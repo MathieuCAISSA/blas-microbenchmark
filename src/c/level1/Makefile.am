@@ -28,4 +28,40 @@ TESTS = \
 	test_bmb_dscal.sh \
 	test_bmb_dswap.sh
 
-EXTRA_DIST = $(TESTS)
+if HAVE_ANY_GPU
+bin_PROGRAMS += \
+	bmb_dasum_gpu \
+	bmb_daxpy_gpu \
+	bmb_dcopy_gpu \
+	bmb_ddot_gpu \
+	bmb_dnrm2_gpu \
+	bmb_dscal_gpu \
+	bmb_dswap_gpu
+
+bmb_dasum_gpu_SOURCES = bmb_dasum_gpu.c
+bmb_daxpy_gpu_SOURCES = bmb_daxpy_gpu.c
+bmb_dcopy_gpu_SOURCES = bmb_dcopy_gpu.c
+bmb_ddot_gpu_SOURCES = bmb_ddot_gpu.c
+bmb_dnrm2_gpu_SOURCES = bmb_dnrm2_gpu.c
+bmb_dscal_gpu_SOURCES = bmb_dscal_gpu.c
+bmb_dswap_gpu_SOURCES = bmb_dswap_gpu.c
+
+# Same smoke tests; the *_gpu binaries themselves exit 77 (SKIP) when no
+# compatible GPU is present at runtime, so this is safe to run in CI too.
+TESTS += \
+	test_bmb_dasum_gpu.sh \
+	test_bmb_daxpy_gpu.sh \
+	test_bmb_dcopy_gpu.sh \
+	test_bmb_ddot_gpu.sh \
+	test_bmb_dnrm2_gpu.sh \
+	test_bmb_dscal_gpu.sh \
+	test_bmb_dswap_gpu.sh
+endif
+
+# Listed unconditionally (not just via $(TESTS)) so `make dist` always ships
+# every test script, regardless of which backend this build was configured for.
+EXTRA_DIST = \
+	test_bmb_dasum.sh test_bmb_daxpy.sh test_bmb_dcopy.sh test_bmb_ddot.sh \
+	test_bmb_dnrm2.sh test_bmb_dscal.sh test_bmb_dswap.sh \
+	test_bmb_dasum_gpu.sh test_bmb_daxpy_gpu.sh test_bmb_dcopy_gpu.sh test_bmb_ddot_gpu.sh \
+	test_bmb_dnrm2_gpu.sh test_bmb_dscal_gpu.sh test_bmb_dswap_gpu.sh

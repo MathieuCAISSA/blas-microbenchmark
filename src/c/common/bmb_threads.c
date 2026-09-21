@@ -6,7 +6,14 @@
 #include "bmb_threads.h"
 #include "bmb_log.h"
 
-#if defined(HAVE_OPENBLAS_SET_NUM_THREADS)
+#if defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
+#include <stdint.h>
+/* dim_t defaults to a 64-bit type in BLIS regardless of the CBLAS
+ * integer width (BLIS_BLAS_INT_TYPE_SIZE), so declare it explicitly
+ * rather than pulling in the full blis.h. */
+extern void bli_thread_set_num_threads(int64_t n_threads);
+#define BMB_THREAD_ENV_VAR "BLIS_NUM_THREADS"
+#elif defined(HAVE_OPENBLAS_SET_NUM_THREADS)
 extern void openblas_set_num_threads(int num_threads);
 #define BMB_THREAD_ENV_VAR "OPENBLAS_NUM_THREADS"
 #elif defined(HAVE_OMP_SET_NUM_THREADS)
@@ -16,7 +23,9 @@ extern void openblas_set_num_threads(int num_threads);
 
 void bmb_threads_set(unsigned int count)
 {
-#if defined(HAVE_OPENBLAS_SET_NUM_THREADS)
+#if defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
+    bli_thread_set_num_threads((int64_t) count);
+#elif defined(HAVE_OPENBLAS_SET_NUM_THREADS)
     openblas_set_num_threads((int) count);
 #elif defined(HAVE_OMP_SET_NUM_THREADS)
     omp_set_num_threads((int) count);
