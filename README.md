@@ -16,10 +16,10 @@ choice of backends, selected at `configure` time:
 
 | Backend | `configure` flag | Status |
 | --- | --- | --- |
-| OpenBLAS | `--with-blas-backend=openblas` (or `auto`) | Verified: built, run, `make check` passes |
-| BLIS | `--with-blas-backend=blis` | Verified: built, run, `make check` passes |
-| NVPL | `--with-blas-backend=nvpl` | Best-effort: wired per NVPL's published CBLAS-compatible API, but NVPL targets aarch64 (NVIDIA Grace) and could not be built or run here at all |
-| ArmPL | `--with-blas-backend=armpl` | Best-effort: wired per ArmPL's published CBLAS-compatible API, but ArmPL requires an Arm-provided install and could not be built or run here at all |
+| OpenBLAS | `--with-blas-backend=openblas` (or `auto`) | Verified in CI: built, run, `make check` passes |
+| BLIS | `--with-blas-backend=blis` | Verified in CI: built, run, `make check` passes |
+| NVPL | `--with-blas-backend=nvpl` | Verified in CI (Linux arm64 runner): built, run, `make check` passes |
+| ArmPL | `--with-blas-backend=armpl` | Verified in CI (Linux arm64 runner): built, run, `make check` passes |
 | Netlib | — | Not yet supported: Debian/Ubuntu ships no CBLAS C wrapper for it (only the raw Fortran ABI); see [AGENTS.md](AGENTS.md) |
 
 All of these expose the standard **CBLAS** C interface, so the same
@@ -57,6 +57,14 @@ Requires GCC ≥ 12 (this first implementation only targets GCC), Autotools
   Debian/Ubuntu (default backend, no extra flag needed), or
 - [BLIS](https://github.com/flame/blis) — `libblis-openmp-dev` on
   Debian/Ubuntu, pass `--with-blas-backend=blis`.
+
+On aarch64 (Arm servers / NVIDIA Grace), two more backends are available:
+
+- [NVPL BLAS](https://developer.nvidia.com/nvpl) — install `libnvpl-blas0`
+  and `libnvpl-blas-dev` (NVIDIA's apt repo), pass `--with-blas-backend=nvpl`.
+- [Arm Performance Libraries](https://developer.arm.com/tools-and-software/arm-performance-libraries) —
+  install `arm-performance-libraries` (Arm's apt repo), pass
+  `--with-blas-backend=armpl`.
 
 ```bash
 autoreconf -fi

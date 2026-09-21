@@ -27,6 +27,10 @@ sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
 sudo apt-get install -y libblis-openmp-dev   # optional, for --with-blas-backend=blis
 ```
 
+NVPL and ArmPL are aarch64-only; see the CI job install steps
+(`.github/workflows/ci.yml`) for the exact `--with-blas-backend=nvpl`/`=armpl`
+setup (both install from public apt repos, no login/EULA prompt).
+
 After changing any `configure.ac` or `Makefile.am`, re-run `autoreconf -fi`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
 silently ignore your edits.
@@ -55,12 +59,32 @@ executable named `bmb_<routine>` (`bin_PROGRAMS` — not `check_PROGRAMS`, so
 
 | Backend | `configure` flag | Status |
 | --- | --- | --- |
-| OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | Verified end-to-end |
-| BLIS | `--with-blas-backend=blis` | Verified end-to-end |
-| NVPL | `--with-blas-backend=nvpl` | Best-effort, unverified (aarch64-only, no package here) |
-| ArmPL | `--with-blas-backend=armpl` | Best-effort, unverified (needs an Arm-provided install) |
+| OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | Verified end-to-end, in CI (`openblas` job) |
+| BLIS | `--with-blas-backend=blis` | Verified end-to-end, in CI (`blis` job) |
+| NVPL | `--with-blas-backend=nvpl` | Verified end-to-end, in CI (`nvpl` job, `ubuntu-24.04-arm`) |
+| ArmPL | `--with-blas-backend=armpl` | Verified end-to-end, in CI (`armpl` job, `ubuntu-24.04-arm`) |
 | Netlib | — | Not implemented: Debian/Ubuntu's `libblas-dev` has no CBLAS C wrapper, only the raw Fortran ABI (no `cblas.h`, no `cblas_dgemm` symbol) — would need a small hand-written CBLAS-over-Fortran shim, which nothing in the tree provides yet |
 | cuBLAS / rocBLAS | — | Not implemented; `configure` accepts `--with-cuda-libpath`/`--with-rocm-libpath` as reserved, currently-ignored placeholders. Deliberately not pursued: a fundamentally different, handle-based, device-memory API that this project has decided not to take on |
+
+NVPL and ArmPL both install from real, public, non-interactive apt repos —
+neither needs a login or EULA click-through, so there's no reason to treat
+them as second-class going forward. If either CI job starts failing after
+an upstream version bump, re-run the discovery in
+`.github/workflows/ci.yml`'s job history rather than assuming it's
+permanently broken:
+- NVPL's `libnvpl-blas-dev` puts its CBLAS-compatible header at
+  `/usr/include/nvpl_compat/cblas.h` (not the default include path) and
+  links as `-lnvpl_blas_lp64_gomp`/`-lnvpl_blas_lp64_seq` (+
+  `-lnvpl_blas_core`). The `nvpl` case in `configure.ac` probes for this
+  explicitly. The installer URL is version-pinned (no stable "latest"
+  alias exists) — bump it in the CI job when
+  [nvpl-downloads](https://developer.nvidia.com/nvpl-downloads) moves on.
+- ArmPL's apt package (`arm-performance-libraries`) installs to a fixed
+  `/opt/arm/arm-performance-libraries/{include,lib}` prefix — found by
+  adding a throwaway `find /opt/arm` debug step to the CI job and reading
+  the log, not by trusting the docs (which describe the older, versioned
+  `/opt/arm/armpl_<version>_gcc/` layout used by the manual tarball
+  installer; that pattern is kept as a fallback probe).
 
 When touching `configure.ac`'s backend-selection logic, don't let checks for
 one backend leak into another: e.g. `AC_CHECK_LIB([openblas],
@@ -131,20 +155,19 @@ an existing one in the same directory, adjust the binary name — small size,
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `autoreconf -fi`,
-`configure`, `make`, and `make check` against OpenBLAS on every push/PR.
-Keep it green — a routine that only works "on my machine" isn't done. It
-does not yet cover the other backends (BLIS/NVPL/ArmPL/Netlib) — that's the
-explicit subject of a separate, later task; don't assume CI exercises them
-until it's been extended to do so.
+`configure`, `make`, and `make check` on every push/PR, once per
+implemented backend: `openblas` and `blis` on `ubuntu-latest`, `nvpl` and
+`armpl` on `ubuntu-24.04-arm` (GitHub's free Linux arm64 hosted runner for
+public repos — both those backends are aarch64-only). Keep it green — a
+routine that only works "on my machine" isn't done. Netlib isn't covered
+since it isn't implemented (see below).
 
 ## Don't half-wire a backend
 
-Netlib, NVPL and ArmPL have no code yet (see the backend status table
-above). cuBLAS/rocBLAS are deliberately out of scope — don't add them back
-without being asked. If you're implementing one of the remaining CPU
-backends, do it fully — build detection in `configure.ac`, the thread-count
-API in `bmb_threads.c` if it needs one, and (for Netlib specifically) the
-CBLAS-over-Fortran shim — rather than adding a partial
-`--with-blas-backend=X` case that fails at compile or link time. Leaving a
-backend entirely unimplemented (as today) is fine; leaving it half-done is
-not.
+Netlib has no code yet (see the backend status table above). cuBLAS/rocBLAS
+are deliberately out of scope — don't add them back without being asked.
+If you're implementing Netlib, do it fully — the CBLAS-over-Fortran shim,
+`configure.ac` detection, and a CI job for it — rather than adding a
+partial `--with-blas-backend=netlib` case that fails at compile or link
+time. Leaving it entirely unimplemented (as today) is fine; leaving it
+half-done is not.
