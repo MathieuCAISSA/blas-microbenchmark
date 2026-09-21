@@ -10,13 +10,3 @@ libbmbcommon_a_SOURCES = \
 	bmb_print.c bmb_print.h \
 	bmb_threads.c bmb_threads.h \
 	bmb_bench.c bmb_bench.h
-
-if HAVE_GPU_CUDA
-libbmbcommon_a_SOURCES += bmb_gpu.h bmb_gpu_cuda.c
-endif
-
-if HAVE_GPU_ROCM
-libbmbcommon_a_SOURCES += bmb_gpu.h bmb_gpu_rocm.c
-endif
-
-EXTRA_libbmbcommon_a_SOURCES = bmb_gpu.h bmb_gpu_cuda.c bmb_gpu_rocm.c

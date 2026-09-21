@@ -18,20 +18,16 @@ choice of backends, selected at `configure` time:
 | --- | --- | --- |
 | OpenBLAS | `--with-blas-backend=openblas` (or `auto`) | Verified: built, run, `make check` passes |
 | BLIS | `--with-blas-backend=blis` | Verified: built, run, `make check` passes |
-| cuBLAS | `--with-gpu-backend=cuda` | Compile/link-verified only — no GPU available to run it in the environment this project was developed in |
-| rocBLAS | `--with-gpu-backend=rocm` | Compile/link-verified only — same reason |
 | NVPL | `--with-blas-backend=nvpl` | Best-effort: wired per NVPL's published CBLAS-compatible API, but NVPL targets aarch64 (NVIDIA Grace) and could not be built or run here at all |
 | ArmPL | `--with-blas-backend=armpl` | Best-effort: wired per ArmPL's published CBLAS-compatible API, but ArmPL requires an Arm-provided install and could not be built or run here at all |
 | Netlib | — | Not yet supported: Debian/Ubuntu ships no CBLAS C wrapper for it (only the raw Fortran ABI); see [AGENTS.md](AGENTS.md) |
 
-The CPU backends (OpenBLAS, BLIS, NVPL, ArmPL) all expose the standard
-**CBLAS** C interface, so the same `bmb_<routine>` source files link against
-whichever one `configure` picks. cuBLAS and rocBLAS have a fundamentally
-different, handle-based, device-memory API, so they instead build a second
-set of `bmb_<routine>_gpu` executables (only when `--with-gpu-backend` is
-given) sharing the same CLI and output format. Running a `*_gpu` benchmark
-on a machine with no matching GPU exits with the standard "SKIP" code (77)
-rather than failing — `make check` reports it as SKIP, not FAIL.
+All of these expose the standard **CBLAS** C interface, so the same
+`bmb_<routine>` source files link against whichever one `configure` picks.
+
+cuBLAS and rocBLAS are not implemented; `configure` accepts
+`--with-cuda-libpath`/`--with-rocm-libpath` as reserved, currently-ignored
+placeholders.
 
 ## Layout
 
@@ -50,7 +46,7 @@ blas-microbenchmark/
 ```
 
 Each benchmark builds to its own executable, named after the routine it
-measures (e.g. `bmb_dgemm`, or `bmb_dgemm_gpu` for the GPU build).
+measures (e.g. `bmb_dgemm`).
 
 ## Building
 
@@ -70,24 +66,16 @@ make
 make check   # runs a minimal smoke test for every benchmark
 ```
 
-To additionally build the GPU benchmarks, install a GPU toolkit
-(`nvidia-cuda-toolkit`, or `librocblas-dev libamdhip64-dev`) and add
-`--with-gpu-backend=cuda` or `--with-gpu-backend=rocm` to the `configure`
-line above. This builds `bmb_<routine>_gpu` alongside the regular CPU
-benchmarks; running one on a machine without the matching GPU prints a
-warning and exits 77 (skip) instead of failing.
-
 ### Useful `configure` options
 
 | Option | Purpose |
 | --- | --- |
 | `-h`, `--help` | List all configure options |
 | `--prefix=PREFIX` | Installation prefix |
-| `--with-blas-backend=auto\|openblas\|blis\|nvpl\|armpl` | CPU BLAS backend to build against (default: `auto`, search for any CBLAS library) |
+| `--with-blas-backend=auto\|openblas\|blis\|nvpl\|armpl` | BLAS backend to build against (default: `auto`, search for any CBLAS library) |
 | `--with-blas-libpath=DIR` | Directory containing the BLAS library to link against, if not on the default path |
-| `--with-gpu-backend=none\|cuda\|rocm` | Additionally build the `*_gpu` benchmarks against this GPU backend (default: `none`) |
-| `--with-cuda-libpath=DIR` | Directory containing libcublas/libcudart, if not on the default library path |
-| `--with-rocm-libpath=DIR` | Directory containing librocblas/libamdhip64, if not on the default library path |
+| `--with-cuda-libpath=DIR` | Reserved for the future cuBLAS backend |
+| `--with-rocm-libpath=DIR` | Reserved for the future rocBLAS backend |
 | `CC=...` | C compiler |
 | `CFLAGS=...` | C compiler flags |
 | `LDFLAGS=...` | Linker flags |
@@ -101,9 +89,6 @@ Examples:
 
 # BLIS instead of OpenBLAS
 ./configure --with-blas-backend=blis
-
-# OpenBLAS (CPU) plus the cuBLAS GPU benchmarks
-./configure --with-gpu-backend=cuda
 ```
 
 ## Running a benchmark
@@ -165,15 +150,6 @@ warning is printed:
 ```
 $ OMP_NUM_THREADS=4 bmb_dgemm -t 1
 OMP_NUM_THREADS is ignored! Set to 4 but option -t is set to 1.
-```
-
-GPU benchmarks (`bmb_<routine>_gpu`) don't take `-t`/thread-count env vars —
-the GPU backend manages its own parallelism. On a machine with no matching
-GPU, they print a warning and exit 77 instead of a result table:
-
-```
-$ bmb_dgemm_gpu
-No compatible GPU device found; skipping.
 ```
 
 ## License

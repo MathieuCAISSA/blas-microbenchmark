@@ -24,10 +24,7 @@ exposing `cblas.h`. On Debian/Ubuntu:
 
 ```bash
 sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
-# optional, for the other backends:
-sudo apt-get install -y libblis-openmp-dev                       # --with-blas-backend=blis
-sudo apt-get install -y nvidia-cuda-toolkit                       # --with-gpu-backend=cuda
-sudo apt-get install -y librocblas-dev libamdhip64-dev             # --with-gpu-backend=rocm
+sudo apt-get install -y libblis-openmp-dev   # optional, for --with-blas-backend=blis
 ```
 
 After changing any `configure.ac` or `Makefile.am`, re-run `autoreconf -fi`
@@ -43,11 +40,10 @@ clean VPATH build; run it before anything that touches `configure.ac`,
 ```
 src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
-                 # (thread-count resolution), bmb_log, bmb_timer,
-                 # bmb_gpu.h + bmb_gpu_cuda.c / bmb_gpu_rocm.c (GPU shim)
-src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap (+ *_gpu)
-src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv (+ *_gpu)
-src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm (+ *_gpu)
+                 # (thread-count resolution), bmb_log, bmb_timer
+src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
+src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
+src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 ```
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
@@ -61,11 +57,10 @@ executable named `bmb_<routine>` (`bin_PROGRAMS` — not `check_PROGRAMS`, so
 | --- | --- | --- |
 | OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | Verified end-to-end |
 | BLIS | `--with-blas-backend=blis` | Verified end-to-end |
-| cuBLAS | `--with-gpu-backend=cuda` | Compile/link-verified only (no GPU in this environment) |
-| rocBLAS | `--with-gpu-backend=rocm` | Compile/link-verified only (no GPU in this environment) |
 | NVPL | `--with-blas-backend=nvpl` | Best-effort, unverified (aarch64-only, no package here) |
 | ArmPL | `--with-blas-backend=armpl` | Best-effort, unverified (needs an Arm-provided install) |
 | Netlib | — | Not implemented: Debian/Ubuntu's `libblas-dev` has no CBLAS C wrapper, only the raw Fortran ABI (no `cblas.h`, no `cblas_dgemm` symbol) — would need a small hand-written CBLAS-over-Fortran shim, which nothing in the tree provides yet |
+| cuBLAS / rocBLAS | — | Not implemented; `configure` accepts `--with-cuda-libpath`/`--with-rocm-libpath` as reserved, currently-ignored placeholders. Deliberately not pursued: a fundamentally different, handle-based, device-memory API that this project has decided not to take on |
 
 When touching `configure.ac`'s backend-selection logic, don't let checks for
 one backend leak into another: e.g. `AC_CHECK_LIB([openblas],
@@ -121,44 +116,6 @@ an existing one in the same directory, adjust the binary name — small size,
 `-x 1 -i 2`), add it to `TESTS`/`EXTRA_DIST`, `chmod +x` it, then
 `autoreconf -fi` and rebuild.
 
-## Adding a GPU routine benchmark (cuBLAS / rocBLAS)
-
-The `*_gpu` benchmarks (`src/c/level1/bmb_dasum_gpu.c`, etc.) follow the same
-setup/call/teardown shape as the CPU ones, but call the backend-agnostic
-`bmb_gpu_*` wrappers declared in `src/c/common/bmb_gpu.h` instead of
-`cblas_*`, so the same routine file works against either cuBLAS
-(`bmb_gpu_cuda.c`) or rocBLAS (`bmb_gpu_rocm.c`) — whichever one
-`configure --with-gpu-backend=cuda|rocm` selected; only one of those two
-`.c` files is ever compiled in (see the `HAVE_GPU_CUDA`/`HAVE_GPU_ROCM`
-Automake conditionals in `src/c/common/Makefile.am`). Differences from the
-CPU pattern:
-
-- Buffers are device memory: `setup()` fills a host array as usual, then
-  `bmb_gpu_malloc()`s a device buffer and `bmb_gpu_memcpy_h2d()`s into it.
-- `call()` must end with `bmb_gpu_synchronize()`. GPU BLAS calls are
-  asynchronous (queued to a stream); without an explicit sync, the timer
-  would only measure queue-submission latency, not actual compute time.
-- Data is column-major (cuBLAS/rocBLAS's native layout, unlike CBLAS's
-  row-major), so leading dimensions follow column-major sizing (e.g. an
-  M×N matrix's `lda` is `M`, not `N`).
-- In-place routines (`dtrmv`, `dtrsv`, `dtrmm`, `dtrsm`) keep the untouched
-  template on the *host* and re-upload it via `bmb_gpu_memcpy_h2d()` at the
-  start of `call()`, mirroring the CPU version's host-side `memcpy` (there
-  is no device-to-device copy helper in `bmb_gpu.h`; add one if a future
-  routine needs it instead of a full re-upload).
-- `main()` must call `bmb_gpu_init()` before `bmb_benchmark_main()` and map
-  `BMB_GPU_NO_DEVICE` to `return 77;` (the Automake "SKIP" convention) —
-  never treat "no GPU here" as a test failure. Call `bmb_gpu_shutdown()`
-  after `bmb_benchmark_main()` returns.
-- cuBLAS's `dtrmm` writes to a separate output buffer unlike CBLAS's
-  in-place version; pass the same buffer as both input and output to get
-  in-place behavior (see `bmb_gpu_cuda.c`'s `bmb_gpu_dtrmm`). rocBLAS's
-  `dtrmm` is in-place already, matching CBLAS directly.
-
-New GPU function signatures were taken directly from the installed
-`cublas_v2.h`/`rocblas-functions.h` headers, not from memory — if you add
-one, `grep` the real header first rather than guessing the parameter order.
-
 ## Code style
 
 - No comments except for non-obvious *why* (a hidden constraint, a numerical
@@ -176,16 +133,18 @@ one, `grep` the real header first rather than guessing the parameter order.
 GitHub Actions (`.github/workflows/ci.yml`) runs `autoreconf -fi`,
 `configure`, `make`, and `make check` against OpenBLAS on every push/PR.
 Keep it green — a routine that only works "on my machine" isn't done. It
-does not yet cover the other backends (BLIS/cuBLAS/rocBLAS/NVPL/ArmPL/
-Netlib) — that's the explicit subject of a separate, later task; don't
-assume CI exercises them until it's been extended to do so.
+does not yet cover the other backends (BLIS/NVPL/ArmPL/Netlib) — that's the
+explicit subject of a separate, later task; don't assume CI exercises them
+until it's been extended to do so.
 
 ## Don't half-wire a backend
 
 Netlib, NVPL and ArmPL have no code yet (see the backend status table
-above). If you're implementing one, do it fully — build detection in
-`configure.ac`, the thread-count API in `bmb_threads.c` if it needs one,
-and (for Netlib specifically) the CBLAS-over-Fortran shim — rather than
-adding a partial `--with-blas-backend=X` case that fails at compile or link
-time. Leaving a backend entirely unimplemented (as today) is fine; leaving
-it half-done is not.
+above). cuBLAS/rocBLAS are deliberately out of scope — don't add them back
+without being asked. If you're implementing one of the remaining CPU
+backends, do it fully — build detection in `configure.ac`, the thread-count
+API in `bmb_threads.c` if it needs one, and (for Netlib specifically) the
+CBLAS-over-Fortran shim — rather than adding a partial
+`--with-blas-backend=X` case that fails at compile or link time. Leaving a
+backend entirely unimplemented (as today) is fine; leaving it half-done is
+not.

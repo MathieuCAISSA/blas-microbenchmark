@@ -158,71 +158,19 @@ AS_IF([test "x$OPENMP_CFLAGS" != "x"], [
 AC_CHECK_LIB([m], [sqrt])
 
 dnl -----------------------------------------------------------------------
-dnl GPU backends (cuBLAS / rocBLAS) - optional, at most one at a time
+dnl GPU backends: reserved, not implemented.
 dnl -----------------------------------------------------------------------
-AC_ARG_WITH([gpu-backend],
-  [AS_HELP_STRING([--with-gpu-backend=none|cuda|rocm],
-    [additionally build the *_gpu benchmarks against this GPU BLAS backend (default: none). Requires the matching toolkit: CUDA+cuBLAS (nvidia-cuda-toolkit), or ROCm+rocBLAS (librocblas-dev, libamdhip64-dev).])],
-  [bmb_gpu_backend="$withval"],
-  [bmb_gpu_backend=none])
-
-AS_CASE(["$bmb_gpu_backend"],
-  [none|cuda|rocm], [],
-  [AC_MSG_ERROR([--with-gpu-backend must be one of: none, cuda, rocm (got '$bmb_gpu_backend')])])
-
 AC_ARG_WITH([cuda-libpath],
   [AS_HELP_STRING([--with-cuda-libpath=DIR],
-    [directory containing libcublas/libcudart, if not already on the default library path])],
-  [LDFLAGS="-L$withval -Wl,-rpath,$withval $LDFLAGS"],
+    [directory containing the CUDA/cuBLAS libraries (reserved: the cuBLAS backend is not implemented in this release)])],
+  [AC_MSG_WARN([--with-cuda-libpath was given but the cuBLAS backend is not implemented yet in this release; the value is ignored.])],
   [])
 
 AC_ARG_WITH([rocm-libpath],
   [AS_HELP_STRING([--with-rocm-libpath=DIR],
-    [directory containing librocblas/libamdhip64, if not already on the default library path])],
-  [LDFLAGS="-L$withval -Wl,-rpath,$withval $LDFLAGS"],
+    [directory containing the ROCm/rocBLAS libraries (reserved: the rocBLAS backend is not implemented in this release)])],
+  [AC_MSG_WARN([--with-rocm-libpath was given but the rocBLAS backend is not implemented yet in this release; the value is ignored.])],
   [])
-
-bmb_have_gpu_cuda=no
-bmb_have_gpu_rocm=no
-
-AS_CASE(["$bmb_gpu_backend"],
-
-  [cuda], [
-    AC_CHECK_HEADERS([cublas_v2.h], [], [
-      AC_MSG_ERROR([cublas_v2.h not found; install nvidia-cuda-toolkit or pass --with-cuda-libpath/CPPFLAGS.])
-    ])
-    AC_CHECK_LIB([cudart], [cudaMalloc], [], [
-      AC_MSG_ERROR([libcudart not found; install nvidia-cuda-toolkit or pass --with-cuda-libpath.])
-    ])
-    AC_CHECK_LIB([cublas], [cublasCreate_v2], [], [
-      AC_MSG_ERROR([libcublas not found; install nvidia-cuda-toolkit or pass --with-cuda-libpath.])
-    ])
-    bmb_have_gpu_cuda=yes
-  ],
-
-  [rocm], [
-    dnl HIP's headers refuse to compile unless exactly one of these is
-    dnl defined; we always target the AMD/ROCm platform, never HIP-on-CUDA.
-    CPPFLAGS="-D__HIP_PLATFORM_AMD__ $CPPFLAGS"
-    AC_CHECK_HEADERS([rocblas/rocblas.h], [], [
-      AC_MSG_ERROR([rocblas/rocblas.h not found; install librocblas-dev or pass --with-rocm-libpath/CPPFLAGS.])
-    ])
-    AC_CHECK_HEADERS([hip/hip_runtime.h], [], [
-      AC_MSG_ERROR([hip/hip_runtime.h not found; install libamdhip64-dev or pass --with-rocm-libpath/CPPFLAGS.])
-    ])
-    AC_CHECK_LIB([amdhip64], [hipMalloc], [], [
-      AC_MSG_ERROR([libamdhip64 not found; install libamdhip64-dev or pass --with-rocm-libpath.])
-    ])
-    AC_CHECK_LIB([rocblas], [rocblas_create_handle], [], [
-      AC_MSG_ERROR([librocblas not found; install librocblas-dev or pass --with-rocm-libpath.])
-    ])
-    bmb_have_gpu_rocm=yes
-  ]
-)
-
-AM_CONDITIONAL([HAVE_GPU_CUDA], [test "x$bmb_have_gpu_cuda" = xyes])
-AM_CONDITIONAL([HAVE_GPU_ROCM], [test "x$bmb_have_gpu_rocm" = xyes])
-AM_CONDITIONAL([HAVE_ANY_GPU], [test "x$bmb_have_gpu_cuda" = xyes -o "x$bmb_have_gpu_rocm" = xyes])
 
 AC_CONFIG_FILES([
   Makefile
@@ -243,5 +191,4 @@ AC_MSG_NOTICE([  CFLAGS         = $CFLAGS])
 AC_MSG_NOTICE([  LDFLAGS        = $LDFLAGS])
 AC_MSG_NOTICE([  LIBS           = $LIBS])
 AC_MSG_NOTICE([  BLAS backend   = $bmb_blas_backend])
-AC_MSG_NOTICE([  GPU backend    = $bmb_gpu_backend])
 AC_MSG_NOTICE([])

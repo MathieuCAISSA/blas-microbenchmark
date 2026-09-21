@@ -25,37 +25,4 @@ TESTS = \
 	test_bmb_dtrmm.sh \
 	test_bmb_dtrsm.sh
 
-if HAVE_ANY_GPU
-bin_PROGRAMS += \
-	bmb_dgemm_gpu \
-	bmb_dsymm_gpu \
-	bmb_dsyrk_gpu \
-	bmb_dsyr2k_gpu \
-	bmb_dtrmm_gpu \
-	bmb_dtrsm_gpu
-
-bmb_dgemm_gpu_SOURCES = bmb_dgemm_gpu.c
-bmb_dsymm_gpu_SOURCES = bmb_dsymm_gpu.c
-bmb_dsyrk_gpu_SOURCES = bmb_dsyrk_gpu.c
-bmb_dsyr2k_gpu_SOURCES = bmb_dsyr2k_gpu.c
-bmb_dtrmm_gpu_SOURCES = bmb_dtrmm_gpu.c
-bmb_dtrsm_gpu_SOURCES = bmb_dtrsm_gpu.c
-
-# Same smoke tests; the *_gpu binaries themselves exit 77 (SKIP) when no
-# compatible GPU is present at runtime, so this is safe to run in CI too.
-TESTS += \
-	test_bmb_dgemm_gpu.sh \
-	test_bmb_dsymm_gpu.sh \
-	test_bmb_dsyrk_gpu.sh \
-	test_bmb_dsyr2k_gpu.sh \
-	test_bmb_dtrmm_gpu.sh \
-	test_bmb_dtrsm_gpu.sh
-endif
-
-# Listed unconditionally (not just via $(TESTS)) so `make dist` always ships
-# every test script, regardless of which backend this build was configured for.
-EXTRA_DIST = \
-	test_bmb_dgemm.sh test_bmb_dsymm.sh test_bmb_dsyrk.sh test_bmb_dsyr2k.sh \
-	test_bmb_dtrmm.sh test_bmb_dtrsm.sh \
-	test_bmb_dgemm_gpu.sh test_bmb_dsymm_gpu.sh test_bmb_dsyrk_gpu.sh test_bmb_dsyr2k_gpu.sh \
-	test_bmb_dtrmm_gpu.sh test_bmb_dtrsm_gpu.sh
+EXTRA_DIST = $(TESTS)
