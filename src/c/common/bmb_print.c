@@ -16,9 +16,9 @@ static void bmb_print_txt_header(FILE *out, const bmb_result_set_t *rs)
 {
     fprintf(out, "# routine: %s\n", rs->routine_name);
     fprintf(out, "%-16s", "Thread count");
-    fprintf(out, "%-16s", rs->dim1_label);
+    fprintf(out, "%-20s", rs->dim1_label);
     if (rs->dim2_label != NULL) {
-        fprintf(out, "%-16s", rs->dim2_label);
+        fprintf(out, "%-20s", rs->dim2_label);
     }
     fprintf(out, "%-14s", "time [s]");
     if (rs->has_stats) {
@@ -36,9 +36,9 @@ void bmb_print_txt(FILE *out, const bmb_result_set_t *rs)
         const bmb_result_row_t *row = &rs->rows[i];
 
         fprintf(out, "%-16u", row->thread_count);
-        fprintf(out, "%-16zu", row->dim1);
+        fprintf(out, "%-20zu", row->dim1);
         if (rs->dim2_label != NULL) {
-            fprintf(out, "%-16zu", row->dim2);
+            fprintf(out, "%-20zu", row->dim2);
         }
         fprintf(out, "%-14.6f", row->time_s);
         if (rs->has_stats) {
