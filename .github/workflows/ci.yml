@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  openblas:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,7 +37,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs
+          name: test-logs-openblas
           path: |
             build/**/test-suite.log
             build/**/*.sh.log
@@ -45,3 +45,132 @@ jobs:
 
       - name: make distcheck
         run: make -C build distcheck -j"$(nproc)"
+
+  blis:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libblis-openmp-dev pkg-config
+
+      - name: autoreconf
+        run: autoreconf -fi
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-blas-backend=blis
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: make check
+        run: make -C build check
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-blis
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore
+
+  # NVPL and ArmPL both target aarch64 (NVIDIA Grace / Arm servers), so these
+  # two jobs run on GitHub's arm64-hosted runners (free for public repos)
+  # instead of ubuntu-latest.
+  nvpl:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config
+
+      - name: Install NVPL BLAS
+        # No stable "latest" alias is published; bump this version (and the
+        # ubuntu2404 tag, if the runner image's Ubuntu release changes) when
+        # https://developer.nvidia.com/nvpl-downloads moves on.
+        run: |
+          curl -fsSL -o nvpl-repo.deb "https://developer.download.nvidia.com/compute/nvpl/26.5/local_installers/nvpl-local-repo-ubuntu2404-26.5_1.0-1_arm64.deb"
+          sudo dpkg -i nvpl-repo.deb
+          sudo cp /var/nvpl-local-repo-ubuntu2404-26.5/nvpl-local-*-keyring.gpg /usr/share/keyrings/
+          sudo apt-get update
+          sudo apt-get install -y libnvpl-blas0 libnvpl-blas-dev
+
+      - name: autoreconf
+        run: autoreconf -fi
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-blas-backend=nvpl
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: make check
+        run: make -C build check
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-nvpl
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore
+
+  armpl:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config
+
+      - name: Install Arm Performance Libraries
+        run: |
+          curl -fsSL -O "https://developer.arm.com/packages/arm-toolchains/ubuntu/pool/arm-toolchains-repository_2-2~noble_all.deb"
+          sudo dpkg -i arm-toolchains-repository_2-2~noble_all.deb
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y arm-performance-libraries
+
+      - name: autoreconf
+        run: autoreconf -fi
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-blas-backend=armpl
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: make check
+        run: make -C build check
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-armpl
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore

@@ -97,20 +97,49 @@ AS_CASE(["$bmb_blas_backend"],
   ],
 
   [nvpl], [
-    AC_MSG_WARN([--with-blas-backend=nvpl is best-effort: NVPL targets aarch64 (NVIDIA Grace) and could not be built or run in the environment this project was developed in. Wiring follows NVPL's published CBLAS-compatible interface but is otherwise unverified.])
-    AC_CHECK_HEADERS([nvpl_blas_cblas.h])
-    AC_CHECK_HEADERS([cblas.h])
-    AC_SEARCH_LIBS([cblas_dgemm], [nvpl_blas_lp64_gomp nvpl_blas_lp64_seq], [], [
-      AC_MSG_ERROR([NVPL BLAS not found (cblas_dgemm unresolved); pass --with-blas-libpath/CPPFLAGS/LDFLAGS/LIBS pointing to your NVPL install.])
+    dnl aarch64-only (NVIDIA Grace / Arm CPUs). libnvpl-blas-dev's
+    dnl CBLAS-compatible header lives under nvpl_compat/ (a plain
+    dnl /usr/include subdirectory, not on the default search path); the
+    dnl libraries themselves install to the standard multiarch libdir.
+    for bmb_dir in /usr/include/nvpl_compat /usr/include/*/nvpl_compat; do
+      if test -f "$bmb_dir/cblas.h"; then
+        CPPFLAGS="-I$bmb_dir $CPPFLAGS"
+        break
+      fi
+    done
+    AC_CHECK_HEADERS([cblas.h], [], [
+      AC_MSG_ERROR([NVPL's cblas.h not found. Install libnvpl-blas-dev (https://developer.nvidia.com/nvpl) or point to it with --with-blas-libpath/CPPFLAGS.])
     ])
+    AC_SEARCH_LIBS([cblas_dgemm], [nvpl_blas_lp64_gomp nvpl_blas_lp64_seq], [], [
+      AC_MSG_ERROR([NVPL BLAS not found (cblas_dgemm unresolved); install libnvpl-blas0/libnvpl-blas-dev or pass --with-blas-libpath/LDFLAGS/LIBS.])
+    ])
+    dnl Not always auto-pulled in as a DT_NEEDED dependency; safe to add
+    dnl even when already linked transitively.
+    LIBS="-lnvpl_blas_core $LIBS"
   ],
 
   [armpl], [
-    AC_MSG_WARN([--with-blas-backend=armpl is best-effort: ArmPL requires an Arm-provided install and could not be built or run in the environment this project was developed in. Wiring follows ArmPL's published CBLAS-compatible interface but is otherwise unverified.])
-    AC_CHECK_HEADERS([armpl.h])
-    AC_CHECK_HEADERS([cblas.h])
+    dnl aarch64-only (Arm servers). The apt package installs under a
+    dnl version-specific /opt/arm/armpl_<version>_gcc/ prefix, not a
+    dnl standard system path.
+    bmb_armpl_dir=
+    for bmb_dir in /opt/arm/armpl_*/include /opt/arm/armpl_*_gcc/include; do
+      if test -f "$bmb_dir/armpl.h"; then
+        bmb_armpl_dir="$bmb_dir"
+        break
+      fi
+    done
+    AS_IF([test -n "$bmb_armpl_dir"], [
+      AC_MSG_NOTICE([found ArmPL headers in $bmb_armpl_dir])
+      CPPFLAGS="-I$bmb_armpl_dir $CPPFLAGS"
+      bmb_armpl_libdir=`AS_ECHO(["$bmb_armpl_dir"]) | sed 's|/include$|/lib|'`
+      LDFLAGS="-L$bmb_armpl_libdir -Wl,-rpath,$bmb_armpl_libdir $LDFLAGS"
+    ])
+    AC_CHECK_HEADERS([cblas.h], [], [
+      AC_MSG_ERROR([ArmPL's cblas.h not found. Install arm-performance-libraries (https://developer.arm.com/tools-and-software/arm-performance-libraries) or point to it with --with-blas-libpath/CPPFLAGS.])
+    ])
     AC_SEARCH_LIBS([cblas_dgemm], [armpl armpl_lp64 armpl_lp64_mp], [], [
-      AC_MSG_ERROR([ArmPL not found (cblas_dgemm unresolved); pass --with-blas-libpath/CPPFLAGS/LDFLAGS/LIBS pointing to your ArmPL install.])
+      AC_MSG_ERROR([ArmPL not found (cblas_dgemm unresolved); install arm-performance-libraries or pass --with-blas-libpath/LDFLAGS/LIBS.])
     ])
   ],
 
