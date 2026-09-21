@@ -119,11 +119,13 @@ AS_CASE(["$bmb_blas_backend"],
   ],
 
   [armpl], [
-    dnl aarch64-only (Arm servers). The apt package installs under a
-    dnl version-specific /opt/arm/armpl_<version>_gcc/ prefix, not a
-    dnl standard system path.
+    dnl aarch64-only (Arm servers). The apt package (arm-performance-libraries)
+    dnl installs to the fixed /opt/arm/arm-performance-libraries/ prefix;
+    dnl older/manual tarball installs use a version-specific
+    dnl /opt/arm/armpl_<version>_gcc/ prefix instead. Neither is a
+    dnl standard system search path.
     bmb_armpl_dir=
-    for bmb_dir in /opt/arm/armpl_*/include /opt/arm/armpl_*_gcc/include; do
+    for bmb_dir in /opt/arm/arm-performance-libraries/include /opt/arm/armpl_*/include /opt/arm/armpl_*_gcc/include; do
       if test -f "$bmb_dir/armpl.h"; then
         bmb_armpl_dir="$bmb_dir"
         break

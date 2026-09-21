@@ -150,11 +150,6 @@ jobs:
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y arm-performance-libraries
 
-      - name: DEBUG find armpl.h
-        run: |
-          dpkg -L arm-performance-libraries | grep -E 'armpl\.h$|cblas\.h$|libarmpl[^ ]*\.so'
-          find /opt/arm -maxdepth 4 -type d 2>/dev/null
-
       - name: autoreconf
         run: autoreconf -fi
 
