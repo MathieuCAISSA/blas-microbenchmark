@@ -12,8 +12,15 @@
 typedef void *(*bmb_bench_setup_fn)(size_t dim1, size_t dim2, unsigned int thread_count);
 
 /* Executes exactly one call to the BLAS routine under test. This is the
- * portion whose wall-clock time is measured. */
+ * portion whose wall-clock time is measured, so it must contain nothing
+ * but that call -- see reset() below for operand restoration. */
 typedef void (*bmb_bench_call_fn)(void *ctx);
+
+/* Optional. Restores the context to the state call() expects, for routines
+ * that overwrite an operand (dtrmv, dtrsv, dtrmm, dtrsm) or drift over
+ * repeated calls (dscal). Run before every call(), warmup and timed alike,
+ * and always outside the timing window. */
+typedef void (*bmb_bench_reset_fn)(void *ctx);
 
 /* Releases resources allocated by setup(). */
 typedef void (*bmb_bench_teardown_fn)(void *ctx);
@@ -34,6 +41,7 @@ typedef struct {
 
     bmb_bench_setup_fn setup;
     bmb_bench_call_fn call;
+    bmb_bench_reset_fn reset; /* optional, may stay NULL */
     bmb_bench_teardown_fn teardown;
 } bmb_benchmark_t;
 

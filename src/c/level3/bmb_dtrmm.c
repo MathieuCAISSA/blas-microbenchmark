@@ -14,7 +14,7 @@ typedef struct {
     double alpha;
     double *a;  /* M x M, upper triangle used */
     double *b0; /* template */
-    double *b;  /* working buffer, reset from b0 before each call */
+    double *b;  /* working buffer, restored by reset() before each call */
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
@@ -63,9 +63,15 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    memcpy(ctx->b, ctx->b0, (size_t) ctx->m * (size_t) ctx->n * sizeof(double));
     cblas_dtrmm(CblasRowMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit,
                 ctx->m, ctx->n, ctx->alpha, ctx->a, ctx->m, ctx->b, ctx->n);
+}
+
+static void reset(void *vctx)
+{
+    bmb_ctx_t *ctx = vctx;
+
+    memcpy(ctx->b, ctx->b0, (size_t) ctx->m * (size_t) ctx->n * sizeof(double));
 }
 
 static void teardown(void *vctx)
@@ -88,6 +94,7 @@ int main(int argc, char *argv[])
     bench.use_vector_range = 0;
     bench.setup = setup;
     bench.call = call;
+    bench.reset = reset;
     bench.teardown = teardown;
 
     return bmb_benchmark_main(argc, argv, &bench);
