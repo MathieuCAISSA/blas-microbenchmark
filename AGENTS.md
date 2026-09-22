@@ -78,12 +78,13 @@ buffer, `src/c/level3/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
    `setup()`, freed in `teardown()`).
 2. `setup(dim1, dim2, thread_count) -> void *`: allocate and fill inputs.
    `dim2` is `0` when the benchmark's `dim2_label` is `NULL`.
-3. `call(void *ctx)`: exactly one call to the `cblas_*` routine — this is the
-   timed portion, keep it to just the call (plus any required reset, see
-   below).
-4. `teardown(void *ctx)`: free everything.
-5. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
-   whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, and the three
+3. `call(void *ctx)`: exactly one call to the `cblas_*` routine and nothing
+   else — this is what the timer wraps.
+4. `reset(void *ctx)`, optional: restore whatever `call()` consumed. Run
+   before every call, outside the timing window.
+5. `teardown(void *ctx)`: free everything.
+6. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
+   whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, and the
    function pointers above) and call `bmb_benchmark_main(argc, argv, &bench)`.
 
 Dimension conventions (only two `--matrix-dim*` options exist, so routines
@@ -99,13 +100,16 @@ with 3 mathematical dimensions reuse one):
 - `dgemm`: `dim1` = M = K (K is tied to M), `dim2` = N.
 
 If a routine overwrites one of its inputs in place (`dtrmv`, `dtrsv`,
-`dtrmm`, `dtrsm`, ...), keep an untouched template buffer and `memcpy` it
-into the working buffer at the start of `call()`, so results stay correct
-and stable regardless of `--iterations`. Routines that accumulate into an
-operand across calls (`daxpy`, `dger`, `dsyr`, `dsyr2`, ...) instead use a
-small `alpha` (e.g. `1.0e-6`) to keep the accumulation bounded for any
-iteration count. Never use `alpha == 1.0` for `dscal`: some BLAS
-implementations special-case it as a no-op fast path.
+`dtrmm`, `dtrsm`) or drifts over repeated calls (`dscal`), keep an
+untouched template buffer and `memcpy` it into the working buffer — from
+`reset()`, **never from `call()`**. For `dtrmm`/`dtrsm` that copy is
+O(M·N), the same order as the routine's own memory traffic, so timing it
+would put a large slice of pure `memcpy` into the reported figure.
+Routines that merely accumulate into an operand (`daxpy`, `dger`, `dsyr`,
+`dsyr2`, ...) don't need a reset: a small `alpha` (e.g. `1.0e-6`) keeps the
+accumulation bounded for any iteration count, without a per-call copy.
+Never use `alpha == 1.0` for `dscal`: some BLAS implementations
+special-case it as a no-op fast path.
 
 Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
 `<prog>_SOURCES`) and add a `test_bmb_<routine>.sh` smoke-test script (copy
@@ -150,9 +154,20 @@ Two things that backend gets wrong easily:
   ABI. Getting a flip wrong yields a transposed or mirror-triangle result
   silently, with no crash. `src/c/netlib/test_netlib_cblas.c` compares the
   shim against naive reference implementations for exactly this reason, and
-  runs as part of `make check` for this backend — it has been confirmed to
-  fail when a mapping is deliberately broken, so treat a failure there as
-  real.
+  runs as part of `make check` for this backend — every mapping it covers
+  has been confirmed to fail when deliberately broken, so treat a failure
+  there as real. Add a case for any routine you add to the shim; a mapping
+  with no test is a mapping nobody has checked.
+- The shim declares the hidden `CHARACTER` length arguments the *GNU*
+  Fortran ABI appends. A netlib built with ifort/ifx uses a different
+  convention, so that combination is untested — if someone reports it, this
+  is where to look.
+- A shared `libblas.so` carries its own Fortran runtime; a static
+  `libblas.a` does not, and leaves `xerbla`'s `_gfortran_*` symbols
+  dangling. `configure` tries the plain link first and retries with
+  `-lgfortran`, so don't "simplify" that into a single unconditional
+  `-lgfortran` — that would make a Fortran runtime a hard requirement for
+  everyone.
 
 **cuBLAS / rocBLAS**: deliberately out of scope. Handle-based,
 device-memory API, fundamentally different from the CBLAS interface every
@@ -224,7 +239,12 @@ half-done is not.
   `bmb_options.c`. Without it, a strict `-std=c11` build fails.
 - Keep `common/` generic: routine-specific logic (shapes, alpha values,
   in-place resets) belongs in the `level{1,2,3}` file, not in `bmb_bench.c`.
-- The project should build with zero warnings under `-Wall -Wextra`.
+- The project builds with zero warnings under `-Wall -Wextra`. `configure`
+  adds both (after checking the compiler takes them) to `BMB_WARN_CFLAGS`,
+  which every `Makefile.am` picks up through `AM_CFLAGS` — so this is
+  something a normal build enforces, not an invariant kept by hand. They go
+  in `AM_CFLAGS` rather than `CFLAGS` so a user-supplied `CFLAGS` still gets
+  the last word; `--disable-warnings` turns them off.
 
 ## CI
 

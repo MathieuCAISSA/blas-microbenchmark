@@ -69,7 +69,8 @@ module load openblas     # sets OPENBLAS_ROOT / OPENBLAS_INCDIR / OPENBLAS_LIBDI
 ./configure              # finds cblas.h and libopenblas through them
 ```
 
-`<PKG>_ROOT`, `<PKG>_INCDIR` and `<PKG>_LIBDIR` are honoured for `OPENBLAS`,
+`<PKG>_ROOT`/`<PKG>_DIR`/`<PKG>_HOME`, `<PKG>_INCDIR` and `<PKG>_LIBDIR`
+are honoured for `OPENBLAS`,
 `BLIS`, `NETLIB`, `NVPL`, `ARMPL`, plus generic `BLAS_*`/`CBLAS_*`. Anything unusual
 can still be pointed at explicitly with `--with-blas-incpath=DIR` and
 `--with-blas-libpath=DIR`.
@@ -104,7 +105,9 @@ Every benchmark takes the same flags:
 ```
 
 A `[min:]max` range doubles from `min` to `max` (`256:4096` → 256, 512,
-1024, 2048, 4096). A bare `max` runs just that one size.
+1024, 2048, 4096). `max` is always measured, even when doubling would
+overshoot it (`100:1000` → 100, 200, 400, 800, 1000). A bare `max` runs
+just that one size.
 
 ```bash
 # sweep vector size, with stddev/min/max, saved as CSV
@@ -115,17 +118,23 @@ bmb_dgemm -t 4
 OMP_NUM_THREADS=4 bmb_dgemm
 ```
 
-If the thread-count flag and the backend's environment variable
-(`OMP_NUM_THREADS` for OpenBLAS/NVPL/ArmPL, `BLIS_NUM_THREADS` for BLIS)
-disagree, the flag wins and a warning explains why:
+If the thread-count flag and a thread-count environment variable the
+backend reads disagree, the flag wins and a warning explains why:
 
 ```
 $ OMP_NUM_THREADS=4 bmb_dgemm -t 1
 OMP_NUM_THREADS is ignored! Set to 4 but option -t is set to 1.
 ```
 
-Netlib reference BLAS is single-threaded and has no thread-count API, so
-`-t` has no effect there.
+Which variables those are depends on the backend, and they are checked in
+the order the backend itself would: `OPENBLAS_NUM_THREADS`,
+`GOTO_NUM_THREADS` then `OMP_NUM_THREADS` for OpenBLAS; `BLIS_NUM_THREADS`
+then `OMP_NUM_THREADS` for BLIS; `OMP_NUM_THREADS` for NVPL and ArmPL.
+Netlib reference BLAS is single-threaded and has no thread-count API at
+all, so `-t` has no effect there.
+
+Results go to stdout, warnings and errors to stderr, so `bmb_dgemm >
+results.txt` gets you a clean file.
 
 ## Backends
 
