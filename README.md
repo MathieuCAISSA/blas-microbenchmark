@@ -111,25 +111,36 @@ Every benchmark takes the same flags:
 ```
 -x, --warmup <n>               iterations ignored before timing (default: 1)
 -i, --iterations <n>           iterations measured (default: 10)
--v, --vector-size <[min:]max>  vector size range, level 1 (default: 4096)
--m, --matrix-dim1 <[min:]max>  matrix first-dimension range, level 2 & 3 (default: 4096)
--M, --matrix-dim2 <[min:]max>  matrix second-dimension range, level 2 & 3
+-v, --vector-size <sweep>      vector sizes, level 1 (default: 4096)
+-m, --matrix-dim1 <sweep>      matrix first dimension, level 2 & 3 (default: 4096)
+-M, --matrix-dim2 <sweep>      matrix second dimension, level 2 & 3
                                 (default: same as --matrix-dim1, i.e. square)
--t, --thread-count <[min:]max> number of BLAS threads (default: 1)
+-t, --thread-count <sweep>     number of BLAS threads (default: 1)
 -s, --statistics               add stddev/min/max columns
 -o, --output <file>            also save results to file
 -f, --output-format <fmt>      csv or json (default: csv, or guessed from -o)
 -h, --help                     show this help
 ```
 
-A `[min:]max` range doubles from `min` to `max` (`256:4096` → 256, 512,
-1024, 2048, 4096). `max` is always measured, even when doubling would
-overshoot it (`100:1000` → 100, 200, 400, 800, 1000). A bare `max` runs
-just that one size.
+The four size options take a `<sweep>`, which says which sizes to measure:
+
+| Form | Measures | Example |
+| --- | --- | --- |
+| `max` | that one size | `4096` |
+| `min:max` | doubling | `256:4096` → 256, 512, 1024, 2048, 4096 |
+| `min:max:step` | linear steps | `1000:4000:1000` → 1000, 2000, 3000, 4000 |
+| `v1,v2,...` | exactly those sizes | `64,1000,4096` |
+
+`max` is always measured, even when the stride would overshoot it
+(`100:1000:300` → 100, 400, 700, **1000**). A sweep is capped at 256
+points.
 
 ```bash
 # sweep vector size, with stddev/min/max, saved as CSV
 bmb_ddot -v 1024:16384 -s -o results.csv
+
+# the sizes that matter to you, and nothing else
+bmb_dgemm -m 1024,2048,4096
 
 # 4 threads, either way works the same:
 bmb_dgemm -t 4

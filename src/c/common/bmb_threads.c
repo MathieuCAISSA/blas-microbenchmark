@@ -73,19 +73,21 @@ void bmb_threads_resolve(bmb_options_t *opts)
         }
 
         if (opts->thread_count_set) {
-            if (env_count != opts->thread_count.min || env_count != opts->thread_count.max) {
+            if (opts->thread_count.count != 1
+                || opts->thread_count.values[0] != (size_t) env_count) {
+                char requested[128];
                 char msg[256];
 
+                bmb_range_describe(&opts->thread_count, requested, sizeof(requested));
                 snprintf(msg, sizeof(msg),
-                         "%s is ignored! Set to %lu but option -t is set to %zu.",
-                         env_vars[i], env_count, opts->thread_count.max);
+                         "%s is ignored! Set to %lu but option -t is set to %s.",
+                         env_vars[i], env_count, requested);
                 bmb_log_warning(msg);
             }
             return;
         }
 
-        opts->thread_count.min = (size_t) env_count;
-        opts->thread_count.max = (size_t) env_count;
+        bmb_range_set_single(&opts->thread_count, (size_t) env_count);
         return;
     }
 #else

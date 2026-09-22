@@ -10,20 +10,6 @@
 #include "bmb_threads.h"
 #include "bmb_timer.h"
 
-/* Next point of a sweep: doubles, except that the last step lands exactly
- * on max instead of overshooting it, so the requested endpoint is always
- * measured (100:1000 gives 100, 200, 400, 800, 1000). Callers must stop
- * once v has reached max, so this is only ever called with v < max --
- * which also means v <= max/2 whenever it doubles, so v * 2 cannot
- * overflow. */
-static size_t bmb_sweep_next(size_t v, size_t max)
-{
-    if (v > max / 2) {
-        return max;
-    }
-    return v * 2;
-}
-
 static void bmb_compute_stats(const double *times, unsigned int n, bmb_result_row_t *row)
 {
     unsigned int i;
@@ -149,37 +135,29 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     return 0;
 }
 
-/* The sweeps below test for the endpoint at the bottom of the loop rather
- * than in the for condition: bmb_sweep_next() stops exactly on max, so a
- * top-of-loop `v <= max` test would never terminate. */
 static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                            unsigned int thread_count, bmb_result_set_t *rs)
 {
-    bmb_range_t range1 = bench->use_vector_range ? opts->vector_size : opts->matrix_dim1;
-    bmb_range_t range2 = opts->matrix_dim2;
-    size_t d1;
+    const bmb_range_t *range1 = bench->use_vector_range ? &opts->vector_size : &opts->matrix_dim1;
+    const bmb_range_t *range2 = &opts->matrix_dim2;
+    size_t i1;
     int status = 0;
 
-    for (d1 = range1.min;; d1 = bmb_sweep_next(d1, range1.max)) {
-        if (bench->dim2_label != NULL) {
-            size_t d2;
+    for (i1 = 0; i1 < range1->count; i1++) {
+        size_t d1 = range1->values[i1];
 
-            for (d2 = range2.min;; d2 = bmb_sweep_next(d2, range2.max)) {
-                if (bmb_record(bench, opts, thread_count, d1, d2, rs) != 0) {
+        if (bench->dim2_label != NULL) {
+            size_t i2;
+
+            for (i2 = 0; i2 < range2->count; i2++) {
+                if (bmb_record(bench, opts, thread_count, d1, range2->values[i2], rs) != 0) {
                     status = -1;
-                }
-                if (d2 >= range2.max) {
-                    break;
                 }
             }
         } else {
             if (bmb_record(bench, opts, thread_count, d1, 0, rs) != 0) {
                 status = -1;
             }
-        }
-
-        if (d1 >= range1.max) {
-            break;
         }
     }
 
@@ -217,7 +195,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 {
     bmb_options_t opts;
     bmb_result_set_t rs;
-    unsigned int thread_count;
+    size_t ti;
     int status = EXIT_SUCCESS;
 
     switch (bmb_options_parse(argc, argv, &opts)) {
@@ -236,15 +214,11 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
 
-    for (thread_count = (unsigned int) opts.thread_count.min;;
-         thread_count = (unsigned int) bmb_sweep_next(thread_count, opts.thread_count.max)) {
+    for (ti = 0; ti < opts.thread_count.count; ti++) {
+        unsigned int thread_count = (unsigned int) opts.thread_count.values[ti];
 
         if (bmb_sweep_dim1(bench, &opts, thread_count, &rs) != 0) {
             status = EXIT_FAILURE;
-        }
-
-        if (thread_count >= opts.thread_count.max) {
-            break;
         }
     }
 

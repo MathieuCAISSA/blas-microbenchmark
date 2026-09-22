@@ -90,6 +90,12 @@ buffer, `src/c/level3/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
    whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, and the
    function pointers above) and call `bmb_benchmark_main(argc, argv, &bench)`.
 
+A size option is expanded into its explicit list of points while the
+command line is parsed (`bmb_range_t` is a list, not a min/max pair), so
+`bmb_bench.c` just iterates it and the four sweep forms — single, doubling,
+linear step, explicit list — cost the loop nothing. Anything new in that
+area belongs in `bmb_parse_range()`, not in the benchmark loop.
+
 Dimension conventions (only two `--matrix-dim*` options exist, so routines
 with 3 mathematical dimensions reuse one):
 

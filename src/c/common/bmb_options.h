@@ -8,10 +8,24 @@ typedef enum {
     BMB_FORMAT_JSON
 } bmb_output_format_t;
 
+/* A sweep is expanded into its explicit list of points when the command
+ * line is parsed, so the benchmark loop is a plain iteration and the
+ * endpoint cannot be missed by an off-by-one in a stride. The bound keeps
+ * the struct small enough to hold by value and rules out a spec like
+ * 1:1000000:1 asking for a million measurements. */
+#define BMB_MAX_SWEEP_POINTS 256
+
 typedef struct {
-    size_t min;
-    size_t max;
+    size_t values[BMB_MAX_SWEEP_POINTS]; /* measured in this order */
+    size_t count;
 } bmb_range_t;
+
+/* Reduces range to the single point value. */
+void bmb_range_set_single(bmb_range_t *range, size_t value);
+
+/* Writes a short human-readable form of range into buf ("4", or
+ * "1, 2, 4, 8", elided with an ellipsis when there are many points). */
+void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size);
 
 typedef struct {
     unsigned int warmup;      /* -x, --warmup */

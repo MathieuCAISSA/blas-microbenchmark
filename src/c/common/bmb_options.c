@@ -40,6 +40,7 @@ static const char *bmb_short_options = "x:i:v:m:M:t:so:f:h";
 #define BMB_PARSE_OK        0
 #define BMB_PARSE_MALFORMED (-1)
 #define BMB_PARSE_RANGE     (-2)
+#define BMB_PARSE_TOO_MANY  (-3)
 
 /* Parses a bare unsigned decimal integer with none of strtoull's leniency:
  * no sign, no leading blanks, no trailing characters. In particular "-5"
@@ -67,13 +68,90 @@ static int bmb_parse_uint(const char *str, unsigned long long limit, unsigned lo
     return BMB_PARSE_OK;
 }
 
-/* Parses a "[min:]max" range of positive integers. */
+void bmb_range_set_single(bmb_range_t *range, size_t value)
+{
+    range->values[0] = value;
+    range->count = 1;
+}
+
+void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size)
+{
+    /* Enough points to recognise the sweep, not so many that a warning
+     * turns into a wall of numbers. */
+    const size_t shown = 4;
+    size_t used = 0;
+    size_t i;
+
+    if (size == 0) {
+        return;
+    }
+    buf[0] = '\0';
+
+    for (i = 0; i < range->count && i < shown; i++) {
+        int n = snprintf(buf + used, size - used, "%s%zu",
+                         (i == 0) ? "" : ", ", range->values[i]);
+
+        if (n < 0 || (size_t) n >= size - used) {
+            return;
+        }
+        used += (size_t) n;
+    }
+
+    if (range->count > shown) {
+        snprintf(buf + used, size - used, ", ... (%zu points)", range->count);
+    }
+}
+
+static int bmb_range_append(bmb_range_t *out, size_t value)
+{
+    if (out->count >= BMB_MAX_SWEEP_POINTS) {
+        return BMB_PARSE_TOO_MANY;
+    }
+    out->values[out->count++] = value;
+    return BMB_PARSE_OK;
+}
+
+/* Expands min..max into out, moving by `step` when it is non-zero and
+ * doubling otherwise. max is always the last point: a stride that would
+ * overshoot it is clamped to it instead, so the endpoint a user asked for
+ * is the endpoint that gets measured. */
+static int bmb_range_expand(bmb_range_t *out, size_t min, size_t max, size_t step)
+{
+    size_t v = min;
+
+    for (;;) {
+        int status = bmb_range_append(out, v);
+
+        if (status != BMB_PARSE_OK) {
+            return status;
+        }
+        if (v >= max) {
+            return BMB_PARSE_OK;
+        }
+
+        if (step != 0) {
+            v = (max - v < step) ? max : v + step;
+        } else {
+            v = (v > max / 2) ? max : v * 2;
+        }
+    }
+}
+
+/* Parses one sweep specification:
+ *
+ *   <max>                a single point
+ *   <min>:<max>          doubling from min to max
+ *   <min>:<max>:<step>   linear, in steps of step
+ *   <v1>,<v2>,...        exactly these points, in this order
+ */
 static int bmb_parse_range(const char *str, bmb_range_t *out)
 {
-    char buf[64];
-    char *colon;
-    unsigned long long min_val;
-    unsigned long long max_val;
+    char buf[512];
+    char *field[3];
+    unsigned long long bound[3] = {0, 0, 0};
+    char *p;
+    size_t nfields = 0;
+    size_t i;
     int status;
 
     if (str == NULL || str[0] == '\0' || strlen(str) >= sizeof(buf)) {
@@ -82,34 +160,73 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
     strncpy(buf, str, sizeof(buf) - 1);
     buf[sizeof(buf) - 1] = '\0';
 
-    colon = strchr(buf, ':');
-    if (colon != NULL) {
-        *colon = '\0';
+    out->count = 0;
 
-        status = bmb_parse_uint(buf, BMB_MAX_VALUE, &min_val);
-        if (status != BMB_PARSE_OK) {
-            return status;
+    if (strchr(buf, ',') != NULL) {
+        if (strchr(buf, ':') != NULL) {
+            return BMB_PARSE_MALFORMED; /* a list has no endpoints to stride between */
         }
 
-        status = bmb_parse_uint(colon + 1, BMB_MAX_VALUE, &max_val);
-        if (status != BMB_PARSE_OK) {
-            return status;
+        for (p = buf; p != NULL; ) {
+            char *comma = strchr(p, ',');
+            unsigned long long value;
+
+            if (comma != NULL) {
+                *comma = '\0';
+            }
+
+            status = bmb_parse_uint(p, BMB_MAX_VALUE, &value);
+            if (status != BMB_PARSE_OK) {
+                return status;
+            }
+            if (value == 0) {
+                return BMB_PARSE_MALFORMED;
+            }
+
+            status = bmb_range_append(out, (size_t) value);
+            if (status != BMB_PARSE_OK) {
+                return status;
+            }
+
+            p = (comma != NULL) ? comma + 1 : NULL;
         }
-    } else {
-        status = bmb_parse_uint(buf, BMB_MAX_VALUE, &max_val);
-        if (status != BMB_PARSE_OK) {
-            return status;
-        }
-        min_val = max_val;
+
+        return BMB_PARSE_OK;
     }
 
-    if (min_val == 0 || max_val == 0 || min_val > max_val) {
+    field[nfields++] = buf;
+    for (p = buf; *p != '\0'; p++) {
+        if (*p != ':') {
+            continue;
+        }
+        if (nfields == 3) {
+            return BMB_PARSE_MALFORMED;
+        }
+        *p = '\0';
+        field[nfields++] = p + 1;
+    }
+
+    for (i = 0; i < nfields; i++) {
+        status = bmb_parse_uint(field[i], BMB_MAX_VALUE, &bound[i]);
+        if (status != BMB_PARSE_OK) {
+            return status;
+        }
+        if (bound[i] == 0) {
+            return BMB_PARSE_MALFORMED;
+        }
+    }
+
+    if (nfields == 1) {
+        bmb_range_set_single(out, (size_t) bound[0]);
+        return BMB_PARSE_OK;
+    }
+
+    if (bound[0] > bound[1]) {
         return BMB_PARSE_MALFORMED;
     }
 
-    out->min = (size_t) min_val;
-    out->max = (size_t) max_val;
-    return BMB_PARSE_OK;
+    return bmb_range_expand(out, (size_t) bound[0], (size_t) bound[1],
+                            (nfields == 3) ? (size_t) bound[2] : 0);
 }
 
 /* Parses one range option, reporting what was wrong with it. */
@@ -122,12 +239,18 @@ static int bmb_option_range(const char *str, const char *option, bmb_range_t *ou
         return 0;
     case BMB_PARSE_RANGE:
         snprintf(msg, sizeof(msg),
-                 "Value out of range for %s: each bound must be between 1 and %d.",
+                 "Value out of range for %s: every value must be between 1 and %d.",
                  option, INT_MAX);
+        break;
+    case BMB_PARSE_TOO_MANY:
+        snprintf(msg, sizeof(msg),
+                 "Too many points for %s: at most %d (use a larger step, or list the sizes).",
+                 option, BMB_MAX_SWEEP_POINTS);
         break;
     default:
         snprintf(msg, sizeof(msg),
-                 "Invalid value for %s (expected [min:]max, positive integers).", option);
+                 "Invalid value for %s (expected max, min:max, min:max:step, or a v1,v2,... list).",
+                 option);
         break;
     }
 
@@ -161,19 +284,15 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->warmup = BMB_DEFAULT_WARMUP;
     opts->iterations = BMB_DEFAULT_ITERATIONS;
 
-    opts->vector_size.min = BMB_DEFAULT_SIZE;
-    opts->vector_size.max = BMB_DEFAULT_SIZE;
+    bmb_range_set_single(&opts->vector_size, BMB_DEFAULT_SIZE);
     opts->vector_size_set = 0;
 
-    opts->matrix_dim1.min = BMB_DEFAULT_SIZE;
-    opts->matrix_dim1.max = BMB_DEFAULT_SIZE;
+    bmb_range_set_single(&opts->matrix_dim1, BMB_DEFAULT_SIZE);
     opts->matrix_dim1_set = 0;
-    opts->matrix_dim2.min = BMB_DEFAULT_SIZE;
-    opts->matrix_dim2.max = BMB_DEFAULT_SIZE;
+    bmb_range_set_single(&opts->matrix_dim2, BMB_DEFAULT_SIZE);
     opts->matrix_dim2_set = 0;
 
-    opts->thread_count.min = BMB_DEFAULT_THREADS;
-    opts->thread_count.max = BMB_DEFAULT_THREADS;
+    bmb_range_set_single(&opts->thread_count, BMB_DEFAULT_THREADS);
     opts->thread_count_set = 0;
 
     opts->statistics = 0;
@@ -303,14 +422,21 @@ void bmb_options_print_help(const char *prog_name)
     fprintf(stdout,
         "  -x, --warmup <n>              iterations ignored before timing (default: %u)\n"
         "  -i, --iterations <n>          iterations measured (default: %u)\n"
-        "  -v, --vector-size <[min:]max> vector size range for level 1 routines (default: %u)\n"
-        "  -m, --matrix-dim1 <[min:]max> matrix first-dimension range for level 2 & 3 (default: %u)\n"
-        "  -M, --matrix-dim2 <[min:]max> matrix second-dimension range for level 2 & 3\n"
+        "  -v, --vector-size <sweep>     vector sizes for level 1 routines (default: %u)\n"
+        "  -m, --matrix-dim1 <sweep>     matrix first dimension for level 2 & 3 (default: %u)\n"
+        "  -M, --matrix-dim2 <sweep>     matrix second dimension for level 2 & 3\n"
         "                                 (default: same as --matrix-dim1, i.e. square matrices)\n"
-        "  -t, --thread-count <[min:]max> number of BLAS threads (default: %u)\n"
+        "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
         "  -s, --statistics              add stddev/min/max columns (default: off)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
-        "  -h, --help                    show this help\n",
+        "  -h, --help                    show this help\n"
+        "\n"
+        "A <sweep> is one of:\n"
+        "  <max>                a single size            e.g. 4096\n"
+        "  <min>:<max>          doubling                 e.g. 256:4096  -> 256 512 1024 2048 4096\n"
+        "  <min>:<max>:<step>   linear                   e.g. 1000:4000:1000 -> 1000 2000 3000 4000\n"
+        "  <v1>,<v2>,...        exactly these sizes      e.g. 64,1000,4096\n"
+        "<max> is always measured, even when the stride would overshoot it.\n",
         BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS);
 }
