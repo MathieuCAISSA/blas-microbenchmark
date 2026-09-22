@@ -11,6 +11,11 @@ the user-facing documentation (CLI options, usage examples).
 
 ## Build & test
 
+This is a git checkout, so `configure` doesn't exist yet — `autoreconf`
+generates it. (End users installing from a release tarball skip this: see
+[README.md](README.md#install) — `configure` ships pre-generated there,
+same as osu-micro-benchmarks releases.)
+
 ```bash
 autoreconf -fi
 mkdir -p build && cd build   # out-of-tree build keeps the source tree clean

@@ -12,28 +12,47 @@ Works against whichever BLAS library you already have installed —
 OpenBLAS, BLIS, NVPL, or ArmPL — so you can compare them on the same
 hardware with the same command.
 
-## Quick start
+## Install
+
+Grab the [latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest)
+and build it the classic Autotools way — `configure` ships pre-generated,
+so you don't need autoconf/automake/libtool, just a BLAS library and a
+C compiler:
 
 ```bash
-sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+sudo apt-get install -y libopenblas-dev   # or another backend, see below
 
-git clone https://github.com/MathieuCAISSA/blas-microbenchmark.git
-cd blas-microbenchmark
+curl -LO https://github.com/MathieuCAISSA/blas-microbenchmark/releases/download/v0.1.0/blas-microbenchmark-0.1.0.tar.gz
+tar xf blas-microbenchmark-0.1.0.tar.gz
+cd blas-microbenchmark-0.1.0
 
-autoreconf -fi
-mkdir build && cd build
-../configure
+./configure
 make
-make check          # sanity-checks every benchmark
+make check        # sanity-checks every benchmark
+sudo make install # installs bmb_<routine> to /usr/local/bin
 ```
 
 Then run one:
 
 ```
-$ ./src/c/level1/bmb_daxpy
+$ bmb_daxpy
 # routine: daxpy
 Thread count    Vector size     time [s]
 1               4096            0.000003
+```
+
+Prefer not to use `sudo`? `./configure --prefix="$HOME/.local"` installs
+there instead — just make sure `$HOME/.local/bin` is on your `PATH`.
+
+Working from a git checkout instead of a release tarball? Same steps, plus
+generating `configure` yourself first:
+
+```bash
+sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+git clone https://github.com/MathieuCAISSA/blas-microbenchmark.git
+cd blas-microbenchmark
+autoreconf -fi
+./configure && make && make check && sudo make install
 ```
 
 ## The benchmarks
