@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src/c/common
+AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src/c/common $(BMB_NETLIB_CPPFLAGS)
 LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 
 bin_PROGRAMS = \

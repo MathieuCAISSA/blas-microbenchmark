@@ -82,23 +82,20 @@ AC_ARG_WITH([blas-libpath],
   [])
 
 AC_ARG_WITH([blas-backend],
-  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|nvpl|armpl],
+  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl],
     [BLAS backend to build against (default: auto, i.e. search for any CBLAS-compatible library on the default paths)])],
   [bmb_blas_backend="$withval"],
   [bmb_blas_backend=auto])
 
 AS_CASE(["$bmb_blas_backend"],
-  [auto|openblas|blis|nvpl|armpl], [],
-  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, nvpl, armpl (got '$bmb_blas_backend')])])
+  [auto|openblas|blis|netlib|nvpl|armpl], [],
+  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, netlib, nvpl, armpl (got '$bmb_blas_backend')])])
 
 dnl Generic hints, applied whatever the backend. Backend-specific ones are
 dnl applied inside each case below, so they take priority over these.
 BMB_ENV_HINTS([CBLAS])
 BMB_ENV_HINTS([BLAS])
 
-dnl netlib reference BLAS ships no CBLAS C wrapper on Debian/Ubuntu (only
-dnl the raw Fortran ABI), so it is intentionally not one of the backends
-dnl selectable here; see AGENTS.md.
 AS_CASE(["$bmb_blas_backend"],
 
   [openblas], [
@@ -150,6 +147,42 @@ AS_CASE(["$bmb_blas_backend"],
       [AC_DEFINE([HAVE_BLI_THREAD_SET_NUM_THREADS], [1],
         [Define if bli_thread_set_num_threads() is available.])],
       [AC_MSG_WARN([bli_thread_set_num_threads not found in libblis; --thread-count/BLIS_NUM_THREADS will have no effect.])])
+  ],
+
+  [netlib], [
+    dnl Netlib reference BLAS is a Fortran library. Some distributions also
+    dnl package a CBLAS layer inside it (Debian/Ubuntu do, declared by
+    dnl cblas-netlib.h rather than the usual cblas.h), but plenty of netlib
+    dnl builds -- source builds, cluster modules -- have none, so the
+    dnl benchmarks get their cblas_* entry points from src/c/netlib instead,
+    dnl which forwards to the Fortran symbols. One code path, works either
+    dnl way; see AGENTS.md.
+    dnl
+    dnl The library itself needs care: on Debian/Ubuntu plain -lblas goes
+    dnl through update-alternatives and usually lands on OpenBLAS, so look
+    dnl for the reference build's own directory first.
+    bmb_netlib_libdir=
+    for bmb_dir in /usr/lib/*/blas /usr/lib64/blas /usr/lib/blas /usr/local/lib/blas; do
+      if test -f "$bmb_dir/libblas.so" || test -f "$bmb_dir/libblas.a"; then
+        bmb_netlib_libdir="$bmb_dir"
+        break
+      fi
+    done
+    AS_IF([test -n "$bmb_netlib_libdir"], [
+      AC_MSG_NOTICE([found netlib reference BLAS in $bmb_netlib_libdir])
+      BMB_ADD_LIBDIR([$bmb_netlib_libdir])
+    ])
+    BMB_ENV_HINTS([NETLIB])
+    dnl Only the Fortran ABI is required: the CBLAS side is ours.
+    AC_SEARCH_LIBS([dgemm_], [blas refblas], [], [
+      AC_MSG_ERROR([Netlib BLAS not found (dgemm_ unresolved). Install libblas-dev, load your netlib module (NETLIB_ROOT/NETLIB_LIBDIR and BLAS_ROOT/BLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
+    ])
+    dnl Reference BLAS has no runtime thread control and no thread-count
+    dnl environment variable of its own; make that explicit so bmb_threads.c
+    dnl doesn't fall through to the generic OpenMP path, which would have no
+    dnl effect on it anyway.
+    AC_DEFINE([BMB_NO_THREAD_CONTROL], [1],
+      [Define if the selected BLAS backend has no runtime thread-count API.])
   ],
 
   [nvpl], [
@@ -253,6 +286,15 @@ AS_IF([test "x$OPENMP_CFLAGS" != "x"], [
 ])
 
 AC_CHECK_LIB([m], [sqrt])
+
+dnl The netlib backend supplies its own cblas_* layer from src/c/netlib;
+dnl that directory must be on the include path ahead of anything else, so
+dnl the benchmarks' #include <cblas.h> resolves to it.
+AM_CONDITIONAL([BLAS_BACKEND_NETLIB], [test "x$bmb_blas_backend" = xnetlib])
+AS_IF([test "x$bmb_blas_backend" = xnetlib],
+  [BMB_NETLIB_CPPFLAGS='-I$(top_srcdir)/src/c/netlib'],
+  [BMB_NETLIB_CPPFLAGS=])
+AC_SUBST([BMB_NETLIB_CPPFLAGS])
 
 dnl -----------------------------------------------------------------------
 dnl GPU backends: reserved, not implemented.

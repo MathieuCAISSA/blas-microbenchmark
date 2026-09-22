@@ -6,7 +6,11 @@
 #include "bmb_threads.h"
 #include "bmb_log.h"
 
-#if defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
+#if defined(BMB_NO_THREAD_CONTROL)
+/* Backend with no runtime thread-count API and no thread-count environment
+ * variable of its own (netlib reference BLAS): nothing to set, nothing to
+ * reconcile. */
+#elif defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
 #include <stdint.h>
 /* dim_t defaults to a 64-bit type in BLIS regardless of the CBLAS
  * integer width (BLIS_BLAS_INT_TYPE_SIZE), so declare it explicitly
@@ -23,7 +27,11 @@ extern void openblas_set_num_threads(int num_threads);
 
 void bmb_threads_set(unsigned int count)
 {
-#if defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
+#if defined(BMB_NO_THREAD_CONTROL)
+    if (count > 1) {
+        bmb_log_debug("This BLAS backend is single-threaded; --thread-count is ignored.");
+    }
+#elif defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
     bli_thread_set_num_threads((int64_t) count);
 #elif defined(HAVE_OPENBLAS_SET_NUM_THREADS)
     openblas_set_num_threads((int) count);

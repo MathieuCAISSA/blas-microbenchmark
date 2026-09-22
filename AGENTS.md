@@ -107,20 +107,40 @@ an existing one in the same directory, adjust the binary name — small size,
 | --- | --- | --- |
 | OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | CI, `openblas` job |
 | BLIS | `--with-blas-backend=blis` | CI, `blis` job |
+| Netlib | `--with-blas-backend=netlib` | CI, `netlib` job |
 | NVPL | `--with-blas-backend=nvpl` | CI, `nvpl` job (`ubuntu-24.04-arm`) |
 | ArmPL | `--with-blas-backend=armpl` | CI, `armpl` job (`ubuntu-24.04-arm`) |
-| Netlib | — | Not implemented — no code |
 | cuBLAS / rocBLAS | — | Not implemented, not planned |
 
-All four implemented backends expose the standard CBLAS interface, so the
-same `bmb_<routine>.c` files link against whichever one `configure` picks;
-only `configure.ac`'s backend-detection logic and `bmb_threads.c`'s
-thread-control dispatch differ per backend.
+Every backend is reached through the CBLAS interface, so the same
+`bmb_<routine>.c` files link against whichever one `configure` picks; only
+`configure.ac`'s detection logic and `bmb_threads.c`'s thread-control
+dispatch differ per backend.
 
-**Netlib**: Debian/Ubuntu's `libblas-dev` has no CBLAS C wrapper, only the
-raw Fortran ABI (no `cblas.h`, no `cblas_dgemm` symbol). Supporting it
-needs a small hand-written CBLAS-over-Fortran shim — nothing in the tree
-provides one yet.
+**Netlib** is the exception in how it gets that interface. Reference BLAS
+is a Fortran library; some distributions bundle a CBLAS layer in it
+(Debian/Ubuntu do — declared by `cblas-netlib.h`, *not* `cblas.h`, which is
+why a plain search for `cblas.h` finds nothing and why this file previously
+claimed no such layer existed at all), but source builds and cluster
+modules often have none. So `src/c/netlib/` provides the `cblas_*` entry
+points itself, forwarding to the Fortran symbols, and that directory goes
+on the include path ahead of everything else only for this backend, so its
+`cblas.h` never shadows a real one. One code path, works either way.
+
+Two things that backend gets wrong easily:
+
+- Plain `-lblas` on Debian/Ubuntu goes through `update-alternatives` and
+  normally resolves to *OpenBLAS*, silently benchmarking the wrong library.
+  `configure` therefore looks for the reference build's own directory
+  (`/usr/lib/*/blas`) first. If you touch that probe, check what
+  `ldd src/c/level3/bmb_dgemm` actually resolves to.
+- The shim translates row-major CBLAS calls to the column-major Fortran
+  ABI. Getting a flip wrong yields a transposed or mirror-triangle result
+  silently, with no crash. `src/c/netlib/test_netlib_cblas.c` compares the
+  shim against naive reference implementations for exactly this reason, and
+  runs as part of `make check` for this backend — it has been confirmed to
+  fail when a mapping is deliberately broken, so treat a failure there as
+  real.
 
 **cuBLAS / rocBLAS**: deliberately out of scope. Handle-based,
 device-memory API, fundamentally different from the CBLAS interface every
@@ -176,11 +196,11 @@ that happens to have multiple BLAS libraries installed will `AC_DEFINE` a
 `HAVE_*_SET_NUM_THREADS` macro for a library that isn't actually in `LIBS`,
 and the link will fail with an undefined reference.
 
-If you're implementing Netlib, do it fully — the CBLAS-over-Fortran shim,
-`configure.ac` detection, and a CI job for it — rather than adding a
-partial `--with-blas-backend=netlib` case that fails at compile or link
-time. Leaving a backend entirely unimplemented (as today, for Netlib) is
-fine; leaving it half-done is not.
+If you add another backend, do it fully — `configure.ac` detection, the
+thread-count API in `bmb_threads.c` if it has one, and a CI job — rather
+than a partial `--with-blas-backend=X` case that fails at compile or link
+time. Leaving a backend entirely unimplemented is fine; leaving it
+half-done is not.
 
 ## Code style
 
@@ -196,12 +216,12 @@ fine; leaving it half-done is not.
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs `autoreconf -fi`,
+GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
 `configure`, `make`, and `make check` on every push/PR, once per
-implemented backend: `openblas` and `blis` on `ubuntu-latest`, `nvpl` and
-`armpl` on `ubuntu-24.04-arm` (GitHub's free Linux arm64 hosted runner for
-public repos — both those backends are aarch64-only). Keep it green — a
-routine that only works "on my machine" isn't done.
+implemented backend: `openblas`, `blis` and `netlib` on `ubuntu-latest`,
+`nvpl` and `armpl` on `ubuntu-24.04-arm` (GitHub's free Linux arm64 hosted
+runner for public repos — both those backends are aarch64-only). Keep it
+green — a routine that only works "on my machine" isn't done.
 
 ## Cutting a release
 

@@ -9,15 +9,15 @@ routine, a shared CLI, and plain text/CSV/JSON output. Think
 for BLAS instead of MPI.
 
 Works against whichever BLAS library you already have installed —
-OpenBLAS, BLIS, NVPL, or ArmPL — so you can compare them on the same
-hardware with the same command.
+OpenBLAS, BLIS, Netlib reference, NVPL or ArmPL — so you can compare them
+on the same hardware with the same command.
 
 ## Install
 
 **Requirements:** a C compiler (GCC ≥ 12) and one BLAS library — at
 minimum [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS)
-(`libopenblas-dev` on Debian/Ubuntu). BLIS, NVPL, and ArmPL also work; see
-[Backends](#backends).
+(`libopenblas-dev` on Debian/Ubuntu). BLIS, Netlib reference BLAS, NVPL
+and ArmPL also work; see [Backends](#backends).
 
 ```bash
 ./configure
@@ -53,7 +53,7 @@ module load openblas     # sets OPENBLAS_ROOT / OPENBLAS_INCDIR / OPENBLAS_LIBDI
 ```
 
 `<PKG>_ROOT`, `<PKG>_INCDIR` and `<PKG>_LIBDIR` are honoured for `OPENBLAS`,
-`BLIS`, `NVPL`, `ARMPL`, plus generic `BLAS_*`/`CBLAS_*`. Anything unusual
+`BLIS`, `NETLIB`, `NVPL`, `ARMPL`, plus generic `BLAS_*`/`CBLAS_*`. Anything unusual
 can still be pointed at explicitly with `--with-blas-incpath=DIR` and
 `--with-blas-libpath=DIR`.
 
@@ -107,21 +107,24 @@ $ OMP_NUM_THREADS=4 bmb_dgemm -t 1
 OMP_NUM_THREADS is ignored! Set to 4 but option -t is set to 1.
 ```
 
+Netlib reference BLAS is single-threaded and has no thread-count API, so
+`-t` has no effect there.
+
 ## Backends
 
-Pick one at `configure` time — no code changes, they all share the same
-CBLAS interface, and all four are built and tested in CI:
+Pick one at `configure` time — no code changes needed, and every one of
+them is built and tested in CI:
 
 | Backend | `configure` flag |
 | --- | --- |
 | OpenBLAS *(default)* | *(none needed, or `--with-blas-backend=openblas`)* |
 | BLIS | `--with-blas-backend=blis` |
+| Netlib reference | `--with-blas-backend=netlib` |
 | NVPL *(aarch64)* | `--with-blas-backend=nvpl` |
 | ArmPL *(aarch64)* | `--with-blas-backend=armpl` |
 
-Netlib isn't supported yet (Debian/Ubuntu ships no CBLAS wrapper for it),
-and cuBLAS/rocBLAS aren't planned. See [AGENTS.md](AGENTS.md) for why, and
-for each backend's exact install steps.
+cuBLAS/rocBLAS aren't planned. See [AGENTS.md](AGENTS.md) for each
+backend's install steps and internals.
 
 `./configure --help` lists every option, including `--with-blas-libpath`
 for a non-standard install location and the usual `CC`/`CFLAGS`/`LDFLAGS`.
