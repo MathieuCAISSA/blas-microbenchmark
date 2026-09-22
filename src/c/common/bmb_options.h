@@ -17,7 +17,7 @@ typedef struct {
     unsigned int warmup;      /* -x, --warmup */
     unsigned int iterations;  /* -i, --iterations */
 
-    bmb_range_t vector_size;  /* -v, --vector-size    (level 1 & 2) */
+    bmb_range_t vector_size;  /* -v, --vector-size    (level 1) */
 
     bmb_range_t matrix_dim1;  /* -m, --matrix-dim1    (level 2 & 3) */
     bmb_range_t matrix_dim2;  /* -M, --matrix-dim2    (level 2 & 3) */

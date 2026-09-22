@@ -1,165 +1,111 @@
 # blas-microbenchmark
 
-Microbenchmarks for BLAS routines, structured after the design of
-[osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/) (OMB):
-one small, self-contained executable per BLAS routine, a common option/timing/
-output layer, and an Autotools build.
+[![CI](https://github.com/MathieuCAISSA/blas-microbenchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuCAISSA/blas-microbenchmark/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-Unlike OMB (which targets MPI), this project only benchmarks BLAS, so it keeps
-a flatter layout: one `src/c` tree with a `common/` helper library and one
-directory per BLAS level.
+Command-line microbenchmarks for BLAS routines — one small executable per
+routine, a shared CLI, and plain text/CSV/JSON output. Think
+[osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/), but
+for BLAS instead of MPI.
 
-## Status
+Works against whichever BLAS library you already have installed —
+OpenBLAS, BLIS, NVPL, or ArmPL — so you can compare them on the same
+hardware with the same command.
 
-BLAS levels 1, 2 and 3 (double precision only) are benchmarked against a
-choice of backends, selected at `configure` time:
-
-| Backend | `configure` flag | Status |
-| --- | --- | --- |
-| OpenBLAS | `--with-blas-backend=openblas` (or `auto`) | Verified in CI: built, run, `make check` passes |
-| BLIS | `--with-blas-backend=blis` | Verified in CI: built, run, `make check` passes |
-| NVPL | `--with-blas-backend=nvpl` | Verified in CI (Linux arm64 runner): built, run, `make check` passes |
-| ArmPL | `--with-blas-backend=armpl` | Verified in CI (Linux arm64 runner): built, run, `make check` passes |
-| Netlib | — | Not yet supported: Debian/Ubuntu ships no CBLAS C wrapper for it (only the raw Fortran ABI); see [AGENTS.md](AGENTS.md) |
-
-All of these expose the standard **CBLAS** C interface, so the same
-`bmb_<routine>` source files link against whichever one `configure` picks.
-
-cuBLAS and rocBLAS are not implemented; `configure` accepts
-`--with-cuda-libpath`/`--with-rocm-libpath` as reserved, currently-ignored
-placeholders.
-
-## Layout
-
-```
-blas-microbenchmark/
-├── configure.ac
-├── Makefile.am
-├── LICENSE
-├── README.md
-└── src
-    └── c
-        ├── common          # options, logging, timing, results, printing, threading
-        ├── level1          # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
-        ├── level2          # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
-        └── level3          # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
-```
-
-Each benchmark builds to its own executable, named after the routine it
-measures (e.g. `bmb_dgemm`).
-
-## Building
-
-Requires GCC ≥ 12 (this first implementation only targets GCC), Autotools
-(autoconf, automake), and one CBLAS-compatible BLAS library:
-
-- [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) — `libopenblas-dev` on
-  Debian/Ubuntu (default backend, no extra flag needed), or
-- [BLIS](https://github.com/flame/blis) — `libblis-openmp-dev` on
-  Debian/Ubuntu, pass `--with-blas-backend=blis`.
-
-On aarch64 (Arm servers / NVIDIA Grace), two more backends are available:
-
-- [NVPL BLAS](https://developer.nvidia.com/nvpl) — install `libnvpl-blas0`
-  and `libnvpl-blas-dev` (NVIDIA's apt repo), pass `--with-blas-backend=nvpl`.
-- [Arm Performance Libraries](https://developer.arm.com/tools-and-software/arm-performance-libraries) —
-  install `arm-performance-libraries` (Arm's apt repo), pass
-  `--with-blas-backend=armpl`.
+## Quick start
 
 ```bash
+sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+
+git clone https://github.com/MathieuCAISSA/blas-microbenchmark.git
+cd blas-microbenchmark
+
 autoreconf -fi
-mkdir -p build && cd build   # out-of-tree build keeps the source tree clean
+mkdir build && cd build
 ../configure
 make
-make check   # runs a minimal smoke test for every benchmark
+make check          # sanity-checks every benchmark
 ```
 
-### Useful `configure` options
-
-| Option | Purpose |
-| --- | --- |
-| `-h`, `--help` | List all configure options |
-| `--prefix=PREFIX` | Installation prefix |
-| `--with-blas-backend=auto\|openblas\|blis\|nvpl\|armpl` | BLAS backend to build against (default: `auto`, search for any CBLAS library) |
-| `--with-blas-libpath=DIR` | Directory containing the BLAS library to link against, if not on the default path |
-| `--with-cuda-libpath=DIR` | Reserved for the future cuBLAS backend |
-| `--with-rocm-libpath=DIR` | Reserved for the future rocBLAS backend |
-| `CC=...` | C compiler |
-| `CFLAGS=...` | C compiler flags |
-| `LDFLAGS=...` | Linker flags |
-| `LIBS=...` | Extra libraries to link |
-
-Examples:
-
-```bash
-# Custom OpenBLAS install
-./configure --with-blas-libpath=/opt/openblas/lib CPPFLAGS=-I/opt/openblas/include
-
-# BLIS instead of OpenBLAS
-./configure --with-blas-backend=blis
-```
-
-## Running a benchmark
-
-Every benchmark shares the same command-line interface:
+Then run one:
 
 ```
-Usage: bmb_<routine> [OPTIONS]
-
-  -x, --warmup <n>               iterations ignored before timing (default: 1)
-  -i, --iterations <n>           iterations measured (default: 10)
-  -v, --vector-size <[min:]max>  vector size range, level 1 & 2 (default: 4096)
-  -m, --matrix-dim1 <[min:]max>  matrix first-dimension range, level 2 & 3 (default: 4096)
-  -M, --matrix-dim2 <[min:]max>  matrix second-dimension range, level 2 & 3
-                                  (default: same as --matrix-dim1, i.e. square matrices)
-  -t, --thread-count <[min:]max> number of BLAS threads (default: 1)
-  -s, --statistics               add stddev/min/max columns (default: off)
-  -o, --output <filename>        also save results to filename
-  -f, --output-format <fmt>      csv or json (default: csv, or inferred from -o's extension)
-  -h, --help                     show this help
-```
-
-A `[min:]max` range is swept by doubling from `min` to `max` (e.g. `256:4096`
-sweeps 256, 512, 1024, 2048, 4096). A bare `max` runs that single size.
-
-Level 1 routines sweep `--vector-size`. Level 2 and 3 routines sweep
-`--matrix-dim1`/`--matrix-dim2`; routines that only have one meaningful
-dimension (e.g. `dsymv`, a symmetric N×N matrix) ignore `--matrix-dim2` and
-only sweep `--matrix-dim1`. `dgemm` reuses `--matrix-dim1` for both its M and
-K dimensions, since only two size options are exposed by design.
-
-### Examples
-
-Default run (1 thread, 4096-element vectors):
-
-```
-$ bmb_daxpy
+$ ./src/c/level1/bmb_daxpy
 # routine: daxpy
 Thread count    Vector size     time [s]
 1               4096            0.000003
 ```
 
-4 threads via the command line:
+## The benchmarks
+
+19 double-precision routines across the three BLAS levels, each its own
+`bmb_<routine>` executable after `make`:
+
+| Level | Routines |
+| --- | --- |
+| 1 (vector-vector) | `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap` |
+| 2 (matrix-vector) | `dgemv` `dger` `dsymv` `dsyr` `dsyr2` `dtrmv` `dtrsv` |
+| 3 (matrix-matrix) | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` |
+
+## Options
+
+Every benchmark takes the same flags:
 
 ```
-$ bmb_dgemm -t 4
+-x, --warmup <n>               iterations ignored before timing (default: 1)
+-i, --iterations <n>           iterations measured (default: 10)
+-v, --vector-size <[min:]max>  vector size range, level 1 (default: 4096)
+-m, --matrix-dim1 <[min:]max>  matrix first-dimension range, level 2 & 3 (default: 4096)
+-M, --matrix-dim2 <[min:]max>  matrix second-dimension range, level 2 & 3
+                                (default: same as --matrix-dim1, i.e. square)
+-t, --thread-count <[min:]max> number of BLAS threads (default: 1)
+-s, --statistics               add stddev/min/max columns
+-o, --output <file>            also save results to file
+-f, --output-format <fmt>      csv or json (default: csv, or guessed from -o)
+-h, --help                     show this help
 ```
 
-4 threads via the BLAS backend's environment variable (`OMP_NUM_THREADS` for
-OpenBLAS-OpenMP/NVPL/ArmPL, `BLIS_NUM_THREADS` for BLIS):
+A `[min:]max` range doubles from `min` to `max` (`256:4096` → 256, 512,
+1024, 2048, 4096). A bare `max` runs just that one size.
 
-```
-$ OMP_NUM_THREADS=4 bmb_dgemm
+```bash
+# sweep vector size, with stddev/min/max, saved as CSV
+bmb_ddot -v 1024:16384 -s -o results.csv
+
+# 4 threads, either way works the same:
+bmb_dgemm -t 4
+OMP_NUM_THREADS=4 bmb_dgemm
 ```
 
-If both are set to different values, the command-line option wins and a
-warning is printed:
+If the thread-count flag and the backend's environment variable
+(`OMP_NUM_THREADS` for OpenBLAS/NVPL/ArmPL, `BLIS_NUM_THREADS` for BLIS)
+disagree, the flag wins and a warning explains why:
 
 ```
 $ OMP_NUM_THREADS=4 bmb_dgemm -t 1
 OMP_NUM_THREADS is ignored! Set to 4 but option -t is set to 1.
 ```
 
+## Backends
+
+Pick one at `configure` time — no code changes, they all share the same
+CBLAS interface:
+
+| Backend | `configure` flag |
+| --- | --- |
+| OpenBLAS *(default)* | *(none needed, or `--with-blas-backend=openblas`)* |
+| BLIS | `--with-blas-backend=blis` |
+| NVPL *(aarch64)* | `--with-blas-backend=nvpl` |
+| ArmPL *(aarch64)* | `--with-blas-backend=armpl` |
+
+All four build and pass `make check` in CI. Netlib isn't supported yet —
+Debian/Ubuntu ships no CBLAS wrapper for it — and cuBLAS/rocBLAS aren't
+planned. See [AGENTS.md](AGENTS.md) for the technical details and the
+exact install steps `.github/workflows/ci.yml` uses for each backend.
+
+`./configure --help` lists every option, including `--with-blas-libpath` for
+a non-standard install location and the usual `CC`/`CFLAGS`/`LDFLAGS`.
+
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE).
+[Apache License 2.0](LICENSE).

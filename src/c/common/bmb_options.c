@@ -236,7 +236,7 @@ void bmb_options_print_help(const char *prog_name)
     fprintf(stdout,
         "  -x, --warmup <n>              iterations ignored before timing (default: %u)\n"
         "  -i, --iterations <n>          iterations measured (default: %u)\n"
-        "  -v, --vector-size <[min:]max> vector size range for level 1 & 2 routines (default: %u)\n"
+        "  -v, --vector-size <[min:]max> vector size range for level 1 routines (default: %u)\n"
         "  -m, --matrix-dim1 <[min:]max> matrix first-dimension range for level 2 & 3 (default: %u)\n"
         "  -M, --matrix-dim2 <[min:]max> matrix second-dimension range for level 2 & 3\n"
         "                                 (default: same as --matrix-dim1, i.e. square matrices)\n"
