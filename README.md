@@ -38,7 +38,7 @@ Thread count    Vector size     time [s]
 
 ## The benchmarks
 
-19 double-precision routines across the three BLAS levels, each its own
+20 double-precision routines across the three BLAS levels, each its own
 `bmb_<routine>` executable after `make`:
 
 | Level | Routines |
