@@ -231,14 +231,21 @@ those are plain git exports with no `configure` in them.
 
 `.github/workflows/release.yml` handles that: on a pushed `v*` tag it
 builds the tarball, verifies it unpacks and builds with no Autotools
-present, and uploads it to the release. So:
+present, then uploads it — *creating* the release if the tag has none yet.
 
 ```bash
-# bump the version in configure.ac (AC_INIT) first if needed
+# 1. bump the version in configure.ac (AC_INIT), commit, push
+# 2. tag it -- this is what kicks the workflow off
 git tag -a vX.Y.Z -m "..."
 git push origin vX.Y.Z
-gh release create vX.Y.Z --title vX.Y.Z --notes "..."   # workflow attaches the tarball
+# 3. wait for the workflow (~30s), then write the release notes
+gh release edit vX.Y.Z --title vX.Y.Z --notes "..."
 ```
 
-Re-run it for an existing tag with
-`gh workflow run release.yml -f tag=vX.Y.Z` if an upload needs redoing.
+Note the order: **edit the notes, don't create the release**. The workflow
+gets there within about half a minute of the tag push and creates it with
+`--generate-notes`, so a `gh release create` afterwards just fails with
+"Release.tag_name already exists".
+
+Re-run the upload for an existing tag with
+`gh workflow run release.yml -f tag=vX.Y.Z`.
