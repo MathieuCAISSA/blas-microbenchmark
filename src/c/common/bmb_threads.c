@@ -16,13 +16,18 @@
  * integer width (BLIS_BLAS_INT_TYPE_SIZE), so declare it explicitly
  * rather than pulling in the full blis.h. */
 extern void bli_thread_set_num_threads(int64_t n_threads);
-#define BMB_THREAD_ENV_VAR "BLIS_NUM_THREADS"
+/* BLIS reads BLIS_NUM_THREADS first and falls back to OMP_NUM_THREADS. */
+#define BMB_THREAD_ENV_VARS "BLIS_NUM_THREADS", "OMP_NUM_THREADS"
 #elif defined(HAVE_OPENBLAS_SET_NUM_THREADS)
 extern void openblas_set_num_threads(int num_threads);
-#define BMB_THREAD_ENV_VAR "OPENBLAS_NUM_THREADS"
+/* Same order OpenBLAS itself uses in blas_get_cpu_number(): its own
+ * variable, then the GotoBLAS one it inherited, then OMP_NUM_THREADS.
+ * Reconciling only the first would let `OMP_NUM_THREADS=4 bmb_dgemm`
+ * report a single-threaded run with no warning at all. */
+#define BMB_THREAD_ENV_VARS "OPENBLAS_NUM_THREADS", "GOTO_NUM_THREADS", "OMP_NUM_THREADS"
 #elif defined(HAVE_OMP_SET_NUM_THREADS)
 #include <omp.h>
-#define BMB_THREAD_ENV_VAR "OMP_NUM_THREADS"
+#define BMB_THREAD_ENV_VARS "OMP_NUM_THREADS"
 #endif
 
 void bmb_threads_set(unsigned int count)
@@ -47,34 +52,42 @@ void bmb_threads_set(unsigned int count)
 
 void bmb_threads_resolve(bmb_options_t *opts)
 {
-#if defined(BMB_THREAD_ENV_VAR)
-    const char *env_val = getenv(BMB_THREAD_ENV_VAR);
-    unsigned long env_count;
-    char *endptr;
+#if defined(BMB_THREAD_ENV_VARS)
+    static const char *const env_vars[] = { BMB_THREAD_ENV_VARS };
+    size_t i;
 
-    if (env_val == NULL || env_val[0] == '\0') {
-        return;
-    }
+    /* The backend's own precedence order, so the variable reported here is
+     * the one it would actually have obeyed. */
+    for (i = 0; i < sizeof(env_vars) / sizeof(env_vars[0]); i++) {
+        const char *env_val = getenv(env_vars[i]);
+        unsigned long env_count;
+        char *endptr;
 
-    env_count = strtoul(env_val, &endptr, 10);
-    if (*endptr != '\0' || env_count == 0) {
-        return;
-    }
-
-    if (opts->thread_count_set) {
-        if (env_count != opts->thread_count.min || env_count != opts->thread_count.max) {
-            char msg[256];
-
-            snprintf(msg, sizeof(msg),
-                     "%s is ignored! Set to %lu but option -t is set to %zu.",
-                     BMB_THREAD_ENV_VAR, env_count, opts->thread_count.max);
-            bmb_log_warning(msg);
+        if (env_val == NULL || env_val[0] == '\0') {
+            continue;
         }
+
+        env_count = strtoul(env_val, &endptr, 10);
+        if (*endptr != '\0' || env_count == 0) {
+            continue;
+        }
+
+        if (opts->thread_count_set) {
+            if (env_count != opts->thread_count.min || env_count != opts->thread_count.max) {
+                char msg[256];
+
+                snprintf(msg, sizeof(msg),
+                         "%s is ignored! Set to %lu but option -t is set to %zu.",
+                         env_vars[i], env_count, opts->thread_count.max);
+                bmb_log_warning(msg);
+            }
+            return;
+        }
+
+        opts->thread_count.min = (size_t) env_count;
+        opts->thread_count.max = (size_t) env_count;
         return;
     }
-
-    opts->thread_count.min = (size_t) env_count;
-    opts->thread_count.max = (size_t) env_count;
 #else
     (void) opts;
 #endif
