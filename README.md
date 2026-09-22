@@ -19,10 +19,6 @@ minimum [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS)
 (`libopenblas-dev` on Debian/Ubuntu). BLIS, NVPL, and ArmPL also work; see
 [Backends](#backends).
 
-Download and extract the [latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest),
-then the classic Autotools trio — `configure` ships pre-generated, no
-autoconf/automake/libtool needed:
-
 ```bash
 ./configure
 make
