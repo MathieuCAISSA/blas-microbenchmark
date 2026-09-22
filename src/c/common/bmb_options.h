@@ -18,8 +18,10 @@ typedef struct {
     unsigned int iterations;  /* -i, --iterations */
 
     bmb_range_t vector_size;  /* -v, --vector-size    (level 1) */
+    int vector_size_set;      /* whether -v/--vector-size was given */
 
     bmb_range_t matrix_dim1;  /* -m, --matrix-dim1    (level 2 & 3) */
+    int matrix_dim1_set;      /* whether -m/--matrix-dim1 was given */
     bmb_range_t matrix_dim2;  /* -M, --matrix-dim2    (level 2 & 3) */
     int matrix_dim2_set;      /* whether -M/--matrix-dim2 was given */
 

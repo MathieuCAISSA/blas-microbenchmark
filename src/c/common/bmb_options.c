@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,17 +31,53 @@ static const struct option bmb_long_options[] = {
 
 static const char *bmb_short_options = "x:i:v:m:M:t:so:f:h";
 
+/* Sizes and thread counts both end up as `int` arguments to BLAS, which is
+ * a 32-bit integer in every LP64 build. Anything larger has to be refused
+ * up front: the cast would silently truncate, and a dimension landing on 0
+ * would time an empty call and report it as a result. */
+#define BMB_MAX_VALUE ((unsigned long long) INT_MAX)
+
+#define BMB_PARSE_OK        0
+#define BMB_PARSE_MALFORMED (-1)
+#define BMB_PARSE_RANGE     (-2)
+
+/* Parses a bare unsigned decimal integer with none of strtoull's leniency:
+ * no sign, no leading blanks, no trailing characters. In particular "-5"
+ * must not be accepted -- strtoull happily wraps it around to a huge
+ * value. */
+static int bmb_parse_uint(const char *str, unsigned long long limit, unsigned long long *out)
+{
+    char *endptr;
+    unsigned long long value;
+
+    if (str == NULL || str[0] < '0' || str[0] > '9') {
+        return BMB_PARSE_MALFORMED;
+    }
+
+    errno = 0;
+    value = strtoull(str, &endptr, 10);
+    if (*endptr != '\0') {
+        return BMB_PARSE_MALFORMED;
+    }
+    if (errno != 0 || value > limit) {
+        return BMB_PARSE_RANGE;
+    }
+
+    *out = value;
+    return BMB_PARSE_OK;
+}
+
 /* Parses a "[min:]max" range of positive integers. */
 static int bmb_parse_range(const char *str, bmb_range_t *out)
 {
     char buf[64];
     char *colon;
-    char *endptr;
     unsigned long long min_val;
     unsigned long long max_val;
+    int status;
 
     if (str == NULL || str[0] == '\0' || strlen(str) >= sizeof(buf)) {
-        return -1;
+        return BMB_PARSE_MALFORMED;
     }
     strncpy(buf, str, sizeof(buf) - 1);
     buf[sizeof(buf) - 1] = '\0';
@@ -48,36 +85,72 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
     colon = strchr(buf, ':');
     if (colon != NULL) {
         *colon = '\0';
-        if (buf[0] == '\0' || colon[1] == '\0') {
-            return -1;
+
+        status = bmb_parse_uint(buf, BMB_MAX_VALUE, &min_val);
+        if (status != BMB_PARSE_OK) {
+            return status;
         }
 
-        errno = 0;
-        min_val = strtoull(buf, &endptr, 10);
-        if (errno != 0 || *endptr != '\0') {
-            return -1;
-        }
-
-        errno = 0;
-        max_val = strtoull(colon + 1, &endptr, 10);
-        if (errno != 0 || *endptr != '\0') {
-            return -1;
+        status = bmb_parse_uint(colon + 1, BMB_MAX_VALUE, &max_val);
+        if (status != BMB_PARSE_OK) {
+            return status;
         }
     } else {
-        errno = 0;
-        max_val = strtoull(buf, &endptr, 10);
-        if (errno != 0 || *endptr != '\0') {
-            return -1;
+        status = bmb_parse_uint(buf, BMB_MAX_VALUE, &max_val);
+        if (status != BMB_PARSE_OK) {
+            return status;
         }
         min_val = max_val;
     }
 
     if (min_val == 0 || max_val == 0 || min_val > max_val) {
-        return -1;
+        return BMB_PARSE_MALFORMED;
     }
 
     out->min = (size_t) min_val;
     out->max = (size_t) max_val;
+    return BMB_PARSE_OK;
+}
+
+/* Parses one range option, reporting what was wrong with it. */
+static int bmb_option_range(const char *str, const char *option, bmb_range_t *out)
+{
+    char msg[256];
+
+    switch (bmb_parse_range(str, out)) {
+    case BMB_PARSE_OK:
+        return 0;
+    case BMB_PARSE_RANGE:
+        snprintf(msg, sizeof(msg),
+                 "Value out of range for %s: each bound must be between 1 and %d.",
+                 option, INT_MAX);
+        break;
+    default:
+        snprintf(msg, sizeof(msg),
+                 "Invalid value for %s (expected [min:]max, positive integers).", option);
+        break;
+    }
+
+    bmb_log_error(msg);
+    return -1;
+}
+
+/* Parses one plain count option (--warmup, --iterations). */
+static int bmb_option_count(const char *str, const char *option, unsigned int min_allowed,
+                            unsigned int *out)
+{
+    unsigned long long value;
+    char msg[256];
+
+    if (bmb_parse_uint(str, (unsigned long long) UINT_MAX, &value) != BMB_PARSE_OK
+        || value < (unsigned long long) min_allowed) {
+        snprintf(msg, sizeof(msg), "Invalid value for %s (expected an integer between %u and %u).",
+                 option, min_allowed, UINT_MAX);
+        bmb_log_error(msg);
+        return -1;
+    }
+
+    *out = (unsigned int) value;
     return 0;
 }
 
@@ -90,9 +163,11 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
 
     opts->vector_size.min = BMB_DEFAULT_SIZE;
     opts->vector_size.max = BMB_DEFAULT_SIZE;
+    opts->vector_size_set = 0;
 
     opts->matrix_dim1.min = BMB_DEFAULT_SIZE;
     opts->matrix_dim1.max = BMB_DEFAULT_SIZE;
+    opts->matrix_dim1_set = 0;
     opts->matrix_dim2.min = BMB_DEFAULT_SIZE;
     opts->matrix_dim2.max = BMB_DEFAULT_SIZE;
     opts->matrix_dim2_set = 0;
@@ -131,48 +206,40 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
     while ((c = getopt_long(argc, argv, bmb_short_options, bmb_long_options, NULL)) != -1) {
         switch (c) {
         case 'x':
-            errno = 0;
-            opts->warmup = (unsigned int) strtoul(optarg, NULL, 10);
-            if (errno != 0) {
-                bmb_log_error("Invalid value for --warmup.");
+            if (bmb_option_count(optarg, "--warmup", 0, &opts->warmup) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             break;
 
         case 'i':
-            errno = 0;
-            opts->iterations = (unsigned int) strtoul(optarg, NULL, 10);
-            if (errno != 0 || opts->iterations == 0) {
-                bmb_log_error("Invalid value for --iterations (must be a positive integer).");
+            if (bmb_option_count(optarg, "--iterations", 1, &opts->iterations) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             break;
 
         case 'v':
-            if (bmb_parse_range(optarg, &opts->vector_size) != 0) {
-                bmb_log_error("Invalid value for --vector-size (expected [min:]max).");
+            if (bmb_option_range(optarg, "--vector-size", &opts->vector_size) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
+            opts->vector_size_set = 1;
             break;
 
         case 'm':
-            if (bmb_parse_range(optarg, &opts->matrix_dim1) != 0) {
-                bmb_log_error("Invalid value for --matrix-dim1 (expected [min:]max).");
+            if (bmb_option_range(optarg, "--matrix-dim1", &opts->matrix_dim1) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
+            opts->matrix_dim1_set = 1;
             break;
 
         case 'M':
-            if (bmb_parse_range(optarg, &opts->matrix_dim2) != 0) {
-                bmb_log_error("Invalid value for --matrix-dim2 (expected [min:]max).");
+            if (bmb_option_range(optarg, "--matrix-dim2", &opts->matrix_dim2) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->matrix_dim2_set = 1;
             break;
 
         case 't':
-            if (bmb_parse_range(optarg, &opts->thread_count) != 0) {
-                bmb_log_error("Invalid value for --thread-count (expected [min:]max).");
+            if (bmb_option_range(optarg, "--thread-count", &opts->thread_count) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->thread_count_set = 1;
