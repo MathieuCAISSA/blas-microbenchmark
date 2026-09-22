@@ -66,6 +66,14 @@ static void teardown(void *vctx)
     free(ctx);
 }
 
+static double flops(size_t dim1, size_t dim2)
+{
+    const double d1 = (double) dim1;
+    const double d2 = (double) dim2;
+
+    return d2 * d1 * (d1 + 1.0);
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -77,6 +85,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.flops = flops;
 
     return bmb_benchmark_main(argc, argv, &bench);
 }

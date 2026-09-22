@@ -82,8 +82,11 @@ buffer, `src/c/level3/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
    else — this is what the timer wraps.
 4. `reset(void *ctx)`, optional: restore whatever `call()` consumed. Run
    before every call, outside the timing window.
-5. `teardown(void *ctx)`: free everything.
-6. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
+5. `flops(dim1, dim2)` / `bytes(dim1, dim2)`, optional: the operation count
+   and the minimum memory traffic of one call, for the `GFLOP/s` and `GB/s`
+   columns. See below for which of the two a routine should declare.
+6. `teardown(void *ctx)`: free everything.
+7. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
    whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, and the
    function pointers above) and call `bmb_benchmark_main(argc, argv, &bench)`.
 
@@ -110,6 +113,27 @@ Routines that merely accumulate into an operand (`daxpy`, `dger`, `dsyr`,
 accumulation bounded for any iteration count, without a per-call copy.
 Never use `alpha == 1.0` for `dscal`: some BLAS implementations
 special-case it as a no-op fast path.
+
+### Which rate a routine declares
+
+- `flops`: every routine that does arithmetic. Use the conventional BLAS
+  operation counts (`2*M*N*K` for gemm, `K*N*(N+1)` for syrk,
+  `N*M*(M+1)` for a left-side trsm, ...) — what the routine is *defined*
+  to compute, not what a particular implementation issues. `dcopy` and
+  `dswap` declare none.
+- `bytes`: levels 1 and 2 only. Count each operand read once and each
+  result written once, the way STREAM does — no read-for-ownership — so
+  the numbers are comparable with STREAM's. Level 3 must *not* declare it:
+  with O(N³) work over O(N²) data the operands live in cache, so a rate
+  built from compulsory traffic is not a bandwidth measurement and would
+  be read as one.
+
+Sanity-check a new formula by comparing across routines rather than
+eyeballing it: at a size large enough to leave the startup noise behind,
+every level 3 routine should land on roughly the same GFLOP/s (the
+machine's peak) and every level 2 routine on roughly the same GB/s. A
+formula off by a factor of two shows up immediately as one routine
+beating the rest.
 
 Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
 `<prog>_SOURCES`) and add a `test_bmb_<routine>.sh` smoke-test script (copy

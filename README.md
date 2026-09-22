@@ -38,8 +38,8 @@ The benchmarks are grouped by BLAS level rather than dumped into `bin`:
 ```
 $ /usr/local/libexec/blas-microbenchmark/level1/bmb_daxpy
 # routine: daxpy
-Thread count    Vector size     time [s]
-1               4096            0.000003
+Thread count    Vector size     time [s]        GFLOP/s   GB/s
+1               4096            0.000001404     5.834     70.002
 ```
 
 Typing that path every time gets old, so the examples below assume the
@@ -85,6 +85,24 @@ can still be pointed at explicitly with `--with-blas-incpath=DIR` and
 | 1 (vector-vector) | `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap` |
 | 2 (matrix-vector) | `dgemv` `dger` `dsymv` `dsyr` `dsyr2` `dtrmv` `dtrsv` |
 | 3 (matrix-matrix) | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` |
+
+## What gets reported
+
+Alongside the wall-clock time, each benchmark reports the rate that
+actually tells you something about the routine:
+
+| Column | Shown for | Meaning |
+| --- | --- | --- |
+| `GFLOP/s` | every routine that does arithmetic | the conventional BLAS operation count (`2·M·N·K` for gemm, `K·N·(N+1)` for syrk, …) divided by the mean time |
+| `GB/s` | levels 1 and 2 | the bytes the routine must move — each operand read once, each result written once — divided by the mean time |
+
+`dcopy` and `dswap` perform no arithmetic, so they get no `GFLOP/s`
+column. Level 3 routines get no `GB/s` one: they reuse their operands out
+of cache (O(N³) work over O(N²) data), so a rate built from compulsory
+traffic would invite a comparison with STREAM that means nothing. Levels 1
+and 2 stream their operands once, and *are* bandwidth-bound, which is
+exactly what that column is for — counted the way STREAM counts it, so the
+two are comparable.
 
 ## Options
 

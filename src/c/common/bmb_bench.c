@@ -115,6 +115,19 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     row->dim2 = dim2;
     bmb_compute_stats(times, opts->iterations, row);
 
+    /* Rates come from the mean. GFLOP/s and GB/s are decimal (1e9), as
+     * they conventionally are for compute and bandwidth figures. */
+    row->gflops = 0.0;
+    row->gbytes_s = 0.0;
+    if (row->time_s > 0.0) {
+        if (bench->flops != NULL) {
+            row->gflops = bench->flops(dim1, dim2) / row->time_s / 1.0e9;
+        }
+        if (bench->bytes != NULL) {
+            row->gbytes_s = bench->bytes(dim1, dim2) / row->time_s / 1.0e9;
+        }
+    }
+
     free(times);
     return 0;
 }
@@ -220,7 +233,8 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
 
-    bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label, opts.statistics);
+    bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
+                        opts.statistics, bench->flops != NULL, bench->bytes != NULL);
 
     for (thread_count = (unsigned int) opts.thread_count.min;;
          thread_count = (unsigned int) bmb_sweep_next(thread_count, opts.thread_count.max)) {

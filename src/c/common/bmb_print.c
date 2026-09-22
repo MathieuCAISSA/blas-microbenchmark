@@ -21,6 +21,12 @@ static void bmb_print_txt_header(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "%-20s", rs->dim2_label);
     }
     fprintf(out, "%-16s", "time [s]");
+    if (rs->has_flops) {
+        fprintf(out, "%-14s", "GFLOP/s");
+    }
+    if (rs->has_bytes) {
+        fprintf(out, "%-14s", "GB/s");
+    }
     if (rs->has_stats) {
         fprintf(out, "%-16s%-16s%-16s", "stddev [s]", "min [s]", "max [s]");
     }
@@ -41,6 +47,12 @@ void bmb_print_txt(FILE *out, const bmb_result_set_t *rs)
             fprintf(out, "%-20zu", row->dim2);
         }
         fprintf(out, "%-16.9f", row->time_s);
+        if (rs->has_flops) {
+            fprintf(out, "%-14.3f", row->gflops);
+        }
+        if (rs->has_bytes) {
+            fprintf(out, "%-14.3f", row->gbytes_s);
+        }
         if (rs->has_stats) {
             fprintf(out, "%-16.9f%-16.9f%-16.9f", row->stddev_s, row->min_s, row->max_s);
         }
@@ -77,6 +89,12 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         bmb_csv_header_label(out, rs->dim2_label);
     }
     fprintf(out, ",time_s");
+    if (rs->has_flops) {
+        fprintf(out, ",gflops");
+    }
+    if (rs->has_bytes) {
+        fprintf(out, ",gbytes_per_s");
+    }
     if (rs->has_stats) {
         fprintf(out, ",stddev_s,min_s,max_s");
     }
@@ -91,6 +109,12 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
             fprintf(out, ",%zu", row->dim2);
         }
         fprintf(out, ",%.9f", row->time_s);
+        if (rs->has_flops) {
+            fprintf(out, ",%.6f", row->gflops);
+        }
+        if (rs->has_bytes) {
+            fprintf(out, ",%.6f", row->gbytes_s);
+        }
         if (rs->has_stats) {
             fprintf(out, ",%.9f,%.9f,%.9f", row->stddev_s, row->min_s, row->max_s);
         }
@@ -113,6 +137,12 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
             fprintf(out, ",\n      \"dim2\": %zu", row->dim2);
         }
         fprintf(out, ",\n      \"time_s\": %.9f", row->time_s);
+        if (rs->has_flops) {
+            fprintf(out, ",\n      \"gflops\": %.6f", row->gflops);
+        }
+        if (rs->has_bytes) {
+            fprintf(out, ",\n      \"gbytes_per_s\": %.6f", row->gbytes_s);
+        }
         if (rs->has_stats) {
             fprintf(out, ",\n      \"stddev_s\": %.9f,\n      \"min_s\": %.9f,\n      \"max_s\": %.9f",
                     row->stddev_s, row->min_s, row->max_s);

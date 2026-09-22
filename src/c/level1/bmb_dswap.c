@@ -56,6 +56,15 @@ static void teardown(void *vctx)
     free(ctx);
 }
 
+static double bytes(size_t dim1, size_t dim2)
+{
+    const double d1 = (double) dim1;
+
+    (void) dim2;
+
+    return 32.0 * d1;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -67,6 +76,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.bytes = bytes;
 
     return bmb_benchmark_main(argc, argv, &bench);
 }

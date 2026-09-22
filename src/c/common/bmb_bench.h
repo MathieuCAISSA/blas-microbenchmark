@@ -25,6 +25,28 @@ typedef void (*bmb_bench_reset_fn)(void *ctx);
 /* Releases resources allocated by setup(). */
 typedef void (*bmb_bench_teardown_fn)(void *ctx);
 
+/* Optional. Number of floating-point operations in one call, which the
+ * harness turns into the GFLOP/s column. These are the conventional BLAS
+ * operation counts (2*M*N*K for gemm, K*N*(N+1) for syrk, ...): a count of
+ * the arithmetic the routine is defined to perform, not of the
+ * instructions a given implementation issues. NULL for routines that do no
+ * arithmetic at all (dcopy, dswap). */
+typedef double (*bmb_bench_flops_fn)(size_t dim1, size_t dim2);
+
+/* Optional. Bytes one call has to move at minimum -- each operand read
+ * once, each output written once -- which the harness turns into the GB/s
+ * column. Counted the way STREAM counts it: an output array contributes
+ * one write, not the write plus the read-for-ownership the cache actually
+ * performs, so that these figures can be compared with STREAM's.
+ *
+ * Only defined for levels 1 and 2, where operands are streamed once and
+ * bandwidth is what limits the routine. Level 3 reuses its operands out of
+ * cache (O(N^3) work over O(N^2) data), so a rate computed from compulsory
+ * traffic would be a small number that says nothing about achieved
+ * bandwidth, and inviting a comparison with STREAM would mislead more than
+ * it informs. */
+typedef double (*bmb_bench_bytes_fn)(size_t dim1, size_t dim2);
+
 typedef struct {
     const char *routine_name;
 
@@ -43,6 +65,9 @@ typedef struct {
     bmb_bench_call_fn call;
     bmb_bench_reset_fn reset; /* optional, may stay NULL */
     bmb_bench_teardown_fn teardown;
+
+    bmb_bench_flops_fn flops; /* optional, may stay NULL */
+    bmb_bench_bytes_fn bytes; /* optional, may stay NULL */
 } bmb_benchmark_t;
 
 /* Parses argv, resolves the effective thread count (option vs. env var),

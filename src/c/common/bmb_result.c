@@ -3,12 +3,15 @@
 #include "bmb_result.h"
 
 void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
-                          const char *dim1_label, const char *dim2_label, int has_stats)
+                          const char *dim1_label, const char *dim2_label,
+                          int has_stats, int has_flops, int has_bytes)
 {
     rs->routine_name = routine_name;
     rs->dim1_label = dim1_label;
     rs->dim2_label = dim2_label;
     rs->has_stats = has_stats;
+    rs->has_flops = has_flops;
+    rs->has_bytes = has_bytes;
     rs->rows = NULL;
     rs->count = 0;
     rs->capacity = 0;
