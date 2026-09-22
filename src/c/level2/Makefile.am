@@ -1,4 +1,5 @@
 AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src/c/common $(BMB_NETLIB_CPPFLAGS)
+AM_CFLAGS = $(BMB_WARN_CFLAGS)
 LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 
 level2dir = $(pkglibexecdir)/level2

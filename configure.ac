@@ -24,6 +24,19 @@ AS_IF([test "x$GCC" = "xyes"], [
   AC_MSG_WARN([This first implementation targets GCC >= 12; a non-GCC compiler was detected ($CC).])
 ])
 
+dnl The project holds itself to building warning-free, which is worth
+dnl nothing if the warnings are never switched on. Kept out of CFLAGS so
+dnl that a user-supplied CFLAGS still comes last and can override them.
+AC_ARG_ENABLE([warnings],
+  [AS_HELP_STRING([--disable-warnings], [do not add -Wall -Wextra to the build flags])],
+  [bmb_warnings="$enableval"], [bmb_warnings=yes])
+BMB_WARN_CFLAGS=
+AS_IF([test "x$bmb_warnings" != xno], [
+  BMB_CHECK_CFLAGS([-Wall], [BMB_WARN_CFLAGS])
+  BMB_CHECK_CFLAGS([-Wextra], [BMB_WARN_CFLAGS])
+])
+AC_SUBST([BMB_WARN_CFLAGS])
+
 dnl -----------------------------------------------------------------------
 dnl Search-path helpers
 dnl
@@ -47,19 +60,32 @@ AC_DEFUN([BMB_ADD_LIBDIR], [
   ])
 ])
 
-dnl BMB_ENV_HINTS(VARPREFIX): pick up $VARPREFIX_ROOT, $VARPREFIX_INC,
-dnl $VARPREFIX_INCDIR, $VARPREFIX_LIB and $VARPREFIX_LIBDIR.
+dnl BMB_ENV_HINTS(VARPREFIX): pick up $VARPREFIX_ROOT, $VARPREFIX_DIR,
+dnl $VARPREFIX_HOME, $VARPREFIX_INC, $VARPREFIX_INCDIR, $VARPREFIX_LIB and
+dnl $VARPREFIX_LIBDIR.
 dnl
-dnl The _ROOT-derived paths are guarded on _ROOT being set: an unset
-dnl variable would otherwise make "$FOO_ROOT/lib" collapse to "/lib",
+dnl _DIR and _HOME are there because module files are not consistent about
+dnl this: plenty of sites name the install prefix one of those instead of
+dnl _ROOT, and a benchmark that cannot find the library it was asked for is
+dnl no use.
+dnl
+dnl The prefix-derived paths are guarded on the variable being set: an
+dnl unset one would otherwise make "$FOO_ROOT/lib" collapse to "/lib",
 dnl which exists and would wrongly end up in -L/-rpath.
-AC_DEFUN([BMB_ENV_HINTS], [
-  bmb_hint_root="[$]$1[_ROOT]"
-  AS_IF([test -n "$bmb_hint_root"], [
-    BMB_ADD_INCDIR([$bmb_hint_root/include])
-    BMB_ADD_LIBDIR([$bmb_hint_root/lib64])
-    BMB_ADD_LIBDIR([$bmb_hint_root/lib])
+AC_DEFUN([BMB_ENV_PREFIX_HINT], [
+  AS_IF([test -n "$1"], [
+    BMB_ADD_INCDIR([$1/include])
+    BMB_ADD_LIBDIR([$1/lib64])
+    BMB_ADD_LIBDIR([$1/lib])
   ])
+])
+
+AC_DEFUN([BMB_ENV_HINTS], [
+  dnl Least specific first: everything here is prepended, so the last one
+  dnl applied wins.
+  BMB_ENV_PREFIX_HINT([[$]$1[_HOME]])
+  BMB_ENV_PREFIX_HINT([[$]$1[_DIR]])
+  BMB_ENV_PREFIX_HINT([[$]$1[_ROOT]])
   BMB_ADD_INCDIR([[$]$1[_INC]])
   BMB_ADD_INCDIR([[$]$1[_INCDIR]])
   BMB_ADD_LIBDIR([[$]$1[_LIB]])
@@ -174,8 +200,19 @@ AS_CASE(["$bmb_blas_backend"],
     ])
     BMB_ENV_HINTS([NETLIB])
     dnl Only the Fortran ABI is required: the CBLAS side is ours.
+    dnl
+    dnl A shared libblas.so pulls in its own Fortran runtime, but a static
+    dnl libblas.a does not: it leaves xerbla's _gfortran_* symbols for us to
+    dnl resolve, which is exactly what cluster modules tend to ship. So try
+    dnl the plain link first and retry with -lgfortran before giving up,
+    dnl rather than always requiring a Fortran runtime to be installed.
     AC_SEARCH_LIBS([dgemm_], [blas refblas], [], [
-      AC_MSG_ERROR([Netlib BLAS not found (dgemm_ unresolved). Install libblas-dev, load your netlib module (NETLIB_ROOT/NETLIB_LIBDIR and BLAS_ROOT/BLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
+      AC_MSG_NOTICE([retrying with the Fortran runtime (-lgfortran)])
+      AS_UNSET([ac_cv_search_dgemm_])
+      AC_SEARCH_LIBS([dgemm_], [blas refblas],
+        [LIBS="$LIBS -lgfortran"],
+        [AC_MSG_ERROR([Netlib BLAS not found (dgemm_ unresolved). Install libblas-dev, load your netlib module (NETLIB_ROOT/NETLIB_LIBDIR and BLAS_ROOT/BLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])],
+        [-lgfortran])
     ])
     dnl Reference BLAS has no runtime thread control and no thread-count
     dnl environment variable of its own; make that explicit so bmb_threads.c
@@ -295,21 +332,6 @@ AS_IF([test "x$bmb_blas_backend" = xnetlib],
   [BMB_NETLIB_CPPFLAGS='-I$(top_srcdir)/src/c/netlib'],
   [BMB_NETLIB_CPPFLAGS=])
 AC_SUBST([BMB_NETLIB_CPPFLAGS])
-
-dnl -----------------------------------------------------------------------
-dnl GPU backends: reserved, not implemented.
-dnl -----------------------------------------------------------------------
-AC_ARG_WITH([cuda-libpath],
-  [AS_HELP_STRING([--with-cuda-libpath=DIR],
-    [directory containing the CUDA/cuBLAS libraries (reserved: the cuBLAS backend is not implemented in this release)])],
-  [AC_MSG_WARN([--with-cuda-libpath was given but the cuBLAS backend is not implemented yet in this release; the value is ignored.])],
-  [])
-
-AC_ARG_WITH([rocm-libpath],
-  [AS_HELP_STRING([--with-rocm-libpath=DIR],
-    [directory containing the ROCm/rocBLAS libraries (reserved: the rocBLAS backend is not implemented in this release)])],
-  [AC_MSG_WARN([--with-rocm-libpath was given but the rocBLAS backend is not implemented yet in this release; the value is ignored.])],
-  [])
 
 AC_CONFIG_FILES([
   Makefile

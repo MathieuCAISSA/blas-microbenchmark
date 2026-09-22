@@ -1,4 +1,5 @@
 AM_CPPFLAGS = -I$(top_builddir) $(BMB_NETLIB_CPPFLAGS)
+AM_CFLAGS = $(BMB_WARN_CFLAGS)
 
 noinst_LIBRARIES = libbmbcommon.a
 
