@@ -23,14 +23,31 @@ and ArmPL also work; see [Backends](#backends).
 ./configure
 make
 make check        # sanity-checks every benchmark
-make install      # installs bmb_<routine> to /usr/local/bin
+make install      # installs to /usr/local/libexec/blas-microbenchmark
+```
+
+The benchmarks are grouped by BLAS level rather than dumped into `bin`:
+
+```
+/usr/local/libexec/blas-microbenchmark/
+├── level1/   bmb_dasum  bmb_daxpy  bmb_dcopy  …
+├── level2/   bmb_dgemv  bmb_dger   bmb_dsymv  …
+└── level3/   bmb_dgemm  bmb_dsymm  bmb_dsyrk  …
 ```
 
 ```
-$ bmb_daxpy
+$ /usr/local/libexec/blas-microbenchmark/level1/bmb_daxpy
 # routine: daxpy
 Thread count    Vector size     time [s]
 1               4096            0.000003
+```
+
+Typing that path every time gets old, so the examples below assume the
+three directories are on your `PATH`:
+
+```bash
+BMB=/usr/local/libexec/blas-microbenchmark
+export PATH="$BMB/level1:$BMB/level2:$BMB/level3:$PATH"
 ```
 
 Take the sources from **`blas-microbenchmark-<version>.tar.gz`** on the

@@ -1,7 +1,12 @@
 AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src/c/common $(BMB_NETLIB_CPPFLAGS)
 LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 
-bin_PROGRAMS = \
+# Installed to $(libexecdir)/blas-microbenchmark/level1, the way
+# osu-micro-benchmarks groups its binaries -- not straight into bin, where
+# 20 bmb_* executables would just clutter $PATH.
+level1dir = $(pkglibexecdir)/level1
+
+level1_PROGRAMS = \
 	bmb_dasum \
 	bmb_daxpy \
 	bmb_dcopy \

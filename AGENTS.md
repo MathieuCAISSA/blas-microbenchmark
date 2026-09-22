@@ -53,8 +53,20 @@ src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
 installed); each `level{1,2,3}` routine builds to its own installed
-executable named `bmb_<routine>` (`bin_PROGRAMS` — not `check_PROGRAMS`, so
-`make`/`make install` produce real binaries, not just test-only ones).
+executable named `bmb_<routine>`.
+
+Those go to `$(libexecdir)/blas-microbenchmark/level<N>`, the layout
+osu-micro-benchmarks uses, rather than to `bin` — 20 executables named
+`bmb_*` have no business sitting in `$PATH`. Each level's `Makefile.am`
+declares it with a custom Automake directory variable:
+
+```make
+level1dir = $(pkglibexecdir)/level1
+level1_PROGRAMS = bmb_dasum ...
+```
+
+Note it's `level<N>_PROGRAMS`, **not** `check_PROGRAMS` — the latter would
+build the benchmarks only under `make check` and install nothing.
 
 ## Adding a new BLAS routine benchmark
 
@@ -95,7 +107,7 @@ small `alpha` (e.g. `1.0e-6`) to keep the accumulation bounded for any
 iteration count. Never use `alpha == 1.0` for `dscal`: some BLAS
 implementations special-case it as a no-op fast path.
 
-Then wire the new file into the level's `Makefile.am` (`bin_PROGRAMS`,
+Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
 `<prog>_SOURCES`) and add a `test_bmb_<routine>.sh` smoke-test script (copy
 an existing one in the same directory, adjust the binary name — small size,
 `-x 1 -i 2`), add it to `TESTS`/`EXTRA_DIST`, `chmod +x` it, then
