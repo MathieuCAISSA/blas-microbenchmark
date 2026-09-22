@@ -14,12 +14,16 @@ hardware with the same command.
 
 ## Install
 
+**Requirements:** a C compiler (GCC ≥ 12) and one BLAS library — at
+minimum [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS)
+(`libopenblas-dev` on Debian/Ubuntu). BLIS, NVPL, and ArmPL also work; see
+[Backends](#backends).
+
+Download and extract the [latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest),
+then the classic Autotools trio — `configure` ships pre-generated, no
+autoconf/automake/libtool needed:
+
 ```bash
-sudo apt-get install -y libopenblas-dev   # or another backend, see Backends below
-
-curl -LO https://github.com/MathieuCAISSA/blas-microbenchmark/releases/download/v0.1.0/blas-microbenchmark-0.1.0.tar.gz
-tar xf blas-microbenchmark-0.1.0.tar.gz && cd blas-microbenchmark-0.1.0
-
 ./configure
 make
 make check          # sanity-checks every benchmark
@@ -33,10 +37,8 @@ Thread count    Vector size     time [s]
 1               4096            0.000003
 ```
 
-`configure` ships pre-generated in the release tarball — no
-autoconf/automake/libtool needed. Installing somewhere other than
-`/usr/local`? `./configure --prefix=DIR` (e.g. `"$HOME/.local"`, no
-`sudo` needed then).
+Installing somewhere other than `/usr/local`? `./configure --prefix=DIR`
+(e.g. `"$HOME/.local"`, no `sudo` needed then).
 
 Building from a git checkout instead — to contribute, or to track
 `main` — needs one extra step (`autoreconf`) to generate `configure`
