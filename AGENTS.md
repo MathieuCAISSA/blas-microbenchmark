@@ -228,21 +228,29 @@ broken; re-discover the current layout (see below) and fix the probe in
 ### Finding a BLAS that isn't in /usr
 
 Clusters expose BLAS through modules, not distro packages, so `configure`
-probes `<PKG>_ROOT`, `<PKG>_INCDIR`/`<PKG>_INC`, `<PKG>_LIBDIR`/`<PKG>_LIB`
-for the selected backend (plus generic `BLAS_*`/`CBLAS_*`), via the
-`BMB_ENV_HINTS`/`BMB_ADD_INCDIR`/`BMB_ADD_LIBDIR` macros at the top of
-`configure.ac`. `--with-blas-incpath`/`--with-blas-libpath` do the same
-thing explicitly.
+probes, for the selected backend (plus generic `BLAS_*`/`CBLAS_*`):
+
+- the install prefix, as `<PKG>_ROOT`, `<PKG>_DIR` or `<PKG>_HOME` — three
+  names because module files are not consistent about it, and a benchmark
+  that cannot find the library it was asked for is no use;
+- the directories directly, as `<PKG>_INCDIR`/`<PKG>_INC` and
+  `<PKG>_LIBDIR`/`<PKG>_LIB`.
+
+That lives in the `BMB_ENV_HINTS`/`BMB_ENV_PREFIX_HINT`/`BMB_ADD_INCDIR`/
+`BMB_ADD_LIBDIR` macros at the top of `configure.ac`.
+`--with-blas-incpath`/`--with-blas-libpath` do the same thing explicitly.
 
 Two things to preserve when touching that code:
 
 - Paths are *prepended*, so whatever is added last wins. Backend-specific
   hints are applied after the hardcoded distro probes on purpose, so a
-  loaded module beats a system-wide install.
-- Anything derived from a `_ROOT` variable must be guarded on that
-  variable being non-empty. `"$FOO_ROOT/lib"` with `FOO_ROOT` unset
-  collapses to `/lib`, which exists — and would silently land in
-  `-L`/`-rpath`.
+  loaded module beats a system-wide install; and within `BMB_ENV_HINTS`
+  the prefixes are applied least-specific first, so `_ROOT` beats `_DIR`
+  beats `_HOME`.
+- Anything derived from a prefix variable must be guarded on that variable
+  being non-empty — which is what `BMB_ENV_PREFIX_HINT` is for.
+  `"$FOO_ROOT/lib"` with `FOO_ROOT` unset collapses to `/lib`, which
+  exists — and would silently land in `-L`/`-rpath`.
 
 When touching `configure.ac`'s backend-selection logic, don't let checks for
 one backend leak into another: e.g. `AC_CHECK_LIB([openblas],

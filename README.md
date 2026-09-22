@@ -162,6 +162,10 @@ then `OMP_NUM_THREADS` for BLIS; `OMP_NUM_THREADS` for NVPL and ArmPL.
 Netlib reference BLAS is single-threaded and has no thread-count API at
 all, so `-t` has no effect there.
 
+`-s` reports the standard deviation over the population of timed
+iterations (divided by *n*, not *n−1*): the `-i n` iterations are all of
+what was measured, not a sample drawn from something larger.
+
 Results go to stdout, warnings and errors to stderr, so `bmb_dgemm >
 results.txt` gets you a clean file.
 
