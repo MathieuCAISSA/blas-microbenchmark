@@ -1,0 +1,68 @@
+name: Release
+
+# Builds the distribution tarball and attaches it to the GitHub release for
+# a pushed tag. GitHub's own auto-generated "Source code" archives are plain
+# git exports with no pre-generated `configure`, so end users need this one.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and upload the tarball for"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  tarball:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+
+      - name: Build the distribution tarball
+        run: |
+          ./autogen.sh
+          mkdir -p build && cd build
+          ../configure
+          make dist
+
+      - name: Verify the tarball builds with no Autotools
+        # A release tarball that still needs autoreconf would defeat its
+        # purpose, so unpack it somewhere clean and build it as a user
+        # would -- configure, make, make check, make install -- without
+        # ever running autogen.sh/autoreconf.
+        run: |
+          mkdir -p verify && cd verify
+          tar xf ../build/blas-microbenchmark-*.tar.gz
+          cd blas-microbenchmark-*/
+          test -f configure || { echo "tarball has no pre-generated configure"; exit 1; }
+          ./configure --prefix="$PWD/_install"
+          make -j"$(nproc)"
+          make check
+          make install
+          ./_install/bin/bmb_daxpy -x 1 -i 2 -v 32
+
+      - name: Upload the tarball to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          # Pushing a tag is enough on its own: create the release if it
+          # doesn't exist yet, otherwise just replace the asset.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" build/blas-microbenchmark-*.tar.gz \
+              --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" build/blas-microbenchmark-*.tar.gz \
+              --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
+          fi

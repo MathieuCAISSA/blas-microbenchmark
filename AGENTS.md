@@ -13,15 +13,15 @@ git checkout instead.
 
 ## Build & test
 
-A git checkout has no `configure` yet — `autoreconf` generates it (a
-release tarball ships it pre-generated, so end users skip this step; see
-README.md).
+A git checkout has no `configure` yet — `./autogen.sh` (a one-line wrapper
+around `autoreconf -fi`) generates it. Release tarballs ship it
+pre-generated, so end users skip this step; see README.md.
 
 ```bash
 sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
 sudo apt-get install -y libblis-openmp-dev   # optional, for --with-blas-backend=blis
 
-autoreconf -fi
+./autogen.sh
 mkdir -p build && cd build   # out-of-tree build keeps the source tree clean
 ../configure
 make
@@ -32,7 +32,7 @@ NVPL and ArmPL (aarch64-only) aren't installable here on x86_64; see their
 CI job steps in `.github/workflows/ci.yml` for the exact
 `--with-blas-backend=nvpl`/`=armpl` setup.
 
-After changing any `configure.ac` or `Makefile.am`, re-run `autoreconf -fi`
+After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
 silently ignore your edits.
 
@@ -148,6 +148,25 @@ broken; re-discover the current layout (see below) and fix the probe in
   (`find /opt/arm`, or `dpkg -L <package> | grep cblas.h`) and read the
   log — don't trust vendor docs over the actual installed files.
 
+### Finding a BLAS that isn't in /usr
+
+Clusters expose BLAS through modules, not distro packages, so `configure`
+probes `<PKG>_ROOT`, `<PKG>_INCDIR`/`<PKG>_INC`, `<PKG>_LIBDIR`/`<PKG>_LIB`
+for the selected backend (plus generic `BLAS_*`/`CBLAS_*`), via the
+`BMB_ENV_HINTS`/`BMB_ADD_INCDIR`/`BMB_ADD_LIBDIR` macros at the top of
+`configure.ac`. `--with-blas-incpath`/`--with-blas-libpath` do the same
+thing explicitly.
+
+Two things to preserve when touching that code:
+
+- Paths are *prepended*, so whatever is added last wins. Backend-specific
+  hints are applied after the hardcoded distro probes on purpose, so a
+  loaded module beats a system-wide install.
+- Anything derived from a `_ROOT` variable must be guarded on that
+  variable being non-empty. `"$FOO_ROOT/lib"` with `FOO_ROOT` unset
+  collapses to `/lib`, which exists — and would silently land in
+  `-L`/`-rpath`.
+
 When touching `configure.ac`'s backend-selection logic, don't let checks for
 one backend leak into another: e.g. `AC_CHECK_LIB([openblas],
 [openblas_set_num_threads])` must only run when OpenBLAS is actually the
@@ -186,22 +205,20 @@ routine that only works "on my machine" isn't done.
 
 ## Cutting a release
 
-End users install from a GitHub release tarball (see README.md), not a git
-checkout, so a release needs the dist tarball built and attached, not just
-a tag:
+End users install from the dist tarball attached to a GitHub release (see
+README.md), *not* from GitHub's auto-generated "Source code" archives —
+those are plain git exports with no `configure` in them.
+
+`.github/workflows/release.yml` handles that: on a pushed `v*` tag it
+builds the tarball, verifies it unpacks and builds with no Autotools
+present, and uploads it to the release. So:
 
 ```bash
 # bump the version in configure.ac (AC_INIT) first if needed
-autoreconf -fi
-mkdir -p build && cd build && ../configure && make dist
-cd ..
 git tag -a vX.Y.Z -m "..."
 git push origin vX.Y.Z
-gh release create vX.Y.Z build/blas-microbenchmark-X.Y.Z.tar.gz --title vX.Y.Z --notes "..."
+gh release create vX.Y.Z --title vX.Y.Z --notes "..."   # workflow attaches the tarball
 ```
 
-Before tagging, verify the tarball actually works standalone — extract it
-somewhere *outside* the repo and run `./configure && make && make check &&
-make install` with **no** `autoreconf` step, confirming it needs no
-Autotools installed. Then update the download URL in README.md's Install
-section to match the new tag.
+Re-run it for an existing tag with
+`gh workflow run release.yml -f tag=vX.Y.Z` if an upload needs redoing.

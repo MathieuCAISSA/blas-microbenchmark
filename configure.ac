@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([blas-microbenchmark], [0.1.0], [mathieu.caissa@eolen.com])
+AC_INIT([blas-microbenchmark], [0.1.1], [mathieu.caissa@eolen.com])
 AC_CONFIG_SRCDIR([src/c/common/bmb_options.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
@@ -25,13 +25,60 @@ AS_IF([test "x$GCC" = "xyes"], [
 ])
 
 dnl -----------------------------------------------------------------------
+dnl Search-path helpers
+dnl
+dnl HPC sites normally expose a BLAS install through module files that set
+dnl <PKG>_ROOT / <PKG>_INCDIR / <PKG>_LIBDIR instead of installing into
+dnl /usr, so honour those too: `module load openblas && ./configure` should
+dnl work without hand-written CPPFLAGS/LDFLAGS. Directories are prepended,
+dnl so the most specific hint must be added last to win.
+dnl -----------------------------------------------------------------------
+AC_DEFUN([BMB_ADD_INCDIR], [
+  AS_IF([test -n "$1" && test -d "$1"], [
+    AC_MSG_NOTICE([using include directory $1])
+    CPPFLAGS="-I$1 $CPPFLAGS"
+  ])
+])
+
+AC_DEFUN([BMB_ADD_LIBDIR], [
+  AS_IF([test -n "$1" && test -d "$1"], [
+    AC_MSG_NOTICE([using library directory $1])
+    LDFLAGS="-L$1 -Wl,-rpath,$1 $LDFLAGS"
+  ])
+])
+
+dnl BMB_ENV_HINTS(VARPREFIX): pick up $VARPREFIX_ROOT, $VARPREFIX_INC,
+dnl $VARPREFIX_INCDIR, $VARPREFIX_LIB and $VARPREFIX_LIBDIR.
+dnl
+dnl The _ROOT-derived paths are guarded on _ROOT being set: an unset
+dnl variable would otherwise make "$FOO_ROOT/lib" collapse to "/lib",
+dnl which exists and would wrongly end up in -L/-rpath.
+AC_DEFUN([BMB_ENV_HINTS], [
+  bmb_hint_root="[$]$1[_ROOT]"
+  AS_IF([test -n "$bmb_hint_root"], [
+    BMB_ADD_INCDIR([$bmb_hint_root/include])
+    BMB_ADD_LIBDIR([$bmb_hint_root/lib64])
+    BMB_ADD_LIBDIR([$bmb_hint_root/lib])
+  ])
+  BMB_ADD_INCDIR([[$]$1[_INC]])
+  BMB_ADD_INCDIR([[$]$1[_INCDIR]])
+  BMB_ADD_LIBDIR([[$]$1[_LIB]])
+  BMB_ADD_LIBDIR([[$]$1[_LIBDIR]])
+])
+
+dnl -----------------------------------------------------------------------
 dnl BLAS implementation selection
 dnl -----------------------------------------------------------------------
+AC_ARG_WITH([blas-incpath],
+  [AS_HELP_STRING([--with-blas-incpath=DIR],
+    [directory containing the BLAS headers (cblas.h), if not on the default path])],
+  [BMB_ADD_INCDIR([$withval])],
+  [])
+
 AC_ARG_WITH([blas-libpath],
   [AS_HELP_STRING([--with-blas-libpath=DIR],
     [directory containing the BLAS library to link against])],
-  [LDFLAGS="-L$withval $LDFLAGS"
-   LIBS="-Wl,-rpath,$withval $LIBS"],
+  [BMB_ADD_LIBDIR([$withval])],
   [])
 
 AC_ARG_WITH([blas-backend],
@@ -44,17 +91,23 @@ AS_CASE(["$bmb_blas_backend"],
   [auto|openblas|blis|nvpl|armpl], [],
   [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, nvpl, armpl (got '$bmb_blas_backend')])])
 
+dnl Generic hints, applied whatever the backend. Backend-specific ones are
+dnl applied inside each case below, so they take priority over these.
+BMB_ENV_HINTS([CBLAS])
+BMB_ENV_HINTS([BLAS])
+
 dnl netlib reference BLAS ships no CBLAS C wrapper on Debian/Ubuntu (only
 dnl the raw Fortran ABI), so it is intentionally not one of the backends
 dnl selectable here; see AGENTS.md.
 AS_CASE(["$bmb_blas_backend"],
 
   [openblas], [
+    BMB_ENV_HINTS([OPENBLAS])
     AC_CHECK_HEADERS([cblas.h], [], [
-      AC_MSG_ERROR([cblas.h not found; install libopenblas-dev or pass --with-blas-libpath/CPPFLAGS.])
+      AC_MSG_ERROR([cblas.h not found. Install libopenblas-dev, load your OpenBLAS module (OPENBLAS_ROOT/OPENBLAS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
     AC_SEARCH_LIBS([cblas_dgemm], [openblas], [], [
-      AC_MSG_ERROR([libopenblas not found (cblas_dgemm unresolved); install libopenblas-dev or pass --with-blas-libpath/LDFLAGS.])
+      AC_MSG_ERROR([libopenblas not found (cblas_dgemm unresolved). Install libopenblas-dev, load your OpenBLAS module (OPENBLAS_ROOT/OPENBLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
     ])
     AC_CHECK_LIB([openblas], [openblas_set_num_threads],
       [AC_DEFINE([HAVE_OPENBLAS_SET_NUM_THREADS], [1],
@@ -83,11 +136,14 @@ AS_CASE(["$bmb_blas_backend"],
       bmb_blis_libdir=`AS_ECHO(["$bmb_blis_dir"]) | sed 's|/include/|/lib/|'`
       LDFLAGS="-L$bmb_blis_libdir -Wl,-rpath,$bmb_blis_libdir $LDFLAGS"
     ])
+    dnl Applied after the distro probe so a loaded module wins over a
+    dnl system-wide install.
+    BMB_ENV_HINTS([BLIS])
     AC_CHECK_HEADERS([cblas.h], [], [
-      AC_MSG_ERROR([BLIS's cblas.h not found. Install libblis-openmp-dev (Debian/Ubuntu) or point to it with --with-blas-libpath/CPPFLAGS.])
+      AC_MSG_ERROR([BLIS's cblas.h not found. Install libblis-openmp-dev (Debian/Ubuntu), load your BLIS module (BLIS_ROOT/BLIS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
     AC_SEARCH_LIBS([cblas_dgemm], [blis], [], [
-      AC_MSG_ERROR([libblis not found (cblas_dgemm unresolved); install libblis-openmp-dev or pass --with-blas-libpath/LDFLAGS.])
+      AC_MSG_ERROR([libblis not found (cblas_dgemm unresolved). Install libblis-openmp-dev, load your BLIS module (BLIS_ROOT/BLIS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
     ])
     AS_IF([test "x$bmb_blis_variant" = xpthread], [LIBS="-lpthread $LIBS"])
     AC_CHECK_LIB([blis], [bli_thread_set_num_threads],
@@ -107,8 +163,10 @@ AS_CASE(["$bmb_blas_backend"],
         break
       fi
     done
+    BMB_ENV_HINTS([NVPL])
+    AS_IF([test -n "$NVPL_ROOT"], [BMB_ADD_INCDIR([$NVPL_ROOT/include/nvpl_compat])])
     AC_CHECK_HEADERS([cblas.h], [], [
-      AC_MSG_ERROR([NVPL's cblas.h not found. Install libnvpl-blas-dev (https://developer.nvidia.com/nvpl) or point to it with --with-blas-libpath/CPPFLAGS.])
+      AC_MSG_ERROR([NVPL's cblas.h not found. Install libnvpl-blas-dev (https://developer.nvidia.com/nvpl), load your NVPL module (NVPL_ROOT/NVPL_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
     AC_SEARCH_LIBS([cblas_dgemm], [nvpl_blas_lp64_gomp nvpl_blas_lp64_seq], [], [
       AC_MSG_ERROR([NVPL BLAS not found (cblas_dgemm unresolved); install libnvpl-blas0/libnvpl-blas-dev or pass --with-blas-libpath/LDFLAGS/LIBS.])
@@ -137,20 +195,28 @@ AS_CASE(["$bmb_blas_backend"],
       bmb_armpl_libdir=`AS_ECHO(["$bmb_armpl_dir"]) | sed 's|/include$|/lib|'`
       LDFLAGS="-L$bmb_armpl_libdir -Wl,-rpath,$bmb_armpl_libdir $LDFLAGS"
     ])
+    BMB_ENV_HINTS([ARMPL])
+    AS_IF([test -n "$ARMPL_DIR"], [
+      BMB_ADD_INCDIR([$ARMPL_DIR/include])
+      BMB_ADD_LIBDIR([$ARMPL_DIR/lib])
+    ])
     AC_CHECK_HEADERS([cblas.h], [], [
-      AC_MSG_ERROR([ArmPL's cblas.h not found. Install arm-performance-libraries (https://developer.arm.com/tools-and-software/arm-performance-libraries) or point to it with --with-blas-libpath/CPPFLAGS.])
+      AC_MSG_ERROR([ArmPL's cblas.h not found. Install arm-performance-libraries (https://developer.arm.com/tools-and-software/arm-performance-libraries), load your ArmPL module (ARMPL_ROOT/ARMPL_DIR/ARMPL_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
     AC_SEARCH_LIBS([cblas_dgemm], [armpl armpl_lp64 armpl_lp64_mp], [], [
       AC_MSG_ERROR([ArmPL not found (cblas_dgemm unresolved); install arm-performance-libraries or pass --with-blas-libpath/LDFLAGS/LIBS.])
     ])
   ],
 
-  [dnl auto: current/original behavior, unchanged.
+  [dnl auto: search the default paths, plus OpenBLAS's module variables
+   dnl (OpenBLAS is what 'auto' prefers; use --with-blas-backend to pick
+   dnl another one and get its variables honoured instead).
+    BMB_ENV_HINTS([OPENBLAS])
     AC_CHECK_HEADERS([cblas.h], [], [
-      AC_MSG_ERROR([cblas.h not found. Install a CBLAS-compatible BLAS (OpenBLAS, BLIS, ...), pass --with-blas-backend to pick one explicitly, or point to it with --with-blas-libpath/CPPFLAGS.])
+      AC_MSG_ERROR([cblas.h not found. Install a CBLAS-compatible BLAS (OpenBLAS, BLIS, ...), load its module (OPENBLAS_ROOT/OPENBLAS_INCDIR, BLAS_ROOT/BLAS_INCDIR are picked up automatically), pass --with-blas-backend to pick one explicitly, or point to it with --with-blas-incpath/CPPFLAGS.])
     ])
     AC_SEARCH_LIBS([cblas_dgemm], [openblas blis cblas blas], [], [
-      AC_MSG_ERROR([No BLAS library exposing the CBLAS interface (cblas_dgemm) was found. Pass --with-blas-backend, --with-blas-libpath, or LDFLAGS/LIBS.])
+      AC_MSG_ERROR([No BLAS library exposing the CBLAS interface (cblas_dgemm) was found. Load your BLAS module (OPENBLAS_ROOT/OPENBLAS_LIBDIR, BLAS_ROOT/BLAS_LIBDIR are picked up automatically), or pass --with-blas-backend/--with-blas-libpath/LDFLAGS/LIBS.])
     ])
     dnl 'auto' doesn't know ahead of time which backend it will find, so
     dnl only probe the thread-control API of whichever library

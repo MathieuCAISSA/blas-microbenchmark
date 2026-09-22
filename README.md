@@ -22,8 +22,8 @@ minimum [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS)
 ```bash
 ./configure
 make
-make check          # sanity-checks every benchmark
-make install   # installs bmb_<routine> to /usr/local/bin
+make check        # sanity-checks every benchmark
+make install      # installs bmb_<routine> to /usr/local/bin
 ```
 
 ```
@@ -33,12 +33,29 @@ Thread count    Vector size     time [s]
 1               4096            0.000003
 ```
 
-Installing somewhere other than `/usr/local`? `./configure --prefix=DIR`
-(e.g. `"$HOME/.local"`, no `sudo` needed then).
+Take the sources from **`blas-microbenchmark-<version>.tar.gz`** on the
+[latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest):
+it ships `configure` pre-generated, so no autoconf/automake/libtool
+needed. (GitHub's own *"Source code (zip/tar.gz)"* links on the same page
+are plain git exports **without** `configure` — if you took one of those,
+or cloned the repo, run `./autogen.sh` first.)
 
-Building from a git checkout instead — to contribute, or to track
-`main` — needs one extra step (`autoreconf`) to generate `configure`
-first; see [AGENTS.md](AGENTS.md).
+Installing somewhere other than `/usr/local`? `./configure --prefix=DIR`,
+e.g. `"$HOME/.local"`.
+
+**On a cluster**, where BLAS usually comes from a module rather than
+`/usr`, `configure` picks up the usual environment variables by itself —
+no need to spell out include/library paths:
+
+```bash
+module load openblas     # sets OPENBLAS_ROOT / OPENBLAS_INCDIR / OPENBLAS_LIBDIR
+./configure              # finds cblas.h and libopenblas through them
+```
+
+`<PKG>_ROOT`, `<PKG>_INCDIR` and `<PKG>_LIBDIR` are honoured for `OPENBLAS`,
+`BLIS`, `NVPL`, `ARMPL`, plus generic `BLAS_*`/`CBLAS_*`. Anything unusual
+can still be pointed at explicitly with `--with-blas-incpath=DIR` and
+`--with-blas-libpath=DIR`.
 
 ## The benchmarks
 
