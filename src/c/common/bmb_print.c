@@ -20,9 +20,9 @@ static void bmb_print_txt_header(FILE *out, const bmb_result_set_t *rs)
     if (rs->dim2_label != NULL) {
         fprintf(out, "%-20s", rs->dim2_label);
     }
-    fprintf(out, "%-14s", "time [s]");
+    fprintf(out, "%-16s", "time [s]");
     if (rs->has_stats) {
-        fprintf(out, "%-14s%-14s%-14s", "stddev [s]", "min [s]", "max [s]");
+        fprintf(out, "%-16s%-16s%-16s", "stddev [s]", "min [s]", "max [s]");
     }
     fprintf(out, "\n");
 }
@@ -40,9 +40,9 @@ void bmb_print_txt(FILE *out, const bmb_result_set_t *rs)
         if (rs->dim2_label != NULL) {
             fprintf(out, "%-20zu", row->dim2);
         }
-        fprintf(out, "%-14.6f", row->time_s);
+        fprintf(out, "%-16.9f", row->time_s);
         if (rs->has_stats) {
-            fprintf(out, "%-14.6f%-14.6f%-14.6f", row->stddev_s, row->min_s, row->max_s);
+            fprintf(out, "%-16.9f%-16.9f%-16.9f", row->stddev_s, row->min_s, row->max_s);
         }
         fprintf(out, "\n");
     }
@@ -90,9 +90,9 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         if (rs->dim2_label != NULL) {
             fprintf(out, ",%zu", row->dim2);
         }
-        fprintf(out, ",%.6f", row->time_s);
+        fprintf(out, ",%.9f", row->time_s);
         if (rs->has_stats) {
-            fprintf(out, ",%.6f,%.6f,%.6f", row->stddev_s, row->min_s, row->max_s);
+            fprintf(out, ",%.9f,%.9f,%.9f", row->stddev_s, row->min_s, row->max_s);
         }
         fprintf(out, "\n");
     }
@@ -112,9 +112,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         if (rs->dim2_label != NULL) {
             fprintf(out, ",\n      \"dim2\": %zu", row->dim2);
         }
-        fprintf(out, ",\n      \"time_s\": %.6f", row->time_s);
+        fprintf(out, ",\n      \"time_s\": %.9f", row->time_s);
         if (rs->has_stats) {
-            fprintf(out, ",\n      \"stddev_s\": %.6f,\n      \"min_s\": %.6f,\n      \"max_s\": %.6f",
+            fprintf(out, ",\n      \"stddev_s\": %.9f,\n      \"min_s\": %.9f,\n      \"max_s\": %.9f",
                     row->stddev_s, row->min_s, row->max_s);
         }
         fprintf(out, "\n    }%s\n", (i + 1 < rs->count) ? "," : "");
