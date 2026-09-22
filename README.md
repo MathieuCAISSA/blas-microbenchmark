@@ -27,7 +27,7 @@ autoconf/automake/libtool needed:
 ./configure
 make
 make check          # sanity-checks every benchmark
-sudo make install   # installs bmb_<routine> to /usr/local/bin
+make install   # installs bmb_<routine> to /usr/local/bin
 ```
 
 ```
