@@ -7,16 +7,20 @@ Guidance for AI coding agents (and humans) working on this repository.
 BLAS microbenchmarks, structured like [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/):
 one small executable per BLAS routine, sharing a common option/timing/output
 layer (`src/c/common`), built with Autotools. See [README.md](README.md) for
-the user-facing documentation (CLI options, usage examples).
+the user-facing documentation (install, CLI options, usage examples) — it
+covers installing from a release tarball; this file covers working from a
+git checkout instead.
 
 ## Build & test
 
-This is a git checkout, so `configure` doesn't exist yet — `autoreconf`
-generates it. (End users installing from a release tarball skip this: see
-[README.md](README.md#install) — `configure` ships pre-generated there,
-same as osu-micro-benchmarks releases.)
+A git checkout has no `configure` yet — `autoreconf` generates it (a
+release tarball ships it pre-generated, so end users skip this step; see
+README.md).
 
 ```bash
+sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+sudo apt-get install -y libblis-openmp-dev   # optional, for --with-blas-backend=blis
+
 autoreconf -fi
 mkdir -p build && cd build   # out-of-tree build keeps the source tree clean
 ../configure
@@ -24,17 +28,9 @@ make
 make check       # runs one smoke test per benchmark (small size, few iterations)
 ```
 
-Requires GCC >= 12, Autotools (autoconf/automake/libtool), and a BLAS library
-exposing `cblas.h`. On Debian/Ubuntu:
-
-```bash
-sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
-sudo apt-get install -y libblis-openmp-dev   # optional, for --with-blas-backend=blis
-```
-
-NVPL and ArmPL are aarch64-only; see the CI job install steps
-(`.github/workflows/ci.yml`) for the exact `--with-blas-backend=nvpl`/`=armpl`
-setup (both install from public apt repos, no login/EULA prompt).
+NVPL and ArmPL (aarch64-only) aren't installable here on x86_64; see their
+CI job steps in `.github/workflows/ci.yml` for the exact
+`--with-blas-backend=nvpl`/`=armpl` setup.
 
 After changing any `configure.ac` or `Makefile.am`, re-run `autoreconf -fi`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
@@ -59,46 +55,6 @@ src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 installed); each `level{1,2,3}` routine builds to its own installed
 executable named `bmb_<routine>` (`bin_PROGRAMS` — not `check_PROGRAMS`, so
 `make`/`make install` produce real binaries, not just test-only ones).
-
-## Backend status
-
-| Backend | `configure` flag | Status |
-| --- | --- | --- |
-| OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | Verified end-to-end, in CI (`openblas` job) |
-| BLIS | `--with-blas-backend=blis` | Verified end-to-end, in CI (`blis` job) |
-| NVPL | `--with-blas-backend=nvpl` | Verified end-to-end, in CI (`nvpl` job, `ubuntu-24.04-arm`) |
-| ArmPL | `--with-blas-backend=armpl` | Verified end-to-end, in CI (`armpl` job, `ubuntu-24.04-arm`) |
-| Netlib | — | Not implemented: Debian/Ubuntu's `libblas-dev` has no CBLAS C wrapper, only the raw Fortran ABI (no `cblas.h`, no `cblas_dgemm` symbol) — would need a small hand-written CBLAS-over-Fortran shim, which nothing in the tree provides yet |
-| cuBLAS / rocBLAS | — | Not implemented; `configure` accepts `--with-cuda-libpath`/`--with-rocm-libpath` as reserved, currently-ignored placeholders. Deliberately not pursued: a fundamentally different, handle-based, device-memory API that this project has decided not to take on |
-
-NVPL and ArmPL both install from real, public, non-interactive apt repos —
-neither needs a login or EULA click-through, so there's no reason to treat
-them as second-class going forward. If either CI job starts failing after
-an upstream version bump, re-run the discovery in
-`.github/workflows/ci.yml`'s job history rather than assuming it's
-permanently broken:
-- NVPL's `libnvpl-blas-dev` puts its CBLAS-compatible header at
-  `/usr/include/nvpl_compat/cblas.h` (not the default include path) and
-  links as `-lnvpl_blas_lp64_gomp`/`-lnvpl_blas_lp64_seq` (+
-  `-lnvpl_blas_core`). The `nvpl` case in `configure.ac` probes for this
-  explicitly. The installer URL is version-pinned (no stable "latest"
-  alias exists) — bump it in the CI job when
-  [nvpl-downloads](https://developer.nvidia.com/nvpl-downloads) moves on.
-- ArmPL's apt package (`arm-performance-libraries`) installs to a fixed
-  `/opt/arm/arm-performance-libraries/{include,lib}` prefix — found by
-  adding a throwaway `find /opt/arm` debug step to the CI job and reading
-  the log, not by trusting the docs (which describe the older, versioned
-  `/opt/arm/armpl_<version>_gcc/` layout used by the manual tarball
-  installer; that pattern is kept as a fallback probe).
-
-When touching `configure.ac`'s backend-selection logic, don't let checks for
-one backend leak into another: e.g. `AC_CHECK_LIB([openblas],
-[openblas_set_num_threads])` must only run when OpenBLAS is actually the
-library that got linked (see the `auto` case, which branches on
-`$ac_cv_search_cblas_dgemm` for exactly this reason) — otherwise a system
-that happens to have multiple BLAS libraries installed will `AC_DEFINE` a
-`HAVE_*_SET_NUM_THREADS` macro for a library that isn't actually in `LIBS`,
-and the link will fail with an undefined reference.
 
 ## Adding a new BLAS routine benchmark
 
@@ -145,6 +101,68 @@ an existing one in the same directory, adjust the binary name — small size,
 `-x 1 -i 2`), add it to `TESTS`/`EXTRA_DIST`, `chmod +x` it, then
 `autoreconf -fi` and rebuild.
 
+## Backends
+
+| Backend | `configure` flag | Verified |
+| --- | --- | --- |
+| OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | CI, `openblas` job |
+| BLIS | `--with-blas-backend=blis` | CI, `blis` job |
+| NVPL | `--with-blas-backend=nvpl` | CI, `nvpl` job (`ubuntu-24.04-arm`) |
+| ArmPL | `--with-blas-backend=armpl` | CI, `armpl` job (`ubuntu-24.04-arm`) |
+| Netlib | — | Not implemented — no code |
+| cuBLAS / rocBLAS | — | Not implemented, not planned |
+
+All four implemented backends expose the standard CBLAS interface, so the
+same `bmb_<routine>.c` files link against whichever one `configure` picks;
+only `configure.ac`'s backend-detection logic and `bmb_threads.c`'s
+thread-control dispatch differ per backend.
+
+**Netlib**: Debian/Ubuntu's `libblas-dev` has no CBLAS C wrapper, only the
+raw Fortran ABI (no `cblas.h`, no `cblas_dgemm` symbol). Supporting it
+needs a small hand-written CBLAS-over-Fortran shim — nothing in the tree
+provides one yet.
+
+**cuBLAS / rocBLAS**: deliberately out of scope. Handle-based,
+device-memory API, fundamentally different from the CBLAS interface every
+other backend shares — this project tried it once and backed it out; don't
+re-add it without being asked.
+
+**NVPL and ArmPL install from real, public, non-interactive apt repos** —
+neither needs a login or EULA click-through. If either CI job starts
+failing after an upstream version bump, don't assume it's permanently
+broken; re-discover the current layout (see below) and fix the probe in
+`configure.ac`:
+
+- NVPL's `libnvpl-blas-dev` puts its CBLAS-compatible header at
+  `/usr/include/nvpl_compat/cblas.h` (not the default include path) and
+  links as `-lnvpl_blas_lp64_gomp`/`-lnvpl_blas_lp64_seq` (+
+  `-lnvpl_blas_core`). The installer URL is version-pinned (no stable
+  "latest" alias exists) — bump it in the CI job when
+  [nvpl-downloads](https://developer.nvidia.com/nvpl-downloads) moves on.
+- ArmPL's apt package (`arm-performance-libraries`) installs to a fixed
+  `/opt/arm/arm-performance-libraries/{include,lib}` prefix. (The docs
+  describe a different, version-numbered `/opt/arm/armpl_<version>_gcc/`
+  layout used by the manual tarball installer — that's kept as a fallback
+  probe, but the apt package doesn't use it.)
+- To re-discover either layout: add a throwaway debug step to the CI job
+  (`find /opt/arm`, or `dpkg -L <package> | grep cblas.h`) and read the
+  log — don't trust vendor docs over the actual installed files.
+
+When touching `configure.ac`'s backend-selection logic, don't let checks for
+one backend leak into another: e.g. `AC_CHECK_LIB([openblas],
+[openblas_set_num_threads])` must only run when OpenBLAS is actually the
+library that got linked (see the `auto` case, which branches on
+`$ac_cv_search_cblas_dgemm` for exactly this reason) — otherwise a system
+that happens to have multiple BLAS libraries installed will `AC_DEFINE` a
+`HAVE_*_SET_NUM_THREADS` macro for a library that isn't actually in `LIBS`,
+and the link will fail with an undefined reference.
+
+If you're implementing Netlib, do it fully — the CBLAS-over-Fortran shim,
+`configure.ac` detection, and a CI job for it — rather than adding a
+partial `--with-blas-backend=netlib` case that fails at compile or link
+time. Leaving a backend entirely unimplemented (as today, for Netlib) is
+fine; leaving it half-done is not.
+
 ## Code style
 
 - No comments except for non-obvious *why* (a hidden constraint, a numerical
@@ -164,15 +182,26 @@ GitHub Actions (`.github/workflows/ci.yml`) runs `autoreconf -fi`,
 implemented backend: `openblas` and `blis` on `ubuntu-latest`, `nvpl` and
 `armpl` on `ubuntu-24.04-arm` (GitHub's free Linux arm64 hosted runner for
 public repos — both those backends are aarch64-only). Keep it green — a
-routine that only works "on my machine" isn't done. Netlib isn't covered
-since it isn't implemented (see below).
+routine that only works "on my machine" isn't done.
 
-## Don't half-wire a backend
+## Cutting a release
 
-Netlib has no code yet (see the backend status table above). cuBLAS/rocBLAS
-are deliberately out of scope — don't add them back without being asked.
-If you're implementing Netlib, do it fully — the CBLAS-over-Fortran shim,
-`configure.ac` detection, and a CI job for it — rather than adding a
-partial `--with-blas-backend=netlib` case that fails at compile or link
-time. Leaving it entirely unimplemented (as today) is fine; leaving it
-half-done is not.
+End users install from a GitHub release tarball (see README.md), not a git
+checkout, so a release needs the dist tarball built and attached, not just
+a tag:
+
+```bash
+# bump the version in configure.ac (AC_INIT) first if needed
+autoreconf -fi
+mkdir -p build && cd build && ../configure && make dist
+cd ..
+git tag -a vX.Y.Z -m "..."
+git push origin vX.Y.Z
+gh release create vX.Y.Z build/blas-microbenchmark-X.Y.Z.tar.gz --title vX.Y.Z --notes "..."
+```
+
+Before tagging, verify the tarball actually works standalone — extract it
+somewhere *outside* the repo and run `./configure && make && make check &&
+make install` with **no** `autoreconf` step, confirming it needs no
+Autotools installed. Then update the download URL in README.md's Install
+section to match the new tag.

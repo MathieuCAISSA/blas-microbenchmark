@@ -14,25 +14,17 @@ hardware with the same command.
 
 ## Install
 
-Grab the [latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest)
-and build it the classic Autotools way — `configure` ships pre-generated,
-so you don't need autoconf/automake/libtool, just a BLAS library and a
-C compiler:
-
 ```bash
-sudo apt-get install -y libopenblas-dev   # or another backend, see below
+sudo apt-get install -y libopenblas-dev   # or another backend, see Backends below
 
 curl -LO https://github.com/MathieuCAISSA/blas-microbenchmark/releases/download/v0.1.0/blas-microbenchmark-0.1.0.tar.gz
-tar xf blas-microbenchmark-0.1.0.tar.gz
-cd blas-microbenchmark-0.1.0
+tar xf blas-microbenchmark-0.1.0.tar.gz && cd blas-microbenchmark-0.1.0
 
 ./configure
 make
-make check        # sanity-checks every benchmark
-sudo make install # installs bmb_<routine> to /usr/local/bin
+make check          # sanity-checks every benchmark
+sudo make install   # installs bmb_<routine> to /usr/local/bin
 ```
-
-Then run one:
 
 ```
 $ bmb_daxpy
@@ -41,24 +33,19 @@ Thread count    Vector size     time [s]
 1               4096            0.000003
 ```
 
-Prefer not to use `sudo`? `./configure --prefix="$HOME/.local"` installs
-there instead — just make sure `$HOME/.local/bin` is on your `PATH`.
+`configure` ships pre-generated in the release tarball — no
+autoconf/automake/libtool needed. Installing somewhere other than
+`/usr/local`? `./configure --prefix=DIR` (e.g. `"$HOME/.local"`, no
+`sudo` needed then).
 
-Working from a git checkout instead of a release tarball? Same steps, plus
-generating `configure` yourself first:
-
-```bash
-sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
-git clone https://github.com/MathieuCAISSA/blas-microbenchmark.git
-cd blas-microbenchmark
-autoreconf -fi
-./configure && make && make check && sudo make install
-```
+Building from a git checkout instead — to contribute, or to track
+`main` — needs one extra step (`autoreconf`) to generate `configure`
+first; see [AGENTS.md](AGENTS.md).
 
 ## The benchmarks
 
 20 double-precision routines across the three BLAS levels, each its own
-`bmb_<routine>` executable after `make`:
+`bmb_<routine>` executable:
 
 | Level | Routines |
 | --- | --- |
@@ -108,7 +95,7 @@ OMP_NUM_THREADS is ignored! Set to 4 but option -t is set to 1.
 ## Backends
 
 Pick one at `configure` time — no code changes, they all share the same
-CBLAS interface:
+CBLAS interface, and all four are built and tested in CI:
 
 | Backend | `configure` flag |
 | --- | --- |
@@ -117,13 +104,12 @@ CBLAS interface:
 | NVPL *(aarch64)* | `--with-blas-backend=nvpl` |
 | ArmPL *(aarch64)* | `--with-blas-backend=armpl` |
 
-All four build and pass `make check` in CI. Netlib isn't supported yet —
-Debian/Ubuntu ships no CBLAS wrapper for it — and cuBLAS/rocBLAS aren't
-planned. See [AGENTS.md](AGENTS.md) for the technical details and the
-exact install steps `.github/workflows/ci.yml` uses for each backend.
+Netlib isn't supported yet (Debian/Ubuntu ships no CBLAS wrapper for it),
+and cuBLAS/rocBLAS aren't planned. See [AGENTS.md](AGENTS.md) for why, and
+for each backend's exact install steps.
 
-`./configure --help` lists every option, including `--with-blas-libpath` for
-a non-standard install location and the usual `CC`/`CFLAGS`/`LDFLAGS`.
+`./configure --help` lists every option, including `--with-blas-libpath`
+for a non-standard install location and the usual `CC`/`CFLAGS`/`LDFLAGS`.
 
 ## License
 
