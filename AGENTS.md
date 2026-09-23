@@ -82,7 +82,8 @@ buffer, `src/c/level3/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
 3. `call(void *ctx)`: exactly one call to the `cblas_*` routine and nothing
    else — this is what the timer wraps.
 4. `reset(void *ctx)`, optional: restore whatever `call()` consumed. Run
-   before every call, outside the timing window.
+   before every timed batch, outside the timing window. Set
+   `reset_every_call` as well if once per batch is not enough — see below.
 5. `flops(dim1, dim2)` / `bytes(dim1, dim2)`, optional: the operation count
    and the minimum memory traffic of one call, for the `GFLOP/s` and `GB/s`
    columns. See below for which of the two a routine should declare.
@@ -120,6 +121,22 @@ Routines that merely accumulate into an operand (`daxpy`, `dger`, `dsyr`,
 accumulation bounded for any iteration count, without a per-call copy.
 Never use `alpha == 1.0` for `dscal`: some BLAS implementations
 special-case it as a no-op fast path.
+
+Then decide how often that reset has to run. Calls are timed in batches
+(see *Known measurement limitations*), and `reset()` runs once per batch,
+so the operand drifts across the calls inside one. Ask what that drift
+does over a few thousand calls:
+
+- `dtrmv`/`dtrmm` multiply the operand by A every time and `dtrsv`/`dtrsm`
+  divide by it, so it reaches infinity or denormals well inside a single
+  batch — and denormals are where the hardware slows down and the timing
+  stops meaning anything. They set `reset_every_call = 1`, which pins the
+  batch to 1 call.
+- `dscal` shrinks its vector by `0.999999` per call, which needs about
+  10⁸ calls to matter. It leaves the flag at 0 and gets batched.
+
+Setting the flag when it isn't needed is not free: it puts the clock's own
+cost back into every measurement, which is the whole point of batching.
 
 ### Which rate a routine declares
 

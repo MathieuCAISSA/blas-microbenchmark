@@ -22,7 +22,7 @@ and ArmPL also work; see [Backends](#backends).
 ```bash
 ./configure
 make
-make check        # sanity-checks every benchmark
+make check        # unit tests, plus one smoke test per benchmark
 make install      # installs to /usr/local/libexec/blas-microbenchmark
 ```
 
@@ -41,7 +41,7 @@ $ /usr/local/libexec/blas-microbenchmark/level1/bmb_daxpy
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # routine: daxpy
 Thread count    Vector size     time [s]        GFLOP/s   GB/s
-1               4096            0.000001404     5.834     70.002
+1               4096            0.000001600     5.121     61.446
 ```
 
 Typing that path every time gets old, so the examples below assume the
@@ -111,7 +111,7 @@ two are comparable.
 Every benchmark takes the same flags:
 
 ```
--x, --warmup <n>               iterations ignored before timing (default: 1)
+-x, --warmup <n>               untimed calls before measuring (default: 1)
 -i, --iterations <n>           timed samples taken (default: 10)
 -b, --batch <n>                calls averaged per sample (default: 0, i.e. chosen
                                 automatically)
@@ -141,7 +141,7 @@ The four size options take a `<sweep>`, which says which sizes to measure:
 points.
 
 ```bash
-# sweep vector size, with stddev/min/max, saved as CSV
+# sweep vector size, with the measurement detail, saved as CSV
 bmb_ddot -v 1024:16384 -s -o results.csv
 
 # the sizes that matter to you, and nothing else

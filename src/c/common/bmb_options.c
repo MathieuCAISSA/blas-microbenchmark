@@ -468,7 +468,7 @@ void bmb_options_print_help(const char *prog_name)
 {
     fprintf(stdout, "Usage: %s [OPTIONS]\n\n", prog_name);
     fprintf(stdout,
-        "  -x, --warmup <n>              iterations ignored before timing (default: %u)\n"
+        "  -x, --warmup <n>              untimed calls before measuring (default: %u)\n"
         "  -i, --iterations <n>          timed samples taken (default: %u)\n"
         "  -b, --batch <n>               calls averaged per sample, 0 = choose automatically\n"
         "                                 (default: 0; a batch amortises the clock's own cost)\n"
@@ -477,7 +477,7 @@ void bmb_options_print_help(const char *prog_name)
         "  -M, --matrix-dim2 <sweep>     matrix second dimension for level 2 & 3\n"
         "                                 (default: same as --matrix-dim1, i.e. square matrices)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
-        "  -s, --statistics              add stddev/min/max columns (default: off)\n"
+        "  -s, --statistics              add mean/stddev/max and the batch size (default: off)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
         "  -h, --help                    show this help\n"
