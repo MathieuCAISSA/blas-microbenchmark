@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,11 +32,44 @@ static const struct option bmb_long_options[] = {
 
 static const char *bmb_short_options = "x:i:v:m:M:t:so:f:h";
 
-/* Sizes and thread counts both end up as `int` arguments to BLAS, which is
- * a 32-bit integer in every LP64 build. Anything larger has to be refused
- * up front: the cast would silently truncate, and a dimension landing on 0
- * would time an empty call and report it as a result. */
-#define BMB_MAX_VALUE ((unsigned long long) INT_MAX)
+/* The largest value any size option may take.
+ *
+ * Two separate ceilings, whichever is lower:
+ *
+ * - INT_MAX, because sizes end up as `int` arguments to BLAS (a 32-bit
+ *   integer in every LP64 build). A larger value would truncate on the
+ *   cast, and a dimension landing on 0 would time an empty call and report
+ *   the result as if it meant something.
+ * - the largest d for which a d x d matrix of doubles can be *sized*
+ *   without wrapping size_t. Several routines allocate dim1 x dim1 (dgemm
+ *   ties K to M; dsymm/dtrmm/dtrsm hold an M x M triangle; every square
+ *   level 2 routine holds an N x N matrix), and `n * n * sizeof(double)`
+ *   wrapping does not fail: it comes back down to a small number, malloc
+ *   succeeds, and the setup loop then writes n^2 doubles into it. At
+ *   n = 1518500250 that is a 291 MB buffer and 2.3e18 elements.
+ *
+ * On 64-bit the second ceiling is 1518500249, which only rules out square
+ * matrices that would need 18 exabytes -- nothing reachable is lost. On a
+ * 32-bit build it correctly drops to about 23170, where a d x d matrix
+ * already fills the address space. */
+static unsigned long long bmb_max_value(void)
+{
+    const size_t elements = SIZE_MAX / sizeof(double);
+    size_t lo = 1;
+    size_t hi = (size_t) INT_MAX;
+
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo + 1) / 2;
+
+        if (mid <= elements / mid) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+
+    return (unsigned long long) lo;
+}
 
 #define BMB_PARSE_OK        0
 #define BMB_PARSE_MALFORMED (-1)
@@ -175,7 +209,7 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
                 *comma = '\0';
             }
 
-            status = bmb_parse_uint(p, BMB_MAX_VALUE, &value);
+            status = bmb_parse_uint(p, bmb_max_value(), &value);
             if (status != BMB_PARSE_OK) {
                 return status;
             }
@@ -207,7 +241,7 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
     }
 
     for (i = 0; i < nfields; i++) {
-        status = bmb_parse_uint(field[i], BMB_MAX_VALUE, &bound[i]);
+        status = bmb_parse_uint(field[i], bmb_max_value(), &bound[i]);
         if (status != BMB_PARSE_OK) {
             return status;
         }
@@ -239,8 +273,8 @@ static int bmb_option_range(const char *str, const char *option, bmb_range_t *ou
         return 0;
     case BMB_PARSE_RANGE:
         snprintf(msg, sizeof(msg),
-                 "Value out of range for %s: every value must be between 1 and %d.",
-                 option, INT_MAX);
+                 "Value out of range for %s: every value must be between 1 and %llu.",
+                 option, bmb_max_value());
         break;
     case BMB_PARSE_TOO_MANY:
         snprintf(msg, sizeof(msg),

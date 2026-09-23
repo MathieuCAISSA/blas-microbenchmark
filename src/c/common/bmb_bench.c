@@ -1,5 +1,4 @@
 #include <math.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -46,14 +45,6 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     void *ctx;
     double *times;
     unsigned int i;
-
-    /* setup() allocates up to dim1 * dim2 doubles; refuse a product that
-     * would wrap around size_t rather than let it turn into a small
-     * allocation that the BLAS call then overruns. */
-    if (dim2 != 0 && dim1 > (SIZE_MAX / sizeof(double)) / dim2) {
-        bmb_log_error("Requested dimensions are too large to allocate; skipping this data point.");
-        return -1;
-    }
 
     bmb_threads_set(thread_count);
 

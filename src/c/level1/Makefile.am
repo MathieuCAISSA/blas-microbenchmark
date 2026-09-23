@@ -32,6 +32,7 @@ TESTS = \
 	test_bmb_ddot.sh \
 	test_bmb_dnrm2.sh \
 	test_bmb_dscal.sh \
-	test_bmb_dswap.sh
+	test_bmb_dswap.sh \
+	test_bmb_size_limits.sh
 
 EXTRA_DIST = $(TESTS)
