@@ -66,6 +66,23 @@ level1dir = $(pkglibexecdir)/level1
 level1_PROGRAMS = bmb_dasum ...
 ```
 
+This is a **deliberate** departure from the GNU standards, which reserve
+`libexecdir` for "programs to be run by other programs rather than by
+users" and would put these in `bindir`. It was weighed against two
+alternatives and kept on purpose, so don't "fix" it:
+
+- *20 binaries flat in `bin`* is what the standards actually call for, and
+  what most projects do. It was rejected because the level grouping was
+  asked for explicitly.
+- *A `bmb` launcher in `bin` running the level binaries from `libexec`*,
+  the way `git` uses `libexec/git-core`, would make this layout
+  standards-correct. It was rejected as more machinery than the grouping
+  is worth. It stays the right answer if the flat `$PATH` ever becomes the
+  bigger annoyance.
+
+The cost is that nothing lands in `$PATH`; README.md gives the two lines
+that put the three directories there.
+
 Note it's `level<N>_PROGRAMS`, **not** `check_PROGRAMS` — the latter would
 build the benchmarks only under `make check` and install nothing.
 
