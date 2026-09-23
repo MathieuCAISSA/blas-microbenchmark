@@ -37,6 +37,8 @@ The benchmarks are grouped by BLAS level rather than dumped into `bin`:
 
 ```
 $ /usr/local/libexec/blas-microbenchmark/level1/bmb_daxpy
+# blas-microbenchmark 0.5.0
+# backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # routine: daxpy
 Thread count    Vector size     time [s]        GFLOP/s   GB/s
 1               4096            0.000001404     5.834     70.002
@@ -120,6 +122,7 @@ Every benchmark takes the same flags:
 -o, --output <file>            also save results to file
 -f, --output-format <fmt>      csv or json (default: csv, or guessed from -o)
 -h, --help                     show this help
+-V, --version                  show the version and the BLAS backend
 ```
 
 The four size options take a `<sweep>`, which says which sizes to measure:
@@ -168,6 +171,34 @@ what was measured, not a sample drawn from something larger.
 
 Results go to stdout, warnings and errors to stderr, so `bmb_dgemm >
 results.txt` gets you a clean file.
+
+## Where a result came from
+
+Comparing BLAS libraries is the point, so every result says which one
+produced it — the project's version, the backend, and the library's own
+version string when it exposes one:
+
+```
+# blas-microbenchmark 0.5.0
+# backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
+# routine: dgemm
+```
+
+Those same lines head a CSV file, as comments — tell your reader to skip
+them (`pd.read_csv("results.csv", comment="#")`). JSON gets real fields
+instead:
+
+```json
+{
+  "version": "0.5.0",
+  "backend": "openblas",
+  "blas": "OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64",
+  "routine": "dgemm",
+  "results": [ ... ]
+}
+```
+
+`bmb_<routine> --version` prints the same thing without running anything.
 
 ## Backends
 

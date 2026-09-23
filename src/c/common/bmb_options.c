@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "bmb_options.h"
+#include "bmb_build.h"
 #include "bmb_log.h"
 
 #define BMB_DEFAULT_WARMUP       1u
@@ -27,10 +28,11 @@ static const struct option bmb_long_options[] = {
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
     {"help",           no_argument,       NULL, 'h'},
+    {"version",        no_argument,       NULL, 'V'},
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:v:m:M:t:so:f:h";
+static const char *bmb_short_options = "x:i:v:m:M:t:so:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -423,6 +425,10 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             bmb_options_print_help(argv[0]);
             return BMB_OPTIONS_HELP;
 
+        case 'V':
+            bmb_options_print_version();
+            return BMB_OPTIONS_VERSION;
+
         case '?':
         default:
             snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s",
@@ -465,6 +471,7 @@ void bmb_options_print_help(const char *prog_name)
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
         "  -h, --help                    show this help\n"
+        "  -V, --version                 show the version and the BLAS backend\n"
         "\n"
         "A <sweep> is one of:\n"
         "  <max>                a single size            e.g. 4096\n"
@@ -473,4 +480,16 @@ void bmb_options_print_help(const char *prog_name)
         "  <v1>,<v2>,...        exactly these sizes      e.g. 64,1000,4096\n"
         "<max> is always measured, even when the stride would overshoot it.\n",
         BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS);
+}
+
+void bmb_options_print_version(void)
+{
+    const char *blas = bmb_build_blas_version();
+
+    printf("blas-microbenchmark %s\n", bmb_build_version());
+    if (blas != NULL && blas[0] != '\0') {
+        printf("BLAS backend: %s (%s)\n", bmb_build_backend(), blas);
+    } else {
+        printf("BLAS backend: %s\n", bmb_build_backend());
+    }
 }

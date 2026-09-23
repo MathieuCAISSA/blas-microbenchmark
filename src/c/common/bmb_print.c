@@ -1,6 +1,7 @@
 #include <stdarg.h>
 
 #include "bmb_print.h"
+#include "bmb_build.h"
 #include "bmb_log.h"
 
 void bmb_print_format(const char *format, ...)
@@ -12,8 +13,27 @@ void bmb_print_format(const char *format, ...)
     va_end(args);
 }
 
+/* Which build and which BLAS produced the numbers below. Written as
+ * comment lines so the same two lines can head the text and the CSV
+ * output; a CSV reader is told to skip them (pandas: comment="#"). A
+ * results file that does not name the library it measured is close to
+ * useless a month later, which is a pity for a project whose purpose is
+ * comparing libraries. */
+static void bmb_print_provenance(FILE *out)
+{
+    const char *blas = bmb_build_blas_version();
+
+    fprintf(out, "# blas-microbenchmark %s\n", bmb_build_version());
+    if (blas != NULL && blas[0] != '\0') {
+        fprintf(out, "# backend: %s (%s)\n", bmb_build_backend(), blas);
+    } else {
+        fprintf(out, "# backend: %s\n", bmb_build_backend());
+    }
+}
+
 static void bmb_print_txt_header(FILE *out, const bmb_result_set_t *rs)
 {
+    bmb_print_provenance(out);
     fprintf(out, "# routine: %s\n", rs->routine_name);
     fprintf(out, "%-16s", "Thread count");
     fprintf(out, "%-20s", rs->dim1_label);
@@ -82,6 +102,8 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
 {
     size_t i;
 
+    bmb_print_provenance(out);
+    fprintf(out, "# routine: %s\n", rs->routine_name);
     fprintf(out, "thread_count,");
     bmb_csv_header_label(out, rs->dim1_label);
     if (rs->dim2_label != NULL) {
@@ -122,11 +144,39 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
     }
 }
 
+/* The BLAS version string comes from the library, not from us, so it gets
+ * escaped rather than trusted to be JSON-safe. */
+static void bmb_print_json_string(FILE *out, const char *value)
+{
+    const char *p;
+
+    fputc('"', out);
+    for (p = value; *p != '\0'; p++) {
+        if (*p == '"' || *p == '\\') {
+            fprintf(out, "\\%c", *p);
+        } else if ((unsigned char) *p < 0x20) {
+            fprintf(out, "\\u%04x", (unsigned char) *p);
+        } else {
+            fputc(*p, out);
+        }
+    }
+    fputc('"', out);
+}
+
 void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
 {
+    const char *blas = bmb_build_blas_version();
     size_t i;
 
-    fprintf(out, "{\n  \"routine\": \"%s\",\n  \"results\": [\n", rs->routine_name);
+    fprintf(out, "{\n");
+    fprintf(out, "  \"version\": \"%s\",\n", bmb_build_version());
+    fprintf(out, "  \"backend\": \"%s\",\n", bmb_build_backend());
+    if (blas != NULL && blas[0] != '\0') {
+        fprintf(out, "  \"blas\": ");
+        bmb_print_json_string(out, blas);
+        fprintf(out, ",\n");
+    }
+    fprintf(out, "  \"routine\": \"%s\",\n  \"results\": [\n", rs->routine_name);
     for (i = 0; i < rs->count; i++) {
         const bmb_result_row_t *row = &rs->rows[i];
 

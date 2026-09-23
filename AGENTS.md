@@ -45,7 +45,8 @@ clean VPATH build; run it before anything that touches `configure.ac`,
 ```
 src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
-                 # (thread-count resolution), bmb_log, bmb_timer
+                 # (thread-count resolution), bmb_build (what this build is),
+                 # bmb_log, bmb_timer
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
@@ -173,6 +174,16 @@ Every backend is reached through the CBLAS interface, so the same
 `bmb_<routine>.c` files link against whichever one `configure` picks; only
 `configure.ac`'s detection logic and `bmb_threads.c`'s thread-control
 dispatch differ per backend.
+
+Each backend also has to be *nameable*: `configure` resolves the selected
+one into `BMB_BLAS_BACKEND` (`auto` becomes whatever `AC_SEARCH_LIBS`
+actually linked, since "auto" is not an answer anyone can act on later),
+and `BMB_CHECK_BLAS_VERSION_API` probes the call that library exposes its
+own version string through. `bmb_build.c` turns both into the provenance
+block every result carries. A new backend must set the name; the version
+string is a bonus where the library has one (OpenBLAS's
+`openblas_get_config()`, BLIS's `bli_info_get_version_str()`) and NULL
+where it does not.
 
 **Netlib** is the exception in how it gets that interface. Reference BLAS
 is a Fortran library; some distributions bundle a CBLAS layer in it

@@ -4,6 +4,7 @@ AM_CFLAGS = $(BMB_WARN_CFLAGS)
 noinst_LIBRARIES = libbmbcommon.a
 
 libbmbcommon_a_SOURCES = \
+	bmb_build.c bmb_build.h \
 	bmb_log.c bmb_log.h \
 	bmb_timer.c bmb_timer.h \
 	bmb_options.c bmb_options.h \

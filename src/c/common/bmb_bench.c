@@ -191,6 +191,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     switch (bmb_options_parse(argc, argv, &opts)) {
     case BMB_OPTIONS_HELP:
+    case BMB_OPTIONS_VERSION:
         return EXIT_SUCCESS;
     case BMB_OPTIONS_ERROR:
         return EXIT_FAILURE;

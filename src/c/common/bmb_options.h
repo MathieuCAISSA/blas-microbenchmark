@@ -52,18 +52,22 @@ typedef struct {
 typedef enum {
     BMB_OPTIONS_OK = 0,
     BMB_OPTIONS_HELP,
+    BMB_OPTIONS_VERSION,
     BMB_OPTIONS_ERROR
 } bmb_options_status_t;
 
 /* Parses argv into opts, filling defaults for anything not given on the
- * command line. Returns BMB_OPTIONS_HELP if -h/--help was requested (the
- * usage message has already been printed) and BMB_OPTIONS_ERROR on a
- * malformed command line (an error message has already been printed);
- * in both cases the caller should stop and return early. */
+ * command line. Returns BMB_OPTIONS_HELP for -h/--help, BMB_OPTIONS_VERSION
+ * for -V/--version (the message has already been printed in both cases),
+ * and BMB_OPTIONS_ERROR on a malformed command line (an error message has
+ * already been printed). In all three the caller should stop and return
+ * early. */
 bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *opts);
 
 void bmb_options_free(bmb_options_t *opts);
 
 void bmb_options_print_help(const char *prog_name);
+
+void bmb_options_print_version(void);
 
 #endif /* BMB_OPTIONS_H */

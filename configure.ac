@@ -100,6 +100,28 @@ AC_DEFUN([BMB_ENV_HINTS], [
   BMB_ADD_LIBDIR([[$]$1[_LIBDIR]])
 ])
 
+dnl BMB_CHECK_BLAS_VERSION_API(LIBRARY)
+dnl
+dnl Probes the call a library makes its own version string available
+dnl through. A results file saying "openblas" does not distinguish 0.3.20
+dnl from 0.3.29, and those do not perform alike; this is what lets it say
+dnl which build produced the numbers. Both checks pass an explicit
+dnl action-if-found so that AC_CHECK_LIB does not append the library to
+dnl LIBS a second time.
+AC_DEFUN([BMB_CHECK_BLAS_VERSION_API], [
+  AS_CASE([$1],
+    [openblas], [
+      AC_CHECK_LIB([openblas], [openblas_get_config],
+        [AC_DEFINE([HAVE_OPENBLAS_GET_CONFIG], [1],
+          [Define if openblas_get_config() is available.])])
+    ],
+    [blis], [
+      AC_CHECK_LIB([blis], [bli_info_get_version_str],
+        [AC_DEFINE([HAVE_BLI_INFO_GET_VERSION_STR], [1],
+          [Define if bli_info_get_version_str() is available.])])
+    ])
+])
+
 dnl -----------------------------------------------------------------------
 dnl BLAS implementation selection
 dnl -----------------------------------------------------------------------
@@ -143,6 +165,7 @@ AS_CASE(["$bmb_blas_backend"],
     AC_CHECK_LIB([openblas], [openblas_set_num_threads],
       [AC_DEFINE([HAVE_OPENBLAS_SET_NUM_THREADS], [1],
         [Define if openblas_set_num_threads() is available.])])
+    BMB_CHECK_BLAS_VERSION_API([openblas])
   ],
 
   [blis], [
@@ -186,6 +209,7 @@ AS_CASE(["$bmb_blas_backend"],
       [AC_DEFINE([HAVE_BLI_THREAD_SET_NUM_THREADS], [1],
         [Define if bli_thread_set_num_threads() is available.])],
       [AC_MSG_WARN([bli_thread_set_num_threads not found in libblis; --thread-count/BLIS_NUM_THREADS will have no effect.])])
+    BMB_CHECK_BLAS_VERSION_API([blis])
   ],
 
   [netlib], [
@@ -312,15 +336,27 @@ AS_CASE(["$bmb_blas_backend"],
         AC_CHECK_LIB([openblas], [openblas_set_num_threads],
           [AC_DEFINE([HAVE_OPENBLAS_SET_NUM_THREADS], [1],
             [Define if openblas_set_num_threads() is available.])])
+        BMB_CHECK_BLAS_VERSION_API([openblas])
+        bmb_blas_backend_name=openblas
       ],
       [*-lblis*], [
         AC_CHECK_LIB([blis], [bli_thread_set_num_threads],
           [AC_DEFINE([HAVE_BLI_THREAD_SET_NUM_THREADS], [1],
             [Define if bli_thread_set_num_threads() is available.])])
+        BMB_CHECK_BLAS_VERSION_API([blis])
+        bmb_blas_backend_name=blis
       ]
     )
   ]
 )
+
+dnl What the results files will say they were produced with. 'auto' is not
+dnl an answer anyone can act on three months later, so it resolves to
+dnl whatever AC_SEARCH_LIBS actually linked.
+AS_IF([test "x$bmb_blas_backend" != xauto], [bmb_blas_backend_name="$bmb_blas_backend"])
+AS_IF([test -z "$bmb_blas_backend_name"], [bmb_blas_backend_name=unknown])
+AC_DEFINE_UNQUOTED([BMB_BLAS_BACKEND], ["$bmb_blas_backend_name"],
+  [Name of the BLAS backend this build was configured against.])
 
 dnl -----------------------------------------------------------------------
 dnl Optional runtime thread-count control via OpenMP (OpenBLAS-OpenMP,

@@ -26,17 +26,27 @@ bmb_check_run() {
 
     bmb_out=`"$bmb_prog" "$@"` || bmb_fail "$bmb_routine: exited $?"
 
-    echo "$bmb_out" | sed -n 1p | grep -q "^# routine: $bmb_routine\$" \
-        || bmb_fail "$bmb_routine: first line is not '# routine: $bmb_routine'"
+    # The provenance block and the routine name are comment lines; the
+    # table starts at the first line that is not one.
+    echo "$bmb_out" | grep -q "^# routine: $bmb_routine\$" \
+        || bmb_fail "$bmb_routine: no '# routine: $bmb_routine' line"
 
-    echo "$bmb_out" | sed -n 2p | grep -q 'time \[s\]' \
+    echo "$bmb_out" | grep -q "^# blas-microbenchmark [0-9]" \
+        || bmb_fail "$bmb_routine: no version line"
+
+    echo "$bmb_out" | grep -q "^# backend: " \
+        || bmb_fail "$bmb_routine: no backend line"
+
+    bmb_table=`echo "$bmb_out" | grep -v "^#"`
+
+    echo "$bmb_table" | sed -n 1p | grep -q 'time \[s\]' \
         || bmb_fail "$bmb_routine: no 'time [s]' column in the header"
 
     # The time is the only column printed with nine decimals, which is what
     # identifies it here without the helper having to know each routine's
     # column layout.
-    echo "$bmb_out" | awk -v routine="$bmb_routine" -v want="$bmb_rows" '
-        NR <= 2 { next }
+    echo "$bmb_table" | awk -v routine="$bmb_routine" -v want="$bmb_rows" '
+        NR == 1 { next }
         {
             rows++
             if (fields == 0) {

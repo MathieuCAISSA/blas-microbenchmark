@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "bmb_build.h"
 #include "bmb_options.h"
 
 /* Wide enough for the longest expansion a sweep can produce: 256 points
@@ -318,6 +319,37 @@ int main(void)
     check_count_option("-i", "1", 1);
     check_count_option("-i", "0", 0);         /* nothing would be measured */
     check_count_option("-i", "-1", 0);
+
+    /* ---- provenance ---- */
+    {
+        bmb_options_t opts;
+
+        if (parse_args(&opts, "-V", NULL) != BMB_OPTIONS_VERSION) {
+            fail("-V", "did not report BMB_OPTIONS_VERSION");
+        } else {
+            ok("-V");
+        }
+        if (parse_args(&opts, "--version", NULL) != BMB_OPTIONS_VERSION) {
+            fail("--version", "did not report BMB_OPTIONS_VERSION");
+        } else {
+            ok("--version");
+        }
+
+        /* A build that cannot name its backend cannot label its results,
+         * so an empty or "unknown" name is a configure bug, not a
+         * cosmetic one. */
+        if (bmb_build_version()[0] == '\0') {
+            fail("build version", "is empty");
+        } else {
+            ok("build version");
+        }
+        if (strcmp(bmb_build_backend(), "unknown") == 0
+            || bmb_build_backend()[0] == '\0') {
+            fail("build backend", "configure did not resolve a backend name");
+        } else {
+            ok("build backend");
+        }
+    }
 
     /* ---- thread counts share the sweep parser ---- */
     {
