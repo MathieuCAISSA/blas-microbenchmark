@@ -19,12 +19,26 @@ minimum [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS)
 (`libopenblas-dev` on Debian/Ubuntu). BLIS, Netlib reference BLAS, NVPL
 and ArmPL also work; see [Backends](#backends).
 
+Take the sources from **`blas-microbenchmark-<version>.tar.gz`** on the
+[latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest).
+It ships `configure` ready to run, so autoconf/automake/libtool are not
+needed:
+
 ```bash
+tar xf blas-microbenchmark-<version>.tar.gz
+cd blas-microbenchmark-<version>
 ./configure
 make
 make check        # unit tests, plus one smoke test per benchmark
 make install      # installs to /usr/local/libexec/blas-microbenchmark
 ```
+
+**Working from a git clone?** Then there is one step before that block:
+run `./autogen.sh`, which needs autoconf, automake and libtool. A
+checkout holds only the files `configure` is generated *from*, never
+`configure` itself. The same applies to GitHub's own *"Source code
+(zip/tar.gz)"* links on the release page — those are plain git exports,
+not the tarball above.
 
 The benchmarks are grouped by BLAS level rather than dumped into `bin`:
 
@@ -51,13 +65,6 @@ three directories are on your `PATH`:
 BMB=/usr/local/libexec/blas-microbenchmark
 export PATH="$BMB/level1:$BMB/level2:$BMB/level3:$PATH"
 ```
-
-Take the sources from **`blas-microbenchmark-<version>.tar.gz`** on the
-[latest release](https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest):
-it ships `configure` pre-generated, so no autoconf/automake/libtool
-needed. (GitHub's own *"Source code (zip/tar.gz)"* links on the same page
-are plain git exports **without** `configure` — if you took one of those,
-or cloned the repo, run `./autogen.sh` first.)
 
 Installing somewhere other than `/usr/local`? `./configure --prefix=DIR`,
 e.g. `"$HOME/.local"`.
