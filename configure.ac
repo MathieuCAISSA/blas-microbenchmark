@@ -30,10 +30,18 @@ dnl that a user-supplied CFLAGS still comes last and can override them.
 AC_ARG_ENABLE([warnings],
   [AS_HELP_STRING([--disable-warnings], [do not add -Wall -Wextra to the build flags])],
   [bmb_warnings="$enableval"], [bmb_warnings=yes])
+dnl Not on by default: a compiler newer than this release will eventually
+dnl warn about something here, and that must not stop people building it.
+dnl CI turns it on, which is what makes "builds warning-free" a fact rather
+dnl than an aspiration.
+AC_ARG_ENABLE([werror],
+  [AS_HELP_STRING([--enable-werror], [treat compiler warnings as errors (used by CI)])],
+  [bmb_werror="$enableval"], [bmb_werror=no])
 BMB_WARN_CFLAGS=
 AS_IF([test "x$bmb_warnings" != xno], [
   BMB_CHECK_CFLAGS([-Wall], [BMB_WARN_CFLAGS])
   BMB_CHECK_CFLAGS([-Wextra], [BMB_WARN_CFLAGS])
+  AS_IF([test "x$bmb_werror" = xyes], [BMB_CHECK_CFLAGS([-Werror], [BMB_WARN_CFLAGS])])
 ])
 AC_SUBST([BMB_WARN_CFLAGS])
 
@@ -155,7 +163,12 @@ AS_CASE(["$bmb_blas_backend"],
     done
     AS_IF([test -n "$bmb_blis_dir"], [
       AC_MSG_NOTICE([found BLIS ($bmb_blis_variant) headers in $bmb_blis_dir])
-      CPPFLAGS="-I$bmb_blis_dir $CPPFLAGS"
+      dnl -isystem, not -I: BLIS's cblas.h defines static helpers that most
+      dnl translation units never call, so -Wunused-function fires twice for
+      dnl every benchmark. Those warnings belong to BLIS, and we build with
+      dnl -Werror in CI. Hint directories are still added with -I and are
+      dnl searched first, so a loaded module keeps winning over this probe.
+      CPPFLAGS="-isystem $bmb_blis_dir $CPPFLAGS"
       bmb_blis_libdir=`AS_ECHO(["$bmb_blis_dir"]) | sed 's|/include/|/lib/|'`
       LDFLAGS="-L$bmb_blis_libdir -Wl,-rpath,$bmb_blis_libdir $LDFLAGS"
     ])

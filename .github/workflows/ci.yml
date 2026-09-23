@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure
+          ../configure --enable-werror
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -64,7 +64,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-blas-backend=blis
+          ../configure --with-blas-backend=blis --enable-werror
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -100,7 +100,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-blas-backend=netlib
+          ../configure --with-blas-backend=netlib --enable-werror
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -152,7 +152,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-blas-backend=nvpl
+          ../configure --with-blas-backend=nvpl --enable-werror
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -195,7 +195,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --with-blas-backend=armpl
+          ../configure --with-blas-backend=armpl --enable-werror
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -211,4 +211,53 @@ jobs:
           path: |
             build/**/test-suite.log
             build/**/*.sh.log
+          if-no-files-found: ignore
+
+  # Built at -O1 with AddressSanitizer and UndefinedBehaviorSanitizer. This
+  # is not a duplicate of the openblas job: it catches what a plain build
+  # cannot see at all (out-of-bounds accesses, signed overflow), and the
+  # lower optimisation level makes GCC's diagnostics land differently --
+  # the first -Werror failure this job ever produced was a
+  # format-truncation warning invisible at -O2.
+  sanitizers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --enable-werror \
+            CFLAGS="-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer" \
+            LDFLAGS="-fsanitize=address,undefined"
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      # Leak detection is off: the leaks reported here are OpenBLAS's own
+      # per-thread buffers, which it never frees by design.
+      - name: make check
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: make -C build check
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-sanitizers
+          path: |
+            build/**/test-suite.log
+            build/**/*.log
           if-no-files-found: ignore

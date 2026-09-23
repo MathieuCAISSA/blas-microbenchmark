@@ -25,7 +25,7 @@ sudo apt-get install -y libblis-openmp-dev   # optional, for --with-blas-backend
 mkdir -p build && cd build   # out-of-tree build keeps the source tree clean
 ../configure
 make
-make check       # runs one smoke test per benchmark (small size, few iterations)
+make check       # unit tests + one smoke test per benchmark
 ```
 
 NVPL and ArmPL (aarch64-only) aren't installable here on x86_64; see their
@@ -142,10 +142,21 @@ formula off by a factor of two shows up immediately as one routine
 beating the rest.
 
 Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
-`<prog>_SOURCES`) and add a `test_bmb_<routine>.sh` smoke-test script (copy
-an existing one in the same directory, adjust the binary name — small size,
-`-x 1 -i 2`), add it to `TESTS`/`EXTRA_DIST`, `chmod +x` it, then
-`autoreconf -fi` and rebuild.
+`<prog>_SOURCES`) and add a `test_bmb_<routine>.sh` smoke test — copy one
+from the same directory, it is a single `bmb_check_run` call naming the
+binary, the routine and how many data rows the sweep should produce. Add it
+to `TESTS`/`EXTRA_DIST`, `chmod +x` it, then `autoreconf -fi` and rebuild.
+
+**Keep the sizes in those scripts tiny.** They run on every `make check`,
+and a benchmark asked for a big size allocates it for real: a test that
+once passed `-v 1518500249` put two 12 GB buffers on a 15 GB machine and
+froze it, on every single run.
+
+`src/c/test_helper.sh` holds the assertions `bmb_check_run` makes — the
+routine header, a timing column, the expected number of data rows, and
+every field on those rows a positive number with exactly one nine-decimal
+timing column. Exit status alone would accept a benchmark that printed
+nothing, or one whose timings had collapsed to zero.
 
 ## Backends
 
@@ -279,19 +290,37 @@ half-done is not.
   in-place resets) belongs in the `level{1,2,3}` file, not in `bmb_bench.c`.
 - The project builds with zero warnings under `-Wall -Wextra`. `configure`
   adds both (after checking the compiler takes them) to `BMB_WARN_CFLAGS`,
-  which every `Makefile.am` picks up through `AM_CFLAGS` — so this is
-  something a normal build enforces, not an invariant kept by hand. They go
-  in `AM_CFLAGS` rather than `CFLAGS` so a user-supplied `CFLAGS` still gets
+  which every `Makefile.am` picks up through `AM_CFLAGS`. They go in
+  `AM_CFLAGS` rather than `CFLAGS` so a user-supplied `CFLAGS` still gets
   the last word; `--disable-warnings` turns them off.
+- CI adds `--enable-werror` on top, which is what makes that a fact rather
+  than an aspiration. It is deliberately *not* the default: a compiler
+  newer than a given release will eventually warn about something, and
+  that must not stop anyone building it.
+- Warnings coming out of a *backend's* headers are the backend's, not
+  ours, and must not fail the build: add that directory with `-isystem`
+  rather than `-I` (BLIS's `cblas.h` defines static helpers most
+  translation units never call, which is two `-Wunused-function` per
+  benchmark). Hint directories keep using `-I` and are searched first, so
+  a loaded module still wins over a distro probe.
 
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
-`configure`, `make`, and `make check` on every push/PR, once per
-implemented backend: `openblas`, `blis` and `netlib` on `ubuntu-latest`,
-`nvpl` and `armpl` on `ubuntu-24.04-arm` (GitHub's free Linux arm64 hosted
-runner for public repos — both those backends are aarch64-only). Keep it
-green — a routine that only works "on my machine" isn't done.
+`configure --enable-werror`, `make`, and `make check` on every push/PR,
+once per implemented backend: `openblas`, `blis` and `netlib` on
+`ubuntu-latest`, `nvpl` and `armpl` on `ubuntu-24.04-arm` (GitHub's free
+Linux arm64 hosted runner for public repos — both those backends are
+aarch64-only). Keep it green — a routine that only works "on my machine"
+isn't done.
+
+A sixth job, `sanitizers`, rebuilds at `-O1` under ASan and UBSan. It is
+not a duplicate of the `openblas` job: it sees what a plain build cannot
+(out-of-bounds accesses, signed overflow), and the different optimisation
+level moves GCC's diagnostics around — the first `-Werror` failure it ever
+produced was a format-truncation warning invisible at `-O2`. Leak
+detection is off, because the leaks are OpenBLAS's own per-thread buffers,
+which it never frees by design.
 
 ## Cutting a release
 
