@@ -315,6 +315,29 @@ half-done is not.
   benchmark). Hint directories keep using `-I` and are searched first, so
   a loaded module still wins over a distro probe.
 
+## Known measurement limitations
+
+Recorded here so they are not mistaken for bugs, and not "fixed" without
+weighing what the fix costs.
+
+- **First-touch NUMA.** `setup()` allocates and fills operands from the
+  main thread, so every page lands on that thread's node. Thread-scaling
+  numbers on a multi-socket machine are therefore pessimistic. Making the
+  fill loops NUMA-aware means guessing how the BLAS library will
+  distribute its own threads, which differs per implementation — so the
+  README tells users to run under `numactl` instead. Reasoned from the
+  code, not measured: no multi-socket machine has been available.
+- **No CPU affinity.** Nothing sets it; the README points at
+  `OMP_PROC_BIND`/`OMP_PLACES` and `taskset`. Setting affinity from inside
+  the benchmark would fight whatever the BLAS library does with its own
+  threads.
+- **Write failures.** Results are written to stdout as they are measured
+  and to `--output` at the end. Both are checked (`ferror`, and `fclose`
+  for the file, which is where a buffered write actually reaches the
+  disk), and either failure makes the process exit non-zero: a table
+  truncated by a full disk must not look like a successful run. `/dev/full`
+  is the easy way to test that.
+
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,

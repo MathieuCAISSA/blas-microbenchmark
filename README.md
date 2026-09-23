@@ -200,6 +200,44 @@ instead:
 
 `bmb_<routine> --version` prints the same thing without running anything.
 
+## Getting numbers you can trust
+
+Two things the benchmarks do not manage for you, and both matter as soon
+as you use more than one thread.
+
+**Pin the threads.** Nothing here sets affinity, so the scheduler is free
+to move threads between cores mid-measurement. For the OpenMP-threaded
+backends (BLIS, NVPL, ArmPL, and OpenBLAS built with OpenMP):
+
+```bash
+OMP_PROC_BIND=close OMP_PLACES=cores bmb_dgemm -t 1:8
+```
+
+A pthread-built OpenBLAS ignores those, so pin the process instead:
+`taskset -c 0-7 bmb_dgemm -t 8`.
+
+**Watch out for NUMA.** Operands are allocated and filled by the main
+thread before the BLAS call, so Linux's first-touch policy puts every page
+on that thread's node. On a single-socket machine this changes nothing. On
+a multi-socket one, threads on the other sockets reach their data
+remotely, and thread-scaling figures come out pessimistic — the benchmark
+measures the interconnect as much as the routine. Either spread the pages:
+
+```bash
+numactl --interleave=all bmb_dgemm -t 1:32
+```
+
+or measure one socket at a time, which is usually what you actually want
+to compare:
+
+```bash
+numactl --cpunodebind=0 --membind=0 bmb_dgemm -t 1:16
+```
+
+This is a known limitation rather than a bug: making the fill loops
+NUMA-aware would mean guessing how the BLAS library will distribute its
+own threads, which differs between implementations.
+
 ## Backends
 
 Pick one at `configure` time — no code changes needed, and every one of

@@ -118,6 +118,11 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     if (bmb_run_one(bench, opts, thread_count, dim1, dim2, &row) != 0) {
         return -1;
     }
+
+    bmb_print_txt_row(stdout, rs, &row);
+
+    /* Kept as well, because the file output needs the whole set: a failure
+     * here costs the file, not the row the user has already seen. */
     if (bmb_result_set_add(rs, row) != 0) {
         bmb_log_error("Out of memory while recording results.");
         return -1;
@@ -205,6 +210,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
+    bmb_print_txt_begin(stdout, &rs);
 
     for (ti = 0; ti < opts.thread_count.count; ti++) {
         unsigned int thread_count = (unsigned int) opts.thread_count.values[ti];
@@ -214,7 +220,12 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         }
     }
 
-    bmb_print_results(&rs, &opts);
+    if (bmb_print_save(&rs, &opts) != 0) {
+        status = EXIT_FAILURE;
+    }
+    if (bmb_print_check_stream(stdout, "the results to stdout") != 0) {
+        status = EXIT_FAILURE;
+    }
 
     bmb_result_set_free(&rs);
     bmb_options_free(&opts);

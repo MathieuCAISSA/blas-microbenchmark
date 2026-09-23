@@ -31,7 +31,7 @@ static void bmb_print_provenance(FILE *out)
     }
 }
 
-static void bmb_print_txt_header(FILE *out, const bmb_result_set_t *rs)
+void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
 {
     bmb_print_provenance(out);
     fprintf(out, "# routine: %s\n", rs->routine_name);
@@ -53,31 +53,31 @@ static void bmb_print_txt_header(FILE *out, const bmb_result_set_t *rs)
     fprintf(out, "\n");
 }
 
-void bmb_print_txt(FILE *out, const bmb_result_set_t *rs)
+void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
+                        const bmb_result_row_t *row)
 {
-    size_t i;
-
-    bmb_print_txt_header(out, rs);
-    for (i = 0; i < rs->count; i++) {
-        const bmb_result_row_t *row = &rs->rows[i];
-
-        fprintf(out, "%-16u", row->thread_count);
-        fprintf(out, "%-20zu", row->dim1);
-        if (rs->dim2_label != NULL) {
-            fprintf(out, "%-20zu", row->dim2);
-        }
-        fprintf(out, "%-16.9f", row->time_s);
-        if (rs->has_flops) {
-            fprintf(out, "%-14.3f", row->gflops);
-        }
-        if (rs->has_bytes) {
-            fprintf(out, "%-14.3f", row->gbytes_s);
-        }
-        if (rs->has_stats) {
-            fprintf(out, "%-16.9f%-16.9f%-16.9f", row->stddev_s, row->min_s, row->max_s);
-        }
-        fprintf(out, "\n");
+    fprintf(out, "%-16u", row->thread_count);
+    fprintf(out, "%-20zu", row->dim1);
+    if (rs->dim2_label != NULL) {
+        fprintf(out, "%-20zu", row->dim2);
     }
+    fprintf(out, "%-16.9f", row->time_s);
+    if (rs->has_flops) {
+        fprintf(out, "%-14.3f", row->gflops);
+    }
+    if (rs->has_bytes) {
+        fprintf(out, "%-14.3f", row->gbytes_s);
+    }
+    if (rs->has_stats) {
+        fprintf(out, "%-16.9f%-16.9f%-16.9f", row->stddev_s, row->min_s, row->max_s);
+    }
+    fprintf(out, "\n");
+
+    /* Flushed per row so that progress is visible through a pipe or a
+     * redirect, where stdout is block-buffered and would otherwise show
+     * nothing until the sweep ends. One flush per measurement is free next
+     * to the measurement itself. */
+    fflush(out);
 }
 
 static void bmb_csv_header_label(FILE *out, const char *label)
@@ -202,20 +202,34 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
     fprintf(out, "  ]\n}\n");
 }
 
-void bmb_print_results(const bmb_result_set_t *rs, const bmb_options_t *opts)
+int bmb_print_check_stream(FILE *stream, const char *what)
+{
+    char msg[256];
+
+    if (fflush(stream) == 0 && ferror(stream) == 0) {
+        return 0;
+    }
+
+    snprintf(msg, sizeof(msg), "Failed to write %s.", what);
+    bmb_log_error(msg);
+    return -1;
+}
+
+int bmb_print_save(const bmb_result_set_t *rs, const bmb_options_t *opts)
 {
     FILE *f;
-
-    bmb_print_txt(stdout, rs);
+    char msg[512];
+    int status = 0;
 
     if (opts->output_file == NULL) {
-        return;
+        return 0;
     }
 
     f = fopen(opts->output_file, "w");
     if (f == NULL) {
-        bmb_log_error("Unable to open output file for writing.");
-        return;
+        snprintf(msg, sizeof(msg), "Unable to open %s for writing.", opts->output_file);
+        bmb_log_error(msg);
+        return -1;
     }
 
     if (opts->output_format == BMB_FORMAT_JSON) {
@@ -224,5 +238,19 @@ void bmb_print_results(const bmb_result_set_t *rs, const bmb_options_t *opts)
         bmb_print_csv(f, rs);
     }
 
-    fclose(f);
+    /* Both are needed: ferror catches a write that already failed, and
+     * fclose is where a buffered one finally reaches the disk. */
+    if (ferror(f) != 0) {
+        status = -1;
+    }
+    if (fclose(f) != 0) {
+        status = -1;
+    }
+    if (status != 0) {
+        snprintf(msg, sizeof(msg), "Failed to write %s in full; the file is incomplete.",
+                 opts->output_file);
+        bmb_log_error(msg);
+    }
+
+    return status;
 }
