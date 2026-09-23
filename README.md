@@ -37,7 +37,7 @@ The benchmarks are grouped by BLAS level rather than dumped into `bin`:
 
 ```
 $ /usr/local/libexec/blas-microbenchmark/level1/bmb_daxpy
-# blas-microbenchmark 0.5.0
+# blas-microbenchmark 0.6.0
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # routine: daxpy
 Thread count    Vector size     time [s]        GFLOP/s   GB/s
@@ -214,7 +214,7 @@ produced it — the project's version, the backend, and the library's own
 version string when it exposes one:
 
 ```
-# blas-microbenchmark 0.5.0
+# blas-microbenchmark 0.6.0
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # routine: dgemm
 ```
@@ -225,7 +225,7 @@ instead:
 
 ```json
 {
-  "version": "0.5.0",
+  "version": "0.6.0",
   "backend": "openblas",
   "blas": "OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64",
   "routine": "dgemm",
