@@ -324,6 +324,20 @@ half-done is not.
 Recorded here so they are not mistaken for bugs, and not "fixed" without
 weighing what the fix costs.
 
+- **The clock is not free.** An empty timed region costs tens of
+  nanoseconds. `bmb_bench.c` therefore times a *batch* of calls and divides,
+  with the batch size calibrated per data point (two passes: the first
+  reading carries the clock's cost and would leave the batch too small).
+  `--iterations` counts samples, not calls. Routines that set
+  `reset_every_call` are pinned to a batch of 1, so at very small sizes
+  their numbers still carry the clock -- that is the price of restoring an
+  operand that would otherwise reach infinity or denormals inside a batch.
+- **The reported time is the fastest sample.** Not the mean: a batch lasts
+  long enough that one scheduling hiccup inflates a sample by a large
+  factor, and a handful of samples then drags the mean with it. Measured on
+  the development machine, three runs of ddot at n=1024 gave means of 2949,
+  396 and 131 ns for fastest samples of 163, 121 and 127 ns. Don't "fix"
+  this back to a mean without re-measuring that.
 - **First-touch NUMA.** `setup()` allocates and fills operands from the
   main thread, so every page lands on that thread's node. Thread-scaling
   numbers on a multi-socket machine are therefore pessimistic. Making the

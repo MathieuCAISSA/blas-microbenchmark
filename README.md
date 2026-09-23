@@ -95,8 +95,8 @@ actually tells you something about the routine:
 
 | Column | Shown for | Meaning |
 | --- | --- | --- |
-| `GFLOP/s` | every routine that does arithmetic | the conventional BLAS operation count (`2·M·N·K` for gemm, `K·N·(N+1)` for syrk, …) divided by the mean time |
-| `GB/s` | levels 1 and 2 | the bytes the routine must move — each operand read once, each result written once — divided by the mean time |
+| `GFLOP/s` | every routine that does arithmetic | the conventional BLAS operation count (`2·M·N·K` for gemm, `K·N·(N+1)` for syrk, …) divided by the reported time |
+| `GB/s` | levels 1 and 2 | the bytes the routine must move — each operand read once, each result written once — divided by the reported time |
 
 `dcopy` and `dswap` perform no arithmetic, so they get no `GFLOP/s`
 column. Level 3 routines get no `GB/s` one: they reuse their operands out
@@ -112,13 +112,15 @@ Every benchmark takes the same flags:
 
 ```
 -x, --warmup <n>               iterations ignored before timing (default: 1)
--i, --iterations <n>           iterations measured (default: 10)
+-i, --iterations <n>           timed samples taken (default: 10)
+-b, --batch <n>                calls averaged per sample (default: 0, i.e. chosen
+                                automatically)
 -v, --vector-size <sweep>      vector sizes, level 1 (default: 4096)
 -m, --matrix-dim1 <sweep>      matrix first dimension, level 2 & 3 (default: 4096)
 -M, --matrix-dim2 <sweep>      matrix second dimension, level 2 & 3
                                 (default: same as --matrix-dim1, i.e. square)
 -t, --thread-count <sweep>     number of BLAS threads (default: 1)
--s, --statistics               add stddev/min/max columns
+-s, --statistics               add mean/stddev/max and the batch size
 -o, --output <file>            also save results to file
 -f, --output-format <fmt>      csv or json (default: csv, or guessed from -o)
 -h, --help                     show this help
@@ -165,9 +167,42 @@ then `OMP_NUM_THREADS` for BLIS; `OMP_NUM_THREADS` for NVPL and ArmPL.
 Netlib reference BLAS is single-threaded and has no thread-count API at
 all, so `-t` has no effect there.
 
-`-s` reports the standard deviation over the population of timed
-iterations (divided by *n*, not *n−1*): the `-i n` iterations are all of
-what was measured, not a sample drawn from something larger.
+## How a number is measured
+
+Reading the clock is not free: an empty timed region costs tens of
+nanoseconds, which is the entire duration of a small level 1 call. Timing
+each call individually would therefore report mostly the clock.
+
+So each **sample** times a *batch* of calls and divides by the batch size.
+`--iterations` is the number of samples (10 by default); the batch size is
+chosen automatically per data point so that a batch lasts long enough for
+the clock to be irrelevant, and `-s` shows what it settled on. Calls that
+already take longer than that get a batch of 1 and are timed exactly as
+they always were, so nothing changes for level 3 or for large sizes.
+`--batch 1` forces per-call timing back.
+
+What this is worth, on ddot:
+
+| Vector size | per call (`--batch 1`) | batched |
+| --- | --- | --- |
+| 32 | 95 ns | **24 ns** |
+| 128 | 124 ns | **31 ns** |
+| 1024 | 286 ns | 237 ns |
+| 16384 | 7959 ns | 6350 ns |
+
+**The reported time is the fastest sample, not the mean.** A sample is
+already an average over a whole batch, so the fastest one is not a lucky
+single call — it is the batch that ran with the least interference from
+everything else on the machine. That matters more than it sounds: one
+scheduling hiccup inflates a sample enormously, and with ten samples it
+drags a mean with it. Three consecutive runs of ddot at n=1024 gave means
+of 2949, 396 and 131 ns while their fastest samples were 163, 121 and
+127 ns.
+
+`-s` is where variability lives: it adds the mean, the standard deviation
+over the samples (population, divided by *n* rather than *n−1*: the
+samples are all of what was measured), the slowest sample, and the batch
+size.
 
 Results go to stdout, warnings and errors to stderr, so `bmb_dgemm >
 results.txt` gets you a clean file.

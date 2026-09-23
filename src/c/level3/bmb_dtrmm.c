@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.reset = reset;
+    bench.reset_every_call = 1;
     bench.teardown = teardown;
     bench.flops = flops;
 

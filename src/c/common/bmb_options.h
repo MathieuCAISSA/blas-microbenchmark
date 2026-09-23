@@ -30,6 +30,7 @@ void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size);
 typedef struct {
     unsigned int warmup;      /* -x, --warmup */
     unsigned int iterations;  /* -i, --iterations */
+    unsigned int batch;       /* -b, --batch; 0 = choose automatically */
 
     bmb_range_t vector_size;  /* -v, --vector-size    (level 1) */
     int vector_size_set;      /* whether -v/--vector-size was given */

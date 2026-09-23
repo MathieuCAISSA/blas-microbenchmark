@@ -317,6 +317,10 @@ int main(void)
     check_count_option("-x", "-5", 0);
     check_count_option("-x", "", 0);
     check_count_option("-i", "1", 1);
+    check_count_option("-b", "0", 1);          /* 0 means "choose for me" */
+    check_count_option("-b", "1", 1);          /* 1 restores per-call timing */
+    check_count_option("-b", "abc", 0);
+    check_count_option("-b", "-1", 0);
     check_count_option("-i", "0", 0);         /* nothing would be measured */
     check_count_option("-i", "-1", 0);
 

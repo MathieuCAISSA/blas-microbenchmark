@@ -18,8 +18,8 @@ typedef void (*bmb_bench_call_fn)(void *ctx);
 
 /* Optional. Restores the context to the state call() expects, for routines
  * that overwrite an operand (dtrmv, dtrsv, dtrmm, dtrsm) or drift over
- * repeated calls (dscal). Run before every call(), warmup and timed alike,
- * and always outside the timing window. */
+ * repeated calls (dscal). Run before every timed batch, and always outside
+ * the timing window. */
 typedef void (*bmb_bench_reset_fn)(void *ctx);
 
 /* Releases resources allocated by setup(). */
@@ -65,6 +65,16 @@ typedef struct {
     bmb_bench_call_fn call;
     bmb_bench_reset_fn reset; /* optional, may stay NULL */
     bmb_bench_teardown_fn teardown;
+
+    /* Set when reset() has to run before *every* call rather than once per
+     * timed batch, which forces a batch size of 1 and brings the clock's
+     * own cost back into the measurement. Only the triangular routines
+     * need it: dtrmv and dtrmm multiply their operand by A over and over
+     * (it reaches infinity), dtrsv and dtrsm divide by it (it reaches
+     * denormals, where the hardware slows down and the timing stops
+     * meaning anything). dscal drifts far too slowly to care, so it leaves
+     * this at 0 and gets batched. */
+    int reset_every_call;
 
     bmb_bench_flops_fn flops; /* optional, may stay NULL */
     bmb_bench_bytes_fn bytes; /* optional, may stay NULL */

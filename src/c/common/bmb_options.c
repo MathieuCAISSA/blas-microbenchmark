@@ -20,6 +20,7 @@
 static const struct option bmb_long_options[] = {
     {"warmup",         required_argument, NULL, 'x'},
     {"iterations",     required_argument, NULL, 'i'},
+    {"batch",          required_argument, NULL, 'b'},
     {"vector-size",    required_argument, NULL, 'v'},
     {"matrix-dim1",    required_argument, NULL, 'm'},
     {"matrix-dim2",    required_argument, NULL, 'M'},
@@ -32,7 +33,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:v:m:M:t:so:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:t:so:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -319,6 +320,7 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
 
     opts->warmup = BMB_DEFAULT_WARMUP;
     opts->iterations = BMB_DEFAULT_ITERATIONS;
+    opts->batch = 0;
 
     bmb_range_set_single(&opts->vector_size, BMB_DEFAULT_SIZE);
     opts->vector_size_set = 0;
@@ -368,6 +370,12 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
 
         case 'i':
             if (bmb_option_count(optarg, "--iterations", 1, &opts->iterations) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
+        case 'b':
+            if (bmb_option_count(optarg, "--batch", 0, &opts->batch) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             break;
@@ -461,7 +469,9 @@ void bmb_options_print_help(const char *prog_name)
     fprintf(stdout, "Usage: %s [OPTIONS]\n\n", prog_name);
     fprintf(stdout,
         "  -x, --warmup <n>              iterations ignored before timing (default: %u)\n"
-        "  -i, --iterations <n>          iterations measured (default: %u)\n"
+        "  -i, --iterations <n>          timed samples taken (default: %u)\n"
+        "  -b, --batch <n>               calls averaged per sample, 0 = choose automatically\n"
+        "                                 (default: 0; a batch amortises the clock's own cost)\n"
         "  -v, --vector-size <sweep>     vector sizes for level 1 routines (default: %u)\n"
         "  -m, --matrix-dim1 <sweep>     matrix first dimension for level 2 & 3 (default: %u)\n"
         "  -M, --matrix-dim2 <sweep>     matrix second dimension for level 2 & 3\n"

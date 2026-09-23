@@ -7,11 +7,16 @@ typedef struct {
     unsigned int thread_count;
     size_t dim1;
     size_t dim2; /* only meaningful when the result set's dim2_label is non-NULL */
+    /* The fastest sample, which is the headline figure: each sample is
+     * already a mean over `batch` calls, and the fastest one is the least
+     * contaminated by whatever else the machine was doing. */
     double time_s;
-    double gflops;     /* 0 when the routine declares no operation count */
-    double gbytes_s;   /* 0 when the routine declares no memory traffic */
+    unsigned int batch;  /* calls averaged into each sample */
+    double gflops;       /* 0 when the routine declares no operation count */
+    double gbytes_s;     /* 0 when the routine declares no memory traffic */
+    /* The spread across samples, shown by -s. */
+    double mean_s;
     double stddev_s;
-    double min_s;
     double max_s;
 } bmb_result_row_t;
 
