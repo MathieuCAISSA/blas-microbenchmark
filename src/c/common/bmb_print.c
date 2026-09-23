@@ -1,17 +1,6 @@
-#include <stdarg.h>
-
 #include "bmb_print.h"
 #include "bmb_build.h"
 #include "bmb_log.h"
-
-void bmb_print_format(const char *format, ...)
-{
-    va_list args;
-
-    va_start(args, format);
-    vfprintf(stdout, format, args);
-    va_end(args);
-}
 
 /* Which build and which BLAS produced the numbers below. Written as
  * comment lines so the same two lines can head the text and the CSV
@@ -82,18 +71,25 @@ void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
 
 static void bmb_csv_header_label(FILE *out, const char *label)
 {
-    /* CSV column names: lowercase, spaces/parens stripped down to a
-     * single identifier-like token, e.g. "Matrix dim1 (M)" -> "matrix_dim1_m". */
+    /* CSV column names: lowercase, every run of other characters collapsed
+     * to one underscore, e.g. "Matrix dim1 (M=K)" -> "matrix_dim1_m_k".
+     * The separator is held back until another word character turns up, so
+     * a label ending in punctuation does not leave a trailing underscore
+     * on the column name. */
     const char *p;
-    int last_was_sep = 0;
+    int pending_sep = 0;
+    int wrote_any = 0;
 
     for (p = label; *p != '\0'; p++) {
         if ((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9')) {
+            if (pending_sep && wrote_any) {
+                fputc('_', out);
+            }
             fputc((*p >= 'A' && *p <= 'Z') ? (*p - 'A' + 'a') : *p, out);
-            last_was_sep = 0;
-        } else if (!last_was_sep) {
-            fputc('_', out);
-            last_was_sep = 1;
+            pending_sep = 0;
+            wrote_any = 1;
+        } else {
+            pending_sep = 1;
         }
     }
 }

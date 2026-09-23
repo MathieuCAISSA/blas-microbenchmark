@@ -6,8 +6,6 @@
 #include "bmb_options.h"
 #include "bmb_result.h"
 
-void bmb_print_format(const char *format, ...);
-
 /* The human-readable table is printed as it is measured rather than at the
  * end: a sweep over large sizes can run for many minutes, and showing
  * nothing until it finishes makes it impossible to tell progress from a

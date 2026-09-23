@@ -194,11 +194,16 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     size_t ti;
     int status = EXIT_SUCCESS;
 
+    /* Freed on the early exits too: -o may already have been parsed by the
+     * time -h, -V or a bad option is reached, and leaving it allocated makes
+     * every run under a leak checker report a finding that is not one. */
     switch (bmb_options_parse(argc, argv, &opts)) {
     case BMB_OPTIONS_HELP:
     case BMB_OPTIONS_VERSION:
+        bmb_options_free(&opts);
         return EXIT_SUCCESS;
     case BMB_OPTIONS_ERROR:
+        bmb_options_free(&opts);
         return EXIT_FAILURE;
     case BMB_OPTIONS_OK:
     default:

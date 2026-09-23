@@ -1,0 +1,9 @@
+# LeakSanitizer suppressions for the CI sanitizers job.
+#
+# BLAS libraries allocate per-thread scratch buffers and never free them:
+# that is by design, not a leak anyone can act on. Suppressing them by
+# module is what lets leak detection stay ON for our own code, which is
+# where it earns its keep -- it catches an option string that an early
+# return forgot to free, for instance.
+leak:libopenblas
+leak:libgomp

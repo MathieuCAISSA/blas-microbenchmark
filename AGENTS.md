@@ -299,6 +299,10 @@ half-done is not.
   `bmb_options.c`. Without it, a strict `-std=c11` build fails.
 - Keep `common/` generic: routine-specific logic (shapes, alpha values,
   in-place resets) belongs in the `level{1,2,3}` file, not in `bmb_bench.c`.
+- Don't leave an exported function with no callers. `common/` is a
+  convenience library for the benchmarks, not a general-purpose one, so an
+  unused entry point is dead weight that still has to be read and kept
+  compiling.
 - The project builds with zero warnings under `-Wall -Wextra`. `configure`
   adds both (after checking the compiler takes them) to `BMB_WARN_CFLAGS`,
   which every `Makefile.am` picks up through `AM_CFLAGS`. They go in
@@ -352,9 +356,20 @@ A sixth job, `sanitizers`, rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot
 (out-of-bounds accesses, signed overflow), and the different optimisation
 level moves GCC's diagnostics around — the first `-Werror` failure it ever
-produced was a format-truncation warning invisible at `-O2`. Leak
-detection is off, because the leaks are OpenBLAS's own per-thread buffers,
-which it never frees by design.
+produced was a format-truncation warning invisible at `-O2`.
+
+Leak detection is on, with the BLAS library's own per-thread buffers --
+which it never frees by design -- suppressed by module in
+`.github/lsan-suppressions.txt`. That keeps it useful for our code: an
+option string that an early return forgot to free is exactly the kind of
+thing it catches. To reproduce locally:
+
+```bash
+../configure --enable-werror CFLAGS="-O1 -g -fsanitize=address,undefined" \
+    LDFLAGS="-fsanitize=address,undefined"
+ASAN_OPTIONS=detect_leaks=1 \
+  LSAN_OPTIONS=suppressions=$PWD/../.github/lsan-suppressions.txt make check
+```
 
 ## Cutting a release
 

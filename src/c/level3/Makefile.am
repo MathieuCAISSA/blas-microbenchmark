@@ -26,6 +26,7 @@ TESTS = \
 	test_bmb_dsyrk.sh \
 	test_bmb_dsyr2k.sh \
 	test_bmb_dtrmm.sh \
-	test_bmb_dtrsm.sh
+	test_bmb_dtrsm.sh \
+	test_bmb_output_formats.sh
 
 EXTRA_DIST = $(TESTS)

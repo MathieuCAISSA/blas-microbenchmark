@@ -9,9 +9,8 @@
  * environment. */
 void bmb_log_format(FILE *stream, const char *message, const char *color);
 
-/* Results go to stdout; everything below is diagnostics and goes to
+/* Results go to stdout; everything here is diagnostics and goes to
  * stderr, so that `bmb_dgemm > results.txt` keeps the two apart. */
-void bmb_log_info(const char *message);
 void bmb_log_debug(const char *message);
 void bmb_log_warning(const char *message);
 void bmb_log_error(const char *message);

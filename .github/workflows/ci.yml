@@ -244,11 +244,13 @@ jobs:
       - name: make
         run: make -C build -j"$(nproc)"
 
-      # Leak detection is off: the leaks reported here are OpenBLAS's own
-      # per-thread buffers, which it never frees by design.
+      # Leak detection stays on for our own code; the BLAS library's own
+      # per-thread buffers, which it never frees by design, are suppressed
+      # by module in .github/lsan-suppressions.txt.
       - name: make check
         env:
-          ASAN_OPTIONS: detect_leaks=0
+          ASAN_OPTIONS: detect_leaks=1
+          LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/lsan-suppressions.txt
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: make -C build check
 

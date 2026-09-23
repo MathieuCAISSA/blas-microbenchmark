@@ -33,11 +33,6 @@ void bmb_log_format(FILE *stream, const char *message, const char *color)
     }
 }
 
-void bmb_log_info(const char *message)
-{
-    bmb_log_format(stdout, message, NULL);
-}
-
 void bmb_log_debug(const char *message)
 {
 #ifdef BMB_DEBUG
