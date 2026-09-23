@@ -1,3 +1,5 @@
 #!/bin/sh
 set -e
-exec ./bmb_dnrm2 -x 1 -i 2 -v 32
+. "${srcdir:-.}/../test_helper.sh"
+
+bmb_check_run ./bmb_dnrm2 dnrm2 3 -x 1 -i 2 -v 8:32

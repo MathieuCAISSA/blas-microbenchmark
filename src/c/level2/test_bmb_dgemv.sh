@@ -1,3 +1,5 @@
 #!/bin/sh
 set -e
-exec ./bmb_dgemv -x 1 -i 2 -m 8 -M 8
+. "${srcdir:-.}/../test_helper.sh"
+
+bmb_check_run ./bmb_dgemv dgemv 4 -x 1 -i 2 -m 8:16 -M 8:16

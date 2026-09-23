@@ -1,3 +1,5 @@
 #!/bin/sh
 set -e
-exec ./bmb_dtrsm -x 1 -i 2 -m 8 -M 8
+. "${srcdir:-.}/../test_helper.sh"
+
+bmb_check_run ./bmb_dtrsm dtrsm 4 -x 1 -i 2 -m 8:16 -M 8:16
