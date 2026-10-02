@@ -24,9 +24,18 @@ test "$rows" -eq 2 || fail "csv has $rows non-comment lines, expected 2 (header 
 
 ./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o fmt.json -f json >/dev/null || fail "the json run failed"
 
-for field in '"version": "' '"backend": "' '"routine": "dgemm"' '"time_s":' '"gflops":'; do
+for field in '"version": "' '"backend": "' '"routine": "dgemm"' '"time_s":' '"gflops":' \
+             '"dim1_label": "Matrix dim1 (M=K)"' '"dim2_label": "Matrix dim2 (N)"'; do
     grep -q "$field" fmt.json || fail "json carries no $field field"
 done
 
-rm -f fmt.csv fmt.json
+# A single-dimension routine names its one dimension and leaves dim2_label
+# out, the way it leaves dim2 out of every row.
+../level1/bmb_ddot -x 0 -i 1 -v 8 -o fmt1.json -f json >/dev/null || fail "the ddot json run failed"
+grep -q '"dim1_label": "Vector size"' fmt1.json || fail "ddot json has no dim1_label"
+if grep -q '"dim2_label"' fmt1.json; then
+    fail "ddot json carries a dim2_label for a routine with one dimension"
+fi
+
+rm -f fmt.csv fmt.json fmt1.json
 echo "ok   output formats"

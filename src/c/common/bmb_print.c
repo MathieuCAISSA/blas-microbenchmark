@@ -175,7 +175,24 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         bmb_print_json_string(out, blas);
         fprintf(out, ",\n");
     }
-    fprintf(out, "  \"routine\": \"%s\",\n  \"results\": [\n", rs->routine_name);
+    fprintf(out, "  \"routine\": \"%s\",\n", rs->routine_name);
+
+    /* What dim1 and dim2 *are* for this routine ("Matrix dim1 (M=K)"). The
+     * text output has always carried them in its header; without them here
+     * a reader of the JSON -- bmb_report first of all -- could only title
+     * its axes by keeping its own copy of each routine's conventions, which
+     * would drift from the C files that define them. dim2_label is omitted
+     * for routines with a single dimension, like dim2 itself. */
+    fprintf(out, "  \"dim1_label\": ");
+    bmb_print_json_string(out, rs->dim1_label);
+    fprintf(out, ",\n");
+    if (rs->dim2_label != NULL) {
+        fprintf(out, "  \"dim2_label\": ");
+        bmb_print_json_string(out, rs->dim2_label);
+        fprintf(out, ",\n");
+    }
+
+    fprintf(out, "  \"results\": [\n");
     for (i = 0; i < rs->count; i++) {
         const bmb_result_row_t *row = &rs->rows[i];
 
