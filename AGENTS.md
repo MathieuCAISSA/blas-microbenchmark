@@ -234,10 +234,14 @@ date. Three rules there:
   guessed, never written empty. A container without sysfs cache entries is
   a legitimate "unknown", which is why `test_bmb_machine` checks only what
   every Linux box guarantees plus the sanity of whatever was recorded.
-- **On aarch64 there is usually no `model name`** in `/proc/cpuinfo`, only
-  implementer and part codes; those are recorded raw rather than decoded
-  from a table we would have to maintain. The `Provenance` step of each CI
-  job prints what every runner reports.
+- **On aarch64 there is no `model name`** in `/proc/cpuinfo`, only
+  implementer and part codes, so the probe records them raw:
+  `implementer 0x41, part 0xd49` on GitHub's arm64 runners (an ARM
+  Neoverse-N2). **Never change that form.** The CPU string is part of the
+  report's series key, and rewriting it — even into a nicer name — would
+  stop files from the same machine merging across versions. Translating
+  codes into names is the report's job, for display only (#1, decision 4).
+  The `Provenance` step of each CI job prints what every runner reports.
 - **No hostname, ever** (#1, decision 4). Reports get shared, and on a
   cluster identical nodes have different names.
 
