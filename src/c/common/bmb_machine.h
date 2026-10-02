@@ -34,6 +34,13 @@ typedef struct {
  * in a benchmark is when the run started. */
 const bmb_machine_t *bmb_machine(void);
 
+/* Probes as though procfs and sysfs were mounted under `root` ("" for the
+ * real ones), which is what bmb_machine() does with "". It exists so the
+ * paths that only occur elsewhere -- an aarch64 /proc/cpuinfo with no model
+ * name, a container without sysfs -- can be tested on any machine. The
+ * logical CPU count, the OS and the date still come from the real system. */
+void bmb_machine_probe_at(const char *root, bmb_machine_t *m);
+
 /* "Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)", or as
  * much of it as is known; "" when nothing is. */
 void bmb_machine_describe_cpu(const bmb_machine_t *m, char *buf, size_t size);

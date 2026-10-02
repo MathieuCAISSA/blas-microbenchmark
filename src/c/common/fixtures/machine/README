@@ -1,0 +1,11 @@
+Fake procfs/sysfs trees for test_bmb_machine, probed through
+bmb_machine_probe_at(). They follow the real files' layout and formatting
+(tab before the colon, sizes like "32768K"), so they test the parser
+against what kernels actually write.
+
+  x86/      an x86 CPU with a "model name", two NUMA nodes (and the
+            non-node "online" entry real sysfs has beside them), and four
+            caches on cpu0.
+  aarch64/  an Arm CPU as GitHub's arm64 runners report it: no "model
+            name", only implementer and part codes -- and no sys/ at all,
+            which is also what a container without sysfs looks like.

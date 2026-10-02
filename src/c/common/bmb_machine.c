@@ -49,13 +49,16 @@ static int bmb_read_line(const char *path, char *buf, size_t size)
  * table of its own. Those codes are recorded raw rather than guessed at --
  * they still tell two different CPUs apart, which is what the series key
  * needs. */
-static void bmb_probe_cpu(bmb_machine_t *m)
+static void bmb_probe_cpu(bmb_machine_t *m, const char *root)
 {
-    FILE *f = fopen("/proc/cpuinfo", "r");
+    char path[512];
+    FILE *f;
     char line[512];
     char implementer[32] = "";
     char part[32] = "";
 
+    snprintf(path, sizeof(path), "%s/proc/cpuinfo", root);
+    f = fopen(path, "r");
     if (f == NULL) {
         return;
     }
@@ -89,11 +92,15 @@ static void bmb_probe_cpu(bmb_machine_t *m)
     }
 }
 
-static void bmb_probe_numa(bmb_machine_t *m)
+static void bmb_probe_numa(bmb_machine_t *m, const char *root)
 {
-    DIR *dir = opendir("/sys/devices/system/node");
+    char path[512];
+    DIR *dir;
     struct dirent *entry;
     int nodes = 0;
+
+    snprintf(path, sizeof(path), "%s/sys/devices/system/node", root);
+    dir = opendir(path);
 
     /* No such directory means the kernel was built without NUMA support.
      * That is not quite the same as "1 node", so it is left unknown. */
@@ -130,25 +137,25 @@ static unsigned long long bmb_parse_size(const char *s)
 /* cpu0's caches. On a hybrid CPU (performance and efficiency cores) the
  * other cores may differ; cpu0 is normally a performance core, which is
  * where a single-threaded benchmark runs anyway. */
-static void bmb_probe_caches(bmb_machine_t *m)
+static void bmb_probe_caches(bmb_machine_t *m, const char *root)
 {
     int i;
 
     for (i = 0; i < BMB_MACHINE_MAX_CACHES; i++) {
-        char path[128];
+        char path[512];
         char level[16], type[32], size[32];
         bmb_cache_t *c = &m->caches[m->cache_count];
         size_t k;
 
-        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu0/cache/index%d/level", i);
+        snprintf(path, sizeof(path), "%s/sys/devices/system/cpu/cpu0/cache/index%d/level", root, i);
         if (bmb_read_line(path, level, sizeof(level)) != 0) {
             break;
         }
-        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu0/cache/index%d/type", i);
+        snprintf(path, sizeof(path), "%s/sys/devices/system/cpu/cpu0/cache/index%d/type", root, i);
         if (bmb_read_line(path, type, sizeof(type)) != 0) {
             break;
         }
-        snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu0/cache/index%d/size", i);
+        snprintf(path, sizeof(path), "%s/sys/devices/system/cpu/cpu0/cache/index%d/size", root, i);
         if (bmb_read_line(path, size, sizeof(size)) != 0) {
             break;
         }
@@ -165,7 +172,7 @@ static void bmb_probe_caches(bmb_machine_t *m)
     }
 }
 
-static void bmb_probe(bmb_machine_t *m)
+void bmb_machine_probe_at(const char *root, bmb_machine_t *m)
 {
     struct utsname u;
     time_t now = time(NULL);
@@ -173,7 +180,7 @@ static void bmb_probe(bmb_machine_t *m)
 
     memset(m, 0, sizeof(*m));
 
-    bmb_probe_cpu(m);
+    bmb_probe_cpu(m, root);
 
 #ifdef _SC_NPROCESSORS_ONLN
     {
@@ -183,8 +190,8 @@ static void bmb_probe(bmb_machine_t *m)
     }
 #endif
 
-    bmb_probe_numa(m);
-    bmb_probe_caches(m);
+    bmb_probe_numa(m, root);
+    bmb_probe_caches(m, root);
 
     if (uname(&u) == 0) {
         snprintf(m->os, sizeof(m->os), "%s %s %s", u.sysname, u.release, u.machine);
@@ -201,7 +208,7 @@ const bmb_machine_t *bmb_machine(void)
     static int probed = 0;
 
     if (!probed) {
-        bmb_probe(&machine);
+        bmb_machine_probe_at("", &machine);
         probed = 1;
     }
     return &machine;

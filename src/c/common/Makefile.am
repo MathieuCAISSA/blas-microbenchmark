@@ -45,4 +45,24 @@ TESTS = $(check_PROGRAMS)
 # Listed unconditionally so `make dist` ships them whatever this build was
 # configured for.
 EXTRA_libbmbcommon_a_SOURCES = ../netlib/bmb_netlib_cblas.c ../netlib/cblas.h
-EXTRA_DIST = ../netlib/test_netlib_cblas.c
+MACHINE_FIXTURES = \
+	fixtures/machine/README \
+	fixtures/machine/aarch64/proc/cpuinfo \
+	fixtures/machine/x86/proc/cpuinfo \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index0/level \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index0/size \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index0/type \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index1/level \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index1/size \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index1/type \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index2/level \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index2/size \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index2/type \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index3/level \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index3/size \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index3/type \
+	fixtures/machine/x86/sys/devices/system/node/node0/cpulist \
+	fixtures/machine/x86/sys/devices/system/node/node1/cpulist \
+	fixtures/machine/x86/sys/devices/system/node/online
+
+EXTRA_DIST = ../netlib/test_netlib_cblas.c $(MACHINE_FIXTURES)
