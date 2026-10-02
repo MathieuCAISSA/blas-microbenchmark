@@ -21,6 +21,7 @@
   --ring: rgba(11, 11, 11, 0.10);
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
   --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --h1: #cde2fb; --h2: #9ec5f4; --h3: #6da7ec; --h4: #3987e5; --h5: #256abf; --h6: #184f95; --h7: #0d366b;
 }
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
@@ -35,6 +36,7 @@
     --ring: rgba(255, 255, 255, 0.10);
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
     --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --h1: #0d366b; --h2: #184f95; --h3: #256abf; --h4: #3987e5; --h5: #6da7ec; --h6: #9ec5f4; --h7: #cde2fb;
   }
 }
 :root[data-theme="dark"] {
@@ -49,6 +51,7 @@
   --ring: rgba(255, 255, 255, 0.10);
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
   --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  --h1: #0d366b; --h2: #184f95; --h3: #256abf; --h4: #3987e5; --h5: #6da7ec; --h6: #9ec5f4; --h7: #cde2fb;
 }
 
 * { box-sizing: border-box; }
@@ -115,6 +118,19 @@ svg .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap:
 svg .band { stroke: none; opacity: 0.10; }
 svg .dot { stroke: var(--surface); stroke-width: 2; }
 svg .end-label { fill: var(--ink-2); }
+/* The one dashed line on the page, and dashed on purpose: it is a
+ * projection (ideal scaling), not data and not a grid. */
+svg .ideal { fill: none; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.7; }
+svg .cell:focus { outline: none; }
+svg .cell.active { stroke: var(--ink); stroke-width: 2; }
+.heat { grid-column: 1 / -1; }
+.panels { display: flex; flex-wrap: wrap; gap: 16px 24px; }
+.panel h4 { font-size: 13px; font-weight: 600; margin: 8px 0 4px; display: flex; align-items: center; gap: 6px; }
+.scale { display: flex; align-items: center; gap: 6px; margin: 8px 0 0; color: var(--ink-2); font-size: 12px; }
+.scale .steps { display: flex; gap: 2px; }
+.scale .steps span { display: inline-block; width: 22px; height: 10px; border-radius: 2px; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-top: 16px; }
+.filters label { color: var(--ink-2); }
 
 .tooltip {
   position: absolute;
@@ -404,6 +420,12 @@ details[open] > summary { margin-bottom: 12px; }
     return step;
   }
 
+  var clipCount = 0;
+
+  /* opt: title, subtitle, xLabel, yLabel, yUnit, series [{name, colour,
+   * points [{x, y, y2?, extra?}], ideal? [{x, y}]}], and optionally
+   * xFormat/xHead (ticks / tooltip heading), yFormat (tooltip value),
+   * yLog + yDomain + yTicks + yTickFormat, baseline, yHeadroom, markers. */
   function lineChart(opt) {
     var fig = el("figure", "chart card");
     var cap = el("figcaption");
@@ -412,6 +434,11 @@ details[open] > summary { margin-bottom: 12px; }
     fig.appendChild(cap);
 
     var drawn = opt.series.filter(function (s) { return s.points.length > 0; });
+    var xFormat = opt.xFormat || fmtSize;
+    var xHead = opt.xHead || function (x) { return opt.xLabel + " " + x.toLocaleString("en-US"); };
+    var yFormat = opt.yFormat || function (v) { return fmtRate(v) + " " + opt.yUnit; };
+    var clipId = "bmb-clip-" + (++clipCount);
+
     if (drawn.length >= 2) {
       var legend = el("ul", "legend");
       drawn.forEach(function (s) {
@@ -435,53 +462,83 @@ details[open] > summary { margin-bottom: 12px; }
       var xs = uniqSorted([].concat.apply([], drawn.map(function (s) { return s.points.map(function (p) { return p.x; }); })));
       var xmin = xs[0], xmax = xs[xs.length - 1];
       var xlog = xmax / xmin >= 8;
-      var ymax = 0;
-      drawn.forEach(function (s) {
-        s.points.forEach(function (p) { ymax = Math.max(ymax, p.y, p.y2 || 0); });
-      });
-      var ystep = niceStep(ymax || 1, 4);
-      var ytop = Math.ceil((ymax * 1.04) / ystep) * ystep || ystep;
-      var decimals = Math.max(0, -Math.floor(Math.log(ystep) / Math.LN10 + 1e-9));
 
       var labels = drawn.length <= 4 && opt.endLabels !== false;
       var longest = labels ? Math.max.apply(null, drawn.map(function (s) { return s.name.length; })) : 0;
-      var m = { top: 24, right: labels ? Math.min(170, 16 + longest * 6.6) : 16, bottom: 40, left: 52 };
+      var m = { top: 24, right: labels ? Math.min(170, 16 + longest * 6.6) : 16, bottom: 40, left: 56 };
       var iw = W - m.left - m.right;
       var ih = H - m.top - m.bottom;
+
+      var lo, hi, ticks, tickFmt, sy;
+      if (opt.yLog) {
+        lo = opt.yDomain[0];
+        hi = opt.yDomain[1];
+        tickFmt = opt.yTickFormat;
+        sy = function (y) { return m.top + ih - ih * (Math.log(y / lo) / Math.log(hi / lo)); };
+        /* Thinned by the room they take, not by how many there are: x0.8,
+         * x1 and x1.25 sit 16px apart on a narrow range and on top of each
+         * other on a wide one. The baseline always stays. */
+        var kept = [];
+        opt.yTicks.slice().sort(function (a, b) {
+          return Math.abs(Math.log(a)) - Math.abs(Math.log(b));
+        }).forEach(function (t) {
+          if (kept.every(function (k) { return Math.abs(sy(k) - sy(t)) >= 16; })) { kept.push(t); }
+        });
+        ticks = kept.sort(function (a, b) { return a - b; });
+      } else {
+        var ymax = 0;
+        drawn.forEach(function (s) {
+          s.points.forEach(function (p) { ymax = Math.max(ymax, p.y, p.y2 || 0); });
+        });
+        var ystep = niceStep((ymax || 1) * (opt.yHeadroom || 1), 4);
+        lo = 0;
+        hi = Math.ceil((ymax * (opt.yHeadroom || 1.04)) / ystep) * ystep || ystep;
+        var decimals = Math.max(0, -Math.floor(Math.log(ystep) / Math.LN10 + 1e-9));
+        ticks = [];
+        for (var t = 0; t <= hi + ystep / 2; t += ystep) { ticks.push(t); }
+        tickFmt = function (v) { return v.toFixed(decimals); };
+        sy = function (y) { return m.top + ih - ih * (y / hi); };
+      }
 
       function sx(x) {
         if (xmin === xmax) { return m.left + iw / 2; }
         if (xlog) { return m.left + iw * (Math.log(x / xmin) / Math.log(xmax / xmin)); }
         return m.left + iw * ((x - xmin) / (xmax - xmin));
       }
-      function sy(y) { return m.top + ih - ih * (y / ytop); }
 
       var svg = sv("svg", { width: W, height: H, viewBox: "0 0 " + W + " " + H, role: "img",
                             tabindex: "0", "aria-label": opt.title + ". Exact values are in the raw data table." });
+      var defs = sv("defs", {});
+      var clip = sv("clipPath", { id: clipId });
+      clip.appendChild(sv("rect", { x: m.left, y: m.top, width: iw, height: ih }));
+      defs.appendChild(clip);
+      svg.appendChild(defs);
 
-      var y;
-      for (y = 0; y <= ytop + ystep / 2; y += ystep) {
-        svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: Math.round(sy(y)) + 0.5, y2: Math.round(sy(y)) + 0.5 }, y === 0 ? "axisline" : "gridline"));
-        var t = sv("text", { x: m.left - 8, y: sy(y) + 4, "text-anchor": "end" }, "tick");
-        t.textContent = y.toFixed(decimals);
-        svg.appendChild(t);
-      }
-      var yt = sv("text", { x: m.left - 8, y: 12, "text-anchor": "end" }, "axis-title");
+      ticks.forEach(function (v) {
+        var py = Math.round(sy(v)) + 0.5;
+        svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: py, y2: py },
+                           (opt.baseline === v) ? "axisline" : "gridline"));
+        var tt = sv("text", { x: m.left - 8, y: sy(v) + 4, "text-anchor": "end" }, "tick");
+        tt.textContent = tickFmt(v);
+        svg.appendChild(tt);
+      });
+      svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: m.top + ih + 0.5, y2: m.top + ih + 0.5 }, "axisline"));
+      var yt = sv("text", { x: 0, y: 12 }, "axis-title");
       yt.textContent = opt.yLabel;
       svg.appendChild(yt);
 
-      var ticks = xs;
+      var xt_ = xs;
       if (xs.length > 10) {
         var every = Math.ceil(xs.length / 10);
-        ticks = xs.filter(function (v, i) { return i % every === 0 || i === xs.length - 1; });
+        xt_ = xs.filter(function (v, i) { return i % every === 0 || i === xs.length - 1; });
       }
-      ticks.forEach(function (x) {
+      xt_.forEach(function (x) {
         var tx = sv("text", { x: sx(x), y: m.top + ih + 18, "text-anchor": "middle" }, "tick");
-        tx.textContent = fmtSize(x);
+        tx.textContent = xFormat(x);
         svg.appendChild(tx);
       });
       var xt = sv("text", { x: m.left + iw / 2, y: H - 4, "text-anchor": "middle" }, "axis-title");
-      xt.textContent = opt.xLabel + (xlog ? " (log scale)" : "");
+      xt.textContent = opt.xLabel + (xlog ? ", log scale" : "");
       svg.appendChild(xt);
 
       (opt.markers || []).forEach(function (mk) {
@@ -493,18 +550,27 @@ details[open] > summary { margin-bottom: 12px; }
         svg.appendChild(ml);
       });
 
+      function path(pts, f) {
+        return pts.map(function (p, i) { return (i ? "L" : "M") + sx(p.x) + "," + sy(f ? f(p) : p.y); }).join("");
+      }
+
       drawn.forEach(function (s) {
         var pts = s.points.slice().sort(function (a, b) { return a.x - b.x; });
+        if (s.ideal && s.ideal.length > 1) {
+          var ideal = sv("path", { d: path(s.ideal.slice().sort(function (a, b) { return a.x - b.x; })),
+                                   "clip-path": "url(#" + clipId + ")" }, "ideal");
+          ideal.style.stroke = s.colour;
+          svg.appendChild(ideal);
+        }
         var banded = pts.filter(function (p) { return p.y2 !== undefined; });
         if (banded.length === pts.length && pts.length > 1) {
-          var d = pts.map(function (p, i) { return (i ? "L" : "M") + sx(p.x) + "," + sy(p.y); }).join("") +
-                  pts.slice().reverse().map(function (p) { return "L" + sx(p.x) + "," + sy(p.y2); }).join("") + "Z";
-          var band = sv("path", { d: d }, "band");
+          var band = sv("path", { d: path(pts) + pts.slice().reverse().map(function (p) {
+            return "L" + sx(p.x) + "," + sy(p.y2); }).join("") + "Z" }, "band");
           band.style.fill = s.colour;
           svg.appendChild(band);
         }
         if (pts.length > 1) {
-          var line = sv("path", { d: pts.map(function (p, i) { return (i ? "L" : "M") + sx(p.x) + "," + sy(p.y); }).join("") }, "line");
+          var line = sv("path", { d: path(pts) }, "line");
           line.style.stroke = s.colour;
           svg.appendChild(line);
         }
@@ -518,13 +584,13 @@ details[open] > summary { margin-bottom: 12px; }
       /* Direct labels at the line ends, but only when they stay apart:
        * nudging colliding labels detaches them from their lines, so then
        * the legend carries identity on its own. */
-      if (labels) {
+      if (labels && drawn.length >= 2) {
         var ends = drawn.map(function (s) {
           var last = s.points.reduce(function (a, b) { return b.x > a.x ? b : a; });
           return { s: s, y: sy(last.y), x: sx(last.x) };
         }).sort(function (a, b) { return a.y - b.y; });
         var apart = ends.every(function (e, i) { return i === 0 || e.y - ends[i - 1].y >= 14; });
-        if (apart && drawn.length >= 2) {
+        if (apart) {
           ends.forEach(function (e) {
             var lt = sv("text", { x: e.x + 10, y: e.y + 4 }, "end-label");
             lt.textContent = e.s.name;
@@ -553,7 +619,7 @@ details[open] > summary { margin-bottom: 12px; }
         cross.setAttribute("x2", px);
         cross.setAttribute("visibility", "visible");
         tip.textContent = "";
-        tip.appendChild(el("div", "head", opt.xLabel + " " + x.toLocaleString("en-US")));
+        tip.appendChild(el("div", "head", xHead(x)));
         drawn.forEach(function (s) {
           var p = s.points.filter(function (q) { return q.x === x; })[0];
           if (!p) { return; }
@@ -561,8 +627,8 @@ details[open] > summary { margin-bottom: 12px; }
           var key = el("span", "key");
           key.style.background = s.colour;
           row.appendChild(key);
-          row.appendChild(el("strong", null, fmtRate(p.y) + " " + opt.yUnit));
-          row.appendChild(el("span", "name", s.name));
+          row.appendChild(el("strong", null, yFormat(p.y)));
+          row.appendChild(el("span", "name", s.name + (p.extra ? " · " + p.extra : "")));
           tip.appendChild(row);
         });
         tip.style.display = "block";
@@ -677,7 +743,8 @@ details[open] > summary { margin-bottom: 12px; }
     });
     var xs = uniqSorted([].concat.apply([], list.map(function (s) { return s.slicePoints.map(slice.pick); })));
     if (xs.length < 2) {
-      return { empty: "Only one size was measured at " + plural(threads, "thread") + ": the summary and the raw data table have the number." };
+      return { list: list, slice: slice,
+               empty: "Only one size was measured at " + plural(threads, "thread") + ": the summary and the raw data table have the number." };
     }
     var sub = plural(threads, "thread") + (slice.note ? " · " + slice.note : "");
     var markers = cacheMarkers(list, slice);
@@ -702,7 +769,308 @@ details[open] > summary { margin-bottom: 12px; }
     }
     build("gflops", "Performance against size", "GFLOP/s");
     build("gbs", "Bandwidth against size", "GB/s");
-    return { charts: out };
+    return { charts: out, list: list, slice: slice };
+  }
+
+
+  /* The figure a routine is judged by: GFLOP/s, or GB/s for the two that
+   * do no arithmetic (dcopy, dswap). */
+  function metricField(rt) {
+    var flops = rt.seriesOrder.some(function (s) {
+      return pointsOf(s).some(function (p) { return p.gflops !== undefined; });
+    });
+    return flops ? "gflops" : "gbs";
+  }
+  function metricUnit(field) { return field === "gflops" ? "GFLOP/s" : "GB/s"; }
+
+  function sizeText(d1, d2) {
+    return d2 === null ? d1.toLocaleString("en-US") : d1.toLocaleString("en-US") + " × " + d2.toLocaleString("en-US");
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Chart 3: thread scaling, at the largest size measured at every     *
+   * thread count, so each point on a curve is the same problem. The    *
+   * dashed line is ideal linear scaling from the lowest thread count;  *
+   * the gap to it is the parallel efficiency, which the tooltip gives. *
+   * ------------------------------------------------------------------ */
+
+  function threadChart(rt) {
+    var field = metricField(rt);
+    var unit = metricUnit(field);
+    var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0 && threadCounts(s).length >= 2; });
+    if (!list.length) { return null; }
+
+    function sizeKey(p) { return p.d1 + "x" + p.d2; }
+    function complete(s) {
+      var ts = threadCounts(s);
+      var by = {};
+      pointsOf(s).forEach(function (p) {
+        if (p[field] === undefined) { return; }
+        var k = sizeKey(p);
+        (by[k] = by[k] || { d1: p.d1, d2: p.d2, at: {} }).at[p.threads] = p;
+      });
+      return Object.keys(by).map(function (k) { return by[k]; }).filter(function (e) {
+        return ts.every(function (t) { return e.at[t]; });
+      });
+    }
+    function largest(entries) {
+      var square = entries.filter(function (e) { return e.d2 === null || e.d1 === e.d2; });
+      var pool = square.length ? square : entries;
+      return pool.sort(function (a, b) { return b.d1 * (b.d2 || 1) - a.d1 * (a.d2 || 1); })[0];
+    }
+
+    var per = list.map(complete);
+    var common = per[0].filter(function (e) {
+      return per.every(function (arr) { return arr.some(function (f) { return sizeKey(f) === sizeKey(e); }); });
+    });
+    var chosen = common.length ? largest(common) : null;
+    var notes = [];
+    var series = list.map(function (s, i) {
+      var entry = chosen ? per[i].filter(function (e) { return sizeKey(e) === sizeKey(chosen); })[0] : largest(per[i]);
+      if (!entry) {
+        notes.push(s.identity.name + " has no size measured at every one of its thread counts, so it is not in the thread-scaling chart.");
+        return { name: s.identity.name, colour: colour(s.identity), points: [] };
+      }
+      var ts = Object.keys(entry.at).map(Number).sort(function (a, b) { return a - b; });
+      var t0 = ts[0], y0 = entry.at[t0][field];
+      return {
+        name: s.identity.name + (chosen ? "" : " (" + sizeText(entry.d1, entry.d2) + ")"),
+        colour: colour(s.identity),
+        points: ts.map(function (t) {
+          var y = entry.at[t][field];
+          return { x: t, y: y, extra: Math.round(100 * y / (y0 * t / t0)) + "% of ideal" };
+        }),
+        ideal: ts.map(function (t) { return { x: t, y: y0 * t / t0 }; })
+      };
+    });
+    if (!series.some(function (x) { return x.points.length; })) { return { notes: notes }; }
+    return {
+      notes: notes,
+      chart: lineChart({
+        title: "Thread scaling",
+        subtitle: (chosen ? "at " + sizeText(chosen.d1, chosen.d2) : "each series at its largest size") +
+                  " · dashed: ideal linear scaling",
+        xLabel: "Threads", yLabel: unit, yUnit: unit, series: series, yHeadroom: 1.2,
+        xFormat: function (x) { return String(x); },
+        xHead: function (x) { return plural(x, "thread"); }
+      })
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Chart 4: each series relative to a reference, on the same slice as *
+   * chart 2. Log scale centred on x1: on a linear axis "2x slower"     *
+   * fits between 0 and 1 while "2x faster" spans 1 to 2, which squashes *
+   * slowness (#1, decision 2).                                          *
+   * ------------------------------------------------------------------ */
+
+  function ratioChart(rt, list, slice, threads, ref) {
+    var field = metricField(rt);
+    var refSeries = list.filter(function (s) { return s.identity === ref; })[0];
+    if (!refSeries || list.length < 2) { return null; }
+    var at = {};
+    refSeries.slicePoints.forEach(function (p) { if (p[field]) { at[p.d1 + "x" + p.d2] = p; } });
+
+    var notes = [];
+    var worst = 1;
+    var series = list.filter(function (s) { return s !== refSeries; }).map(function (s) {
+      var pts = [];
+      s.slicePoints.forEach(function (p) {
+        var r = at[p.d1 + "x" + p.d2];
+        if (r && p[field] !== undefined) {
+          var v = p[field] / r[field];
+          worst = Math.max(worst, v, 1 / v);
+          pts.push({ x: slice.pick(p), y: v });
+        }
+      });
+      if (!pts.length) {
+        notes.push(s.identity.name + " has no point in common with " + ref.name + " at " +
+                   plural(threads, "thread") + ", so it is not in the comparison chart.");
+      }
+      return { name: s.identity.name, colour: colour(s.identity), points: pts };
+    });
+    var xs = uniqSorted([].concat.apply([], series.map(function (x) { return x.points.map(function (p) { return p.x; }); })));
+    if (xs.length < 2) { return { notes: notes }; }
+
+    var hi = Math.max(1.25, worst * 1.15), lo = 1 / hi;
+    var ticks = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.8, 1, 1.25, 2, 5, 10, 20, 50, 100]
+      .filter(function (t) { return t >= lo && t <= hi; });
+    if (ticks.length > 9) { ticks = ticks.filter(function (t) { return t !== 0.8 && t !== 1.25; }); }
+    var shown = series.filter(function (x) { return x.points.length; });
+    return {
+      notes: notes,
+      chart: lineChart({
+        /* One curve gets no legend, so the title has to say whose it is. */
+        title: (shown.length === 1 ? shown[0].name + " c" : "C") + "ompared with " + ref.name,
+        subtitle: plural(threads, "thread") + (slice.note ? " · " + slice.note : "") +
+                  " · " + ref.name + " = ×1, higher is faster",
+        xLabel: slice.label, yLabel: "× " + ref.name + " (log)", series: series,
+        yLog: true, yDomain: [lo, hi], yTicks: ticks, baseline: 1,
+        yTickFormat: function (t) { return "×" + t; },
+        yFormat: function (v) { return "×" + v.toFixed(2); }
+      })
+    };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Chart 5: a heatmap per series, side by side, for routines whose    *
+   * two dimensions were swept as a grid -- it shows what a curve       *
+   * hides, tall-and-skinny against square. Every map shares one colour *
+   * scale, or the same dark cell would mean 40 GFLOP/s on one and 4 on *
+   * the next. One hue, light to dark, seven steps.                     *
+   * ------------------------------------------------------------------ */
+
+  var STEPS = 7;
+
+  function threadsWithGrid(rt) {
+    return uniqSorted([].concat.apply([], rt.seriesOrder.map(threadCounts))).filter(function (t) {
+      var pts = [].concat.apply([], rt.seriesOrder.map(function (s) {
+        return pointsOf(s).filter(function (p) { return p.threads === t; });
+      }));
+      return uniqSorted(pts.map(function (p) { return p.d1; })).length >= 2 &&
+             uniqSorted(pts.map(function (p) { return p.d2; })).length >= 2 &&
+             pts.some(function (p) { return p.d1 !== p.d2; });
+    });
+  }
+
+  function heatmapChart(rt, threads) {
+    if (!rt.dim2Label) { return null; }
+    var field = metricField(rt);
+    var unit = metricUnit(field);
+    var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0; });
+    var panels = list.map(function (s) {
+      return { s: s, cells: pointsOf(s).filter(function (p) { return p.threads === threads && p[field] !== undefined; }) };
+    }).filter(function (pn) { return pn.cells.length; });
+    var cells = [].concat.apply([], panels.map(function (pn) { return pn.cells; }));
+    var d1s = uniqSorted(cells.map(function (p) { return p.d1; }));
+    var d2s = uniqSorted(cells.map(function (p) { return p.d2; }));
+    if (d1s.length < 2 || d2s.length < 2 || !cells.some(function (p) { return p.d1 !== p.d2; })) { return null; }
+    var vmax = Math.max.apply(null, cells.map(function (p) { return p[field]; }));
+    function step(v) { return Math.min(STEPS, Math.floor((v / vmax) * STEPS) + 1); }
+
+    var fig = el("figure", "chart card heat");
+    var cap = el("figcaption");
+    cap.appendChild(el("h3", null, "Shapes"));
+    cap.appendChild(el("p", "sub", plural(threads, "thread") + " · " + rt.dim1Label + " by " + rt.dim2Label +
+                       " · one colour scale for every map"));
+    fig.appendChild(cap);
+    var scale = el("div", "scale");
+    scale.appendChild(el("span", null, "0"));
+    var steps = el("span", "steps");
+    for (var k = 1; k <= STEPS; k++) {
+      var sw = el("span");
+      sw.style.background = "var(--h" + k + ")";
+      steps.appendChild(sw);
+    }
+    scale.appendChild(steps);
+    scale.appendChild(el("span", null, fmtRate(vmax) + " " + unit));
+    fig.appendChild(scale);
+    var row = el("div", "panels");
+    fig.appendChild(row);
+
+    function draw() {
+      row.textContent = "";
+      var avail = Math.max(280, row.clientWidth || 600);
+      var pw = Math.max(260, Math.min(440, Math.floor((avail - 24 * (panels.length - 1)) / panels.length)));
+      panels.forEach(function (pn) {
+        var box = el("div", "panel plot");
+        box.style.width = pw + "px";
+        var h4 = el("h4");
+        if (panels.length > 1) {
+          var dot = el("span", "swatch");
+          dot.style.background = colour(pn.s.identity);
+          h4.appendChild(dot);
+        }
+        h4.appendChild(document.createTextNode(pn.s.identity.name));
+        box.appendChild(h4);
+
+        var m = { top: 18, right: 8, bottom: 40, left: 52 };
+        var iw = pw - m.left - m.right;
+        var cw = iw / d2s.length;
+        var ch = Math.max(18, Math.min(cw, 44));
+        var ih = ch * d1s.length;
+        var H = m.top + ih + m.bottom;
+        var svg = sv("svg", { width: pw, height: H, viewBox: "0 0 " + pw + " " + H, role: "img", tabindex: "0",
+                              "aria-label": "Heatmap of " + unit + " for " + pn.s.identity.name + ". Exact values are in the raw data table." });
+        var yt = sv("text", { x: m.left - 8, y: 11, "text-anchor": "end" }, "axis-title");
+        yt.textContent = parens(rt.dim1Label) || "dim1";
+        svg.appendChild(yt);
+
+        var at = {};
+        pn.cells.forEach(function (p) { at[p.d1 + "x" + p.d2] = p; });
+        var rects = [];
+        d1s.forEach(function (d1, i) {
+          var y = m.top + (d1s.length - 1 - i) * ch;
+          var ty = sv("text", { x: m.left - 8, y: y + ch / 2 + 4, "text-anchor": "end" }, "tick");
+          ty.textContent = fmtSize(d1);
+          svg.appendChild(ty);
+          d2s.forEach(function (d2, j) {
+            var p = at[d1 + "x" + d2];
+            if (!p) { return; }
+            /* The 2px surface gap between cells, never a border. */
+            var r = sv("rect", { x: m.left + j * cw + 1, y: y + 1, width: Math.max(1, cw - 2), height: Math.max(1, ch - 2), rx: 2 }, "cell");
+            r.style.fill = "var(--h" + step(p[field]) + ")";
+            r.bmb = { p: p, i: i, j: j };
+            rects.push(r);
+            svg.appendChild(r);
+          });
+        });
+        d2s.forEach(function (d2, j) {
+          if (d2s.length > 10 && j % Math.ceil(d2s.length / 10) !== 0) { return; }
+          var tx = sv("text", { x: m.left + j * cw + cw / 2, y: m.top + ih + 16, "text-anchor": "middle" }, "tick");
+          tx.textContent = fmtSize(d2);
+          svg.appendChild(tx);
+        });
+        var xt = sv("text", { x: m.left + iw / 2, y: H - 4, "text-anchor": "middle" }, "axis-title");
+        xt.textContent = parens(rt.dim2Label) || "dim2";
+        svg.appendChild(xt);
+        box.appendChild(svg);
+
+        var tip = el("div", "tooltip");
+        tip.style.display = "none";
+        box.appendChild(tip);
+        var active = null;
+        function show(r) {
+          if (active) { active.classList.remove("active"); }
+          active = r;
+          r.classList.add("active");
+          var p = r.bmb.p;
+          tip.textContent = "";
+          tip.appendChild(el("div", "head", sizeText(p.d1, p.d2)));
+          var line = el("div", "row");
+          line.appendChild(el("strong", null, fmtRate(p[field]) + " " + unit));
+          line.appendChild(el("span", "name", fmtTime(p.time)));
+          tip.appendChild(line);
+          tip.style.display = "block";
+          var left = Number(r.getAttribute("x")) + cw + 4;
+          if (left + tip.offsetWidth > pw) { left = Number(r.getAttribute("x")) - tip.offsetWidth - 4; }
+          tip.style.left = Math.max(0, left) + "px";
+          tip.style.top = (Number(r.getAttribute("y")) + 20) + "px";
+        }
+        function hide() {
+          if (active) { active.classList.remove("active"); }
+          active = null;
+          tip.style.display = "none";
+        }
+        rects.forEach(function (r) { r.addEventListener("pointerenter", function () { show(r); }); });
+        svg.addEventListener("pointerleave", hide);
+        svg.addEventListener("focus", function () { if (rects.length) { show(active || rects[rects.length - 1]); } });
+        svg.addEventListener("blur", hide);
+        svg.addEventListener("keydown", function (ev) {
+          if (!active) { return; }
+          var di = { ArrowUp: 1, ArrowDown: -1 }[ev.key] || 0;
+          var dj = { ArrowRight: 1, ArrowLeft: -1 }[ev.key] || 0;
+          if (!di && !dj) { if (ev.key === "Escape") { hide(); } return; }
+          var want = rects.filter(function (r) { return r.bmb.i === active.bmb.i + di && r.bmb.j === active.bmb.j + dj; })[0];
+          if (want) { show(want); }
+          ev.preventDefault();
+        });
+        row.appendChild(box);
+      });
+    }
+    fig.draw = draw;
+    charts.push(fig);
+    return fig;
   }
 
   /* ------------------------------------------------------------------ *
@@ -719,6 +1087,43 @@ details[open] > summary { margin-bottom: 12px; }
     (meta.date ? " · generated " + meta.date.replace("T", " ").replace("Z", " UTC") : "") +
     (meta.generator ? " by " + meta.generator : "")));
   root.appendChild(header);
+
+  /* The ratio reference (#1, decision 2): OpenBLAS when there is one --
+   * identityOrder already puts it first -- otherwise the first series by
+   * legend name; never the order of the files, which the shell sorts by
+   * name. One selector for the whole page, in the one filter row, since it
+   * scopes every comparison chart below. */
+  var comparable = identityOrder.filter(function (id) {
+    return id.slot && routineOrder.some(function (rt) {
+      return rt.seriesOrder.length >= 2 && rt.seriesOrder.some(function (s) { return s.identity === id; });
+    });
+  });
+  var reference = comparable[0] || null;
+  var sections = [];
+  if (comparable.length >= 2) {
+    var filters = el("div", "filters");
+    var flab = el("label", null, "Compare against ");
+    var fsel = el("select");
+    comparable.forEach(function (id, i) {
+      var o = el("option", null, id.name);
+      o.value = String(i);
+      fsel.appendChild(o);
+    });
+    fsel.addEventListener("change", function () {
+      reference = comparable[Number(fsel.value)];
+      sections.forEach(function (redraw) { redraw(); });
+    });
+    flab.appendChild(fsel);
+    filters.appendChild(flab);
+    root.appendChild(filters);
+  }
+
+  /* A routine the chosen reference was not measured for compares against
+   * its own default instead, and says so in the chart title. */
+  function referenceFor(rt) {
+    var mine = rt.seriesOrder.map(function (s) { return s.identity; });
+    return (reference && mine.indexOf(reference) >= 0) ? reference : mine[0];
+  }
 
   if (problems.length) {
     var pb = el("div", "card problems");
@@ -837,32 +1242,83 @@ details[open] > summary { margin-bottom: 12px; }
       body.textContent = "";
       charts = charts.filter(function (c) { return document.body.contains(c); });
       var grid = el("div", "grid charts");
+      var notes = [];
+      var made = [];
+
       var res = sizeCharts(rt, threads);
       if (res.empty) { body.appendChild(el("p", "empty", res.empty)); }
-      (res.charts || []).forEach(function (c) { grid.appendChild(c); });
-      body.appendChild(grid);
-      (res.charts || []).forEach(function (c) { c.draw(); });
+      made = made.concat(res.charts || []);
 
-      var notes = [];
+      var rc = ratioChart(rt, res.list, res.slice, threads, referenceFor(rt));
+      if (rc) {
+        if (rc.chart) { made.push(rc.chart); }
+        notes = notes.concat(rc.notes);
+      }
+      var tc = threadChart(rt);
+      if (tc) {
+        if (tc.chart) { made.push(tc.chart); }
+        notes = notes.concat(tc.notes);
+      }
+      var hm = heatmapChart(rt, threads);
+      if (hm) { made.push(hm); }
+
+      /* The heatmap follows the thread selector, and a grid of shapes is
+       * often measured at one thread count only. Say where it is rather
+       * than let it be absent without explanation. */
+      if (!hm && rt.dim2Label) {
+        var gridAt = threadsWithGrid(rt).filter(function (t) { return t !== threads; });
+        if (gridAt.length) {
+          notes.push("The shapes heatmap needs a grid of sizes, which was measured at " +
+                     gridAt.map(function (t) { return plural(t, "thread"); }).join(", ") +
+                     " only: pick that in the selector to see it.");
+        }
+      }
+
+      made.forEach(function (c) { grid.appendChild(c); });
+      body.appendChild(grid);
+      made.forEach(function (c) { c.draw(); });
+
       var missing = rt.seriesOrder.filter(function (s) { return threadCounts(s).indexOf(threads) < 0; });
       if (missing.length) {
-        notes.push("Not measured at " + plural(threads, "thread") + ": " + missing.map(function (s) { return s.identity.name; }).join(", ") + ".");
+        notes.push("Not measured at " + plural(threads, "thread") + ": " +
+                   missing.map(function (s) { return s.identity.name; }).join(", ") + ".");
       }
-      rt.duplicates.forEach(function (d) {
-        notes.push(d.series.identity.name + ", " + (d.point.d2 === null ? d.point.d1 : d.point.d1 + " × " + d.point.d2) +
-          " at " + plural(d.point.threads, "thread") + ": measured in more than one file; kept the fastest (" + d.kept +
-          "), the other (" + d.other + ") was " + d.gap.toFixed(0) + "% slower.");
-      });
-      if (notes.length) {
-        var ul = el("ul", "notes");
-        notes.forEach(function (n) { ul.appendChild(el("li", null, n)); });
-        body.appendChild(ul);
+
+      var ul = el("ul", "notes");
+      notes.forEach(function (n) { ul.appendChild(el("li", null, n)); });
+
+      /* Points measured in more than one file: the fastest was kept, and
+       * the page says so with the gap, so that a run that did not
+       * reproduce does not go unnoticed (#1, decision 1). A handful are
+       * listed; more are summarised, with the full list one click away. */
+      var dups = rt.duplicates;
+      function dupText(d) {
+        return d.series.identity.name + ", " + sizeText(d.point.d1, d.point.d2) + " at " +
+               plural(d.point.threads, "thread") + ": kept " + d.kept + ", " + d.other + " was " +
+               d.gap.toFixed(0) + "% slower";
       }
+      if (dups.length && dups.length <= 3) {
+        dups.forEach(function (d) { ul.appendChild(el("li", null, "Measured in more than one file — " + dupText(d) + ".")); });
+      } else if (dups.length) {
+        var worst = dups.reduce(function (a, b) { return b.gap > a.gap ? b : a; });
+        var li = el("li");
+        var det = el("details");
+        det.appendChild(el("summary", null, dups.length + " points were measured in more than one file; the fastest was kept each time. Largest gap: " +
+                                             worst.gap.toFixed(0) + "% (" + worst.series.identity.name + ", " +
+                                             sizeText(worst.point.d1, worst.point.d2) + ")."));
+        var inner = el("ul", "notes");
+        dups.forEach(function (d) { inner.appendChild(el("li", null, dupText(d) + ".")); });
+        det.appendChild(inner);
+        li.appendChild(det);
+        ul.appendChild(li);
+      }
+      if (ul.children.length) { body.appendChild(ul); }
     }
 
     if (select) { select.addEventListener("change", function () { render(Number(select.value)); }); }
     root.appendChild(sec);
     render(initial);
+    sections.push(function () { render(select ? Number(select.value) : initial); });
   });
 
   /* ---- 6. Raw data: every row, and the table view of every chart ---- */

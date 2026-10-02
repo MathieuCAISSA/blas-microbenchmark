@@ -13,7 +13,7 @@ bmb_report: $(srcdir)/bmb_report.sh $(srcdir)/report.html $(srcdir)/assemble.awk
 	    $(srcdir)/report.html $(srcdir)/bmb_report.sh >$@.tmp && \
 	chmod +x $@.tmp && mv -f $@.tmp $@
 
-TESTS = test_bmb_report.sh
+TESTS = test_bmb_report.sh test_bmb_report_render.sh
 
 FIXTURES = \
 	fixtures/README \

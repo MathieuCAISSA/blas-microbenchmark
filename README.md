@@ -10,7 +10,8 @@ for BLAS instead of MPI.
 
 Works against whichever BLAS library you already have installed —
 OpenBLAS, BLIS, Netlib reference, NVPL or ArmPL — so you can compare them
-on the same hardware with the same command.
+on the same hardware with the same command, and turn the results into a
+page of charts with [`bmb_report`](#charts-bmb_report).
 
 ## Install
 
@@ -295,6 +296,55 @@ instead:
 
 `bmb_<routine> --version` prints the library and the machine without
 running anything.
+
+## Charts: `bmb_report`
+
+Save results as JSON, then turn any number of them into one HTML page:
+
+```bash
+bmb_dgemm -m 256:4096 -t 1:8 -o results/dgemm-openblas.json
+bmb_dgemm -m 256:4096 -t 1:8 -o results/dgemm-blis.json     # built against BLIS
+bmb_ddot  -v 1024:16777216  -o results/ddot-openblas.json
+bmb_report results/*.json > report.html
+firefox report.html
+```
+
+The page is **self-contained** — data, styles and script all inside it,
+nothing fetched — so it opens straight from disk on a machine with no
+network, and can be sent as a single file.
+
+What it shows, each part only when the results can support it:
+
+- **A summary** — the best figure per routine, and where every series came
+  from (library, CPU, caches, OS, date).
+- **Performance against size**, and **bandwidth** for levels 1 and 2, with
+  the points where a sweep leaves L1, L2 and L3 marked on the axis. With
+  `-s`, a band shows the spread between the fastest sample and the mean.
+- **A comparison** of each library against a reference — OpenBLAS by
+  default, switchable at the top of the page — on a log scale, so that
+  "twice as slow" and "twice as fast" sit at the same distance from ×1.
+- **Thread scaling** at the largest size measured at every thread count,
+  against ideal linear scaling.
+- **A heatmap of shapes** for two-dimension routines measured as a grid
+  (`-m` and `-M` both given).
+- **The raw data**, every row, sortable.
+
+Hovering a chart gives the exact values; the arrow keys do the same from
+the keyboard.
+
+Results are grouped into **series** by backend, library version, CPU and
+`--label`. Files that share all four form one curve — a sweep extended the
+next day, or thread counts measured in separate runs, merge on their own.
+A point measured in more than one file keeps the fastest measurement, and
+the page says so with the gap, so that a run which did not reproduce does
+not go unnoticed. To compare two conditions on the same machine — turbo on
+and off, two BIOS settings — give each run its own `--label`.
+
+`bmb_report` reads results from the same major version as itself, and
+refuses anything else **before writing a page**, naming the file and the
+reason: results from before 0.6.0 measured a mean rather than the fastest
+sample, and 0.6.x did not record the machine, so neither can be compared
+with current results.
 
 ## Getting numbers you can trust
 

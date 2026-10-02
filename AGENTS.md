@@ -427,6 +427,48 @@ file, with every `</` turned into `<\/` (the same character to JSON) so
 that a `</script>` inside a label cannot close its element. Each block is
 parsed on its own, so one bad file cannot take the others down with it.
 
+### The page
+
+All of it is in `report.html`: plain JavaScript and SVG, no library, in
+keeping with "nothing fetched". The decisions it implements are #1's, and
+the code points at them; the ones easiest to break by accident:
+
+- **A series is routine + backend + BLAS string + CPU + label.** Files
+  sharing one merge; a duplicate point keeps the fastest and is reported.
+- **Colours are assigned once per page**, in a fixed order with OpenBLAS
+  first, so a series keeps its colour in every chart and under every
+  selector. Never assign them per chart or by rank. The palette is the
+  dataviz skill's reference palette, light and dark, used as validated —
+  if you change a hue, re-run its validator rather than eyeballing it.
+- **One y axis per chart.** GB/s is a second chart, not a second scale.
+- **Anything from a result file reaches the DOM through `textContent`**,
+  never `innerHTML`: a label is whatever someone typed.
+- **Charts draw at the width they get** and redraw on resize, rather than
+  scaling an SVG `viewBox`, so text stays at its real size.
+
+### Testing the page
+
+`test_bmb_report_render.sh` generates input meant to trigger every chart,
+renders the report in headless Chrome (`--dump-dom`) and checks each one
+drew. It runs on GitHub's x86 runners, which ship Chrome, and reports SKIP
+wherever no Chrome or Chromium is found. Two things about it took two
+false passes to learn, so keep them:
+
+- **It only looks inside the rendered `<main>`.** The serialised DOM also
+  holds the page's own script, whose source contains every chart title
+  verbatim: grepping the whole document passes even when nothing drew.
+- **It extracts `<main>` with awk, not a `sed` range.** The page builds
+  `<main>` in one go, so it opens and closes on one line, and a `sed`
+  range only looks for its end from the next line — it ran on through the
+  script to the end of the file.
+
+It was checked against a page whose script throws on its first line, and
+against one that never draws the heatmap; both fail. `BMB_BROWSER=…`
+points it at a specific browser. To look at a page rather than test it,
+render a screenshot: `chrome --headless=new --screenshot=out.png
+--window-size=1280,3000 file://$PWD/report.html` — and do look, in light
+and dark: the test proves the charts exist, not that they are readable.
+
 ## Known measurement limitations
 
 Recorded here so they are not mistaken for bugs, and not "fixed" without
