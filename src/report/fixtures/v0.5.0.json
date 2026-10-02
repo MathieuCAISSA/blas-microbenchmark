@@ -1,0 +1,12 @@
+{
+  "routine": "ddot",
+  "results": [
+    {
+      "thread_count": 1,
+      "dim1": 4096,
+      "time_s": 0.000000312,
+      "gflops": 26.256410,
+      "gbytes_per_s": 210.051282
+    }
+  ]
+}

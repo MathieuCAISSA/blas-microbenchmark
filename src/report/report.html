@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLAS benchmark report</title>
+</head>
+<body>
+<main id="bmb-report"><p>Loading the results…</p></main>
+<!-- @BMB_RESULTS@ -->
+<script>
+(function () {
+  "use strict";
+  var out = document.getElementById("bmb-report");
+  var list = document.createElement("ul");
+  var nodes = document.querySelectorAll("script.bmb-result");
+  out.textContent = "";
+  for (var i = 0; i < nodes.length; i++) {
+    var item = document.createElement("li");
+    try {
+      var entry = JSON.parse(nodes[i].textContent);
+      item.textContent = entry.file + ": " + entry.result.routine + ", " +
+        entry.result.backend + ", " + entry.result.results.length + " points";
+    } catch (e) {
+      item.textContent = "result " + (i + 1) + " could not be read: " + e.message;
+    }
+    list.appendChild(item);
+  }
+  out.appendChild(list);
+})();
+</script>
+</body>
+</html>

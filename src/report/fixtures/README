@@ -1,0 +1,11 @@
+Result files in the formats bmb_report must refuse (#1, decision 5), laid
+out exactly as those versions wrote them -- recovered from the git history
+(git show v0.5.0:src/c/common/bmb_print.c), not reconstructed from memory.
+
+  v0.5.0.json    before 0.6.0: no version, no backend, time_s was a mean
+  v0.6.1.json    0.6.x: no machine information, no dimension labels
+  v2.0.0.json    a future major version
+  not-ours.json  JSON from something else entirely
+
+Current-format input is not kept here: the tests generate it by running the
+benchmarks, so it can never fall out of date.

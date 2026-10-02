@@ -53,6 +53,12 @@ jobs:
           # Benchmarks install grouped by BLAS level, not into bin.
           ./_install/libexec/blas-microbenchmark/level1/bmb_daxpy -x 1 -i 2 -v 32
           ./_install/libexec/blas-microbenchmark/level3/bmb_dgemm -x 1 -i 2 -m 32
+          # bmb_report goes to <prefix>/bin -- the one thing on $PATH -- and
+          # must follow --prefix rather than land in /usr/local regardless.
+          test -x ./_install/bin/bmb_report
+          ./_install/libexec/blas-microbenchmark/level3/bmb_dgemm -x 0 -i 1 -m 32 -o r.json
+          ./_install/bin/bmb_report r.json > r.html
+          grep -qi '^<!doctype html>' r.html
 
       - name: Upload the tarball to the release
         env:

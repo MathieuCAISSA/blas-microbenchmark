@@ -50,6 +50,8 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
+src/report/      # bmb_report: the script, the HTML template, how the two
+                 # are assembled, and fixtures in the formats it refuses
 ```
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
@@ -80,8 +82,11 @@ alternatives and kept on purpose, so don't "fix" it:
   is worth. It stays the right answer if the flat `$PATH` ever becomes the
   bigger annoyance.
 
-The cost is that nothing lands in `$PATH`; README.md gives the two lines
-that put the three directories there.
+The cost is that no benchmark lands in `$PATH`; README.md gives the two
+lines that put the three directories there. The one exception is
+`bmb_report`, a single user-facing command, which goes to `$(bindir)` — and
+so follows `--prefix`, `--bindir` and `DESTDIR` like anything else Automake
+installs. The release workflow checks it lands in `<prefix>/bin`.
 
 Note it's `level<N>_PROGRAMS`, **not** `check_PROGRAMS` — the latter would
 build the benchmarks only under `make check` and install nothing.
@@ -382,6 +387,45 @@ half-done is not.
   translation units never call, which is two `-Wunused-function` per
   benchmark). Hint directories keep using `-I` and are searched first, so
   a loaded module still wins over a distro probe.
+
+## The report
+
+`bmb_report results/*.json > report.html` turns any number of JSON results
+into one HTML page of charts (#1). The page must open from `file://` with
+no network, so everything is inside it: data, styles, script, nothing
+fetched. `test_bmb_report.sh` enforces that, among other things, by
+refusing any external `src`/`href`.
+
+**How it is built.** `src/report/bmb_report.sh` is a POSIX sh script with
+two marker lines; `make` runs `assemble.awk`, which splits `report.html` at
+its `<!-- @BMB_RESULTS@ -->` line and puts each half in place of a marker,
+inside a *quoted* here-document. The template is therefore copied byte for
+byte, with no shell expansion at all — and must never contain a line equal
+to `BMB_REPORT_HEAD` or `BMB_REPORT_TAIL`, which would end the
+here-document early (`assemble.awk` refuses to build if it does). Edit
+`report.html` freely otherwise; re-run `make` and the installed command
+picks it up.
+
+**What it accepts** is decision 5 of #1: results of the same major version
+as the report itself, which `assemble.awk` takes from `PACKAGE_VERSION`.
+Everything else is refused *before* anything is written, with the file name
+and the reason, because a page silently missing one backend would be read
+as complete. That is also why `main` carries a `-dev` version between
+releases (`1.0.0-dev`): its own results have to be accepted by its own
+report. `src/report/fixtures/` holds files in each refused format, laid out
+exactly as those versions wrote them — taken from the git history, not
+from memory. Current-format input is never a fixture: the test generates it
+by running the benchmarks, so it cannot fall out of date.
+
+The script checks files line by line rather than parsing JSON. That holds
+because the benchmarks write them — one field per line, fixed indentation —
+so any change to the JSON layout in `bmb_print.c` has to keep
+`check_file()` in step.
+
+Data goes into the page as one `<script type="application/json">` block per
+file, with every `</` turned into `<\/` (the same character to JSON) so
+that a `</script>` inside a label cannot close its element. Each block is
+parsed on its own, so one bad file cannot take the others down with it.
 
 ## Known measurement limitations
 

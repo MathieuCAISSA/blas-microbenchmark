@@ -1,0 +1,15 @@
+{
+  "version": "0.6.1",
+  "backend": "openblas",
+  "blas": "OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64",
+  "routine": "ddot",
+  "results": [
+    {
+      "thread_count": 1,
+      "dim1": 4096,
+      "time_s": 0.000000312,
+      "gflops": 26.256410,
+      "gbytes_per_s": 210.051282
+    }
+  ]
+}

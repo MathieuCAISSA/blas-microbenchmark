@@ -30,7 +30,8 @@ cd blas-microbenchmark-<version>
 ./configure
 make
 make check        # unit tests, plus one smoke test per benchmark
-make install      # installs to /usr/local/libexec/blas-microbenchmark
+make install      # benchmarks to /usr/local/libexec/blas-microbenchmark,
+                  # bmb_report to /usr/local/bin
 ```
 
 **Working from a git clone?** Then there is one step before that block:
