@@ -127,6 +127,13 @@ with 3 mathematical dimensions reuse one):
 - `dsyrk`/`dsyr2k`: `dim1` = N, `dim2` = K.
 - `dgemm`: `dim1` = M = K (K is tied to M), `dim2` = N.
 
+For every two-dimension routine, `dim2` follows `dim1` point by point unless
+`-M` was given, so `-m 512:2048` measures three square problems; `-M` turns
+the sweep into the full grid. Until 1.0.0, `-M` silently copied `-m`'s
+*range* instead, which made every such sweep the N² grid while `--help`
+promised square matrices (#1, decision 3). If you touch `bmb_sweep_dim1()`,
+keep the two cases apart.
+
 If a routine overwrites one of its inputs in place (`dtrmv`, `dtrsv`,
 `dtrmm`, `dtrsm`) or drifts over repeated calls (`dscal`), keep an
 untouched template buffer and `memcpy` it into the working buffer — from

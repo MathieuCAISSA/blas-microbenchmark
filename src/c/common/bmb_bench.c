@@ -223,9 +223,19 @@ static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opt
     for (i1 = 0; i1 < range1->count; i1++) {
         size_t d1 = range1->values[i1];
 
-        if (bench->dim2_label != NULL) {
+        if (bench->dim2_label != NULL && !opts->matrix_dim2_set) {
+            /* No -M: square matrices, dim2 following dim1 point by point.
+             * Taking -M's *range* from -m instead, as this once did, made
+             * `-m 512:2048` measure all nine M x N combinations where three
+             * were asked for -- N^2 runs for N sizes, most of them shapes
+             * nobody requested, while --help promised square matrices. */
+            if (bmb_record(bench, opts, thread_count, d1, d1, rs) != 0) {
+                status = -1;
+            }
+        } else if (bench->dim2_label != NULL) {
             size_t i2;
 
+            /* -M given: every combination, the grid a heatmap needs. */
             for (i2 = 0; i2 < range2->count; i2++) {
                 if (bmb_record(bench, opts, thread_count, d1, range2->values[i2], rs) != 0) {
                     status = -1;

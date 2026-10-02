@@ -125,7 +125,8 @@ Every benchmark takes the same flags:
 -v, --vector-size <sweep>      vector sizes, level 1 (default: 4096)
 -m, --matrix-dim1 <sweep>      matrix first dimension, level 2 & 3 (default: 4096)
 -M, --matrix-dim2 <sweep>      matrix second dimension, level 2 & 3
-                                (default: same as --matrix-dim1, i.e. square)
+                                (default: square matrices; with -M, every
+                                combination of the two)
 -t, --thread-count <sweep>     number of BLAS threads (default: 1)
 -s, --statistics               add mean/stddev/max and the batch size
 -o, --output <file>            also save results to file
@@ -146,6 +147,16 @@ The four size options take a `<sweep>`, which says which sizes to measure:
 `max` is always measured, even when the stride would overshoot it
 (`100:1000:300` → 100, 400, 700, **1000**). A sweep is capped at 256
 points.
+
+For routines with two dimensions, leaving out `-M` measures **square
+matrices**, the second dimension following the first at every point. Give
+`-M` and every combination is measured instead — the grid that the report's
+heatmap is for:
+
+```
+$ bmb_dgemm -m 512:2048                  → 512², 1024², 2048²         (3 runs)
+$ bmb_dgemm -m 512:2048 -M 512:2048      → every M × N combination  (9 runs)
+```
 
 ```bash
 # sweep vector size, with the measurement detail, saved as CSV

@@ -186,38 +186,36 @@ static void test_defaults(void)
     bmb_options_free(&opts);
 }
 
-/* --matrix-dim2 defaults to --matrix-dim1 so that a routine with two
- * dimensions measures square matrices unless told otherwise. */
-static void test_dim2_mirrors_dim1(void)
+/* Without -M, dim2 is not a range of its own: it follows dim1 point by
+ * point (square matrices), which bmb_bench.c decides from matrix_dim2_set.
+ * So what the parser must get right is that flag -- and with -M, the range
+ * it was given. The pairing itself is checked end to end by
+ * test_bmb_square_default.sh. */
+static void test_dim2(void)
 {
     bmb_options_t opts;
-    char dim1[64];
     char dim2[64];
 
     if (parse_args(&opts, "-m", "8:32", NULL) != BMB_OPTIONS_OK) {
-        fail("-M defaults to -m", "-m 8:32 was rejected");
+        fail("-m without -M", "-m 8:32 was rejected");
         return;
     }
-    format_range(&opts.matrix_dim1, dim1, sizeof(dim1));
-    format_range(&opts.matrix_dim2, dim2, sizeof(dim2));
-    if (strcmp(dim1, dim2) != 0) {
-        fail("-M defaults to -m", "dim2 does not mirror dim1");
-    } else if (opts.matrix_dim2_set) {
-        fail("-M defaults to -m", "dim2 is marked as explicitly given");
+    if (opts.matrix_dim2_set) {
+        fail("-m without -M", "dim2 is marked as given, so the sweep would be a grid");
     } else {
-        ok("-M defaults to -m");
+        ok("-m without -M leaves dim2 unset");
     }
     bmb_options_free(&opts);
 
-    if (parse_args(&opts, "-m", "8", "-M", "16", NULL) != BMB_OPTIONS_OK) {
-        fail("-M overrides -m", "-m 8 -M 16 was rejected");
+    if (parse_args(&opts, "-m", "8", "-M", "16:32", NULL) != BMB_OPTIONS_OK) {
+        fail("-M given", "-m 8 -M 16:32 was rejected");
         return;
     }
     format_range(&opts.matrix_dim2, dim2, sizeof(dim2));
-    if (strcmp(dim2, "16") != 0 || !opts.matrix_dim2_set) {
-        fail("-M overrides -m", "dim2 did not take the given value");
+    if (strcmp(dim2, "16,32") != 0 || !opts.matrix_dim2_set) {
+        fail("-M given", "dim2 did not take the given range");
     } else {
-        ok("-M overrides -m");
+        ok("-M sets its own range");
     }
     bmb_options_free(&opts);
 }
@@ -261,7 +259,7 @@ int main(void)
     char spec[64];
 
     test_defaults();
-    test_dim2_mirrors_dim1();
+    test_dim2();
     test_output_format();
 
     /* ---- the four sweep forms ---- */

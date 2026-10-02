@@ -38,7 +38,9 @@ typedef struct {
     bmb_range_t matrix_dim1;  /* -m, --matrix-dim1    (level 2 & 3) */
     int matrix_dim1_set;      /* whether -m/--matrix-dim1 was given */
     bmb_range_t matrix_dim2;  /* -M, --matrix-dim2    (level 2 & 3) */
-    int matrix_dim2_set;      /* whether -M/--matrix-dim2 was given */
+    int matrix_dim2_set;      /* whether -M was given; without it dim2
+                               * follows dim1 point by point (square
+                               * matrices) and matrix_dim2 is unused */
 
     bmb_range_t thread_count; /* -t, --thread-count */
     int thread_count_set;     /* whether -t/--thread-count was given */

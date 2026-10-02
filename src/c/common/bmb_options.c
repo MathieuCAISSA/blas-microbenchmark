@@ -447,10 +447,6 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
         }
     }
 
-    if (!opts->matrix_dim2_set) {
-        opts->matrix_dim2 = opts->matrix_dim1;
-    }
-
     if (opts->output_file != NULL && !opts->output_format_set) {
         opts->output_format = bmb_infer_output_format(opts->output_file) ? BMB_FORMAT_JSON : BMB_FORMAT_CSV;
     }
@@ -475,7 +471,8 @@ void bmb_options_print_help(const char *prog_name)
         "  -v, --vector-size <sweep>     vector sizes for level 1 routines (default: %u)\n"
         "  -m, --matrix-dim1 <sweep>     matrix first dimension for level 2 & 3 (default: %u)\n"
         "  -M, --matrix-dim2 <sweep>     matrix second dimension for level 2 & 3\n"
-        "                                 (default: same as --matrix-dim1, i.e. square matrices)\n"
+        "                                 (default: square matrices, dim2 = dim1 at every point;\n"
+        "                                 with -M, every dim1 x dim2 combination is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
         "  -s, --statistics              add mean/stddev/max and the batch size (default: off)\n"
         "  -o, --output <filename>       also save results to filename\n"
