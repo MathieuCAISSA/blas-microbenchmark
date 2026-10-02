@@ -1,5 +1,6 @@
 #include "bmb_print.h"
 #include "bmb_build.h"
+#include "bmb_machine.h"
 #include "bmb_log.h"
 
 /* Which build and which BLAS produced the numbers below. Written as
@@ -8,9 +9,11 @@
  * results file that does not name the library it measured is close to
  * useless a month later, which is a pity for a project whose purpose is
  * comparing libraries. */
-static void bmb_print_provenance(FILE *out)
+static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
+    const bmb_machine_t *m = bmb_machine();
+    char line[512];
 
     fprintf(out, "# blas-microbenchmark %s\n", bmb_build_version());
     if (blas != NULL && blas[0] != '\0') {
@@ -18,11 +21,29 @@ static void bmb_print_provenance(FILE *out)
     } else {
         fprintf(out, "# backend: %s\n", bmb_build_backend());
     }
+    if (rs->label != NULL) {
+        fprintf(out, "# label: %s\n", rs->label);
+    }
+
+    bmb_machine_describe_cpu(m, line, sizeof(line));
+    if (line[0] != '\0') {
+        fprintf(out, "# cpu: %s\n", line);
+    }
+    bmb_machine_describe_caches(m, line, sizeof(line));
+    if (line[0] != '\0') {
+        fprintf(out, "# caches: %s\n", line);
+    }
+    if (m->os[0] != '\0') {
+        fprintf(out, "# os: %s\n", m->os);
+    }
+    if (m->date[0] != '\0') {
+        fprintf(out, "# date: %s\n", m->date);
+    }
 }
 
 void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
 {
-    bmb_print_provenance(out);
+    bmb_print_provenance(out, rs);
     fprintf(out, "# routine: %s\n", rs->routine_name);
     fprintf(out, "%-16s", "Thread count");
     fprintf(out, "%-20s", rs->dim1_label);
@@ -100,7 +121,7 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
 {
     size_t i;
 
-    bmb_print_provenance(out);
+    bmb_print_provenance(out, rs);
     fprintf(out, "# routine: %s\n", rs->routine_name);
     fprintf(out, "thread_count,");
     bmb_csv_header_label(out, rs->dim1_label);
@@ -162,6 +183,49 @@ static void bmb_print_json_string(FILE *out, const char *value)
     fputc('"', out);
 }
 
+/* The machine block, and the date next to it. Every field that could not
+ * be read is left out rather than written empty. */
+static void bmb_print_json_machine(FILE *out, const bmb_machine_t *m)
+{
+    const char *sep = "\n";
+    int i;
+
+    if (m->date[0] != '\0') {
+        fprintf(out, "  \"date\": \"%s\",\n", m->date);
+    }
+
+    fprintf(out, "  \"machine\": {");
+    if (m->cpu[0] != '\0') {
+        fprintf(out, "%s    \"cpu\": ", sep);
+        bmb_print_json_string(out, m->cpu);
+        sep = ",\n";
+    }
+    if (m->logical_cpus > 0) {
+        fprintf(out, "%s    \"logical_cpus\": %ld", sep, m->logical_cpus);
+        sep = ",\n";
+    }
+    if (m->numa_nodes > 0) {
+        fprintf(out, "%s    \"numa_nodes\": %d", sep, m->numa_nodes);
+        sep = ",\n";
+    }
+    if (m->cache_count > 0) {
+        fprintf(out, "%s    \"caches\": [", sep);
+        for (i = 0; i < m->cache_count; i++) {
+            fprintf(out, "%s\n      {\"level\": %d, \"type\": \"%s\", \"size_bytes\": %llu}",
+                    (i == 0) ? "" : ",", m->caches[i].level, m->caches[i].type,
+                    m->caches[i].size_bytes);
+        }
+        fprintf(out, "\n    ]");
+        sep = ",\n";
+    }
+    if (m->os[0] != '\0') {
+        fprintf(out, "%s    \"os\": ", sep);
+        bmb_print_json_string(out, m->os);
+        sep = ",\n";
+    }
+    fprintf(out, "%s},\n", (sep[0] == ',') ? "\n  " : "");
+}
+
 void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
@@ -175,6 +239,12 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         bmb_print_json_string(out, blas);
         fprintf(out, ",\n");
     }
+    if (rs->label != NULL) {
+        fprintf(out, "  \"label\": ");
+        bmb_print_json_string(out, rs->label);
+        fprintf(out, ",\n");
+    }
+    bmb_print_json_machine(out, bmb_machine());
     fprintf(out, "  \"routine\": \"%s\",\n", rs->routine_name);
 
     /* What dim1 and dim2 *are* for this routine ("Matrix dim1 (M=K)"). The

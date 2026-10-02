@@ -129,10 +129,11 @@ Every benchmark takes the same flags:
                                 combination of the two)
 -t, --thread-count <sweep>     number of BLAS threads (default: 1)
 -s, --statistics               add mean/stddev/max and the batch size
+-l, --label <text>             tag the results, e.g. "turbo off"
 -o, --output <file>            also save results to file
 -f, --output-format <fmt>      csv or json (default: csv, or guessed from -o)
 -h, --help                     show this help
--V, --version                  show the version and the BLAS backend
+-V, --version                  show the version, the BLAS backend and the machine
 ```
 
 The four size options take a `<sweep>`, which says which sizes to measure:
@@ -227,15 +228,39 @@ results.txt` gets you a clean file.
 
 ## Where a result came from
 
-Comparing BLAS libraries is the point, so every result says which one
-produced it — the project's version, the backend, and the library's own
-version string when it exposes one:
+Comparing BLAS libraries is the point, so every result says what produced
+it — which library, on which machine, and when:
 
 ```
 # blas-microbenchmark 0.6.1
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
+# cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
+# caches: L1d 48K, L1i 64K, L2 2M, L3 12M
+# os: Linux 6.6.87 x86_64
+# date: 2026-10-02T07:21:37Z
 # routine: dgemm
 ```
+
+The library's own version string is there because two files both saying
+`openblas` can be 0.3.20 and 0.3.29, which do not perform alike. The cache
+sizes are what lets a reader see where a sweep leaves L1, L2 and L3. A
+field that cannot be read on a given machine is left out rather than
+guessed.
+
+The **hostname is deliberately not recorded**: results get shared, and the
+machine name would travel with them. On a cluster it would also be
+misleading, since identical nodes have different names.
+
+What no automatic field can capture — turbo on or off, before and after a
+BIOS update, two NUMA bindings, two identical nodes — goes in a label of
+your own:
+
+```bash
+bmb_dgemm -m 1024:8192 --label "turbo off" -o dgemm-turbo-off.json
+```
+
+which adds `# label: turbo off`. Without `--label` there is no label line
+at all.
 
 Those same lines head a CSV file, as comments — tell your reader to skip
 them (`pd.read_csv("results.csv", comment="#")`). JSON gets real fields
@@ -246,12 +271,29 @@ instead:
   "version": "0.6.1",
   "backend": "openblas",
   "blas": "OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64",
+  "label": "turbo off",
+  "date": "2026-10-02T07:21:37Z",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) Ultra 7 155U",
+    "logical_cpus": 14,
+    "numa_nodes": 1,
+    "caches": [
+      {"level": 1, "type": "data", "size_bytes": 49152},
+      {"level": 1, "type": "instruction", "size_bytes": 65536},
+      {"level": 2, "type": "unified", "size_bytes": 2097152},
+      {"level": 3, "type": "unified", "size_bytes": 12582912}
+    ],
+    "os": "Linux 6.6.87 x86_64"
+  },
   "routine": "dgemm",
+  "dim1_label": "Matrix dim1 (M=K)",
+  "dim2_label": "Matrix dim2 (N)",
   "results": [ ... ]
 }
 ```
 
-`bmb_<routine> --version` prints the same thing without running anything.
+`bmb_<routine> --version` prints the library and the machine without
+running anything.
 
 ## Getting numbers you can trust
 

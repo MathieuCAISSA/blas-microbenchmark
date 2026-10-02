@@ -30,6 +30,12 @@ jobs:
       - name: make
         run: make -C build -j"$(nproc)"
 
+      # What this job measured on: the backend, and the machine as the
+      # probe sees it. On the arm64 runners this is also where to look to
+      # find out what /proc/cpuinfo actually offers there.
+      - name: Provenance
+        run: build/src/c/level1/bmb_ddot --version
+
       - name: make check
         run: make -C build check
 
@@ -69,6 +75,12 @@ jobs:
       - name: make
         run: make -C build -j"$(nproc)"
 
+      # What this job measured on: the backend, and the machine as the
+      # probe sees it. On the arm64 runners this is also where to look to
+      # find out what /proc/cpuinfo actually offers there.
+      - name: Provenance
+        run: build/src/c/level1/bmb_ddot --version
+
       - name: make check
         run: make -C build check
 
@@ -104,6 +116,12 @@ jobs:
 
       - name: make
         run: make -C build -j"$(nproc)"
+
+      # What this job measured on: the backend, and the machine as the
+      # probe sees it. On the arm64 runners this is also where to look to
+      # find out what /proc/cpuinfo actually offers there.
+      - name: Provenance
+        run: build/src/c/level1/bmb_ddot --version
 
       # Also covers test_netlib_cblas, which checks the shim's row-major to
       # column-major translation against naive reference implementations.
@@ -157,6 +175,12 @@ jobs:
       - name: make
         run: make -C build -j"$(nproc)"
 
+      # What this job measured on: the backend, and the machine as the
+      # probe sees it. On the arm64 runners this is also where to look to
+      # find out what /proc/cpuinfo actually offers there.
+      - name: Provenance
+        run: build/src/c/level1/bmb_ddot --version
+
       - name: make check
         run: make -C build check
 
@@ -199,6 +223,12 @@ jobs:
 
       - name: make
         run: make -C build -j"$(nproc)"
+
+      # What this job measured on: the backend, and the machine as the
+      # probe sees it. On the arm64 runners this is also where to look to
+      # find out what /proc/cpuinfo actually offers there.
+      - name: Provenance
+        run: build/src/c/level1/bmb_ddot --version
 
       - name: make check
         run: make -C build check
@@ -243,6 +273,12 @@ jobs:
 
       - name: make
         run: make -C build -j"$(nproc)"
+
+      # What this job measured on: the backend, and the machine as the
+      # probe sees it. On the arm64 runners this is also where to look to
+      # find out what /proc/cpuinfo actually offers there.
+      - name: Provenance
+        run: build/src/c/level1/bmb_ddot --version
 
       # Leak detection stays on for our own code; the BLAS library's own
       # per-thread buffers, which it never frees by design, are suppressed

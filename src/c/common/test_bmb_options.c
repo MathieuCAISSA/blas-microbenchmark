@@ -322,6 +322,50 @@ int main(void)
     check_count_option("-i", "0", 0);         /* nothing would be measured */
     check_count_option("-i", "-1", 0);
 
+    /* ---- --label ---- */
+    {
+        bmb_options_t opts;
+        char long_label[256];
+
+        if (parse_args(&opts, NULL) == BMB_OPTIONS_OK) {
+            if (opts.label != NULL) {
+                fail("no --label", "a label is set although none was given");
+            } else {
+                ok("no --label leaves the label unset");
+            }
+            bmb_options_free(&opts);
+        }
+
+        if (parse_args(&opts, "--label", "turbo off", NULL) == BMB_OPTIONS_OK
+            && opts.label != NULL && strcmp(opts.label, "turbo off") == 0) {
+            ok("--label \"turbo off\"");
+            bmb_options_free(&opts);
+        } else {
+            fail("--label \"turbo off\"", "was not stored as given");
+        }
+
+        if (parse_args(&opts, "-l", "x", "-l", "y", NULL) == BMB_OPTIONS_OK
+            && opts.label != NULL && strcmp(opts.label, "y") == 0) {
+            ok("the last --label wins");
+            bmb_options_free(&opts);
+        } else {
+            fail("-l x -l y", "did not keep the last label");
+        }
+
+        /* A newline would turn the rest of a text or CSV comment line into
+         * data rows. */
+        check_count_option("--label", "", 0);
+        check_count_option("--label", "two\nlines", 0);
+        check_count_option("--label", "tab\there", 0);
+
+        memset(long_label, 'a', 200);
+        long_label[200] = '\0';
+        check_count_option("--label", long_label, 1);
+        memset(long_label, 'a', 201);
+        long_label[201] = '\0';
+        check_count_option("--label", long_label, 0);
+    }
+
     /* ---- provenance ---- */
     {
         bmb_options_t opts;

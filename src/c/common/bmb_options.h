@@ -47,6 +47,8 @@ typedef struct {
 
     int statistics;           /* -s, --statistics */
 
+    char *label;              /* -l, --label; NULL when not given */
+
     char *output_file;        /* -o, --output */
     bmb_output_format_t output_format;
     int output_format_set;    /* whether -f/--output-format was given */

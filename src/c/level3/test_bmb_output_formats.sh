@@ -37,5 +37,25 @@ if grep -q '"dim2_label"' fmt1.json; then
     fail "ddot json carries a dim2_label for a routine with one dimension"
 fi
 
-rm -f fmt.csv fmt.json fmt1.json
+# The machine and the date are recorded in every format (#1, decision 4).
+for line in '^# cpu: ' '^# os: ' '^# date: '; do
+    grep -q "$line" fmt.csv || fail "csv carries no '$line' line"
+done
+for field in '"machine": {' '"date": "' '"logical_cpus": '; do
+    grep -q "$field" fmt.json || fail "json carries no $field field"
+done
+
+# No --label, no label anywhere: the field is omitted rather than empty.
+if grep -q '^# label:' fmt.csv || grep -q '"label"' fmt.json; then
+    fail "a label was written although none was given"
+fi
+
+# With one, it shows up in every format -- escaped in JSON, since it is
+# whatever the user typed.
+./bmb_dgemm -x 0 -i 1 -m 8 -M 8 --label 'say "hi"' -o fmtl.json -f json >fmtl.txt \
+    || fail "the --label run failed"
+grep -q '^# label: say "hi"$' fmtl.txt || fail "text output carries no label line"
+grep -q '"label": "say \\"hi\\""' fmtl.json || fail "json label is missing or not escaped"
+
+rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt
 echo "ok   output formats"

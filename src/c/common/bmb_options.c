@@ -10,6 +10,7 @@
 
 #include "bmb_options.h"
 #include "bmb_build.h"
+#include "bmb_machine.h"
 #include "bmb_log.h"
 
 #define BMB_DEFAULT_WARMUP       1u
@@ -26,6 +27,7 @@ static const struct option bmb_long_options[] = {
     {"matrix-dim2",    required_argument, NULL, 'M'},
     {"thread-count",   required_argument, NULL, 't'},
     {"statistics",     no_argument,       NULL, 's'},
+    {"label",          required_argument, NULL, 'l'},
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
     {"help",           no_argument,       NULL, 'h'},
@@ -33,7 +35,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:b:v:m:M:t:so:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:t:sl:o:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -314,6 +316,41 @@ static int bmb_option_count(const char *str, const char *option, unsigned int mi
     return 0;
 }
 
+/* The free-text label for what no automatic field can see: turbo on or
+ * off, before and after a BIOS update, two NUMA bindings, two identical
+ * nodes (#1, decision 4). It is printed on a comment line of the text and
+ * CSV output, so a newline in it would turn the rest into data rows, and a
+ * control character has no business in a legend. */
+#define BMB_MAX_LABEL 200
+
+static int bmb_option_label(const char *str, char **out)
+{
+    char msg[256];
+    size_t len = strlen(str);
+    size_t i;
+    int printable = (len > 0 && len <= BMB_MAX_LABEL);
+
+    for (i = 0; printable && i < len; i++) {
+        unsigned char c = (unsigned char) str[i];
+
+        if (c < 0x20 || c == 0x7f) {
+            printable = 0;
+        }
+    }
+
+    if (!printable) {
+        snprintf(msg, sizeof(msg),
+                 "Invalid value for --label (expected 1 to %d characters, with no newline "
+                 "or other control character).", BMB_MAX_LABEL);
+        bmb_log_error(msg);
+        return -1;
+    }
+
+    free(*out);
+    *out = strdup(str);
+    return 0;
+}
+
 static void bmb_options_set_defaults(bmb_options_t *opts)
 {
     memset(opts, 0, sizeof(*opts));
@@ -412,6 +449,12 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             opts->statistics = 1;
             break;
 
+        case 'l':
+            if (bmb_option_label(optarg, &opts->label) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
         case 'o':
             free(opts->output_file);
             opts->output_file = strdup(optarg);
@@ -456,6 +499,8 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
 
 void bmb_options_free(bmb_options_t *opts)
 {
+    free(opts->label);
+    opts->label = NULL;
     free(opts->output_file);
     opts->output_file = NULL;
 }
@@ -475,10 +520,11 @@ void bmb_options_print_help(const char *prog_name)
         "                                 with -M, every dim1 x dim2 combination is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
         "  -s, --statistics              add mean/stddev/max and the batch size (default: off)\n"
+        "  -l, --label <text>            tag the results, e.g. \"turbo off\" (default: none)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
         "  -h, --help                    show this help\n"
-        "  -V, --version                 show the version and the BLAS backend\n"
+        "  -V, --version                 show the version, the BLAS backend and the machine\n"
         "\n"
         "A <sweep> is one of:\n"
         "  <max>                a single size            e.g. 4096\n"
@@ -492,11 +538,27 @@ void bmb_options_print_help(const char *prog_name)
 void bmb_options_print_version(void)
 {
     const char *blas = bmb_build_blas_version();
+    const bmb_machine_t *m = bmb_machine();
+    char line[512];
 
     printf("blas-microbenchmark %s\n", bmb_build_version());
     if (blas != NULL && blas[0] != '\0') {
         printf("BLAS backend: %s (%s)\n", bmb_build_backend(), blas);
     } else {
         printf("BLAS backend: %s\n", bmb_build_backend());
+    }
+
+    /* The machine as well: CI prints this for every job, which is how one
+     * finds out what each runner's CPU actually reports. */
+    bmb_machine_describe_cpu(m, line, sizeof(line));
+    if (line[0] != '\0') {
+        printf("CPU: %s\n", line);
+    }
+    bmb_machine_describe_caches(m, line, sizeof(line));
+    if (line[0] != '\0') {
+        printf("Caches: %s\n", line);
+    }
+    if (m->os[0] != '\0') {
+        printf("OS: %s\n", m->os);
     }
 }

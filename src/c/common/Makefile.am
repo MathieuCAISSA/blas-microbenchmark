@@ -6,6 +6,7 @@ noinst_LIBRARIES = libbmbcommon.a
 libbmbcommon_a_SOURCES = \
 	bmb_build.c bmb_build.h \
 	bmb_log.c bmb_log.h \
+	bmb_machine.c bmb_machine.h \
 	bmb_timer.c bmb_timer.h \
 	bmb_options.c bmb_options.h \
 	bmb_result.c bmb_result.h \
@@ -17,9 +18,14 @@ libbmbcommon_a_SOURCES = \
 # that cannot be, so its mistakes are silent: a sweep that drops its
 # endpoint or a size that truncates to zero still produces a plausible
 # table. It gets unit tests of its own, whatever the backend.
-check_PROGRAMS = test_bmb_options
+check_PROGRAMS = test_bmb_options test_bmb_machine
 test_bmb_options_SOURCES = test_bmb_options.c
 test_bmb_options_LDADD = libbmbcommon.a
+
+# The machine probe reads procfs and sysfs, whose contents vary by kernel,
+# architecture and container, so it is checked on every CI runner.
+test_bmb_machine_SOURCES = test_bmb_machine.c
+test_bmb_machine_LDADD = libbmbcommon.a
 
 # Netlib reference BLAS is Fortran-only in the general case, so this
 # backend brings its own cblas_* layer forwarding to the Fortran symbols.

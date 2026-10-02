@@ -24,6 +24,7 @@ typedef struct {
     const char *routine_name;
     const char *dim1_label; /* e.g. "Vector size", "Matrix dim (N)", "Matrix dim1 (M)" */
     const char *dim2_label; /* NULL if the routine has a single size dimension */
+    const char *label;      /* --label, or NULL; owned by the options */
     int has_stats;
     int has_flops;
     int has_bytes;

@@ -46,7 +46,7 @@ clean VPATH build; run it before anything that touches `configure.ac`,
 src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
                  # (thread-count resolution), bmb_build (what this build is),
-                 # bmb_log, bmb_timer
+                 # bmb_machine (what it runs on), bmb_log, bmb_timer
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
@@ -225,6 +225,25 @@ block every result carries. A new backend must set the name; the version
 string is a bonus where the library has one (OpenBLAS's
 `openblas_get_config()`, BLIS's `bli_info_get_version_str()`) and NULL
 where it does not.
+
+The machine side of the provenance lives in `bmb_machine.c`, probed once per
+run: CPU model, logical CPUs, NUMA nodes, cpu0's caches, `uname`, and the
+date. Three rules there:
+
+- **Every field is best effort and omitted when unreadable** — never
+  guessed, never written empty. A container without sysfs cache entries is
+  a legitimate "unknown", which is why `test_bmb_machine` checks only what
+  every Linux box guarantees plus the sanity of whatever was recorded.
+- **On aarch64 there is usually no `model name`** in `/proc/cpuinfo`, only
+  implementer and part codes; those are recorded raw rather than decoded
+  from a table we would have to maintain. The `Provenance` step of each CI
+  job prints what every runner reports.
+- **No hostname, ever** (#1, decision 4). Reports get shared, and on a
+  cluster identical nodes have different names.
+
+`--label` is the escape hatch for what no probe can see. It goes on a
+comment line of the text and CSV output, so it refuses control characters:
+a newline in it would turn the rest of that line into data rows.
 
 **Netlib** is the exception in how it gets that interface. Reference BLAS
 is a Fortran library; some distributions bundle a CBLAS layer in it

@@ -306,6 +306,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
+    rs.label = opts.label;
     bmb_print_txt_begin(stdout, &rs);
 
     for (ti = 0; ti < opts.thread_count.count; ti++) {

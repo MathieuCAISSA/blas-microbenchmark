@@ -9,6 +9,7 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->routine_name = routine_name;
     rs->dim1_label = dim1_label;
     rs->dim2_label = dim2_label;
+    rs->label = NULL;
     rs->has_stats = has_stats;
     rs->has_flops = has_flops;
     rs->has_bytes = has_bytes;
