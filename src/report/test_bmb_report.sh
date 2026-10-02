@@ -59,6 +59,17 @@ sed '$d' "$T/ddot.json" >"$T/truncated.json"
 refuse "$T/truncated.json" "incomplete"
 refuse "$T/missing.json" "cannot be read"
 
+# A newline in a file name would end up inside the JSON string that names
+# the file in the page, which JSON does not allow.
+nl_name="$T/two
+lines.json"
+cp "$T/ddot.json" "$nl_name"
+if $R "$T/ddot.json" "$nl_name" >"$T/out" 2>"$T/err"; then
+    fail "a file name containing a newline was accepted"
+fi
+grep -q "contains a newline" "$T/err" || fail "the newline refusal does not say why: $(cat "$T/err")"
+pass "refuses a file name containing a newline"
+
 # ---- the page ----
 $R "$T/ddot.json" "$T/dgemm.json" >"$T/report.html" 2>"$T/err" \
     || fail "valid input was refused: $(cat "$T/err")"

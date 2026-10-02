@@ -13,7 +13,11 @@ bmb_report: $(srcdir)/bmb_report.sh $(srcdir)/report.html $(srcdir)/assemble.awk
 	    $(srcdir)/report.html $(srcdir)/bmb_report.sh >$@.tmp && \
 	chmod +x $@.tmp && mv -f $@.tmp $@
 
-TESTS = test_bmb_report.sh test_bmb_report_render.sh
+TESTS = test_assemble.sh test_bmb_report.sh test_bmb_report_render.sh
+
+# test_assemble.sh must exercise the awk the build uses, not whichever one
+# happens to be first on PATH.
+AM_TESTS_ENVIRONMENT = AWK='$(AWK)'; export AWK;
 
 FIXTURES = \
 	fixtures/README \
