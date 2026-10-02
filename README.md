@@ -53,11 +53,15 @@ The benchmarks are grouped by BLAS level rather than dumped into `bin`:
 
 ```
 $ /usr/local/libexec/blas-microbenchmark/level1/bmb_daxpy
-# blas-microbenchmark 0.6.1
+# blas-microbenchmark 1.0.0
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
+# cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
+# caches: L1d 48K, L1i 64K, L2 2M, L3 12M
+# os: Linux 6.6.87 x86_64
+# date: 2026-10-02T09:05:04Z
 # routine: daxpy
-Thread count    Vector size     time [s]        GFLOP/s   GB/s
-1               4096            0.000001600     5.121     61.446
+Thread count    Vector size         time [s]        GFLOP/s       GB/s
+1               4096                0.000001227     6.679         80.145
 ```
 
 Typing that path every time gets old, so the examples below assume the
@@ -234,7 +238,7 @@ Comparing BLAS libraries is the point, so every result says what produced
 it — which library, on which machine, and when:
 
 ```
-# blas-microbenchmark 0.6.1
+# blas-microbenchmark 1.0.0
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
@@ -270,7 +274,7 @@ instead:
 
 ```json
 {
-  "version": "0.6.1",
+  "version": "1.0.0",
   "backend": "openblas",
   "blas": "OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64",
   "label": "turbo off",
