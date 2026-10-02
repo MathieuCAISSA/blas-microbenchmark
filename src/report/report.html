@@ -270,130 +270,137 @@ details[open] > summary { margin-bottom: 12px; }
   };
 
   /* ------------------------------------------------------------------ *
-   * Loading. A series is routine + identity, where the identity is     *
-   * backend + BLAS version string + CPU + label (#1, decision 1).      *
-   * Files sharing a series merge into one curve; a point measured in   *
-   * more than one file keeps the fastest, as the benchmarks already do *
-   * between samples, and the page says so.                             *
+   * The model. Everything from here to the view is pure -- no DOM --   *
+   * and is exposed as window.bmbReport, which is what the unit tests   *
+   * (test_report.js) exercise.                                         *
+   *                                                                    *
+   * A series is routine + identity, where the identity is backend +    *
+   * BLAS version string + CPU + label (#1, decision 1). Files sharing  *
+   * a series merge into one curve; a point measured in more than one   *
+   * file keeps the fastest, as the benchmarks already do between       *
+   * samples, and the duplicate is recorded so the page can say so.     *
    * ------------------------------------------------------------------ */
 
-  var meta = {};
-  try { meta = JSON.parse(document.getElementById("bmb-meta").textContent); } catch (e) { meta = {}; }
-
-  var problems = [];
-  var identities = {};
-  var identityOrder = [];
-  var routines = {};
-
-  function identityOf(r) {
-    var machine = r.machine || {};
-    var key = [r.backend, r.blas || "", machine.cpu || "", r.label || ""].join("\u0001");
-    var id = identities[key];
-    if (!id) {
-      id = identities[key] = {
-        key: key, backend: r.backend || "unknown", blas: r.blas || "",
-        cpu: machine.cpu || "", label: r.label || "", machine: machine,
-        versions: {}, dates: [], files: []
-      };
-      identityOrder.push(id);
-    }
-    return id;
-  }
-
-  function addResult(file, r) {
-    var id = identityOf(r);
-    var routine = routines[r.routine];
-    var series, i;
-
-    id.versions[r.version] = true;
-    if (r.date) { id.dates.push(r.date); }
-    if (id.files.indexOf(file) < 0) { id.files.push(file); }
-
-    if (!routine) {
-      routine = routines[r.routine] = {
-        name: r.routine, level: LEVEL[r.routine] || 0,
-        dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
-        series: {}, seriesOrder: [], duplicates: []
-      };
-    }
-    series = routine.series[id.key];
-    if (!series) {
-      series = routine.series[id.key] = { identity: id, points: {} };
-      routine.seriesOrder.push(series);
-    }
-
-    for (i = 0; i < r.results.length; i++) {
-      var row = r.results[i];
-      var p = {
-        threads: row.thread_count, d1: row.dim1,
-        d2: (row.dim2 === undefined) ? null : row.dim2,
-        time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
-        mean: row.mean_s, stddev: row.stddev_s, max: row.max_s,
-        calls: row.calls_per_sample, file: file
-      };
-      var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
-      var prev = series.points[pkey];
-      if (prev) {
-        var fast = (p.time < prev.time) ? p : prev;
-        var slow = (fast === p) ? prev : p;
-        routine.duplicates.push({ series: series, point: fast, kept: fast.file,
-                                  other: slow.file, gap: (slow.time / fast.time - 1) * 100 });
-        series.points[pkey] = fast;
-      } else {
-        series.points[pkey] = p;
-      }
-    }
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll("script.bmb-result"), function (node, n) {
-    try {
-      var entry = JSON.parse(node.textContent);
-      addResult(entry.file, entry.result);
-    } catch (e) {
-      problems.push("result " + (n + 1) + " could not be read: " + e.message);
-    }
-  });
-
-  /* Legend names: the backend alone when that is unambiguous, then only
-   * as much of label, library version and CPU as it takes to tell series
-   * of the same backend apart. */
   function shortBlas(blas) { return blas.split(/\s+/).slice(0, 2).join(" "); }
 
-  identityOrder.forEach(function (id) {
-    var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
-    var parts = [id.backend];
-    function differs(f) {
-      return same.some(function (o) { return f(o) !== f(id); });
+  /* entries: [{file, result}], result being one benchmark's JSON. Returns
+   * {identities, routines, problems}, identities in colour-slot order and
+   * routines by level then name. A malformed entry becomes a problem and
+   * takes nothing else down with it. */
+  function buildModel(entries) {
+    var problems = [];
+    var identities = {};
+    var identityOrder = [];
+    var routines = {};
+
+    function identityOf(r) {
+      var machine = r.machine || {};
+      var key = [r.backend, r.blas || "", machine.cpu || "", r.label || ""].join("\u0001");
+      var id = identities[key];
+      if (!id) {
+        id = identities[key] = {
+          key: key, backend: r.backend || "unknown", blas: r.blas || "",
+          cpu: machine.cpu || "", label: r.label || "", machine: machine,
+          versions: {}, dates: [], files: []
+        };
+        identityOrder.push(id);
+      }
+      return id;
     }
-    if (same.length > 1) {
-      if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
-      if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
-      if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
+
+    function addResult(file, r) {
+      var id = identityOf(r);
+      var routine = routines[r.routine];
+      var series, i;
+
+      id.versions[r.version] = true;
+      if (r.date) { id.dates.push(r.date); }
+      if (id.files.indexOf(file) < 0) { id.files.push(file); }
+
+      if (!routine) {
+        routine = routines[r.routine] = {
+          name: r.routine, level: LEVEL[r.routine] || 0,
+          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
+          series: {}, seriesOrder: [], duplicates: []
+        };
+      }
+      series = routine.series[id.key];
+      if (!series) {
+        series = routine.series[id.key] = { identity: id, points: {} };
+        routine.seriesOrder.push(series);
+      }
+
+      for (i = 0; i < r.results.length; i++) {
+        var row = r.results[i];
+        var p = {
+          threads: row.thread_count, d1: row.dim1,
+          d2: (row.dim2 === undefined) ? null : row.dim2,
+          time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
+          mean: row.mean_s, stddev: row.stddev_s, max: row.max_s,
+          calls: row.calls_per_sample, file: file
+        };
+        var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
+        var prev = series.points[pkey];
+        if (prev) {
+          var fast = (p.time < prev.time) ? p : prev;
+          var slow = (fast === p) ? prev : p;
+          routine.duplicates.push({ series: series, point: fast, kept: fast.file,
+                                    other: slow.file, gap: (slow.time / fast.time - 1) * 100 });
+          series.points[pkey] = fast;
+        } else {
+          series.points[pkey] = p;
+        }
+      }
     }
-    id.name = parts.join(" · ");
-  });
 
-  /* Colour slots in a fixed order, assigned once for the whole page so a
-   * series keeps its colour in every chart and under every selector.
-   * OpenBLAS first, as the default reference (#1, decision 2). Past eight
-   * there is no honest ninth colour: those series are listed, not drawn. */
-  identityOrder.sort(function (a, b) {
-    var ao = a.backend === "openblas" ? 0 : 1;
-    var bo = b.backend === "openblas" ? 0 : 1;
-    if (ao !== bo) { return ao - bo; }
-    return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
-  });
-  identityOrder.forEach(function (id, i) { id.slot = (i < 8) ? i + 1 : 0; });
+    entries.forEach(function (entry, n) {
+      var name = (entry && entry.file) || "result " + (n + 1);
+      if (!entry || !entry.result || !entry.result.routine || !Array.isArray(entry.result.results)) {
+        problems.push(name + " could not be read: it is not a benchmark result");
+        return;
+      }
+      addResult(entry.file, entry.result);
+    });
 
-  function colour(id) { return "var(--s" + id.slot + ")"; }
+    /* Legend names: the backend alone when that is unambiguous, then only
+     * as much of label, library version and CPU as it takes to tell series
+     * of the same backend apart. */
+    identityOrder.forEach(function (id) {
+      var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
+      var parts = [id.backend];
+      function differs(f) {
+        return same.some(function (o) { return f(o) !== f(id); });
+      }
+      if (same.length > 1) {
+        if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
+        if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
+        if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
+      }
+      id.name = parts.join(" · ");
+    });
 
-  var routineOrder = Object.keys(routines).map(function (k) { return routines[k]; });
-  routineOrder.sort(function (a, b) {
-    return (a.level - b.level) || (a.name < b.name ? -1 : 1);
-  });
-  routineOrder.forEach(function (rt) {
-    rt.seriesOrder.sort(function (a, b) { return identityOrder.indexOf(a.identity) - identityOrder.indexOf(b.identity); });
-  });
+    /* Colour slots in a fixed order, assigned once for the whole page so a
+     * series keeps its colour in every chart and under every selector.
+     * OpenBLAS first, as the default reference (#1, decision 2). Past eight
+     * there is no honest ninth colour: those series are listed, not drawn. */
+    identityOrder.sort(function (a, b) {
+      var ao = a.backend === "openblas" ? 0 : 1;
+      var bo = b.backend === "openblas" ? 0 : 1;
+      if (ao !== bo) { return ao - bo; }
+      return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+    });
+    identityOrder.forEach(function (id, i) { id.slot = (i < 8) ? i + 1 : 0; });
+
+    var routineOrder = Object.keys(routines).map(function (k) { return routines[k]; });
+    routineOrder.sort(function (a, b) {
+      return (a.level - b.level) || (a.name < b.name ? -1 : 1);
+    });
+    routineOrder.forEach(function (rt) {
+      rt.seriesOrder.sort(function (a, b) { return identityOrder.indexOf(a.identity) - identityOrder.indexOf(b.identity); });
+    });
+
+    return { identities: identityOrder, routines: routineOrder, problems: problems };
+  }
 
   function pointsOf(series) {
     return Object.keys(series.points).map(function (k) { return series.points[k]; });
@@ -402,6 +409,38 @@ details[open] > summary { margin-bottom: 12px; }
   function threadCounts(series) {
     return uniqSorted(pointsOf(series).map(function (p) { return p.threads; }));
   }
+
+  /* Default thread count: the highest one every series measured, or a
+   * library measured only at 1 thread would vanish from the default view
+   * (#1, decision 3). If none is shared, the highest overall. */
+  function defaultThreads(rt) {
+    var all = uniqSorted([].concat.apply([], rt.seriesOrder.map(threadCounts)));
+    var shared = all.filter(function (t) {
+      return rt.seriesOrder.every(function (s) { return threadCounts(s).indexOf(t) >= 0; });
+    });
+    return { all: all, shared: shared, initial: shared.length ? shared[shared.length - 1] : all[all.length - 1] };
+  }
+
+  /* The ratio reference (#1, decision 2): OpenBLAS when there is one --
+   * buildModel already puts it first -- otherwise the first series by
+   * legend name; never the order of the files, which the shell sorts by
+   * name. Only series that have something to be compared with qualify. */
+  function comparable(identities, routines) {
+    return identities.filter(function (id) {
+      return id.slot && routines.some(function (rt) {
+        return rt.seriesOrder.length >= 2 && rt.seriesOrder.some(function (s) { return s.identity === id; });
+      });
+    });
+  }
+
+  /* A routine the chosen reference was not measured for compares against
+   * its own default instead. */
+  function referenceFor(rt, reference) {
+    var mine = rt.seriesOrder.map(function (s) { return s.identity; });
+    return (reference && mine.indexOf(reference) >= 0) ? reference : mine[0];
+  }
+
+  function colour(id) { return "var(--s" + id.slot + ")"; }
 
   /* ------------------------------------------------------------------ *
    * The line chart. One y axis, always (a second scale on the same     *
@@ -426,6 +465,20 @@ details[open] > summary { margin-bottom: 12px; }
    * points [{x, y, y2?, extra?}], ideal? [{x, y}]}], and optionally
    * xFormat/xHead (ticks / tooltip heading), yFormat (tooltip value),
    * yLog + yDomain + yTicks + yTickFormat, baseline, yHeadroom, markers. */
+  /* Log ticks, thinned by the room they take, not by how many there are:
+   * x0.8, x1 and x1.25 sit 16px apart on a narrow range and on top of each
+   * other on a wide one. Closest to x1 first, so the baseline always stays.
+   * sy maps a value to its pixel. */
+  function thinTicks(ticks, sy, gap) {
+    var kept = [];
+    ticks.slice().sort(function (a, b) {
+      return Math.abs(Math.log(a)) - Math.abs(Math.log(b));
+    }).forEach(function (t) {
+      if (kept.every(function (k) { return Math.abs(sy(k) - sy(t)) >= gap; })) { kept.push(t); }
+    });
+    return kept.sort(function (a, b) { return a - b; });
+  }
+
   function lineChart(opt) {
     var fig = el("figure", "chart card");
     var cap = el("figcaption");
@@ -475,16 +528,7 @@ details[open] > summary { margin-bottom: 12px; }
         hi = opt.yDomain[1];
         tickFmt = opt.yTickFormat;
         sy = function (y) { return m.top + ih - ih * (Math.log(y / lo) / Math.log(hi / lo)); };
-        /* Thinned by the room they take, not by how many there are: x0.8,
-         * x1 and x1.25 sit 16px apart on a narrow range and on top of each
-         * other on a wide one. The baseline always stays. */
-        var kept = [];
-        opt.yTicks.slice().sort(function (a, b) {
-          return Math.abs(Math.log(a)) - Math.abs(Math.log(b));
-        }).forEach(function (t) {
-          if (kept.every(function (k) { return Math.abs(sy(k) - sy(t)) >= 16; })) { kept.push(t); }
-        });
-        ticks = kept.sort(function (a, b) { return a - b; });
+        ticks = thinTicks(opt.yTicks, sy, 16);
       } else {
         var ymax = 0;
         drawn.forEach(function (s) {
@@ -717,7 +761,7 @@ details[open] > summary { margin-bottom: 12px; }
     if (!caches.length || seriesList.some(function (s) {
       return JSON.stringify((s.identity.machine.caches || []).filter(function (c) { return c.type !== "instruction"; })) !== sig;
     })) { return []; }
-    var pts = first.slicePoints.filter(function (p) { return p.gbs; }).sort(function (a, b) { return slice.pick(a) - slice.pick(b); });
+    var pts = first.points.filter(function (p) { return p.gbs; }).sort(function (a, b) { return slice.pick(a) - slice.pick(b); });
     var out = [];
     caches.forEach(function (c) {
       var i;
@@ -735,13 +779,20 @@ details[open] > summary { margin-bottom: 12px; }
     return out;
   }
 
-  function sizeCharts(rt, threads) {
+  /* The points chart 2 plots at one thread count, per drawable series. */
+  function sizeData(rt, threads) {
     var slice = sliceForSize(rt, threads);
-    var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0; });
-    list.forEach(function (s) {
-      s.slicePoints = pointsOf(s).filter(function (p) { return p.threads === threads && slice.keep(p); });
+    var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0; }).map(function (s) {
+      return { series: s, identity: s.identity,
+               points: pointsOf(s).filter(function (p) { return p.threads === threads && slice.keep(p); }) };
     });
-    var xs = uniqSorted([].concat.apply([], list.map(function (s) { return s.slicePoints.map(slice.pick); })));
+    var xs = uniqSorted([].concat.apply([], list.map(function (it) { return it.points.map(slice.pick); })));
+    return { slice: slice, list: list, xs: xs };
+  }
+
+  function sizeCharts(rt, threads) {
+    var data = sizeData(rt, threads);
+    var slice = data.slice, list = data.list, xs = data.xs;
     if (xs.length < 2) {
       return { list: list, slice: slice,
                empty: "Only one size was measured at " + plural(threads, "thread") + ": the summary and the raw data table have the number." };
@@ -754,7 +805,7 @@ details[open] > summary { margin-bottom: 12px; }
       var series = list.map(function (s) {
         return {
           name: s.identity.name, colour: colour(s.identity),
-          points: s.slicePoints.filter(function (p) { return p[field] !== undefined; }).map(function (p) {
+          points: s.points.filter(function (p) { return p[field] !== undefined; }).map(function (p) {
             /* With -s, the band runs from the fastest sample (the reported
              * figure) down to the mean: how stable the measurement was. */
             var q = { x: slice.pick(p), y: p[field] };
@@ -794,9 +845,8 @@ details[open] > summary { margin-bottom: 12px; }
    * the gap to it is the parallel efficiency, which the tooltip gives. *
    * ------------------------------------------------------------------ */
 
-  function threadChart(rt) {
+  function threadData(rt) {
     var field = metricField(rt);
-    var unit = metricUnit(field);
     var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0 && threadCounts(s).length >= 2; });
     if (!list.length) { return null; }
 
@@ -816,7 +866,7 @@ details[open] > summary { margin-bottom: 12px; }
     function largest(entries) {
       var square = entries.filter(function (e) { return e.d2 === null || e.d1 === e.d2; });
       var pool = square.length ? square : entries;
-      return pool.sort(function (a, b) { return b.d1 * (b.d2 || 1) - a.d1 * (a.d2 || 1); })[0];
+      return pool.slice().sort(function (a, b) { return b.d1 * (b.d2 || 1) - a.d1 * (a.d2 || 1); })[0];
     }
 
     var per = list.map(complete);
@@ -829,26 +879,40 @@ details[open] > summary { margin-bottom: 12px; }
       var entry = chosen ? per[i].filter(function (e) { return sizeKey(e) === sizeKey(chosen); })[0] : largest(per[i]);
       if (!entry) {
         notes.push(s.identity.name + " has no size measured at every one of its thread counts, so it is not in the thread-scaling chart.");
-        return { name: s.identity.name, colour: colour(s.identity), points: [] };
+        return { identity: s.identity, size: null, points: [], ideal: [] };
       }
       var ts = Object.keys(entry.at).map(Number).sort(function (a, b) { return a - b; });
       var t0 = ts[0], y0 = entry.at[t0][field];
       return {
-        name: s.identity.name + (chosen ? "" : " (" + sizeText(entry.d1, entry.d2) + ")"),
-        colour: colour(s.identity),
+        identity: s.identity, size: { d1: entry.d1, d2: entry.d2 },
         points: ts.map(function (t) {
           var y = entry.at[t][field];
-          return { x: t, y: y, extra: Math.round(100 * y / (y0 * t / t0)) + "% of ideal" };
+          return { x: t, y: y, efficiency: y / (y0 * t / t0) };
         }),
         ideal: ts.map(function (t) { return { x: t, y: y0 * t / t0 }; })
       };
     });
-    if (!series.some(function (x) { return x.points.length; })) { return { notes: notes }; }
+    return { field: field, chosen: chosen ? { d1: chosen.d1, d2: chosen.d2 } : null, series: series, notes: notes };
+  }
+
+  function threadChart(rt) {
+    var data = threadData(rt);
+    if (!data) { return null; }
+    var unit = metricUnit(data.field);
+    var series = data.series.map(function (x) {
+      return {
+        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + sizeText(x.size.d1, x.size.d2) + ")"),
+        colour: colour(x.identity),
+        points: x.points.map(function (p) { return { x: p.x, y: p.y, extra: Math.round(100 * p.efficiency) + "% of ideal" }; }),
+        ideal: x.ideal
+      };
+    });
+    if (!series.some(function (x) { return x.points.length; })) { return { notes: data.notes }; }
     return {
-      notes: notes,
+      notes: data.notes,
       chart: lineChart({
         title: "Thread scaling",
-        subtitle: (chosen ? "at " + sizeText(chosen.d1, chosen.d2) : "each series at its largest size") +
+        subtitle: (data.chosen ? "at " + sizeText(data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
                   " · dashed: ideal linear scaling",
         xLabel: "Threads", yLabel: unit, yUnit: unit, series: series, yHeadroom: 1.2,
         xFormat: function (x) { return String(x); },
@@ -864,18 +928,20 @@ details[open] > summary { margin-bottom: 12px; }
    * slowness (#1, decision 2).                                          *
    * ------------------------------------------------------------------ */
 
-  function ratioChart(rt, list, slice, threads, ref) {
+  /* list: sizeData's list. A ratio only exists where the series and the
+   * reference measured the same point; a series with none is a note. */
+  function ratioData(rt, list, slice, threads, ref) {
     var field = metricField(rt);
-    var refSeries = list.filter(function (s) { return s.identity === ref; })[0];
-    if (!refSeries || list.length < 2) { return null; }
+    var refItem = list.filter(function (it) { return it.identity === ref; })[0];
+    if (!refItem || list.length < 2) { return null; }
     var at = {};
-    refSeries.slicePoints.forEach(function (p) { if (p[field]) { at[p.d1 + "x" + p.d2] = p; } });
+    refItem.points.forEach(function (p) { if (p[field]) { at[p.d1 + "x" + p.d2] = p; } });
 
     var notes = [];
     var worst = 1;
-    var series = list.filter(function (s) { return s !== refSeries; }).map(function (s) {
+    var series = list.filter(function (it) { return it !== refItem; }).map(function (it) {
       var pts = [];
-      s.slicePoints.forEach(function (p) {
+      it.points.forEach(function (p) {
         var r = at[p.d1 + "x" + p.d2];
         if (r && p[field] !== undefined) {
           var v = p[field] / r[field];
@@ -884,28 +950,48 @@ details[open] > summary { margin-bottom: 12px; }
         }
       });
       if (!pts.length) {
-        notes.push(s.identity.name + " has no point in common with " + ref.name + " at " +
+        notes.push(it.identity.name + " has no point in common with " + ref.name + " at " +
                    plural(threads, "thread") + ", so it is not in the comparison chart.");
       }
-      return { name: s.identity.name, colour: colour(s.identity), points: pts };
+      return { identity: it.identity, points: pts };
     });
     var xs = uniqSorted([].concat.apply([], series.map(function (x) { return x.points.map(function (p) { return p.x; }); })));
-    if (xs.length < 2) { return { notes: notes }; }
+    return { field: field, series: series, notes: notes, worst: worst, xs: xs };
+  }
 
-    var hi = Math.max(1.25, worst * 1.15), lo = 1 / hi;
+  /* The log axis spans the worst ratio either way, at least x0.8..x1.25. */
+  function ratioDomain(worst) {
+    var hi = Math.max(1.25, worst * 1.15);
+    return [1 / hi, hi];
+  }
+
+  /* x0.8 and x1.25 only while the axis is short enough to need them. */
+  function ratioTicks(dom) {
     var ticks = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.8, 1, 1.25, 2, 5, 10, 20, 50, 100]
-      .filter(function (t) { return t >= lo && t <= hi; });
+      .filter(function (t) { return t >= dom[0] && t <= dom[1]; });
     if (ticks.length > 9) { ticks = ticks.filter(function (t) { return t !== 0.8 && t !== 1.25; }); }
+    return ticks;
+  }
+
+  function ratioChart(rt, list, slice, threads, ref) {
+    var data = ratioData(rt, list, slice, threads, ref);
+    if (!data) { return null; }
+    if (data.xs.length < 2) { return { notes: data.notes }; }
+    var dom = ratioDomain(data.worst);
+    var series = data.series.map(function (x) {
+      return { name: x.identity.name, colour: colour(x.identity), points: x.points };
+    });
     var shown = series.filter(function (x) { return x.points.length; });
     return {
-      notes: notes,
+      notes: data.notes,
       chart: lineChart({
         /* One curve gets no legend, so the title has to say whose it is. */
         title: (shown.length === 1 ? shown[0].name + " c" : "C") + "ompared with " + ref.name,
         subtitle: plural(threads, "thread") + (slice.note ? " · " + slice.note : "") +
                   " · " + ref.name + " = ×1, higher is faster",
         xLabel: slice.label, yLabel: "× " + ref.name + " (log)", series: series,
-        yLog: true, yDomain: [lo, hi], yTicks: ticks, baseline: 1,
+        yLog: true, yDomain: dom, baseline: 1,
+        yTicks: ratioTicks(dom),
         yTickFormat: function (t) { return "×" + t; },
         yFormat: function (v) { return "×" + v.toFixed(2); }
       })
@@ -933,10 +1019,11 @@ details[open] > summary { margin-bottom: 12px; }
     });
   }
 
-  function heatmapChart(rt, threads) {
+  /* null unless there is a grid to show: two sizes on each axis and at
+   * least one non-square shape (the -M diagonal alone is chart 2's). */
+  function heatData(rt, threads) {
     if (!rt.dim2Label) { return null; }
     var field = metricField(rt);
-    var unit = metricUnit(field);
     var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0; });
     var panels = list.map(function (s) {
       return { s: s, cells: pointsOf(s).filter(function (p) { return p.threads === threads && p[field] !== undefined; }) };
@@ -946,7 +1033,19 @@ details[open] > summary { margin-bottom: 12px; }
     var d2s = uniqSorted(cells.map(function (p) { return p.d2; }));
     if (d1s.length < 2 || d2s.length < 2 || !cells.some(function (p) { return p.d1 !== p.d2; })) { return null; }
     var vmax = Math.max.apply(null, cells.map(function (p) { return p[field]; }));
-    function step(v) { return Math.min(STEPS, Math.floor((v / vmax) * STEPS) + 1); }
+    return { field: field, panels: panels, d1s: d1s, d2s: d2s, vmax: vmax };
+  }
+
+  /* The colour step 1..STEPS of a value, on one scale shared by every map
+   * so that two maps can be compared cell by cell. */
+  function heatStep(v, vmax) { return Math.min(STEPS, Math.floor((v / vmax) * STEPS) + 1); }
+
+  function heatmapChart(rt, threads) {
+    var data = heatData(rt, threads);
+    if (!data) { return null; }
+    var field = data.field, panels = data.panels, d1s = data.d1s, d2s = data.d2s, vmax = data.vmax;
+    var unit = metricUnit(field);
+    function step(v) { return heatStep(v, vmax); }
 
     var fig = el("figure", "chart card heat");
     var cap = el("figcaption");
@@ -1073,9 +1172,41 @@ details[open] > summary { margin-bottom: 12px; }
     return fig;
   }
 
+  /* What test_report.js checks. Not an interface for anything else: the
+   * page itself is the product, and these may change with it. */
+  window.bmbReport = {
+    buildModel: buildModel, pointsOf: pointsOf, threadCounts: threadCounts,
+    defaultThreads: defaultThreads, comparable: comparable, referenceFor: referenceFor,
+    cpuName: cpuName, plural: plural, fmtRate: fmtRate, fmtSize: fmtSize,
+    fmtBytes: fmtBytes, fmtTime: fmtTime, metricField: metricField,
+    sliceForSize: sliceForSize, sizeData: sizeData, cacheMarkers: cacheMarkers,
+    ratioData: ratioData, ratioDomain: ratioDomain, ratioTicks: ratioTicks,
+    thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
+    heatData: heatData, heatStep: heatStep, STEPS: STEPS
+  };
+
   /* ------------------------------------------------------------------ *
    * Page.                                                              *
    * ------------------------------------------------------------------ */
+
+  var meta = {};
+  try { meta = JSON.parse(document.getElementById("bmb-meta").textContent); } catch (e) { meta = {}; }
+
+  /* Each result is its own block, parsed on its own, so one bad file
+   * cannot take the others down with it. */
+  var problems = [];
+  var entries = [];
+  Array.prototype.forEach.call(document.querySelectorAll("script.bmb-result"), function (node, n) {
+    try {
+      entries.push(JSON.parse(node.textContent));
+    } catch (e) {
+      problems.push("result " + (n + 1) + " could not be read: " + e.message);
+    }
+  });
+  var model = buildModel(entries);
+  problems = problems.concat(model.problems);
+  var identityOrder = model.identities;
+  var routineOrder = model.routines;
 
   var root = document.getElementById("bmb-report");
   root.textContent = "";
@@ -1088,29 +1219,20 @@ details[open] > summary { margin-bottom: 12px; }
     (meta.generator ? " by " + meta.generator : "")));
   root.appendChild(header);
 
-  /* The ratio reference (#1, decision 2): OpenBLAS when there is one --
-   * identityOrder already puts it first -- otherwise the first series by
-   * legend name; never the order of the files, which the shell sorts by
-   * name. One selector for the whole page, in the one filter row, since it
-   * scopes every comparison chart below. */
-  var comparable = identityOrder.filter(function (id) {
-    return id.slot && routineOrder.some(function (rt) {
-      return rt.seriesOrder.length >= 2 && rt.seriesOrder.some(function (s) { return s.identity === id; });
-    });
-  });
-  var reference = comparable[0] || null;
+  var candidates = comparable(identityOrder, routineOrder);
+  var reference = candidates[0] || null;
   var sections = [];
-  if (comparable.length >= 2) {
+  if (candidates.length >= 2) {
     var filters = el("div", "filters");
     var flab = el("label", null, "Compare against ");
     var fsel = el("select");
-    comparable.forEach(function (id, i) {
+    candidates.forEach(function (id, i) {
       var o = el("option", null, id.name);
       o.value = String(i);
       fsel.appendChild(o);
     });
     fsel.addEventListener("change", function () {
-      reference = comparable[Number(fsel.value)];
+      reference = candidates[Number(fsel.value)];
       sections.forEach(function (redraw) { redraw(); });
     });
     flab.appendChild(fsel);
@@ -1118,12 +1240,6 @@ details[open] > summary { margin-bottom: 12px; }
     root.appendChild(filters);
   }
 
-  /* A routine the chosen reference was not measured for compares against
-   * its own default instead, and says so in the chart title. */
-  function referenceFor(rt) {
-    var mine = rt.seriesOrder.map(function (s) { return s.identity; });
-    return (reference && mine.indexOf(reference) >= 0) ? reference : mine[0];
-  }
 
   if (problems.length) {
     var pb = el("div", "card problems");
@@ -1213,12 +1329,8 @@ details[open] > summary { margin-bottom: 12px; }
       " · " + plural(rt.seriesOrder.length, "series")));
     sec.appendChild(head);
 
-    /* Default thread count: the highest one every series measured, or a
-     * library measured only at 1 thread would vanish from the default
-     * view (#1, decision 3). */
-    var all = uniqSorted([].concat.apply([], rt.seriesOrder.map(threadCounts)));
-    var shared = all.filter(function (t) { return rt.seriesOrder.every(function (s) { return threadCounts(s).indexOf(t) >= 0; }); });
-    var initial = shared.length ? shared[shared.length - 1] : all[all.length - 1];
+    var dt = defaultThreads(rt);
+    var all = dt.all, initial = dt.initial;
 
     var body = el("div");
     var controls = null, select = null;
@@ -1249,7 +1361,7 @@ details[open] > summary { margin-bottom: 12px; }
       if (res.empty) { body.appendChild(el("p", "empty", res.empty)); }
       made = made.concat(res.charts || []);
 
-      var rc = ratioChart(rt, res.list, res.slice, threads, referenceFor(rt));
+      var rc = ratioChart(rt, res.list, res.slice, threads, referenceFor(rt, reference));
       if (rc) {
         if (rc.chart) { made.push(rc.chart); }
         notes = notes.concat(rc.notes);

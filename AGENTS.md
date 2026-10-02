@@ -40,6 +40,51 @@ silently ignore your edits.
 clean VPATH build; run it before anything that touches `configure.ac`,
 `Makefile.am` files, or adds/removes source files.
 
+## Tests
+
+Everything runs under `make check`, through Automake's test driver: a test
+is a program or a `sh` script that exits 0 (pass), 77 (SKIP: something it
+needs is missing here) or anything else (fail). Each one leaves its output
+in `<name>.log` next to it in the build tree, and the directory's
+`test-suite.log` gathers the failures. To run just one, or a few:
+
+```bash
+make -C src/report check TESTS=test_bmb_report_js.sh
+make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
+```
+
+| Where | Test | What it pins down |
+|---|---|---|
+| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label` |
+| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form |
+| | `test_netlib_cblas` | (netlib only) the row-major → column-major shim against naive references |
+| `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
+| | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
+| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label |
+| | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
+| `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |
+| | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
+| | `test_bmb_report_render.sh` | the page in a real browser: every chart draws |
+| | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
+
+The two browser tests SKIP without a browser (see [Testing the
+page](#testing-the-page)); every other test runs anywhere.
+
+Three rules the existing tests follow, and new ones should too:
+
+- **Tiny sizes only.** A benchmark test that allocates gigabytes takes the
+  machine down with it (one did). Test limits through the parser, which
+  refuses before allocating.
+- **Generate current-format input; keep only old formats as fixtures.**
+  Fixtures of the current format fall out of date silently.
+- **Prove the test can fail.** Before relying on a new check, break the code
+  it guards (a flipped comparison, a removed line) and watch it fail, then
+  restore it. Each test here was checked that way; two of them passed when
+  broken the first time, which is how the rules in [Testing the
+  page](#testing-the-page) were learnt. Make sure the mutation still
+  *compiles* — under `--enable-werror` an unused variable stops the build,
+  `make check` then runs the old binary, and the test "passes".
+
 ## Layout
 
 ```
@@ -51,7 +96,8 @@ src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 src/report/      # bmb_report: the script, the HTML template, how the two
-                 # are assembled, and fixtures in the formats it refuses
+                 # are assembled, fixtures in the formats it refuses, and
+                 # the browser tests (browser.sh, test_report.js)
 ```
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
@@ -86,7 +132,9 @@ The cost is that no benchmark lands in `$PATH`; README.md gives the two
 lines that put the three directories there. The one exception is
 `bmb_report`, a single user-facing command, which goes to `$(bindir)` — and
 so follows `--prefix`, `--bindir` and `DESTDIR` like anything else Automake
-installs. The release workflow checks it lands in `<prefix>/bin`.
+installs. CI checks that on every push (the `openblas` job's "Install
+layout" step: nothing may land outside the prefix), and the release
+workflow checks it again from the tarball.
 
 Note it's `level<N>_PROGRAMS`, **not** `check_PROGRAMS` — the latter would
 build the benchmarks only under `make check` and install nothing.
@@ -448,26 +496,64 @@ the code points at them; the ones easiest to break by accident:
 
 ### Testing the page
 
-`test_bmb_report_render.sh` generates input meant to trigger every chart,
-renders the report in headless Chrome (`--dump-dom`) and checks each one
-drew. It runs on GitHub's x86 runners, which ship Chrome, and reports SKIP
-wherever no Chrome or Chromium is found. Two things about it took two
-false passes to learn, so keep them:
+Two tests run the page in a real browser, through `browser.sh`, which both
+source:
 
-- **It only looks inside the rendered `<main>`.** The serialised DOM also
+- `test_bmb_report_render.sh` generates input meant to trigger every chart
+  and checks each one drew.
+- `test_bmb_report_js.sh` runs `test_report.js`, the unit tests of the
+  page's logic, which pin #1's decisions one check each (merging, fastest
+  duplicate, names, colour slots, the reference, default threads, slices,
+  ratios, thread scaling, the heatmap, cache markers, formatting).
+
+**The model and the view are split for that.** Everything in `report.html`
+from `buildModel` to the line before `window.bmbReport` is pure — it takes
+results and returns numbers, never touches the DOM — and is exported on
+`window.bmbReport`. The `...Chart` functions only draw what the matching
+`...Data` function computed. Keep it that way: a decision made inside a
+drawing function cannot be unit-tested, only eyeballed. The harness pastes
+`test_report.js` after the page's script in a real report, so the tests
+exercise the shipped code; the results come back in a `<pre
+id="bmb-test-results">` read from the DOM. `test_report.js` must not
+contain `</` (it would close the `<script>` it is pasted into), and the
+harness refuses it if it does.
+
+**Browsers.** Chrome or Chromium print the rendered DOM with `--dump-dom`.
+Firefox has no such flag, so `browser.sh` drives it over WebDriver:
+geckodriver plus `curl`, and a small awk decoder for the JSON string the
+DOM comes back in. Without either browser the tests SKIP. `BMB_BROWSER=…`
+picks one (`BMB_BROWSER=firefox` for Firefox); `BMB_GECKODRIVER=…` points at
+a geckodriver that is not on `$PATH`. In CI the x86 jobs run them in
+Chrome and the `firefox` job in Firefox — the browser the README tells
+users to open the page with; the `openblas` and `firefox` jobs fail if
+they skipped.
+
+Things that took false passes to learn, so keep them:
+
+- **Only look inside what the page rendered.** The serialised DOM also
   holds the page's own script, whose source contains every chart title
-  verbatim: grepping the whole document passes even when nothing drew.
-- **It extracts `<main>` with awk, not a `sed` range.** The page builds
-  `<main>` in one go, so it opens and closes on one line, and a `sed`
-  range only looks for its end from the next line — it ran on through the
-  script to the end of the file.
+  verbatim (and `test_report.js`'s own source): grepping the whole document
+  passes even when nothing drew. The render test reads only `<main>`, and
+  `test_report.js` never spells its results tag in a comment.
+- **Extract with awk, not a `sed` range.** The page builds `<main>` in one
+  go, so it opens and closes on one line, and a `sed` range only looks for
+  its end from the next line — it ran on through the script to the end of
+  the file. Likewise the results tag shares a line with whatever precedes
+  it and with the first check: strip up to the tag, or a failing first
+  check goes unseen.
+- **Strip carriage returns** before matching: a Windows browser ends its
+  lines with them, and `$` then never matches.
 
-It was checked against a page whose script throws on its first line, and
-against one that never draws the heatmap; both fail. `BMB_BROWSER=…`
-points it at a specific browser. To look at a page rather than test it,
-render a screenshot: `chrome --headless=new --screenshot=out.png
---window-size=1280,3000 file://$PWD/report.html` — and do look, in light
-and dark: the test proves the charts exist, not that they are readable.
+The render test was checked against a page whose script throws on its
+first line, and against one that never draws the heatmap; the JS test
+against a missing export, a syntax error, a throwing function, a failing
+first check, and wrong decisions (slowest duplicate kept, OpenBLAS not
+first, ratio ticks never pruned). All fail. To look at a page rather than
+test it, render a screenshot — `chrome --headless=new --screenshot=out.png
+--window-size=1280,3000 file://$PWD/report.html`, or `firefox --headless
+--screenshot out.png file://$PWD/report.html` — and do look, in light and
+dark: the tests prove the charts exist and the numbers behind them are
+right, not that they are readable.
 
 ## Known measurement limitations
 
@@ -516,7 +602,17 @@ Linux arm64 hosted runner for public repos — both those backends are
 aarch64-only). Keep it green — a routine that only works "on my machine"
 isn't done.
 
-A sixth job, `sanitizers`, rebuilds at `-O1` under ASan and UBSan. It is
+The `openblas` job also installs into a staging root and fails if anything
+lands outside `--prefix`, or if `bin/bmb_report` and the `libexec`
+benchmarks are not where the README says; and it fails if the browser
+tests skipped, since the x86 runners have Chrome.
+
+The `firefox` job builds with OpenBLAS and runs only `src/report`'s tests,
+in Firefox through geckodriver (both preinstalled on the runner image). It
+exists because Firefox is the browser users are told to use, and Chrome
+passing says nothing about it.
+
+The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot
 (out-of-bounds accesses, signed overflow), and the different optimisation
 level moves GCC's diagnostics around — the first `-Werror` failure it ever

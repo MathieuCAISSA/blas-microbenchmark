@@ -13,7 +13,7 @@ bmb_report: $(srcdir)/bmb_report.sh $(srcdir)/report.html $(srcdir)/assemble.awk
 	    $(srcdir)/report.html $(srcdir)/bmb_report.sh >$@.tmp && \
 	chmod +x $@.tmp && mv -f $@.tmp $@
 
-TESTS = test_assemble.sh test_bmb_report.sh test_bmb_report_render.sh
+TESTS = test_assemble.sh test_bmb_report.sh test_bmb_report_render.sh test_bmb_report_js.sh
 
 # test_assemble.sh must exercise the awk the build uses, not whichever one
 # happens to be first on PATH.
@@ -26,4 +26,4 @@ FIXTURES = \
 	fixtures/v0.6.1.json \
 	fixtures/v2.0.0.json
 
-EXTRA_DIST = bmb_report.sh report.html assemble.awk $(TESTS) $(FIXTURES)
+EXTRA_DIST = bmb_report.sh report.html assemble.awk browser.sh test_report.js $(TESTS) $(FIXTURES)

@@ -39,6 +39,39 @@ jobs:
       - name: make check
         run: make -C build check
 
+      # The browser tests SKIP without a browser, which make check counts
+      # as a pass. The x86 runners have Chrome, so here a SKIP means the
+      # page went unchecked: fail instead.
+      - name: The page was checked in a browser
+        run: |
+          if grep -l '^:test-result: SKIP' build/src/report/test_bmb_report_render.sh.trs \
+                                          build/src/report/test_bmb_report_js.sh.trs; then
+            echo "the browser tests were skipped"; exit 1
+          fi
+
+      # Everything goes where --prefix says, and nowhere else: installed
+      # into a staging root, nothing may land outside <root>/<prefix>.
+      - name: Install layout
+        run: |
+          mkdir -p build-install
+          cd build-install
+          ../configure --prefix=/opt/bmb-test
+          make -j"$(nproc)"
+          make install DESTDIR="$PWD/stage"
+          outside=$(find stage -type f ! -path 'stage/opt/bmb-test/*')
+          if [ -n "$outside" ]; then
+            echo "installed outside the prefix:"; echo "$outside"; exit 1
+          fi
+          P=stage/opt/bmb-test
+          test -x $P/bin/bmb_report
+          test -x $P/libexec/blas-microbenchmark/level1/bmb_ddot
+          test -x $P/libexec/blas-microbenchmark/level2/bmb_dgemv
+          test -x $P/libexec/blas-microbenchmark/level3/bmb_dgemm
+          $P/libexec/blas-microbenchmark/level3/bmb_dgemm -x 0 -i 1 -m 16 -o r.json >/dev/null
+          $P/bin/bmb_report r.json > r.html
+          grep -qi '^<!doctype html>' r.html
+          find stage -type f | sort
+
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -136,6 +169,65 @@ jobs:
           path: |
             build/**/test-suite.log
             build/**/*.log
+          if-no-files-found: ignore
+
+  # The report page in Firefox, the browser the README tells users to open
+  # it with. The other x86 jobs run the same tests in Chrome. Firefox has
+  # no --dump-dom, so browser.sh drives it through geckodriver; the runner
+  # image ships both.
+  firefox:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+
+      - name: Firefox and geckodriver
+        run: |
+          if ! command -v geckodriver >/dev/null && [ -x "$GECKOWEBDRIVER/geckodriver" ]; then
+            echo "$GECKOWEBDRIVER" >> "$GITHUB_PATH"
+          fi
+          firefox --version
+          PATH="$GECKOWEBDRIVER:$PATH" geckodriver --version | head -1
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --enable-werror
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: Report tests in Firefox
+        env:
+          BMB_BROWSER: firefox
+        run: make -C build/src/report check
+
+      # A SKIP would be make check passing with the page unchecked.
+      - name: The page was checked in Firefox
+        run: |
+          grep -h 'rendering with' build/src/report/test_bmb_report_render.sh.log \
+                                   build/src/report/test_bmb_report_js.sh.log
+          if grep -l '^:test-result: SKIP' build/src/report/*.trs; then
+            echo "a report test was skipped"; exit 1
+          fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-firefox
+          path: |
+            build/src/report/*.log
+            build/src/report/*.d/
           if-no-files-found: ignore
 
   # NVPL and ArmPL both target aarch64 (NVIDIA Grace / Arm servers), so these

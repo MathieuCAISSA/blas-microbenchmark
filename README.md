@@ -403,6 +403,13 @@ backend's install steps and internals.
 `./configure --help` lists every option, including `--with-blas-libpath`
 for a non-standard install location and the usual `CC`/`CFLAGS`/`LDFLAGS`.
 
+## Contributing
+
+[AGENTS.md](AGENTS.md) is the developer guide: building from a git
+checkout, what each test checks and how to run one, how to add a routine,
+and what CI runs. `make check` runs every test; the two that need a browser
+(Chrome, or Firefox with geckodriver) skip without one.
+
 ## License
 
 [Apache License 2.0](LICENSE).

@@ -6,9 +6,8 @@
 # So this generates input meant to trigger each chart, lets a real browser
 # run the page, and looks at the DOM it ends up with.
 #
-# It needs Chrome or Chromium (for --dump-dom); without one it reports SKIP
-# rather than failing. GitHub's x86 runners have Chrome, so CI runs it.
-# BMB_BROWSER overrides the search.
+# It needs a browser (see browser.sh); without one it reports SKIP rather
+# than failing. CI runs it in Chrome and in Firefox.
 set -e
 
 T=render-test.d
@@ -18,20 +17,8 @@ fail() {
     exit 1
 }
 
-browser=${BMB_BROWSER:-}
-if [ -z "$browser" ]; then
-    for b in google-chrome google-chrome-stable chromium chromium-browser; do
-        if command -v "$b" >/dev/null 2>&1; then
-            browser=$b
-            break
-        fi
-    done
-fi
-if [ -z "$browser" ]; then
-    echo "SKIP: no Chrome or Chromium to render the page with"
-    exit 77
-fi
-echo "     rendering with $browser"
+. "${srcdir:-.}/browser.sh"
+find_browser
 
 rm -rf "$T"
 mkdir "$T"
@@ -48,13 +35,7 @@ mkdir "$T"
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 
-# Chrome runs headless without a sandbox here: the page is our own, read
-# from disk, and the user-namespace sandbox is often unavailable on CI.
-"$browser" --headless=new --no-sandbox --disable-gpu --dump-dom \
-    "file://$(pwd)/$T/report.html" >"$T/dom.html" 2>"$T/browser.log" \
-    || fail "the browser did not render the page: $(cat "$T/browser.log")"
-
-test -s "$T/dom.html" || fail "the browser returned an empty DOM"
+render_dom "$T/report.html" "$T/dom.html"
 
 # Only what the page *rendered*, inside <main>. The serialised DOM also
 # carries the page's own script, whose source contains every chart title
