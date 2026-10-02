@@ -4,29 +4,953 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BLAS benchmark report</title>
+<style>
+/* Colours are the dataviz skill's reference palette, used as documented and
+ * validated there (adjacent CVD delta E >= 8 in both modes). Series take
+ * slots in a fixed order and keep them across the whole page: a series is
+ * the same colour in every chart. Text never wears a series colour. */
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --ring: rgba(11, 11, 11, 0.10);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --ring: rgba(255, 255, 255, 0.10);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface: #1a1a19;
+  --ink: #ffffff;
+  --ink-2: #c3c2b7;
+  --muted: #898781;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --ring: rgba(255, 255, 255, 0.10);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 1120px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 24px; font-weight: 600; margin: 0 0 4px; }
+h2 { font-size: 18px; font-weight: 600; margin: 0; }
+h3 { font-size: 14px; font-weight: 600; margin: 0; }
+.sub { color: var(--ink-2); margin: 0; }
+.muted { color: var(--muted); }
+section { margin-top: 40px; }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 12px; }
+.section-head .sub { flex: 1 1 auto; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--ring);
+  border-radius: 8px;
+  padding: 16px;
+}
+.grid { display: grid; gap: 12px; }
+.tiles { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.tile .label { color: var(--ink-2); font-size: 13px; }
+.tile .value { font-size: 24px; font-weight: 600; margin: 2px 0; }
+.tile .value small { font-size: 13px; font-weight: 400; color: var(--ink-2); }
+.tile .detail { color: var(--muted); font-size: 12px; }
+.charts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 12px; }
+.controls label { color: var(--ink-2); }
+select {
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--axis);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+figure.chart { margin: 0; }
+figure.chart figcaption .sub { font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 8px 0 4px; padding: 0; list-style: none; color: var(--ink-2); font-size: 13px; }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.key { display: inline-block; width: 16px; height: 2px; border-radius: 1px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+.plot { position: relative; }
+.plot svg { display: block; overflow: visible; }
+.plot svg:focus { outline: none; }
+.plot svg:focus-visible { outline: 2px solid var(--axis); outline-offset: 2px; border-radius: 4px; }
+svg text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; }
+svg .tick { fill: var(--muted); font-variant-numeric: tabular-nums; }
+svg .axis-title { fill: var(--ink-2); }
+svg .gridline { stroke: var(--grid); stroke-width: 1; shape-rendering: crispEdges; }
+svg .axisline { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+svg .marker-line { stroke: var(--axis); stroke-width: 1; shape-rendering: crispEdges; }
+svg .marker-label { fill: var(--muted); font-size: 11px; }
+svg .crosshair { stroke: var(--muted); stroke-width: 1; shape-rendering: crispEdges; }
+svg .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+svg .band { stroke: none; opacity: 0.10; }
+svg .dot { stroke: var(--surface); stroke-width: 2; }
+svg .end-label { fill: var(--ink-2); }
+
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--ring);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  padding: 8px 10px;
+  font-size: 12px;
+  min-width: 140px;
+  z-index: 2;
+}
+.tooltip .head { color: var(--ink-2); margin-bottom: 4px; }
+.tooltip .row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tooltip .row strong { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tooltip .row span.name { color: var(--ink-2); }
+
+.notes { margin: 12px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 13px; }
+.notes li { margin: 2px 0; }
+.empty { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--ink-2); font-weight: 600; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+th button { all: unset; cursor: pointer; }
+th button:focus-visible { outline: 2px solid var(--axis); outline-offset: 2px; }
+.table-wrap { overflow-x: auto; }
+table.wrap th, table.wrap td { white-space: normal; vertical-align: top; }
+details > summary { cursor: pointer; font-weight: 600; }
+details[open] > summary { margin-bottom: 12px; }
+.problems { border-color: var(--s8); }
+</style>
 </head>
 <body>
-<main id="bmb-report"><p>Loading the results…</p></main>
+<main id="bmb-report"><p class="sub">Loading the results…</p></main>
 <!-- @BMB_RESULTS@ -->
 <script>
 (function () {
   "use strict";
-  var out = document.getElementById("bmb-report");
-  var list = document.createElement("ul");
-  var nodes = document.querySelectorAll("script.bmb-result");
-  out.textContent = "";
-  for (var i = 0; i < nodes.length; i++) {
-    var item = document.createElement("li");
-    try {
-      var entry = JSON.parse(nodes[i].textContent);
-      item.textContent = entry.file + ": " + entry.result.routine + ", " +
-        entry.result.backend + ", " + entry.result.results.length + " points";
-    } catch (e) {
-      item.textContent = "result " + (i + 1) + " could not be read: " + e.message;
-    }
-    list.appendChild(item);
+
+  /* ------------------------------------------------------------------ *
+   * Small helpers. Everything that comes from a result file goes into  *
+   * the page through textContent, never innerHTML: labels are whatever *
+   * someone typed after --label.                                       *
+   * ------------------------------------------------------------------ */
+
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined && text !== null) { e.textContent = String(text); }
+    return e;
   }
-  out.appendChild(list);
+
+  function sv(tag, attrs, cls) {
+    var e = document.createElementNS(SVGNS, tag);
+    var k;
+    for (k in attrs) {
+      if (Object.prototype.hasOwnProperty.call(attrs, k)) { e.setAttribute(k, attrs[k]); }
+    }
+    if (cls) { e.setAttribute("class", cls); }
+    return e;
+  }
+
+  function uniqSorted(values) {
+    var seen = {};
+    var out = [];
+    values.forEach(function (v) {
+      if (!seen[v]) { seen[v] = true; out.push(v); }
+    });
+    return out.sort(function (a, b) { return a - b; });
+  }
+
+  function fmtRate(v) {
+    if (v >= 100) { return v.toFixed(0); }
+    if (v >= 10) { return v.toFixed(1); }
+    return v.toFixed(2);
+  }
+
+  /* Sizes are counts of elements or matrix dimensions, swept by doubling,
+   * so binary suffixes keep the axis readable: 16384 is "16K". */
+  function fmtSize(n) {
+    if (n >= 1048576 && n % 1048576 === 0) { return (n / 1048576) + "M"; }
+    if (n >= 1024 && n % 1024 === 0) { return (n / 1024) + "K"; }
+    return n.toLocaleString("en-US");
+  }
+
+  function fmtBytes(n) {
+    if (n % 1073741824 === 0) { return (n / 1073741824) + "G"; }
+    if (n % 1048576 === 0) { return (n / 1048576) + "M"; }
+    if (n % 1024 === 0) { return (n / 1024) + "K"; }
+    return n + "B";
+  }
+
+  function fmtTime(s) {
+    if (s < 1e-6) { return (s * 1e9).toFixed(1) + " ns"; }
+    if (s < 1e-3) { return (s * 1e6).toFixed(2) + " µs"; }
+    if (s < 1) { return (s * 1e3).toFixed(2) + " ms"; }
+    return s.toFixed(3) + " s";
+  }
+
+  function plural(n, word) {
+    return n + " " + word + (n === 1 || /s$/.test(word) ? "" : "s");
+  }
+
+  /* ------------------------------------------------------------------ *
+   * aarch64 kernels report implementer and part codes rather than a    *
+   * model name, and the data keeps them raw on purpose: the CPU string *
+   * is part of the series key, so it must never change form (#1,       *
+   * decision 4). Naming is for display only -- a missing entry here    *
+   * just shows the codes.                                              *
+   * ------------------------------------------------------------------ */
+
+  var ARM_PARTS = {
+    "0x41": { "0xd0c": "Arm Neoverse-N1", "0xd40": "Arm Neoverse-V1",
+              "0xd49": "Arm Neoverse-N2", "0xd4f": "Arm Neoverse-V2" },
+    "0x46": { "0x001": "Fujitsu A64FX" }
+  };
+
+  function cpuName(cpu) {
+    var m = /^implementer (0x[0-9a-f]+), part (0x[0-9a-f]+)$/i.exec(cpu || "");
+    if (m) {
+      var vendor = ARM_PARTS[m[1].toLowerCase()];
+      var name = vendor && vendor[m[2].toLowerCase()];
+      if (name) { return name; }
+    }
+    return cpu || "unknown CPU";
+  }
+
+  var LEVEL = {
+    dasum: 1, daxpy: 1, dcopy: 1, ddot: 1, dnrm2: 1, dscal: 1, dswap: 1,
+    dgemv: 2, dger: 2, dsymv: 2, dsyr: 2, dsyr2: 2, dtrmv: 2, dtrsv: 2,
+    dgemm: 3, dsymm: 3, dsyrk: 3, dsyr2k: 3, dtrmm: 3, dtrsm: 3
+  };
+
+  /* ------------------------------------------------------------------ *
+   * Loading. A series is routine + identity, where the identity is     *
+   * backend + BLAS version string + CPU + label (#1, decision 1).      *
+   * Files sharing a series merge into one curve; a point measured in   *
+   * more than one file keeps the fastest, as the benchmarks already do *
+   * between samples, and the page says so.                             *
+   * ------------------------------------------------------------------ */
+
+  var meta = {};
+  try { meta = JSON.parse(document.getElementById("bmb-meta").textContent); } catch (e) { meta = {}; }
+
+  var problems = [];
+  var identities = {};
+  var identityOrder = [];
+  var routines = {};
+
+  function identityOf(r) {
+    var machine = r.machine || {};
+    var key = [r.backend, r.blas || "", machine.cpu || "", r.label || ""].join("\u0001");
+    var id = identities[key];
+    if (!id) {
+      id = identities[key] = {
+        key: key, backend: r.backend || "unknown", blas: r.blas || "",
+        cpu: machine.cpu || "", label: r.label || "", machine: machine,
+        versions: {}, dates: [], files: []
+      };
+      identityOrder.push(id);
+    }
+    return id;
+  }
+
+  function addResult(file, r) {
+    var id = identityOf(r);
+    var routine = routines[r.routine];
+    var series, i;
+
+    id.versions[r.version] = true;
+    if (r.date) { id.dates.push(r.date); }
+    if (id.files.indexOf(file) < 0) { id.files.push(file); }
+
+    if (!routine) {
+      routine = routines[r.routine] = {
+        name: r.routine, level: LEVEL[r.routine] || 0,
+        dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
+        series: {}, seriesOrder: [], duplicates: []
+      };
+    }
+    series = routine.series[id.key];
+    if (!series) {
+      series = routine.series[id.key] = { identity: id, points: {} };
+      routine.seriesOrder.push(series);
+    }
+
+    for (i = 0; i < r.results.length; i++) {
+      var row = r.results[i];
+      var p = {
+        threads: row.thread_count, d1: row.dim1,
+        d2: (row.dim2 === undefined) ? null : row.dim2,
+        time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
+        mean: row.mean_s, stddev: row.stddev_s, max: row.max_s,
+        calls: row.calls_per_sample, file: file
+      };
+      var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
+      var prev = series.points[pkey];
+      if (prev) {
+        var fast = (p.time < prev.time) ? p : prev;
+        var slow = (fast === p) ? prev : p;
+        routine.duplicates.push({ series: series, point: fast, kept: fast.file,
+                                  other: slow.file, gap: (slow.time / fast.time - 1) * 100 });
+        series.points[pkey] = fast;
+      } else {
+        series.points[pkey] = p;
+      }
+    }
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("script.bmb-result"), function (node, n) {
+    try {
+      var entry = JSON.parse(node.textContent);
+      addResult(entry.file, entry.result);
+    } catch (e) {
+      problems.push("result " + (n + 1) + " could not be read: " + e.message);
+    }
+  });
+
+  /* Legend names: the backend alone when that is unambiguous, then only
+   * as much of label, library version and CPU as it takes to tell series
+   * of the same backend apart. */
+  function shortBlas(blas) { return blas.split(/\s+/).slice(0, 2).join(" "); }
+
+  identityOrder.forEach(function (id) {
+    var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
+    var parts = [id.backend];
+    function differs(f) {
+      return same.some(function (o) { return f(o) !== f(id); });
+    }
+    if (same.length > 1) {
+      if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
+      if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
+      if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
+    }
+    id.name = parts.join(" · ");
+  });
+
+  /* Colour slots in a fixed order, assigned once for the whole page so a
+   * series keeps its colour in every chart and under every selector.
+   * OpenBLAS first, as the default reference (#1, decision 2). Past eight
+   * there is no honest ninth colour: those series are listed, not drawn. */
+  identityOrder.sort(function (a, b) {
+    var ao = a.backend === "openblas" ? 0 : 1;
+    var bo = b.backend === "openblas" ? 0 : 1;
+    if (ao !== bo) { return ao - bo; }
+    return a.name < b.name ? -1 : (a.name > b.name ? 1 : 0);
+  });
+  identityOrder.forEach(function (id, i) { id.slot = (i < 8) ? i + 1 : 0; });
+
+  function colour(id) { return "var(--s" + id.slot + ")"; }
+
+  var routineOrder = Object.keys(routines).map(function (k) { return routines[k]; });
+  routineOrder.sort(function (a, b) {
+    return (a.level - b.level) || (a.name < b.name ? -1 : 1);
+  });
+  routineOrder.forEach(function (rt) {
+    rt.seriesOrder.sort(function (a, b) { return identityOrder.indexOf(a.identity) - identityOrder.indexOf(b.identity); });
+  });
+
+  function pointsOf(series) {
+    return Object.keys(series.points).map(function (k) { return series.points[k]; });
+  }
+
+  function threadCounts(series) {
+    return uniqSorted(pointsOf(series).map(function (p) { return p.threads; }));
+  }
+
+  /* ------------------------------------------------------------------ *
+   * The line chart. One y axis, always (a second scale on the same     *
+   * plot makes any crossing between curves an accident of scales);     *
+   * 2px lines, 8px dots with a surface ring, hairline solid grid. The  *
+   * crosshair snaps to the nearest measured size and the tooltip lists *
+   * every series there; arrow keys do the same from the keyboard.      *
+   * ------------------------------------------------------------------ */
+
+  function niceStep(span, count) {
+    var raw = span / count;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var err = raw / mag;
+    var step = mag;
+    if (err >= 7.5) { step = mag * 10; } else if (err >= 3.5) { step = mag * 5; } else if (err >= 1.5) { step = mag * 2; }
+    return step;
+  }
+
+  function lineChart(opt) {
+    var fig = el("figure", "chart card");
+    var cap = el("figcaption");
+    cap.appendChild(el("h3", null, opt.title));
+    if (opt.subtitle) { cap.appendChild(el("p", "sub", opt.subtitle)); }
+    fig.appendChild(cap);
+
+    var drawn = opt.series.filter(function (s) { return s.points.length > 0; });
+    if (drawn.length >= 2) {
+      var legend = el("ul", "legend");
+      drawn.forEach(function (s) {
+        var li = el("li");
+        var key = el("span", "key");
+        key.style.background = s.colour;
+        li.appendChild(key);
+        li.appendChild(document.createTextNode(s.name));
+        legend.appendChild(li);
+      });
+      fig.appendChild(legend);
+    }
+
+    var plot = el("div", "plot");
+    fig.appendChild(plot);
+
+    function draw() {
+      plot.textContent = "";
+      var W = Math.max(300, plot.clientWidth || 600);
+      var H = 280;
+      var xs = uniqSorted([].concat.apply([], drawn.map(function (s) { return s.points.map(function (p) { return p.x; }); })));
+      var xmin = xs[0], xmax = xs[xs.length - 1];
+      var xlog = xmax / xmin >= 8;
+      var ymax = 0;
+      drawn.forEach(function (s) {
+        s.points.forEach(function (p) { ymax = Math.max(ymax, p.y, p.y2 || 0); });
+      });
+      var ystep = niceStep(ymax || 1, 4);
+      var ytop = Math.ceil((ymax * 1.04) / ystep) * ystep || ystep;
+      var decimals = Math.max(0, -Math.floor(Math.log(ystep) / Math.LN10 + 1e-9));
+
+      var labels = drawn.length <= 4 && opt.endLabels !== false;
+      var longest = labels ? Math.max.apply(null, drawn.map(function (s) { return s.name.length; })) : 0;
+      var m = { top: 24, right: labels ? Math.min(170, 16 + longest * 6.6) : 16, bottom: 40, left: 52 };
+      var iw = W - m.left - m.right;
+      var ih = H - m.top - m.bottom;
+
+      function sx(x) {
+        if (xmin === xmax) { return m.left + iw / 2; }
+        if (xlog) { return m.left + iw * (Math.log(x / xmin) / Math.log(xmax / xmin)); }
+        return m.left + iw * ((x - xmin) / (xmax - xmin));
+      }
+      function sy(y) { return m.top + ih - ih * (y / ytop); }
+
+      var svg = sv("svg", { width: W, height: H, viewBox: "0 0 " + W + " " + H, role: "img",
+                            tabindex: "0", "aria-label": opt.title + ". Exact values are in the raw data table." });
+
+      var y;
+      for (y = 0; y <= ytop + ystep / 2; y += ystep) {
+        svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: Math.round(sy(y)) + 0.5, y2: Math.round(sy(y)) + 0.5 }, y === 0 ? "axisline" : "gridline"));
+        var t = sv("text", { x: m.left - 8, y: sy(y) + 4, "text-anchor": "end" }, "tick");
+        t.textContent = y.toFixed(decimals);
+        svg.appendChild(t);
+      }
+      var yt = sv("text", { x: m.left - 8, y: 12, "text-anchor": "end" }, "axis-title");
+      yt.textContent = opt.yLabel;
+      svg.appendChild(yt);
+
+      var ticks = xs;
+      if (xs.length > 10) {
+        var every = Math.ceil(xs.length / 10);
+        ticks = xs.filter(function (v, i) { return i % every === 0 || i === xs.length - 1; });
+      }
+      ticks.forEach(function (x) {
+        var tx = sv("text", { x: sx(x), y: m.top + ih + 18, "text-anchor": "middle" }, "tick");
+        tx.textContent = fmtSize(x);
+        svg.appendChild(tx);
+      });
+      var xt = sv("text", { x: m.left + iw / 2, y: H - 4, "text-anchor": "middle" }, "axis-title");
+      xt.textContent = opt.xLabel + (xlog ? " (log scale)" : "");
+      svg.appendChild(xt);
+
+      (opt.markers || []).forEach(function (mk) {
+        if (mk.x <= xmin || mk.x >= xmax) { return; }
+        var px = Math.round(sx(mk.x)) + 0.5;
+        svg.appendChild(sv("line", { x1: px, x2: px, y1: m.top, y2: m.top + ih }, "marker-line"));
+        var ml = sv("text", { x: px + 4, y: m.top + 10 }, "marker-label");
+        ml.textContent = mk.label;
+        svg.appendChild(ml);
+      });
+
+      drawn.forEach(function (s) {
+        var pts = s.points.slice().sort(function (a, b) { return a.x - b.x; });
+        var banded = pts.filter(function (p) { return p.y2 !== undefined; });
+        if (banded.length === pts.length && pts.length > 1) {
+          var d = pts.map(function (p, i) { return (i ? "L" : "M") + sx(p.x) + "," + sy(p.y); }).join("") +
+                  pts.slice().reverse().map(function (p) { return "L" + sx(p.x) + "," + sy(p.y2); }).join("") + "Z";
+          var band = sv("path", { d: d }, "band");
+          band.style.fill = s.colour;
+          svg.appendChild(band);
+        }
+        if (pts.length > 1) {
+          var line = sv("path", { d: pts.map(function (p, i) { return (i ? "L" : "M") + sx(p.x) + "," + sy(p.y); }).join("") }, "line");
+          line.style.stroke = s.colour;
+          svg.appendChild(line);
+        }
+        pts.forEach(function (p) {
+          var dot = sv("circle", { cx: sx(p.x), cy: sy(p.y), r: 4 }, "dot");
+          dot.style.fill = s.colour;
+          svg.appendChild(dot);
+        });
+      });
+
+      /* Direct labels at the line ends, but only when they stay apart:
+       * nudging colliding labels detaches them from their lines, so then
+       * the legend carries identity on its own. */
+      if (labels) {
+        var ends = drawn.map(function (s) {
+          var last = s.points.reduce(function (a, b) { return b.x > a.x ? b : a; });
+          return { s: s, y: sy(last.y), x: sx(last.x) };
+        }).sort(function (a, b) { return a.y - b.y; });
+        var apart = ends.every(function (e, i) { return i === 0 || e.y - ends[i - 1].y >= 14; });
+        if (apart && drawn.length >= 2) {
+          ends.forEach(function (e) {
+            var lt = sv("text", { x: e.x + 10, y: e.y + 4 }, "end-label");
+            lt.textContent = e.s.name;
+            svg.appendChild(lt);
+          });
+        }
+      }
+
+      var cross = sv("line", { y1: m.top, y2: m.top + ih, visibility: "hidden" }, "crosshair");
+      svg.appendChild(cross);
+      var hit = sv("rect", { x: m.left, y: m.top, width: iw, height: ih, fill: "transparent" });
+      svg.appendChild(hit);
+      plot.appendChild(svg);
+
+      var tip = el("div", "tooltip");
+      tip.style.display = "none";
+      plot.appendChild(tip);
+      var current = -1;
+
+      function show(i) {
+        if (i < 0 || i >= xs.length) { return; }
+        current = i;
+        var x = xs[i];
+        var px = Math.round(sx(x)) + 0.5;
+        cross.setAttribute("x1", px);
+        cross.setAttribute("x2", px);
+        cross.setAttribute("visibility", "visible");
+        tip.textContent = "";
+        tip.appendChild(el("div", "head", opt.xLabel + " " + x.toLocaleString("en-US")));
+        drawn.forEach(function (s) {
+          var p = s.points.filter(function (q) { return q.x === x; })[0];
+          if (!p) { return; }
+          var row = el("div", "row");
+          var key = el("span", "key");
+          key.style.background = s.colour;
+          row.appendChild(key);
+          row.appendChild(el("strong", null, fmtRate(p.y) + " " + opt.yUnit));
+          row.appendChild(el("span", "name", s.name));
+          tip.appendChild(row);
+        });
+        tip.style.display = "block";
+        var left = px + 12;
+        if (left + tip.offsetWidth > W) { left = px - 12 - tip.offsetWidth; }
+        tip.style.left = Math.max(0, left) + "px";
+        tip.style.top = m.top + "px";
+      }
+      function hide() {
+        cross.setAttribute("visibility", "hidden");
+        tip.style.display = "none";
+      }
+      function nearest(clientX) {
+        var box = svg.getBoundingClientRect();
+        var px = clientX - box.left;
+        var best = 0;
+        xs.forEach(function (x, i) {
+          if (Math.abs(sx(x) - px) < Math.abs(sx(xs[best]) - px)) { best = i; }
+        });
+        return best;
+      }
+      hit.addEventListener("pointermove", function (ev) { show(nearest(ev.clientX)); });
+      hit.addEventListener("pointerleave", hide);
+      svg.addEventListener("focus", function () { show(current < 0 ? xs.length - 1 : current); });
+      svg.addEventListener("blur", hide);
+      svg.addEventListener("keydown", function (ev) {
+        if (ev.key === "ArrowLeft") { show(Math.max(0, current - 1)); ev.preventDefault(); }
+        if (ev.key === "ArrowRight") { show(Math.min(xs.length - 1, current + 1)); ev.preventDefault(); }
+        if (ev.key === "Escape") { hide(); }
+      });
+    }
+
+    fig.draw = draw;
+    charts.push(fig);
+    return fig;
+  }
+
+  var charts = [];
+
+  /* ------------------------------------------------------------------ *
+   * Chart 2: performance against size, at one thread count. With two  *
+   * dimensions: the one that varies is the X axis; if both vary, the   *
+   * diagonal -- square matrices -- and the other shapes are the        *
+   * heatmap's job (#1, decision 3).                                    *
+   * ------------------------------------------------------------------ */
+
+  function parens(label) {
+    var m = /\(([^)]*)\)/.exec(label || "");
+    return m ? m[1] : null;
+  }
+
+  function sliceForSize(rt, threads) {
+    var all = [];
+    rt.seriesOrder.forEach(function (s) {
+      pointsOf(s).forEach(function (p) { if (p.threads === threads) { all.push(p); } });
+    });
+    if (!rt.dim2Label) {
+      return { label: rt.dim1Label, pick: function (p) { return p.d1; }, keep: function () { return true; } };
+    }
+    var d1 = uniqSorted(all.map(function (p) { return p.d1; }));
+    var d2 = uniqSorted(all.map(function (p) { return p.d2; }));
+    if (d2.length === 1) {
+      return { label: rt.dim1Label, note: rt.dim2Label + " = " + d2[0].toLocaleString("en-US"),
+               pick: function (p) { return p.d1; }, keep: function () { return true; } };
+    }
+    if (d1.length === 1) {
+      return { label: rt.dim2Label, note: rt.dim1Label + " = " + d1[0].toLocaleString("en-US"),
+               pick: function (p) { return p.d2; }, keep: function () { return true; } };
+    }
+    var a = parens(rt.dim1Label), b = parens(rt.dim2Label);
+    var grid = all.some(function (p) { return p.d1 !== p.d2; });
+    return { label: (a && b) ? "Size (" + a + "=" + b + ")" : rt.dim1Label + " = " + rt.dim2Label,
+             note: grid ? "square matrices only; the other shapes are in the heatmap" : "square matrices",
+             pick: function (p) { return p.d1; }, keep: function (p) { return p.d1 === p.d2; } };
+  }
+
+  /* Where a sweep leaves each data cache. The working set at a point is
+   * the minimum traffic the benchmark itself declared (GB/s x time), so
+   * the markers follow each routine's own byte count rather than a copy
+   * of it here. Drawn only when every series ran on the same caches. */
+  function cacheMarkers(seriesList, slice) {
+    var first = seriesList[0];
+    if (!first) { return []; }
+    var caches = (first.identity.machine.caches || []).filter(function (c) { return c.type !== "instruction"; });
+    var sig = JSON.stringify(caches);
+    if (!caches.length || seriesList.some(function (s) {
+      return JSON.stringify((s.identity.machine.caches || []).filter(function (c) { return c.type !== "instruction"; })) !== sig;
+    })) { return []; }
+    var pts = first.slicePoints.filter(function (p) { return p.gbs; }).sort(function (a, b) { return slice.pick(a) - slice.pick(b); });
+    var out = [];
+    caches.forEach(function (c) {
+      var i;
+      for (i = 0; i + 1 < pts.length; i++) {
+        var w0 = pts[i].gbs * 1e9 * pts[i].time, w1 = pts[i + 1].gbs * 1e9 * pts[i + 1].time;
+        if (w0 <= c.size_bytes && c.size_bytes < w1) {
+          var x0 = slice.pick(pts[i]), x1 = slice.pick(pts[i + 1]);
+          var f = Math.log(c.size_bytes / w0) / Math.log(w1 / w0);
+          out.push({ x: Math.exp(Math.log(x0) + f * Math.log(x1 / x0)),
+                     label: "L" + c.level + (c.type === "data" ? "d" : "") + " " + fmtBytes(c.size_bytes) });
+          break;
+        }
+      }
+    });
+    return out;
+  }
+
+  function sizeCharts(rt, threads) {
+    var slice = sliceForSize(rt, threads);
+    var list = rt.seriesOrder.filter(function (s) { return s.identity.slot > 0; });
+    list.forEach(function (s) {
+      s.slicePoints = pointsOf(s).filter(function (p) { return p.threads === threads && slice.keep(p); });
+    });
+    var xs = uniqSorted([].concat.apply([], list.map(function (s) { return s.slicePoints.map(slice.pick); })));
+    if (xs.length < 2) {
+      return { empty: "Only one size was measured at " + plural(threads, "thread") + ": the summary and the raw data table have the number." };
+    }
+    var sub = plural(threads, "thread") + (slice.note ? " · " + slice.note : "");
+    var markers = cacheMarkers(list, slice);
+    var out = [];
+
+    function build(field, title, unit) {
+      var series = list.map(function (s) {
+        return {
+          name: s.identity.name, colour: colour(s.identity),
+          points: s.slicePoints.filter(function (p) { return p[field] !== undefined; }).map(function (p) {
+            /* With -s, the band runs from the fastest sample (the reported
+             * figure) down to the mean: how stable the measurement was. */
+            var q = { x: slice.pick(p), y: p[field] };
+            if (p.mean) { q.y2 = p[field] * p.time / p.mean; }
+            return q;
+          })
+        };
+      });
+      if (!series.some(function (s) { return s.points.length; })) { return; }
+      out.push(lineChart({ title: title, subtitle: sub, xLabel: slice.label, yLabel: unit, yUnit: unit,
+                           series: series, markers: markers }));
+    }
+    build("gflops", "Performance against size", "GFLOP/s");
+    build("gbs", "Bandwidth against size", "GB/s");
+    return { charts: out };
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Page.                                                              *
+   * ------------------------------------------------------------------ */
+
+  var root = document.getElementById("bmb-report");
+  root.textContent = "";
+
+  var header = el("header");
+  header.appendChild(el("h1", null, "BLAS benchmark report"));
+  var nfiles = document.querySelectorAll("script.bmb-result").length;
+  header.appendChild(el("p", "sub", plural(nfiles, "result file") + " · " + plural(routineOrder.length, "routine") +
+    (meta.date ? " · generated " + meta.date.replace("T", " ").replace("Z", " UTC") : "") +
+    (meta.generator ? " by " + meta.generator : "")));
+  root.appendChild(header);
+
+  if (problems.length) {
+    var pb = el("div", "card problems");
+    pb.appendChild(el("h3", null, "Some results could not be read"));
+    var pl = el("ul", "notes");
+    problems.forEach(function (p) { pl.appendChild(el("li", null, p)); });
+    pb.appendChild(pl);
+    root.appendChild(pb);
+  }
+
+  /* ---- 1. Summary: a number answers "how fast does it go", so tiles ---- */
+  var summary = el("section");
+  var sh = el("div", "section-head");
+  sh.appendChild(el("h2", null, "Summary"));
+  sh.appendChild(el("p", "sub", "The best figure reached for each routine, across every series loaded."));
+  summary.appendChild(sh);
+  var tiles = el("div", "grid tiles");
+  routineOrder.forEach(function (rt) {
+    var best = null, bestSeries = null;
+    var field = "gflops", unit = "GFLOP/s";
+    var any = rt.seriesOrder.some(function (s) { return pointsOf(s).some(function (p) { return p.gflops !== undefined; }); });
+    if (!any) { field = "gbs"; unit = "GB/s"; }
+    rt.seriesOrder.forEach(function (s) {
+      pointsOf(s).forEach(function (p) {
+        if (p[field] !== undefined && (!best || p[field] > best[field])) { best = p; bestSeries = s; }
+      });
+    });
+    if (!best) { return; }
+    var tile = el("div", "card tile");
+    tile.appendChild(el("div", "label", rt.name));
+    var v = el("div", "value", fmtRate(best[field]) + " ");
+    v.appendChild(el("small", null, unit));
+    tile.appendChild(v);
+    var size = best.d2 === null ? best.d1.toLocaleString("en-US") : best.d1.toLocaleString("en-US") + " × " + best.d2.toLocaleString("en-US");
+    tile.appendChild(el("div", "detail", bestSeries.identity.name + " · " + size + " · " + plural(best.threads, "thread")));
+    tiles.appendChild(tile);
+  });
+  summary.appendChild(tiles);
+
+  var prov = el("div", "card table-wrap");
+  prov.style.marginTop = "12px";
+  prov.appendChild(el("h3", null, "Where the results came from"));
+  var pt = el("table", "wrap");
+  var phead = el("tr");
+  ["Series", "BLAS library", "CPU", "Caches", "OS", "Measured", "Files"].forEach(function (h) { phead.appendChild(el("th", null, h)); });
+  var pthead = el("thead");
+  pthead.appendChild(phead);
+  pt.appendChild(pthead);
+  var pbody = el("tbody");
+  identityOrder.forEach(function (id) {
+    var tr = el("tr");
+    var name = el("td");
+    if (id.slot) {
+      var sw = el("span", "swatch");
+      sw.style.background = colour(id);
+      sw.style.marginRight = "6px";
+      name.appendChild(sw);
+    }
+    name.appendChild(document.createTextNode(id.name + (id.slot ? "" : " (not drawn: past eight series)")));
+    tr.appendChild(name);
+    tr.appendChild(el("td", null, id.blas || id.backend));
+    var cpu = el("td", null, cpuName(id.cpu) + (id.machine.logical_cpus ? ", " + plural(id.machine.logical_cpus, "CPU") : "") +
+      (id.machine.numa_nodes ? ", " + plural(id.machine.numa_nodes, "NUMA node") : ""));
+    if (cpuName(id.cpu) !== id.cpu && id.cpu) { cpu.title = id.cpu; }
+    tr.appendChild(cpu);
+    tr.appendChild(el("td", null, (id.machine.caches || []).map(function (c) {
+      return "L" + c.level + (c.type === "data" ? "d" : c.type === "instruction" ? "i" : "") + " " + fmtBytes(c.size_bytes);
+    }).join(", ")));
+    tr.appendChild(el("td", null, id.machine.os || ""));
+    var dates = id.dates.slice().sort();
+    tr.appendChild(el("td", null, dates.length ? dates[0].slice(0, 10) + (dates[dates.length - 1].slice(0, 10) !== dates[0].slice(0, 10) ? " → " + dates[dates.length - 1].slice(0, 10) : "") : ""));
+    tr.appendChild(el("td", null, id.files.join(", ")));
+    pbody.appendChild(tr);
+  });
+  pt.appendChild(pbody);
+  prov.appendChild(pt);
+  summary.appendChild(prov);
+  root.appendChild(summary);
+
+  /* ---- one section per routine ---- */
+  routineOrder.forEach(function (rt) {
+    var sec = el("section");
+    sec.id = "routine-" + rt.name;
+    var head = el("div", "section-head");
+    head.appendChild(el("h2", null, rt.name));
+    head.appendChild(el("p", "sub", (rt.level ? "Level " + rt.level + " · " : "") + rt.dim1Label + (rt.dim2Label ? " × " + rt.dim2Label : "") +
+      " · " + plural(rt.seriesOrder.length, "series")));
+    sec.appendChild(head);
+
+    /* Default thread count: the highest one every series measured, or a
+     * library measured only at 1 thread would vanish from the default
+     * view (#1, decision 3). */
+    var all = uniqSorted([].concat.apply([], rt.seriesOrder.map(threadCounts)));
+    var shared = all.filter(function (t) { return rt.seriesOrder.every(function (s) { return threadCounts(s).indexOf(t) >= 0; }); });
+    var initial = shared.length ? shared[shared.length - 1] : all[all.length - 1];
+
+    var body = el("div");
+    var controls = null, select = null;
+    if (all.length > 1) {
+      controls = el("div", "controls");
+      var lab = el("label", null, "Threads ");
+      select = el("select");
+      all.forEach(function (t) {
+        var o = el("option", null, String(t));
+        o.value = String(t);
+        if (t === initial) { o.selected = true; }
+        select.appendChild(o);
+      });
+      lab.appendChild(select);
+      controls.appendChild(lab);
+      sec.appendChild(controls);
+    }
+    sec.appendChild(body);
+
+    function render(threads) {
+      body.textContent = "";
+      charts = charts.filter(function (c) { return document.body.contains(c); });
+      var grid = el("div", "grid charts");
+      var res = sizeCharts(rt, threads);
+      if (res.empty) { body.appendChild(el("p", "empty", res.empty)); }
+      (res.charts || []).forEach(function (c) { grid.appendChild(c); });
+      body.appendChild(grid);
+      (res.charts || []).forEach(function (c) { c.draw(); });
+
+      var notes = [];
+      var missing = rt.seriesOrder.filter(function (s) { return threadCounts(s).indexOf(threads) < 0; });
+      if (missing.length) {
+        notes.push("Not measured at " + plural(threads, "thread") + ": " + missing.map(function (s) { return s.identity.name; }).join(", ") + ".");
+      }
+      rt.duplicates.forEach(function (d) {
+        notes.push(d.series.identity.name + ", " + (d.point.d2 === null ? d.point.d1 : d.point.d1 + " × " + d.point.d2) +
+          " at " + plural(d.point.threads, "thread") + ": measured in more than one file; kept the fastest (" + d.kept +
+          "), the other (" + d.other + ") was " + d.gap.toFixed(0) + "% slower.");
+      });
+      if (notes.length) {
+        var ul = el("ul", "notes");
+        notes.forEach(function (n) { ul.appendChild(el("li", null, n)); });
+        body.appendChild(ul);
+      }
+    }
+
+    if (select) { select.addEventListener("change", function () { render(Number(select.value)); }); }
+    root.appendChild(sec);
+    render(initial);
+  });
+
+  /* ---- 6. Raw data: every row, and the table view of every chart ---- */
+  var raw = el("section");
+  var det = el("details", "card");
+  var rows = [];
+  routineOrder.forEach(function (rt) {
+    rt.seriesOrder.forEach(function (s) {
+      pointsOf(s).forEach(function (p) { rows.push({ rt: rt, s: s, p: p }); });
+    });
+  });
+  det.appendChild(el("summary", null, "Raw data (" + plural(rows.length, "row") + ")"));
+  var cols = [
+    { h: "Routine", v: function (r) { return r.rt.name; } },
+    { h: "Series", v: function (r) { return r.s.identity.name; } },
+    { h: "Threads", n: true, v: function (r) { return r.p.threads; } },
+    { h: "dim1", n: true, v: function (r) { return r.p.d1; } },
+    { h: "dim2", n: true, v: function (r) { return r.p.d2; } },
+    { h: "Time", n: true, v: function (r) { return r.p.time; }, f: fmtTime },
+    { h: "GFLOP/s", n: true, v: function (r) { return r.p.gflops; }, f: fmtRate },
+    { h: "GB/s", n: true, v: function (r) { return r.p.gbs; }, f: fmtRate },
+    { h: "Mean", n: true, v: function (r) { return r.p.mean; }, f: fmtTime },
+    { h: "Std dev", n: true, v: function (r) { return r.p.stddev; }, f: fmtTime },
+    { h: "Max", n: true, v: function (r) { return r.p.max; }, f: fmtTime },
+    { h: "Calls/sample", n: true, v: function (r) { return r.p.calls; } },
+    { h: "File", v: function (r) { return r.p.file; } }
+  ].filter(function (c) { return rows.some(function (r) { var v = c.v(r); return v !== undefined && v !== null; }); });
+
+  var wrap = el("div", "table-wrap");
+  var table = el("table");
+  var thead = el("thead");
+  var htr = el("tr");
+  var tbody = el("tbody");
+  var sortBy = -1, sortDir = 1;
+
+  function fill() {
+    tbody.textContent = "";
+    var sorted = rows.slice();
+    if (sortBy >= 0) {
+      var c = cols[sortBy];
+      sorted.sort(function (a, b) {
+        var x = c.v(a), y = c.v(b);
+        if (x === y) { return 0; }
+        if (x === undefined || x === null) { return 1; }
+        if (y === undefined || y === null) { return -1; }
+        return (x < y ? -1 : 1) * sortDir;
+      });
+    }
+    sorted.forEach(function (r) {
+      var tr = el("tr");
+      cols.forEach(function (c) {
+        var v = c.v(r);
+        tr.appendChild(el("td", c.n ? "num" : null, (v === undefined || v === null) ? "" : (c.f ? c.f(v) : (c.n ? v.toLocaleString("en-US") : v))));
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  cols.forEach(function (c, i) {
+    var th = el("th", c.n ? "num" : null);
+    var b = el("button", null, c.h);
+    b.type = "button";
+    b.addEventListener("click", function () {
+      sortDir = (sortBy === i) ? -sortDir : 1;
+      sortBy = i;
+      Array.prototype.forEach.call(htr.children, function (x) { x.removeAttribute("aria-sort"); });
+      th.setAttribute("aria-sort", sortDir > 0 ? "ascending" : "descending");
+      fill();
+    });
+    th.appendChild(b);
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  det.appendChild(wrap);
+  raw.appendChild(det);
+  root.appendChild(raw);
+  fill();
+
+  /* Charts are drawn at the width they get, so text stays at its real size
+   * instead of being scaled with an SVG viewBox. */
+  var pending = null;
+  window.addEventListener("resize", function () {
+    if (pending) { clearTimeout(pending); }
+    pending = setTimeout(function () { charts.forEach(function (c) { if (document.body.contains(c)) { c.draw(); } }); }, 120);
+  });
 })();
 </script>
 </body>
