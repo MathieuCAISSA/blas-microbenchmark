@@ -171,12 +171,17 @@ jobs:
             build/**/*.log
           if-no-files-found: ignore
 
-  # The report page in Firefox, the browser the README tells users to open
-  # it with. The other x86 jobs run the same tests in Chrome. Firefox has
-  # no --dump-dom, so browser.sh drives it through geckodriver; the runner
-  # image ships both.
-  firefox:
+  # The report page in the browsers the Chrome-based jobs above do not
+  # cover: Firefox, which the README tells users to open it with, and Edge.
+  # Firefox has no --dump-dom, so browser.sh drives it through geckodriver;
+  # Edge is driven like Chrome. The runner image ships Firefox, geckodriver
+  # and, normally, Edge.
+  browsers:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, microsoft-edge]
 
     steps:
       - uses: actions/checkout@v4
@@ -187,12 +192,27 @@ jobs:
           sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
 
       - name: Firefox and geckodriver
+        if: matrix.browser == 'firefox'
         run: |
           if ! command -v geckodriver >/dev/null && [ -x "$GECKOWEBDRIVER/geckodriver" ]; then
             echo "$GECKOWEBDRIVER" >> "$GITHUB_PATH"
           fi
           firefox --version
           PATH="$GECKOWEBDRIVER:$PATH" geckodriver --version | head -1
+
+      # From Microsoft's repository if the image ever stops shipping it.
+      - name: Edge
+        if: matrix.browser == 'microsoft-edge'
+        run: |
+          if ! command -v microsoft-edge >/dev/null; then
+            curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+              | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-edge.gpg
+            echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-edge.gpg] https://packages.microsoft.com/repos/edge stable main" \
+              | sudo tee /etc/apt/sources.list.d/microsoft-edge.list
+            sudo apt-get update
+            sudo apt-get install -y microsoft-edge-stable
+          fi
+          microsoft-edge --version
 
       - name: autoreconf
         run: ./autogen.sh
@@ -206,13 +226,13 @@ jobs:
       - name: make
         run: make -C build -j"$(nproc)"
 
-      - name: Report tests in Firefox
+      - name: Report tests in ${{ matrix.browser }}
         env:
-          BMB_BROWSER: firefox
+          BMB_BROWSER: ${{ matrix.browser }}
         run: make -C build/src/report check
 
       # A SKIP would be make check passing with the page unchecked.
-      - name: The page was checked in Firefox
+      - name: The page was checked in ${{ matrix.browser }}
         run: |
           grep -h 'rendering with' build/src/report/test_bmb_report_render.sh.log \
                                    build/src/report/test_bmb_report_js.sh.log
@@ -224,7 +244,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-logs-firefox
+          name: test-logs-${{ matrix.browser }}
           path: |
             build/src/report/*.log
             build/src/report/*.d/

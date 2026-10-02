@@ -98,6 +98,8 @@ src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
+doc/             # the README's chart images, and screenshots.sh, which
+                 # makes them
 ```
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
@@ -518,15 +520,31 @@ id="bmb-test-results">` read from the DOM. `test_report.js` must not
 contain `</` (it would close the `<script>` it is pasted into), and the
 harness refuses it if it does.
 
-**Browsers.** Chrome or Chromium print the rendered DOM with `--dump-dom`.
-Firefox has no such flag, so `browser.sh` drives it over WebDriver:
-geckodriver plus `curl`, and a small awk decoder for the JSON string the
-DOM comes back in. Without either browser the tests SKIP. `BMB_BROWSER=…`
-picks one (`BMB_BROWSER=firefox` for Firefox); `BMB_GECKODRIVER=…` points at
-a geckodriver that is not on `$PATH`. In CI the x86 jobs run them in
-Chrome and the `firefox` job in Firefox — the browser the README tells
-users to open the page with; the `openblas` and `firefox` jobs fail if
-they skipped.
+**Browsers.** The Chromium-based ones — Chrome, Chromium, Edge — print
+the rendered DOM with `--dump-dom`. Firefox has no such flag, so
+`browser.sh` drives it over WebDriver: geckodriver plus `curl`, and a
+small awk decoder for the JSON string the DOM comes back in. Left to
+itself, `browser.sh` takes the first of Chrome, Chromium and Edge it finds,
+then Firefox if geckodriver is there too; with none, the tests SKIP.
+`BMB_BROWSER=…` picks one (`firefox`, `microsoft-edge`, a path…);
+`BMB_GECKODRIVER=…` points at a geckodriver that is not on `$PATH`.
+
+| Browser | CI | Locally |
+|---|---|---|
+| Chrome | the x86 jobs (`openblas`, `blis`, `netlib`, `sanitizers`) | found on its own |
+| Firefox | `browsers` job | `BMB_BROWSER=firefox make check` |
+| Edge | `browsers` job | `BMB_BROWSER=microsoft-edge make check` |
+
+The `openblas` and `browsers` jobs fail if the tests skipped. Run them in
+Firefox before a release: it is the browser the README tells users to
+open the page with, and the one most likely to differ.
+
+Under WSL, a browser installed on the Windows side does not count: it
+cannot open the `file:///home/…` pages the tests write, and WSL cannot
+reach the Windows `localhost` that geckodriver listens on. Install the
+Linux packages inside WSL (Chrome's `.deb`; Firefox from Mozilla's APT
+repository — not Ubuntu's snap, which geckodriver handles badly — and the
+geckodriver release tarball).
 
 Things that took false passes to learn, so keep them:
 
@@ -554,6 +572,24 @@ test it, render a screenshot — `chrome --headless=new --screenshot=out.png
 --screenshot out.png file://$PWD/report.html` — and do look, in light and
 dark: the tests prove the charts exist and the numbers behind them are
 right, not that they are readable.
+
+### The README's images
+
+`doc/images/` holds the four charts the README shows, each in light and
+dark (`<picture>` picks one by the reader's GitHub theme). They are real
+results, made by the commands in the README's report section, and
+`doc/screenshots.sh` captures them from the report those produce:
+
+```bash
+bmb_report results/*.json > report.html
+doc/screenshots.sh report.html doc/images
+```
+
+It drives Firefox over WebDriver and screenshots each chart's own element
+at twice the CSS resolution, so nothing around the chart gets in. Redo the
+images whenever the page's look changes, and keep the README's commands,
+and the machine and library versions it names, matching what produced
+them.
 
 ## Known measurement limitations
 
@@ -607,10 +643,11 @@ lands outside `--prefix`, or if `bin/bmb_report` and the `libexec`
 benchmarks are not where the README says; and it fails if the browser
 tests skipped, since the x86 runners have Chrome.
 
-The `firefox` job builds with OpenBLAS and runs only `src/report`'s tests,
-in Firefox through geckodriver (both preinstalled on the runner image). It
-exists because Firefox is the browser users are told to use, and Chrome
-passing says nothing about it.
+The `browsers` job builds with OpenBLAS and runs only `src/report`'s tests,
+once in Firefox (through geckodriver) and once in Edge, both preinstalled
+on the runner image — Edge is installed from Microsoft's repository if it
+ever stops being. It exists because Firefox is the browser users are told
+to use, and Chrome passing says nothing about it.
 
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot

@@ -302,9 +302,10 @@ running anything.
 Save results as JSON, then turn any number of them into one HTML page:
 
 ```bash
-bmb_dgemm -m 256:4096 -t 1:8 -o results/dgemm-openblas.json
-bmb_dgemm -m 256:4096 -t 1:8 -o results/dgemm-blis.json     # built against BLIS
-bmb_ddot  -v 1024:16777216  -o results/ddot-openblas.json
+bmb_ddot  -v 1024:16777216           -o results/ddot-openblas.json
+bmb_dgemm -m 128:2048 -t 1:8         -o results/dgemm-openblas.json
+bmb_dgemv -m 256:4096 -M 256:4096    -o results/dgemv-openblas.json
+# ... the same three again from a build against BLIS, as *-blis.json
 bmb_report results/*.json > report.html
 firefox report.html
 ```
@@ -331,6 +332,44 @@ What it shows, each part only when the results can support it:
 
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
+
+### What it looks like
+
+These are the commands above, run on a laptop (Intel Core Ultra 7 155U,
+under WSL2) against OpenBLAS 0.3.26 and BLIS 0.9.0. They show what the page
+draws, not which library is faster: one laptop, whose clock follows its
+temperature, settles nothing about either.
+
+**Performance against size**, with the points where the sweep leaves each
+cache marked. BLIS drops as the vectors outgrow L1 and then L2; past L3,
+both libraries are limited by memory bandwidth alone:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/ddot-size-dark.png">
+  <img src="doc/images/ddot-size-light.png" alt="ddot GFLOP/s against vector size, OpenBLAS and BLIS, with the L1d, L2 and L3 sizes marked" width="538">
+</picture>
+
+**The comparison** with the reference, on a log scale centred on ×1:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-ratio-dark.png">
+  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.5 and x0.9 depending on size" width="538">
+</picture>
+
+**Thread scaling**, against ideal linear scaling (dashed):
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-threads-dark.png">
+  <img src="doc/images/dgemm-threads-light.png" alt="dgemm GFLOP/s at 1, 2, 4 and 8 threads at 2048x2048, OpenBLAS and BLIS, with ideal scaling dashed" width="538">
+</picture>
+
+**Shapes**, for a sweep over both dimensions, on one colour scale for both
+libraries so that cells can be compared across maps:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemv-shapes-dark.png">
+  <img src="doc/images/dgemv-shapes-light.png" alt="dgemv heatmaps of GFLOP/s over M and N from 256 to 4096, OpenBLAS and BLIS side by side" width="100%">
+</picture>
 
 Results are grouped into **series** by backend, library version, CPU and
 `--label`. Files that share all four form one curve — a sweep extended the
@@ -408,7 +447,7 @@ for a non-standard install location and the usual `CC`/`CFLAGS`/`LDFLAGS`.
 [AGENTS.md](AGENTS.md) is the developer guide: building from a git
 checkout, what each test checks and how to run one, how to add a routine,
 and what CI runs. `make check` runs every test; the two that need a browser
-(Chrome, or Firefox with geckodriver) skip without one.
+(Chrome, Chromium, Edge, or Firefox with geckodriver) skip without one.
 
 ## License
 

@@ -5,14 +5,16 @@
 #     render_dom page.html dom.html  # the DOM once the page's scripts ran
 #
 # Two kinds of browser, because they are driven differently:
-#  - Chrome or Chromium, which print the rendered DOM with --dump-dom;
+#  - Chromium-based ones -- Chrome, Chromium, Edge -- which print the
+#    rendered DOM with --dump-dom;
 #  - Firefox, which has no such flag, so it is driven over WebDriver by
 #    geckodriver, with curl. Firefox is the browser the README tells users
 #    to open the page with, so it is the one that matters most.
 #
 # BMB_BROWSER picks one (a command or a path; anything whose name contains
-# "firefox" is driven as Firefox). Otherwise Chrome is used if found, then
-# Firefox if geckodriver and curl are there too. BMB_GECKODRIVER overrides
+# "firefox" is driven as Firefox, anything else as Chromium). Otherwise
+# Chrome, Chromium or Edge is used if found, then Firefox if geckodriver
+# and curl are there too. BMB_GECKODRIVER overrides
 # the geckodriver command.
 #
 # Expects a fail() function from the test that sources it.
@@ -20,7 +22,8 @@
 find_browser() {
     browser=${BMB_BROWSER:-}
     if [ -z "$browser" ]; then
-        for b in google-chrome google-chrome-stable chromium chromium-browser; do
+        for b in google-chrome google-chrome-stable chromium chromium-browser \
+                 microsoft-edge microsoft-edge-stable; do
             if command -v "$b" >/dev/null 2>&1; then
                 browser=$b
                 break
@@ -33,7 +36,7 @@ find_browser() {
         browser=firefox
     fi
     if [ -z "$browser" ]; then
-        echo "SKIP: no browser to run the page in (Chrome, Chromium, or Firefox with geckodriver and curl)"
+        echo "SKIP: no browser to run the page in (Chrome, Chromium, Edge, or Firefox with geckodriver and curl)"
         exit 77
     fi
     echo "     rendering with $browser"
