@@ -67,6 +67,10 @@ jobs:
           test -x $P/libexec/blas-microbenchmark/level1/bmb_ddot
           test -x $P/libexec/blas-microbenchmark/level2/bmb_dgemv
           test -x $P/libexec/blas-microbenchmark/level3/bmb_dgemm
+          test -f $P/share/man/man1/blas-microbenchmark.1
+          test -f $P/share/man/man1/bmb_report.1
+          grep -qx '.so man1/blas-microbenchmark.1' $P/share/man/man1/bmb_dgemm.1
+          grep -q 'opt/bmb\\-test/libexec' $P/share/man/man1/blas-microbenchmark.1
           $P/libexec/blas-microbenchmark/level3/bmb_dgemm -x 0 -i 1 -m 16 -o r.json >/dev/null
           $P/bin/bmb_report r.json > r.html
           grep -qi '^<!doctype html>' r.html

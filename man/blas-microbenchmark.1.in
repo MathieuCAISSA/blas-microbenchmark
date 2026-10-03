@@ -1,0 +1,383 @@
+'\" t
+.\" blas-microbenchmark(1). configure turns blas-microbenchmark.1.in into
+.\" blas-microbenchmark.1; edit the .in. test_man.sh checks that every
+.\" option of --help is here and that this renders without warnings.
+.TH BLAS-MICROBENCHMARK 1 "" "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.\" No hyphenation, no justification: both hurt in a terminal, and
+.\" hyphenation splits literals such as "# label:".
+.nh
+.ds AD l
+.ad l
+.SH NAME
+blas-microbenchmark, bmb_dasum, bmb_daxpy, bmb_dcopy, bmb_ddot, bmb_dnrm2,
+bmb_dscal, bmb_dswap, bmb_dgemv, bmb_dger, bmb_dsymv, bmb_dsyr, bmb_dsyr2,
+bmb_dtrmv, bmb_dtrsv, bmb_dgemm, bmb_dsymm, bmb_dsyrk, bmb_dsyr2k, bmb_dtrmm,
+bmb_dtrsm \- microbenchmarks for BLAS routines
+.SH SYNOPSIS
+.B bmb_\c
+.I routine
+.RI [ options ]
+.SH DESCRIPTION
+Each
+.BI bmb_ routine
+times one double-precision BLAS routine, called through CBLAS, over a sweep
+of sizes and thread counts, and prints one row per point: the time of a
+call and the rate it achieved.
+All of them take the same options.
+They run against the BLAS library chosen when the package was built
+(OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL);
+.B \-\-version
+says which.
+.PP
+To compare libraries, build the package once against each and run the same
+command with each build; then turn the results into charts with
+.BR bmb_report (1).
+.SS Routines
+.TS
+l l.
+Level 1 (vector)	dasum daxpy dcopy ddot dnrm2 dscal dswap
+Level 2 (matrix\-vector)	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv
+Level 3 (matrix\-matrix)	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm
+.TE
+.PP
+Level 1 routines are sized with
+.BR \-v .
+Level 2 and 3 routines are sized with
+.B \-m
+and, for those with two dimensions,
+.BR \-M .
+Which dimension is which:
+.PP
+.TS
+l l.
+dgemv dger dsymm dtrmm dtrsm	\-m is M, \-M is N
+dgemm	\-m is M and K, \-M is N
+dsyrk dsyr2k	\-m is N, \-M is K
+dsymv dsyr dsyr2 dtrmv dtrsv	\-m is N (square; no \-M)
+.TE
+.SH OPTIONS
+.TP
+.BI "\-x, \-\-warmup " n
+Untimed calls before measuring each point.
+Default: 1.
+.TP
+.BI "\-i, \-\-iterations " n
+Timed samples taken at each point.
+Default: 10.
+.TP
+.BI "\-b, \-\-batch " n
+Calls averaged per sample;
+0 chooses automatically, per point (see
+.BR "HOW A NUMBER IS MEASURED" ).
+.B \-\-batch 1
+times every call on its own.
+Default: 0.
+.TP
+.BI "\-v, \-\-vector\-size " sweep
+Vector sizes, for level 1 routines.
+Default: 4096.
+.TP
+.BI "\-m, \-\-matrix\-dim1 " sweep
+First matrix dimension, for level 2 and 3 routines.
+Default: 4096.
+.TP
+.BI "\-M, \-\-matrix\-dim2 " sweep
+Second matrix dimension.
+Without it, matrices are square: the second dimension follows the first at
+every point.
+With it, every combination of the two is measured.
+.TP
+.BI "\-t, \-\-thread\-count " sweep
+Number of BLAS threads.
+Default: 1.
+See
+.BR THREADS .
+.TP
+.B "\-s, \-\-statistics"
+Also report, per point, the mean of the samples, their standard deviation
+(over the samples as measured, divided by
+.I n
+rather than
+.IR n \-1),
+the slowest sample and the batch size.
+.TP
+.BI "\-l, \-\-label " text
+Tag the results, for what no automatic field records: turbo off, a BIOS
+setting, a NUMA binding.
+1 to 200 characters, no control characters.
+Default: none, and no label is written.
+.TP
+.BI "\-o, \-\-output " file
+Also save the results to
+.IR file .
+.TP
+.BI "\-f, \-\-output\-format " format
+.B csv
+or
+.B json
+for
+.BR \-o .
+Default: guessed from the extension of the
+.B \-o
+file, otherwise csv.
+.TP
+.B "\-h, \-\-help"
+Show a summary of the options.
+.TP
+.B "\-V, \-\-version"
+Show the version, the BLAS library and the machine, without running
+anything.
+.SS Sweeps
+The four size options each take a
+.IR sweep :
+.PP
+.TS
+l l l.
+\fImax\fP	that one size	4096
+\fImin\fP:\fImax\fP	doubling	256:4096 \(-> 256 512 1024 2048 4096
+\fImin\fP:\fImax\fP:\fIstep\fP	linear	1000:4000:1000 \(-> 1000 2000 3000 4000
+\fIv1\fP,\fIv2\fP,...	exactly those	64,1000,4096
+.TE
+.PP
+.I max
+is always measured, even when the step would overshoot it:
+100:1000:300 gives 100, 400, 700 and 1000.
+A sweep has at most 256 points.
+A size whose memory would not fit in
+.B size_t
+is refused before anything is allocated.
+.SH HOW A NUMBER IS MEASURED
+Reading the clock costs tens of nanoseconds, which is the whole duration of
+a small level 1 call.
+So each
+.I sample
+times a
+.I batch
+of calls and divides by the batch size.
+The batch size is chosen per point, so that a batch lasts long enough for
+the clock not to matter;
+calls that already take longer get a batch of 1, so nothing changes for
+level 3 or for large sizes.
+.B \-s
+shows the batch size chosen.
+.PP
+The reported time is the
+.B fastest
+sample, not the mean.
+A sample is already an average over a whole batch, so the fastest is not a
+lucky call: it is the batch that ran with the least interference.
+One scheduling hiccup inflates a sample a great deal, and would drag a
+mean with it;
+.B \-s
+shows the mean and the spread for that reason.
+.PP
+Two rates are derived from that time:
+.TP
+.B GFLOP/s
+the conventional operation count of the routine (2\(muM\(muN\(muK for
+dgemm, K\(muN\(mu(N+1) for dsyrk, ...) divided by the time.
+Not shown for dcopy and dswap, which do no arithmetic.
+.TP
+.B GB/s
+the bytes the routine must move \(em each operand read once, each result
+written once, counted the way STREAM counts them \(em divided by the time.
+Levels 1 and 2 only: level 3 routines reuse their operands from cache, so
+a rate built from that traffic would not measure bandwidth.
+.SH THREADS
+.B \-t
+sets the number of threads through the library's own interface.
+If an environment variable that the library reads says otherwise,
+.B \-t
+wins, and a warning says so:
+.PP
+.RS
+.EX
+$ OMP_NUM_THREADS=4 bmb_dgemm \-t 1
+OMP_NUM_THREADS is ignored! Set to 4 but option \-t is set to 1.
+.EE
+.RE
+.PP
+Without
+.BR \-t ,
+those variables apply as usual.
+Netlib reference BLAS is single-threaded, and
+.B \-t
+has no effect with it.
+.PP
+Nothing here sets thread affinity, and operands are allocated and filled by
+the main thread, so on a machine with several NUMA nodes every page lands
+on that thread's node.
+Both matter as soon as more than one thread runs; see
+.BR EXAMPLES .
+.SH OUTPUT
+Results go to standard output, one row per point, as they are measured;
+warnings and errors go to standard error.
+Every result starts with where it came from:
+.PP
+.RS
+.EX
+# blas\-microbenchmark @PACKAGE_VERSION@
+# backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
+# cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
+# caches: L1d 48K, L1i 64K, L2 2M, L3 12M
+# os: Linux 6.6.87 x86_64
+# date: 2026\-10\-02T09:05:04Z
+# routine: dgemm
+.EE
+.RE
+.PP
+The library's version string, where it exposes one, tells apart two
+builds of the same library.
+The caches show where a sweep leaves each level.
+A field that cannot be read on a machine is left out, never guessed.
+The hostname is deliberately not recorded.
+With
+.BR \-l ,
+a
+.B "#\ label:"
+line follows the routine.
+.PP
+With
+.BR \-o ,
+the results are also saved to a file:
+.TP
+.B csv
+the same comment lines, then a header and one row per point.
+Readers must skip lines starting with
+.BR # ,
+e.g.\&
+.B pd.read_csv(file, comment=\(dq#\(dq)
+in pandas.
+.TP
+.B json
+one object: the same information as fields
+.RB ( version ,
+.BR backend ,
+.BR blas ,
+.BR label ,
+.BR date ,
+a
+.B machine
+object, the
+.B routine
+and what its two dimensions are), then a
+.B results
+array with one object per point
+.RB ( thread_count ,
+.BR dim1 ,
+.BR dim2 ,
+.BR time_s ,
+.BR gflops ,
+.BR gbytes_per_s ,
+and with
+.BR \-s :
+.BR mean_s ,
+.BR stddev_s ,
+.BR max_s ,
+.BR calls_per_sample ).
+This is what
+.BR bmb_report (1)
+reads.
+.SH EXIT STATUS
+0 when every point was measured and every result written;
+1 for an invalid option or size, or when standard output or the
+.B \-o
+file could not be written \(em a table cut short by a full disk must not
+pass for a complete one.
+.SH ENVIRONMENT
+The thread-count variables the library reads, in the order it reads them:
+.TP
+OpenBLAS
+.BR OPENBLAS_NUM_THREADS ,
+.BR GOTO_NUM_THREADS ,
+.B OMP_NUM_THREADS
+.TP
+BLIS
+.BR BLIS_NUM_THREADS ,
+.B OMP_NUM_THREADS
+.TP
+NVPL, ArmPL
+.B OMP_NUM_THREADS
+.PP
+.BR OMP_PROC_BIND " and " OMP_PLACES
+pin the threads of the OpenMP-threaded libraries.
+.SH FILES
+.TP
+.I @pkglibexecdir@/level1
+.TQ
+.I @pkglibexecdir@/level2
+.TQ
+.I @pkglibexecdir@/level3
+The benchmarks, grouped by BLAS level rather than put on the
+.BR PATH .
+To run them by name:
+.RS
+.PP
+.EX
+BMB=@pkglibexecdir@
+export PATH=\(dq$BMB/level1:$BMB/level2:$BMB/level3:$PATH\(dq
+.EE
+.RE
+.SH EXAMPLES
+Sweep ddot from 1K to 16M elements, with the statistics, saved as CSV:
+.PP
+.RS
+.EX
+bmb_ddot \-v 1024:16777216 \-s \-o ddot.csv
+.EE
+.RE
+.PP
+The sizes that matter to you, and nothing else:
+.PP
+.RS
+.EX
+bmb_dgemm \-m 1024,2048,4096
+.EE
+.RE
+.PP
+Square matrices, then every shape (the grid
+.BR bmb_report (1)
+draws as a heatmap):
+.PP
+.RS
+.EX
+bmb_dgemm \-m 512:2048                 # 512\(S2, 1024\(S2, 2048\(S2
+bmb_dgemm \-m 512:2048 \-M 512:2048     # all 9 combinations
+.EE
+.RE
+.PP
+Thread scaling, threads pinned \(em OMP_* for the OpenMP-threaded
+libraries, taskset for a pthread-built OpenBLAS:
+.PP
+.RS
+.EX
+OMP_PROC_BIND=close OMP_PLACES=cores bmb_dgemm \-t 1:8 \-o dgemm.json
+taskset \-c 0\-7 bmb_dgemm \-t 1:8 \-o dgemm.json
+.EE
+.RE
+.PP
+On a machine with several NUMA nodes, spread the pages over all of them,
+or measure one node at a time \(em usually what you want to compare:
+.PP
+.RS
+.EX
+numactl \-\-interleave=all bmb_dgemm \-t 1:32
+numactl \-\-cpunodebind=0 \-\-membind=0 bmb_dgemm \-t 1:16
+.EE
+.RE
+.PP
+Two conditions on the same machine, told apart in the report:
+.PP
+.RS
+.EX
+bmb_dgemm \-m 1024:8192 \-l \(dqturbo on\(dq  \-o turbo\-on.json
+bmb_dgemm \-m 1024:8192 \-l \(dqturbo off\(dq \-o turbo\-off.json
+bmb_report turbo\-*.json > report.html
+.EE
+.RE
+.SH SEE ALSO
+.BR bmb_report (1),
+.BR numactl (8),
+.BR taskset (1)
+.PP
+https://github.com/MathieuCAISSA/blas\-microbenchmark

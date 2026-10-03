@@ -23,11 +23,16 @@ page="file://$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 out=$2
 mkdir -p "$out"
 
-# name  routine  text in the chart's title
-SHOTS='ddot-size ddot Performance against size
-dgemm-ratio dgemm compared with
-dgemm-threads dgemm Thread scaling
-dgemv-shapes dgemv Shapes'
+# name  window width  routine  text in the chart's title
+#
+# The page lays charts out to the width they get. At 1200px the line charts
+# sit two to a row, about 540px each; the heatmap spans the whole row, so it
+# is taken at a width that gives it about the same size and proportions,
+# and the README can show the four as a regular grid.
+SHOTS='ddot-size 1200 ddot Performance against size
+dgemm-ratio 1200 dgemm compared with
+dgemm-threads 1200 dgemm Thread scaling
+dgemv-shapes 640 dgemv Shapes'
 
 gd=${BMB_GECKODRIVER:-geckodriver}
 port=$((20000 + $$ % 20000))
@@ -77,10 +82,13 @@ for theme in light dark; do
     resp=$(wd POST /session "{\"capabilities\":{\"alwaysMatch\":{\"moz:firefoxOptions\":{\"args\":[\"-headless\"],\"prefs\":{\"layout.css.devPixelsPerPx\":\"2\",\"ui.systemUsesDarkTheme\":$dark}}}}}")
     sid=$(printf '%s' "$resp" | sed -n 's/.*"sessionId":"\([^"]*\)".*/\1/p')
     [ -n "$sid" ] || fail "Firefox did not start: $resp"
-    wd POST "/session/$sid/window/rect" '{"width":1200,"height":1600}' >/dev/null
     wd POST "/session/$sid/url" "{\"url\":\"$page\"}" >/dev/null
 
-    printf '%s\n' "$SHOTS" | while read -r name routine title; do
+    printf '%s\n' "$SHOTS" | while read -r name width routine title; do
+        # The charts redraw on the resize event, which Firefox delivers
+        # asynchronously: give it a moment.
+        wd POST "/session/$sid/window/rect" "{\"width\":$width,\"height\":1600}" >/dev/null
+        sleep 1
         el=$(wd POST "/session/$sid/execute/sync" "{\"script\":\"$FIND\",\"args\":[\"$routine\",\"$title\"]}" \
             | sed -n 's/.*"element-6066-11e4-a52e-4f735466cecf":"\([^"]*\)".*/\1/p')
         [ -n "$el" ] || fail "no \"$title\" chart for $routine in $1"

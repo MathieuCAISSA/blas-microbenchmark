@@ -385,6 +385,7 @@ AC_SUBST([BMB_NETLIB_CPPFLAGS])
 AC_CONFIG_FILES([
   Makefile
   src/Makefile
+  man/Makefile
   src/c/Makefile
   src/report/Makefile
   src/c/common/Makefile

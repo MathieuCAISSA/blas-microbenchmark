@@ -22,6 +22,8 @@ The page needs no network: open it with any browser.
 
   -h, --help     show this help
   -V, --version  show the version
+
+Full documentation: man bmb_report
 EOF
 }
 

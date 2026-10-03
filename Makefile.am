@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src
+SUBDIRS = src man
 
 EXTRA_DIST = README.md AGENTS.md LICENSE autogen.sh

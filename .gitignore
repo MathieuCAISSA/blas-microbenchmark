@@ -54,3 +54,6 @@ src/c/level3/bmb_dtrsm
 *.swp
 *~
 .DS_Store
+
+# Man pages generated from man/*.1.in by an in-tree build
+/man/*.1

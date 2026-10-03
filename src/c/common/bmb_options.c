@@ -531,7 +531,9 @@ void bmb_options_print_help(const char *prog_name)
         "  <min>:<max>          doubling                 e.g. 256:4096  -> 256 512 1024 2048 4096\n"
         "  <min>:<max>:<step>   linear                   e.g. 1000:4000:1000 -> 1000 2000 3000 4000\n"
         "  <v1>,<v2>,...        exactly these sizes      e.g. 64,1000,4096\n"
-        "<max> is always measured, even when the stride would overshoot it.\n",
+        "<max> is always measured, even when the stride would overshoot it.\n"
+        "\n"
+        "Full documentation: man blas-microbenchmark\n",
         BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS);
 }
 

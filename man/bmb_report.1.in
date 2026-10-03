@@ -1,0 +1,102 @@
+.\" bmb_report(1). configure turns bmb_report.1.in into bmb_report.1; edit
+.\" the .in. test_man.sh checks that every option of --help is here and
+.\" that this renders without warnings.
+.TH BMB_REPORT 1 "" "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.\" No hyphenation, no justification: both hurt in a terminal, and
+.\" hyphenation splits literals such as "# label:".
+.nh
+.ds AD l
+.ad l
+.SH NAME
+bmb_report \- one HTML page of charts from blas-microbenchmark results
+.SH SYNOPSIS
+.B bmb_report
+.IR result.json ...
+.B >
+.I report.html
+.SH DESCRIPTION
+.B bmb_report
+turns the JSON results written by the benchmarks of
+.BR blas\-microbenchmark (1)
+.RB ( "bmb_\fIroutine\fP \-o result.json" )
+into one HTML page of charts, written to standard output.
+.PP
+The page is self-contained: data, styles and script are all inside it and
+nothing is fetched, so it opens from disk on a machine with no network, and
+can be sent as a single file.
+Open it with a browser.
+.SS What the page shows
+Each part appears only when the results can support it:
+.IP \(bu 2
+a summary: the best figure for each routine, and where each series came
+from (library, CPU, caches, OS, date);
+.IP \(bu
+performance against size, and for levels 1 and 2 bandwidth against size,
+with the points where a sweep leaves L1, L2 and L3 marked.
+For results measured with
+.BR \-s ,
+a band shows the spread from the fastest sample to the mean;
+.IP \(bu
+each library compared with a reference, on a log scale centred on \(mu1,
+so that twice as slow and twice as fast sit at the same distance from it.
+The reference is OpenBLAS when there is one, and can be changed on the
+page;
+.IP \(bu
+thread scaling, at the largest size measured at every thread count,
+against ideal linear scaling;
+.IP \(bu
+a heatmap of every shape, for two-dimension routines measured with both
+.B \-m
+and
+.BR \-M ;
+.IP \(bu
+the raw data, every row, sortable.
+.PP
+Hovering a chart gives the exact values; the arrow keys do the same from
+the keyboard.
+.SS Series
+Results are grouped into series by backend, library version, CPU and
+label
+.RB ( \-l ).
+Files that share all four make one curve: a sweep extended the next day, or
+thread counts measured in separate runs, merge on their own.
+A point measured in more than one file keeps the fastest measurement, and
+the page says so with the gap, so that a run which did not reproduce does
+not go unnoticed.
+To compare two conditions on one machine, give each run its own label.
+.SS What it accepts
+Results of the same major version as
+.B bmb_report
+itself.
+Anything else is refused before a page is written, with the file name and
+the reason: results from before 0.6.0 measured a mean rather than the
+fastest sample, and those from 0.6.x do not record the machine.
+One refused file means no page at all, since a page missing a library
+would be read as complete.
+.SH OPTIONS
+.TP
+.B "\-h, \-\-help"
+Show a summary of the usage.
+.TP
+.B "\-V, \-\-version"
+Show the version.
+.SH EXIT STATUS
+0 when the page was written;
+1 when a file was refused, and then nothing is written;
+2 for a usage error, including standard output being a terminal \(em the
+page is HTML, to be redirected to a file.
+.SH EXAMPLES
+OpenBLAS against BLIS, each build run with the same commands:
+.PP
+.RS
+.EX
+bmb_dgemm \-m 128:2048 \-t 1:8 \-o results/dgemm\-openblas.json
+bmb_dgemm \-m 128:2048 \-t 1:8 \-o results/dgemm\-blis.json  # BLIS build
+bmb_report results/*.json > report.html
+firefox report.html
+.EE
+.RE
+.SH SEE ALSO
+.BR blas\-microbenchmark (1)
+.PP
+https://github.com/MathieuCAISSA/blas\-microbenchmark

@@ -6,10 +6,10 @@ Guidance for AI coding agents (and humans) working on this repository.
 
 BLAS microbenchmarks, structured like [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/):
 one small executable per BLAS routine, sharing a common option/timing/output
-layer (`src/c/common`), built with Autotools. See [README.md](README.md) for
-the user-facing documentation (install, CLI options, usage examples) — it
-covers installing from a release tarball; this file covers working from a
-git checkout instead.
+layer (`src/c/common`), built with Autotools. The user-facing documentation
+is [README.md](README.md) (install and a first run) and the man pages in
+`man/` (everything else); see [Documentation](#documentation). This file
+covers working from a git checkout.
 
 ## Build & test
 
@@ -66,9 +66,11 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
+| `man` | `test_man.sh` | the man pages render without warnings, list exactly the options of `--help`, name every benchmark, and escape the hyphens of anything a reader might paste |
 
 The two browser tests SKIP without a browser (see [Testing the
-page](#testing-the-page)); every other test runs anywhere.
+page](#testing-the-page)) and `test_man.sh` without groff; every other
+test runs anywhere.
 
 Three rules the existing tests follow, and new ones should too:
 
@@ -98,6 +100,7 @@ src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
+man/             # the man pages, blas-microbenchmark(1) and bmb_report(1)
 doc/             # the README's chart images, and screenshots.sh, which
                  # makes them
 ```
@@ -239,7 +242,10 @@ formula off by a factor of two shows up immediately as one routine
 beating the rest.
 
 Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
-`<prog>_SOURCES`) and add a `test_bmb_<routine>.sh` smoke test — copy one
+`<prog>_SOURCES`), add the routine to `ROUTINES` in `man/Makefile.am` and
+to the NAME line and the routine tables of `man/blas-microbenchmark.1.in`
+(`test_man.sh` fails until the first two are done), and add a
+`test_bmb_<routine>.sh` smoke test — copy one
 from the same directory, it is a single `bmb_check_run` call naming the
 binary, the routine and how many data rows the sweep should produce. Add it
 to `TESTS`/`EXTRA_DIST`, `chmod +x` it, then `autoreconf -fi` and rebuild.
@@ -586,10 +592,57 @@ doc/screenshots.sh report.html doc/images
 ```
 
 It drives Firefox over WebDriver and screenshots each chart's own element
-at twice the CSS resolution, so nothing around the chart gets in. Redo the
+at twice the CSS resolution, so nothing around the chart gets in. The
+README shows the four as a 2×2 grid, so they need about the same
+proportions: the heatmap, which spans a whole row of the page, is taken at
+a narrower window than the line charts (the width is per chart, in
+`SHOTS`). Redo the
 images whenever the page's look changes, and keep the README's commands,
 and the machine and library versions it names, matching what produced
 them.
+
+## Documentation
+
+Two places, for two readers:
+
+- **README.md** is for the first five minutes: what this is, installing it,
+  one run, the report, the backends. Keep it short; it was cut from 458
+  lines to 136 once, because nobody found anything in it.
+- **The man pages** are the reference: `blas-microbenchmark(1)` for every
+  benchmark (options, sweeps, how a number is measured, threads, output,
+  exit status, examples) and `bmb_report(1)`. A new option, output field
+  or behaviour goes there, not into the README.
+
+`--help` is the summary and ends by pointing at the man page.
+`test_man.sh` fails when the options in the man page and in `--help`
+differ, so adding an option to `bmb_options.c` means adding it to the man
+page in the same change.
+
+How the man pages are built, and why:
+
+- `man/*.1.in` are the sources. `make` turns them into `*.1`, substituting
+  the version and the install path — not `configure`, which would leave a
+  literal `${exec_prefix}` in the path. They install to
+  `$(mandir)/man1`, so they follow `--prefix` like everything else.
+- `make install` also writes one alias page per benchmark
+  (`bmb_dgemm.1`: `.so man1/blas-microbenchmark.1`), so that `man
+  bmb_dgemm` works; `ROUTINES` in `man/Makefile.am` is the list.
+- **Every hyphen a reader might paste is written `\-`** — in options,
+  paths, commands, `.EX` examples. groff 1.23 renders a plain `-` as a
+  typographic hyphen (U+2010) on most systems, which no shell accepts.
+  Debian and Ubuntu map it back to ASCII in their `man.local`, so the bug
+  is invisible here; `test_man.sh` checks the source for that reason, not
+  the rendering. The substitution escapes the hyphens of the install path
+  itself — with `$(...)`, not backquotes, which eat one level of
+  backslashes (they did, once).
+- `.nh` and `.ds AD l` at the top turn off hyphenation and justification:
+  both look bad in a terminal, and hyphenation splits literals. `.ad l`
+  alone does not stick, since the `man` macros reset the adjustment from
+  `AD` at every paragraph.
+- A page with tables starts with `'\" t`, which tells `man` to run `tbl`.
+
+To read a page without installing it: `man -l man/blas-microbenchmark.1`
+from the build directory.
 
 ## Known measurement limitations
 
@@ -615,9 +668,9 @@ weighing what the fix costs.
   numbers on a multi-socket machine are therefore pessimistic. Making the
   fill loops NUMA-aware means guessing how the BLAS library will
   distribute its own threads, which differs per implementation — so the
-  README tells users to run under `numactl` instead. Reasoned from the
+  man page tells users to run under `numactl` instead. Reasoned from the
   code, not measured: no multi-socket machine has been available.
-- **No CPU affinity.** Nothing sets it; the README points at
+- **No CPU affinity.** Nothing sets it; the man page points at
   `OMP_PROC_BIND`/`OMP_PLACES` and `taskset`. Setting affinity from inside
   the benchmark would fight whatever the BLAS library does with its own
   threads.
