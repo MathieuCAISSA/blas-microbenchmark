@@ -34,12 +34,19 @@ done
 ok "man bmb_<routine> opens the shared page for all $(echo $ROUTINES | wc -w) benchmarks"
 
 # The page says where the benchmarks are installed: it must be where they
-# are, with this build's --prefix, written so that it can be pasted.
+# are, with this build's --prefix, written so that it can be pasted. The
+# line to paste (BMB=...) is an example, which never wraps: it must be
+# exact. The FILES entries wrap after a / when the path is long, so they
+# are compared with the line breaks and indents taken out.
 show blas-microbenchmark >"$T/page.txt"
+grep -F "BMB=$pkglibexecdir" "$T/page.txt" | sed 's/^ *//' | grep -qxF "BMB=$pkglibexecdir" \
+    || fail "the installed page's example does not set BMB=$pkglibexecdir on one line"
+tr -d ' \n' <"$T/page.txt" >"$T/joined.txt"
 for l in 1 2 3; do
-    grep -qF "$pkglibexecdir/level$l" "$T/page.txt" || fail "the installed page does not give $pkglibexecdir/level$l"
+    grep -qF "$(printf '%s' "$pkglibexecdir/level$l" | tr -d ' ')" "$T/joined.txt" \
+        || fail "the installed page does not give $pkglibexecdir/level$l"
 done
-ok "the installed page gives this build's install path, $pkglibexecdir"
+ok "the installed page gives this build's install path, $pkglibexecdir, and a line to paste it"
 
 ${MAKE:-make} uninstall DESTDIR="$stage" >"$T/uninstall.log" 2>&1 \
     || fail "make uninstall failed: $(cat "$T/uninstall.log")"

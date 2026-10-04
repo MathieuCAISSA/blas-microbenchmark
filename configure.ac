@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([blas-microbenchmark], [1.1.1], [mathieu.caissa@eolen.com])
+AC_INIT([blas-microbenchmark], [1.2.0-dev], [mathieu.caissa@eolen.com])
 AC_CONFIG_SRCDIR([src/c/common/bmb_options.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
