@@ -62,7 +62,7 @@ jobs:
       # These SKIP outside a git checkout (or without .github/), which this is.
       - name: The files and their links were checked
         run: |
-          for t in test_editorconfig.sh test_doc_links.sh test_actions_pinned.sh; do
+          for t in tests/test_editorconfig.sh tests/test_doc_links.sh tests/test_actions_pinned.sh; do
             if ! grep -q '^:test-result: PASS' "build/$t.trs"; then
               cat "build/$t.log"; exit 1
             fi

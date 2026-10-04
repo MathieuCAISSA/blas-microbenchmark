@@ -25,9 +25,9 @@ releases with the same major version can be compared and read by the same
   frequency change during a run, a warning says so and gives the
   commands that fix it; the run goes on. `--version` says what the
   system exposes.
-- `REVIEWS.md`, the checklist every pull request is reviewed against.
+- `.github/REVIEWS.md`, the checklist every pull request is reviewed against.
 - A code of conduct, the Contributor Covenant 3.0
-  (`CODE_OF_CONDUCT.md`); reports go through GitHub.
+  (`.github/CODE_OF_CONDUCT.md`); reports go through GitHub.
 - Release tarballs carry a signed attestation of where they were built:
   `gh attestation verify blas-microbenchmark-<version>.tar.gz --repo
   MathieuCAISSA/blas-microbenchmark` checks the file came from this

@@ -5,4 +5,4 @@ contact_links:
     about: The manual pages, with examples of every output.
   - name: Security problem
     url: https://github.com/MathieuCAISSA/blas-microbenchmark/security/advisories/new
-    about: Report it privately, not in a public issue (see SECURITY.md).
+    about: Report it privately, not in a public issue (see .github/SECURITY.md).

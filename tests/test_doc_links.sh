@@ -5,17 +5,17 @@
 # AGENTS.md and doc/dev/, and a section moved or renamed in one file
 # breaks links in the others without a word.
 #
-# Links to the web are not followed. .github/ is left out: GitHub resolves
-# the links of its templates against the page they are shown on, not the
-# file. Needs git to list the files, so it SKIPs outside a checkout, as
-# test_editorconfig.sh does.
+# Links to the web are not followed. The issue and pull request templates
+# are left out: GitHub resolves their links against the page they are
+# shown on, not the file. Needs git to list the files, so it SKIPs outside
+# a checkout, as test_editorconfig.sh does.
 set -e
 
 S=${srcdir:-.}
 
 command -v git >/dev/null 2>&1 || { echo "SKIP: no git"; exit 77; }
 test -e "$S/.git" || { echo "SKIP: $S is not a git checkout"; exit 77; }
-files=$(git -C "$S" ls-files '*.md' ':!:.github/*')
+files=$(git -C "$S" ls-files '*.md' ':!:.github/ISSUE_TEMPLATE/*' ':!:.github/pull_request_template.md')
 test -n "$files" || { echo "FAIL: git lists no Markdown files in $S"; exit 1; }
 
 cd "$S"
