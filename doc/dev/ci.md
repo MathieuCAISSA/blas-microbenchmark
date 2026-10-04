@@ -4,8 +4,13 @@ What each CI job is for. Start at [AGENTS.md](../../AGENTS.md).
 
 `ci.yml` gives its jobs a read-only token (`permissions: contents:
 read`); only `pages.yml` and `release.yml` ask for more, for what they
-publish. Dependabot (`.github/dependabot.yml`) proposes updates of the
-actions, grouped, once a week. `main` is protected: no force push or
+publish. Every action is pinned to a full commit SHA, with its version
+in a comment (`actions/checkout@3d3c42e… # v7.0.1`): a tag can be moved to
+other code, a commit cannot. `test_actions_pinned.sh` refuses anything
+else. Dependabot (`.github/dependabot.yml`) proposes updates of the
+actions, grouped, once a week, and updates the SHA and the comment
+together; to pin a new action by hand, take the commit of its latest
+release (`gh api repos/OWNER/REPO/commits/vX.Y.Z -q .sha`). `main` is protected: no force push or
 deletion, and a pull request needs every CI job green to merge.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,

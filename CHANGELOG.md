@@ -10,6 +10,10 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Release tarballs carry a signed attestation of where they were built:
+  `gh attestation verify blas-microbenchmark-<version>.tar.gz --repo
+  MathieuCAISSA/blas-microbenchmark` checks the file came from this
+  repository's release workflow, untouched.
 - `.editorconfig`, for contributors' editors; `make check` holds every
   file in git to it.
 

@@ -28,6 +28,13 @@ make check
 make install
 ```
 
+To check the download came from this repository's release workflow,
+untouched (needs the [GitHub CLI](https://cli.github.com/)):
+
+```bash
+gh attestation verify blas-microbenchmark-<version>.tar.gz --repo MathieuCAISSA/blas-microbenchmark
+```
+
 From a git clone, run `./autogen.sh` first (it needs autoconf, automake
 and libtool); GitHub's *"Source code"* archives are git clones too.
 
