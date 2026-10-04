@@ -9,6 +9,10 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- `.editorconfig`, for contributors' editors; `make check` holds every
+  file in git to it.
+
 ### Changed
 - `--verify` is on by default, as the check is in STREAM and HPL: every
   point is checked against a reference before it is timed, and a wrong

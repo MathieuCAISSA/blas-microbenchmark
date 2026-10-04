@@ -59,6 +59,13 @@ jobs:
             echo "the browser tests were skipped"; exit 1
           fi
 
+      # test_editorconfig.sh SKIPs outside a git checkout, which this is.
+      - name: The files were checked against .editorconfig
+        run: |
+          if ! grep -q '^:test-result: PASS' build/test_editorconfig.sh.trs; then
+            cat build/test_editorconfig.sh.log; exit 1
+          fi
+
       # Everything goes where --prefix says, and nowhere else: installed
       # into a staging root, nothing may land outside <root>/<prefix>.
       - name: Install layout

@@ -39,8 +39,10 @@ every CI job passes. The details are in
 
 ## Before opening a pull request
 
-- `make check` passes; `make distcheck` too if you touched `configure.ac`,
-  a `Makefile.am`, or added or removed a file.
+- `make check` passes. It holds every file to
+  [.editorconfig](.editorconfig), which most editors follow, natively or
+  with a plugin. `make distcheck` too if you touched `configure.ac`, a
+  `Makefile.am`, or added or removed a file.
 - A new test has been seen to fail: break the code it guards, watch it
   fail, restore it ([AGENTS.md, Tests](AGENTS.md#tests)).
 - A new option, output field or behaviour is in the man page, with the

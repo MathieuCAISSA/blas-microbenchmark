@@ -97,6 +97,7 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
 | top | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
+| | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
 | | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the exit statuses, the commands in the examples |
@@ -493,6 +494,14 @@ half-done is not.
 
 ## Code style
 
+- `.editorconfig` tells editors the layout: UTF-8, LF line ends, a final
+  newline, no trailing whitespace, 4 spaces to indent (2 in HTML, CSS,
+  JS, YAML, JSON and Markdown), tabs in `Makefile.am`.
+  `test_editorconfig.sh` holds every file in git to it, except the
+  width: continuation lines are aligned by hand on what they continue.
+  There is no `.clang-format`: the closest configuration still rewrote
+  116 lines in 14 files, flattening hand-aligned tables and test
+  matrices (issue #15).
 - No comments except for non-obvious *why* (a hidden constraint, a numerical
   stability trick, a workaround). Don't restate what the code does.
 - Any use of a POSIX function not in strict ISO C (`clock_gettime`,
