@@ -15,6 +15,10 @@ releases with the same major version can be compared and read by the same
   independently (by random projection for level 3, at the cost of a level
   2 call). A wrong result stops the run with exit status 2 and writes no
   results file; verified results say so (`# verified:`, `"verified": true`).
+- `bmb_report` shows which results were verified: a Verified column in
+  the table of where the results came from (yes, no, or "1 of 3 files" for
+  a series merged from several) and in the raw data, once any result was
+  measured with `--verify`.
 - `CONTRIBUTING.md`, `SECURITY.md`, `CITATION.cff` and this changelog,
   shipped in the release tarball too; issue and pull request templates.
 - Releases carry a `SHA256SUMS` file for the tarball.

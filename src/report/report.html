@@ -301,7 +301,7 @@ details[open] > summary { margin-bottom: 12px; }
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
           cpu: machine.cpu || "", label: r.label || "", machine: machine,
-          versions: {}, dates: [], files: []
+          versions: {}, dates: [], files: [], verifiedFiles: []
         };
         identityOrder.push(id);
       }
@@ -316,6 +316,7 @@ details[open] > summary { margin-bottom: 12px; }
       id.versions[r.version] = true;
       if (r.date) { id.dates.push(r.date); }
       if (id.files.indexOf(file) < 0) { id.files.push(file); }
+      if (r.verified === true && id.verifiedFiles.indexOf(file) < 0) { id.verifiedFiles.push(file); }
 
       if (!routine) {
         routine = routines[r.routine] = {
@@ -337,7 +338,7 @@ details[open] > summary { margin-bottom: 12px; }
           d2: (row.dim2 === undefined) ? null : row.dim2,
           time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
           mean: row.mean_s, stddev: row.stddev_s, max: row.max_s,
-          calls: row.calls_per_sample, file: file
+          calls: row.calls_per_sample, file: file, verified: r.verified === true
         };
         var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
         var prev = series.points[pkey];
@@ -438,6 +439,21 @@ details[open] > summary { margin-bottom: 12px; }
   function referenceFor(rt, reference) {
     var mine = rt.seriesOrder.map(function (s) { return s.identity; });
     return (reference && mine.indexOf(reference) >= 0) ? reference : mine[0];
+  }
+
+  /* --verify: whether a series' results were checked against a reference
+   * before they were timed. A series merges files, which may differ. */
+  function verificationText(id) {
+    var n = id.files.length, v = id.verifiedFiles.length;
+    if (v === 0) { return "no"; }
+    if (v === n) { return "yes"; }
+    return v + " of " + plural(n, "file");
+  }
+
+  /* The Verified columns only appear once some result was verified, so
+   * that a report of older results does not fill up with "no". */
+  function anyVerified(identities) {
+    return identities.some(function (id) { return id.verifiedFiles.length > 0; });
   }
 
   function colour(id) { return "var(--s" + id.slot + ")"; }
@@ -1177,6 +1193,7 @@ details[open] > summary { margin-bottom: 12px; }
   window.bmbReport = {
     buildModel: buildModel, pointsOf: pointsOf, threadCounts: threadCounts,
     defaultThreads: defaultThreads, comparable: comparable, referenceFor: referenceFor,
+    verificationText: verificationText, anyVerified: anyVerified,
     cpuName: cpuName, plural: plural, fmtRate: fmtRate, fmtSize: fmtSize,
     fmtBytes: fmtBytes, fmtTime: fmtTime, metricField: metricField,
     sliceForSize: sliceForSize, sizeData: sizeData, cacheMarkers: cacheMarkers,
@@ -1284,7 +1301,12 @@ details[open] > summary { margin-bottom: 12px; }
   prov.appendChild(el("h3", null, "Where the results came from"));
   var pt = el("table", "wrap");
   var phead = el("tr");
-  ["Series", "BLAS library", "CPU", "Caches", "OS", "Measured", "Files"].forEach(function (h) { phead.appendChild(el("th", null, h)); });
+  var verifiedCol = anyVerified(identityOrder);
+  ["Series", "BLAS library", "CPU", "Caches", "OS", "Measured"].concat(verifiedCol ? ["Verified"] : [], ["Files"]).forEach(function (h) {
+    var th = el("th", null, h);
+    if (h === "Verified") { th.title = "Each result checked against a reference before it was timed (bmb_<routine> --verify)"; }
+    phead.appendChild(th);
+  });
   var pthead = el("thead");
   pthead.appendChild(phead);
   pt.appendChild(pthead);
@@ -1311,6 +1333,7 @@ details[open] > summary { margin-bottom: 12px; }
     tr.appendChild(el("td", null, id.machine.os || ""));
     var dates = id.dates.slice().sort();
     tr.appendChild(el("td", null, dates.length ? dates[0].slice(0, 10) + (dates[dates.length - 1].slice(0, 10) !== dates[0].slice(0, 10) ? " → " + dates[dates.length - 1].slice(0, 10) : "") : ""));
+    if (verifiedCol) { tr.appendChild(el("td", null, verificationText(id))); }
     tr.appendChild(el("td", null, id.files.join(", ")));
     pbody.appendChild(tr);
   });
@@ -1456,6 +1479,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "Std dev", n: true, v: function (r) { return r.p.stddev; }, f: fmtTime },
     { h: "Max", n: true, v: function (r) { return r.p.max; }, f: fmtTime },
     { h: "Calls/sample", n: true, v: function (r) { return r.p.calls; } },
+    { h: "Verified", v: function (r) { return verifiedCol ? (r.p.verified ? "yes" : "no") : undefined; } },
     { h: "File", v: function (r) { return r.p.file; } }
   ].filter(function (c) { return rows.some(function (r) { var v = c.v(r); return v !== undefined && v !== null; }); });
 

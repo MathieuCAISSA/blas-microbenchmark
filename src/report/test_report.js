@@ -60,6 +60,7 @@
     };
     if (o.dim2Label) { r.dim2_label = o.dim2Label; }
     if (o.label) { r.label = o.label; }
+    if (o.verified) { r.verified = true; }
     return r;
   }
 
@@ -344,6 +345,26 @@
       ]);
       sd = R.sizeData(m.routines[0], 1);
       eq(R.cacheMarkers(sd.list, sd.slice), [], "cache markers: none when the series ran on different caches");
+    });
+
+    /* ---- --verify ---- */
+
+    test("verification", function () {
+      var m = R.buildModel([
+        entry("a.json", { verified: true, rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("b.json", { rows: [[1, 16, null, 1e-6, 1, 8]] }),
+        entry("c.json", { backend: "blis", blas: "", verified: true, rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("d.json", { backend: "netlib", blas: "", rows: [[1, 8, null, 1e-6, 1, 8]] })
+      ]);
+      eq(m.identities.map(function (id) { return R.verificationText(id); }), ["1 of 2 files", "yes", "no"],
+         "a series is verified when all its files are, partly when some are, not when none is");
+      eq(R.anyVerified(m.identities), true, "the Verified columns appear once some result is verified");
+      var pts = R.pointsOf(m.routines[0].seriesOrder[0]);
+      eq(pts.map(function (p) { return p.d1 + ":" + p.verified; }).sort(), ["16:false", "8:true"],
+         "each point knows whether the file it came from was verified");
+
+      m = R.buildModel([entry("a.json", { rows: [[1, 8, null, 1e-6, 1, 8]] })]);
+      eq(R.anyVerified(m.identities), false, "and not before: a report of older results gets no column of \"no\"");
     });
 
     /* ---- Formatting ---- */

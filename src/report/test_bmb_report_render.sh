@@ -26,10 +26,11 @@ mkdir "$T"
 # One input per chart:
 #  - ddot over a range: performance and bandwidth against size;
 #  - dgemm twice, under two labels so they are two series, at two thread
-#    counts: the comparison chart and thread scaling;
+#    counts: the comparison chart and thread scaling; one of them with
+#    --verify, for the Verified columns;
 #  - dgemv as a grid, at one thread only: the heatmap.
 ../c/level1/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
-../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -o "$T/dgemm-a.json" >/dev/null
+../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c -o "$T/dgemm-a.json" >/dev/null
 ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label b -o "$T/dgemm-b.json" >/dev/null
 ../c/level2/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
 
@@ -66,6 +67,12 @@ done
 
 # At least one drawn line, and heatmap cells: a chart with a title but
 # nothing in it would pass the checks above.
+# One series verified, the others not: the provenance table and the raw
+# data both get a Verified column, saying yes for that series.
+test "$(grep -o '>Verified<' "$dom" | wc -l)" -ge 2 || fail "no Verified column in the provenance and raw data tables"
+grep -q '<td>yes</td>' "$dom" || fail "the verified series is not shown as verified"
+echo "ok   rendered: the Verified columns, for the series run with --verify"
+
 grep -q 'class="line"' "$dom" || fail "no line was drawn"
 grep -q 'class="cell"' "$dom" || fail "no heatmap cell was drawn"
 echo "ok   lines and heatmap cells drawn"
