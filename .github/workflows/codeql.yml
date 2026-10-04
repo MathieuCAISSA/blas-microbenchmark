@@ -50,3 +50,22 @@ jobs:
       - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           category: /language:c-cpp
+
+      # A pull request's analysis only reports on the lines it changes; here
+      # the whole branch was analysed, and an alert left open on it fails
+      # the job rather than wait for someone to look. Each is fixed, or
+      # dismissed with its reason (doc/dev/ci.md).
+      - name: No alert left open
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/code-scanning/alerts?state=open&ref=$GITHUB_REF&per_page=100" \
+            --jq '.[] | "\(.number) \(.rule.id) \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)"' \
+            > open-alerts.txt
+          if [ -s open-alerts.txt ]; then
+            echo "CodeQL alerts open on $GITHUB_REF:"
+            cat open-alerts.txt
+            exit 1
+          fi
+          echo "no CodeQL alert open on $GITHUB_REF"
