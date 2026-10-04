@@ -256,7 +256,7 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
 
     /* Kept as well, because the file output needs the whole set: a failure
      * here costs the file, not the row the user has already seen. */
-    if (bmb_result_set_add(rs, row) != 0) {
+    if (bmb_result_set_add(rs, &row) != 0) {
         bmb_log_error("Out of memory while recording results.");
         return -1;
     }

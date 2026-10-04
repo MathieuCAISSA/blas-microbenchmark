@@ -37,7 +37,7 @@ typedef struct {
 void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
                           const char *dim1_label, const char *dim2_label,
                           int has_stats, int has_flops, int has_bytes);
-int bmb_result_set_add(bmb_result_set_t *rs, bmb_result_row_t row);
+int bmb_result_set_add(bmb_result_set_t *rs, const bmb_result_row_t *row);
 void bmb_result_set_free(bmb_result_set_t *rs);
 
 #endif /* BMB_RESULT_H */

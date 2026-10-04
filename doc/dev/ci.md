@@ -98,6 +98,25 @@ test takes:
   (code scanning), not to the job's status: each is fixed, or dismissed
   there with a reason.
 
+  **A pull request's analysis only reports on the lines it changes**
+  (its `CodeQL` check fails on a new alert there); the full picture is
+  the analysis of `main`. #12's pull request showed no result while
+  `main` had four. After merging, list what is open, and fix or dismiss
+  each:
+
+  ```bash
+  gh api 'repos/MathieuCAISSA/blas-microbenchmark/code-scanning/alerts?state=open' \
+    -q '.[] | "\(.number) \(.rule.id) \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)"'
+  ```
+
+  Dismissed so far, each with its reason in the alert: the path
+  injections from the `BMB_MACHINE_ROOT` test hook (used in tests: it
+  reads, for the user running it, files that user can read already); the
+  `-o` file created under the user's umask (won't fix); the exact
+  comparison of exactly representable values in `test_bmb_verify.c`;
+  the length of `bmb_options_parse()` without comments (the code style
+  is comments for *why* only).
+
 ## Sanitizers
 
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is

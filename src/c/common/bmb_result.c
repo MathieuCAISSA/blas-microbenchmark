@@ -19,7 +19,7 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->capacity = 0;
 }
 
-int bmb_result_set_add(bmb_result_set_t *rs, bmb_result_row_t row)
+int bmb_result_set_add(bmb_result_set_t *rs, const bmb_result_row_t *row)
 {
     if (rs->count == rs->capacity) {
         size_t new_capacity = (rs->capacity == 0) ? 8 : rs->capacity * 2;
@@ -32,7 +32,7 @@ int bmb_result_set_add(bmb_result_set_t *rs, bmb_result_row_t row)
         rs->capacity = new_capacity;
     }
 
-    rs->rows[rs->count++] = row;
+    rs->rows[rs->count++] = *row;
     return 0;
 }
 
