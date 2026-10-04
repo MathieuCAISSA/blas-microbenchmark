@@ -14,6 +14,10 @@ and the machine, which is most of what is needed to reproduce a result.
 A security problem goes through [SECURITY.md](SECURITY.md) instead, not a
 public issue.
 
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md)
+(the Contributor Covenant 3.0). It says how to report a problem with
+someone's behaviour, publicly or not.
+
 ## Building and testing from git
 
 ```bash
