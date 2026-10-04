@@ -20,6 +20,8 @@ libtool
 *.o
 *.la
 *.a
+*.gcno
+*.gcda
 .deps/
 .libs/
 **/Makefile

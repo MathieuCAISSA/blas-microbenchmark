@@ -96,6 +96,21 @@ make -C src/report check TESTS=test_bmb_report_js.sh
 make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 ```
 
+To see which lines of the C code the tests never reach, build with
+coverage in a directory of its own and run `gcovr` (`apt install gcovr`)
+over it; the `coverage` CI job does the same on every push (see
+[doc/dev/ci.md](doc/dev/ci.md#coverage)):
+
+```bash
+mkdir -p build-cov && cd build-cov
+../configure CFLAGS="-O0 -g --coverage" LDFLAGS="--coverage"
+make && make check
+gcovr --root .. src --exclude '.*/test_[^/]*$' --html-details cov.html --print-summary
+```
+
+`cov.html` shows each file line by line. There is no threshold: read it
+for paths no test takes, then decide whether one should.
+
 | Where | Test | What it pins down |
 |---|---|---|
 | `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C` |
