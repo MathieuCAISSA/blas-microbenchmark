@@ -516,3 +516,68 @@ jobs:
             build/**/test-suite.log
             build/**/*.log
           if-no-files-found: ignore
+
+  # Which lines of the C code make check runs, and which it never reaches:
+  # each test was seen to fail, but that says nothing of the paths no test
+  # takes. No threshold -- the report is there to be read. The per-file
+  # summary is on the run's page; the line-by-line HTML report and an lcov
+  # file are in the coverage artifact.
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config gcovr
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      # -O0 so that every line maps to code gcov can count.
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --enable-werror CFLAGS="-O0 -g --coverage" LDFLAGS="--coverage"
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: make check
+        run: make -C build check
+
+      # The tests' own code is left out: what matters is what they reach.
+      - name: Coverage report
+        run: |
+          cd build
+          mkdir -p coverage
+          gcovr --root .. src --exclude '.*/test_[^/]*$' \
+            --txt coverage/summary.txt \
+            --html-details coverage/index.html \
+            --lcov coverage/coverage.lcov \
+            --print-summary
+          {
+            echo '### Coverage of the C code by `make check`'
+            echo '```'
+            cat coverage/summary.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage
+          path: build/coverage/
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-logs-coverage
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore

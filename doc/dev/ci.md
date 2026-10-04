@@ -54,6 +54,24 @@ a tolerance too tight for a real size, or a library that is only wrong
 once it splits the work between threads, would get through it. It takes
 seconds; the sanitizers job runs it under ASan and UBSan too.
 
+## Coverage
+
+The `coverage` job builds at `-O0` with `--coverage`, runs `make check`,
+and reports with `gcovr` which lines and branches of the C code the tests
+reached, the tests' own files left out. The per-file summary is on the
+run's page; the line-by-line HTML report and an lcov file are in the
+`coverage` artifact. AGENTS.md gives the same commands for a local run.
+
+There is no threshold, on purpose: a number to keep above invites tests
+written for the number. The report is for finding paths no test takes.
+When it was added (1.3.0-dev) it read 90% of lines, 77% of branches; the
+gaps were the out-of-memory paths of every benchmark, the option
+parser's error messages, and `bmb_threads.c` at 38%: no test sets a
+thread-count environment variable (`OPENBLAS_NUM_THREADS`, ...), so
+neither its use nor the warning when it disagrees with `-t` is run.
+
+## Sanitizers
+
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot
 (out-of-bounds accesses, signed overflow), and the different optimisation
