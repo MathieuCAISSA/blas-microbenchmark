@@ -37,7 +37,8 @@ uninstall-hook:
 # through html-local), with mandoc; .github/workflows/pages.yml publishes
 # it. Not installed: the installed documentation is the man pages.
 html-local: $(man1_MANS)
-	$(AM_V_GEN)srcdir='$(srcdir)' $(SHELL) $(srcdir)/html.sh html '$(PACKAGE_VERSION)' $(man1_MANS)
+	$(AM_V_GEN)srcdir='$(srcdir)' IMAGES='$(top_srcdir)/doc/images' \
+	    $(SHELL) $(srcdir)/html.sh html '$(PACKAGE_VERSION)' $(man1_MANS)
 
 clean-local:
 	rm -rf html
@@ -49,5 +50,5 @@ AM_TESTS_ENVIRONMENT = \
 	man1dir='$(man1dir)' pkglibexecdir='$(pkglibexecdir)' PACKAGE_VERSION='$(PACKAGE_VERSION)'; \
 	export ROUTINES MAKE mandir man1dir pkglibexecdir PACKAGE_VERSION;
 
-EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in man_helper.sh html.sh mandoc.css site.css \
+EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in man_helper.sh html.sh site.css \
 	$(TESTS)

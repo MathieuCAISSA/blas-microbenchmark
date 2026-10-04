@@ -1,6 +1,198 @@
+/* The documentation site's stylesheet. html.sh wraps mandoc's HTML for
+ * each man page in the layout styled here; the classes below the layout
+ * (Sh, Ss, Pp, Bd-indent, Bl-tag, Bl-bullet, tbl) are the ones mandoc
+ * gives man(7) pages, and the only ones these pages use.
+ *
+ * Colours are tokens, set once for light and once for dark. */
 
-/* blas-microbenchmark's additions to mandoc.css, which html.sh appends to
- * it. mandoc.css is kept as mandoc ships it. */
+:root {
+  --bg: #ffffff;
+  --surface: #f5f7fa;
+  --fg: #1c2127;
+  --muted: #5d6773;
+  --border: #e2e6eb;
+  --accent: #2160c4;
+  --accent-soft: #e8f0fc;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --bar: 3.5rem;
+  color-scheme: light dark;
+}
 
-/* The examples are commands to paste: monospace, as in a terminal. */
-pre {		font-family: monospace; }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171b;
+    --surface: #1c2025;
+    --fg: #e4e7eb;
+    --muted: #9aa4af;
+    --border: #2b3037;
+    --accent: #7eaaf5;
+    --accent-soft: #1d2a3d;
+    --shadow: none;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-padding-top: calc(var(--bar) + 1rem); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.65 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+a:hover { text-decoration-color: currentColor; }
+
+/* ---- Layout ----------------------------------------------------------- */
+
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  height: var(--bar);
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-inner, .layout, .site-footer-inner, .landing {
+  max-width: 72rem; margin: 0 auto; padding: 0 1.25rem;
+}
+.topbar-inner { height: 100%; display: flex; align-items: center; gap: 1.5rem; }
+.brand { font-weight: 650; color: var(--fg); text-decoration: none; white-space: nowrap; }
+.brand .version { font-weight: 500; color: var(--muted); font-size: 0.85em; margin-left: 0.35rem; }
+.topnav { display: flex; gap: 0.25rem; margin-left: auto; overflow-x: auto; }
+.topnav a {
+  color: var(--muted); text-decoration: none; padding: 0.35rem 0.65rem; border-radius: 6px;
+  font-size: 0.925rem; white-space: nowrap;
+}
+.topnav a:hover { color: var(--fg); background: var(--surface); }
+.topnav a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
+
+.layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 3rem; }
+
+.toc {
+  position: sticky; top: var(--bar); align-self: start;
+  max-height: calc(100vh - var(--bar)); overflow-y: auto;
+  padding: 2rem 0 2rem; font-size: 0.875rem;
+}
+.toc-title { margin: 0 0 0.5rem; color: var(--muted); font-size: 0.75rem;
+             font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc ul ul { padding-left: 0.85rem; }
+.toc a { display: block; padding: 0.2rem 0.5rem; margin-left: -0.5rem; border-radius: 5px;
+         color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--fg); background: var(--surface); }
+/* Section names are capitals in a man page: shown in sentence case. */
+.toc .toc-sh > a { text-transform: lowercase; }
+.toc .toc-sh > a::first-letter { text-transform: uppercase; }
+
+.page { padding: 2.25rem 0 4rem; max-width: 46rem; }
+.page-title { font-size: 2rem; line-height: 1.2; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+.page-title .mansect { color: var(--muted); font-weight: 500; }
+.page-desc { margin: 0.4rem 0 0; color: var(--muted); font-size: 1.125rem; }
+.page-desc::first-letter { text-transform: uppercase; }
+
+.site-footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
+.site-footer-inner { padding-top: 1.25rem; padding-bottom: 2rem; }
+
+@media (max-width: 56rem) {
+  /* The bar takes two rows, the pages' names on the second. */
+  :root { --bar: 5.6rem; }
+  .topbar-inner { flex-wrap: wrap; align-content: center; gap: 0.25rem 0.75rem; }
+  .topnav { margin-left: -0.65rem; width: calc(100% + 0.65rem); }
+  .layout { display: block; }
+  .toc { display: none; }
+  .page { padding-top: 1.5rem; }
+  .page-title { font-size: 1.6rem; }
+  table.tbl td:first-child { white-space: normal; }
+}
+
+/* ---- The man page, as mandoc writes it -------------------------------- */
+
+.manual-text { margin-top: 1rem; }
+
+section.Sh { margin-top: 2.25rem; }
+h1.Sh {
+  font-size: 1.35rem; line-height: 1.3; font-weight: 650; margin: 0 0 0.6rem;
+  padding-top: 1.25rem; border-top: 1px solid var(--border);
+  text-transform: lowercase;
+}
+h1.Sh::first-letter { text-transform: uppercase; }
+section.Sh:first-child { margin-top: 1.5rem; }
+h2.Ss { font-size: 1.075rem; font-weight: 650; margin: 1.75rem 0 0.4rem; }
+a.permalink { color: inherit; text-decoration: none; }
+h1.Sh a.permalink:hover::after, h2.Ss a.permalink:hover::after {
+  content: " #"; color: var(--muted); font-weight: 400;
+}
+
+.Pp { margin: 0.7rem 0; }
+.Pp:empty { display: none; }
+b { font-weight: 620; }
+
+.Bd-indent { margin: 0.9rem 0; }
+pre {
+  margin: 0; padding: 0.85rem 1rem; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  font: 0.85rem/1.55 var(--mono); tab-size: 4;
+}
+
+dl.Bl-tag { margin: 0.75rem 0; }
+dl.Bl-tag > dt {
+  margin-top: 1rem; font-family: var(--mono); font-size: 0.9rem;
+}
+dl.Bl-tag > dt:first-child { margin-top: 0; }
+dl.Bl-tag > dt b { font-weight: 600; }
+dl.Bl-tag > dt i { color: var(--muted); }
+dl.Bl-tag > dd { margin: 0.15rem 0 0 1.5rem; }
+
+ul.Bl-bullet { margin: 0.7rem 0; padding-left: 1.25rem; }
+ul.Bl-bullet > li { margin: 0.35rem 0; }
+ul.Bl-bullet > li::marker { color: var(--muted); }
+
+table.tbl {
+  display: block; max-width: 100%; overflow-x: auto;
+  border-collapse: collapse; margin: 0.9rem 0; font-size: 0.925rem;
+}
+table.tbl td { padding: 0.4rem 1.25rem 0.4rem 0; border-bottom: 1px solid var(--border);
+               vertical-align: top; }
+table.tbl tr:last-child td { border-bottom: 0; }
+table.tbl td:first-child { color: var(--muted); white-space: nowrap; }
+
+/* ---- The landing page ------------------------------------------------- */
+
+.landing { padding-top: 3.5rem; padding-bottom: 4rem; }
+.hero { max-width: 44rem; }
+.hero h1 { font-size: 2.6rem; line-height: 1.1; margin: 0; letter-spacing: -0.02em; }
+.hero .tagline { font-size: 1.25rem; color: var(--muted); margin: 0.75rem 0 0; }
+.hero .tagline::first-letter { text-transform: uppercase; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+.button {
+  display: inline-block; padding: 0.55rem 1rem; border-radius: 8px; font-weight: 600;
+  text-decoration: none; border: 1px solid var(--border); color: var(--fg); background: var(--bg);
+}
+.button:hover { background: var(--surface); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.button.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--fg)); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+         gap: 1rem; margin-top: 3rem; }
+.card {
+  display: block; padding: 1.1rem 1.25rem; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--bg); box-shadow: var(--shadow); color: var(--fg); text-decoration: none;
+}
+.card:hover { border-color: var(--accent); }
+.card-title { font-family: var(--mono); font-weight: 600; font-size: 1rem; color: var(--accent); }
+.card-desc { margin: 0.35rem 0 0; color: var(--muted); }
+.card-desc::first-letter { text-transform: uppercase; }
+.card-cmd { margin: 0.75rem 0 0; font: 0.8rem var(--mono); color: var(--muted); }
+
+.shot { margin: 3rem 0 0; }
+.shot img { display: block; width: 100%; max-width: 40rem; height: auto;
+            border-radius: 12px; border: 1px solid var(--border); }
+.shot figcaption { margin-top: 0.6rem; color: var(--muted); font-size: 0.9rem; }
+.note { margin-top: 2.5rem; color: var(--muted); font-size: 0.9rem; }

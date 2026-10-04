@@ -8,8 +8,11 @@ set -e
 . "${srcdir:-.}/man_helper.sh"
 need mandoc "build the site"
 
+# With the chart when the checkout has it (a release tarball does not):
+# the checks below hold either way.
 site=$T/site
-srcdir=${srcdir:-.} "${SHELL:-/bin/sh}" "${srcdir:-.}/html.sh" "$site" "$PACKAGE_VERSION" $PAGES \
+IMAGES=${srcdir:-.}/../doc/images srcdir=${srcdir:-.} \
+    "${SHELL:-/bin/sh}" "${srcdir:-.}/html.sh" "$site" "$PACKAGE_VERSION" $PAGES \
     >"$T/build.log" 2>&1 || fail "html.sh failed: $(cat "$T/build.log")"
 
 # A site with empty pages must not pass for a site: without mandoc, or
@@ -23,7 +26,7 @@ for bad in "$T/no-such-mandoc" false; do
 done
 ok "html.sh fails when mandoc is missing or fails"
 
-for f in index.html mandoc.css blas-microbenchmark.html bmb_report.html; do
+for f in index.html site.css blas-microbenchmark.html bmb_report.html; do
     test -s "$site/$f" || fail "the site has no $f"
 done
 ok "the site has the index, the stylesheet and both pages"
@@ -61,15 +64,34 @@ done
 test "$n" -ge 20 || fail "only $n links found on the site"
 ok "all $n links lead to a page and an anchor of the site, or to https"
 
-# Nothing fetched from elsewhere: the stylesheet is the site's own, and
-# there is no script or image at all.
-if grep -Eq '<(script|img|iframe)' "$site"/*.html; then
-    fail "the site loads a script, an image or a frame: $(grep -El '<(script|img|iframe)' "$site"/*.html)"
+# Nothing fetched from elsewhere: no script or frame at all, the site's own
+# stylesheet, and images (src, srcset) that are files of the site.
+if grep -Eq '<(script|iframe)' "$site"/*.html; then
+    fail "the site has a script or a frame: $(grep -El '<(script|iframe)' "$site"/*.html)"
 fi
-if grep -o '<link [^>]*>' "$site"/*.html | grep -v 'href="mandoc.css"' | grep -q .; then
+if grep -o '<link [^>]*>' "$site"/*.html | grep -v 'href="site.css"' | grep -q .; then
     fail "the site loads something other than its own stylesheet"
 fi
-ok "the site loads nothing but its own stylesheet"
+images=0
+for f in "$site"/*.html; do
+    for src in $(grep -oE '(src|srcset)="[^"]*"' "$f" | sed 's/^[a-z]*="//; s/"$//'); do
+        case $src in
+            */* | *:*) fail "$(basename "$f") loads $src, which is not a file of the site" ;;
+        esac
+        test -f "$site/$src" || fail "$(basename "$f") loads $src, and the site has no such file"
+        images=$((images + 1))
+    done
+done
+ok "the site loads nothing but its own stylesheet and $images images of its own"
+
+# Every section of a page is in its table of contents.
+for p in blas-microbenchmark bmb_report; do
+    for id in $(grep -o '<h[12] class="S[hs]" id="[^"]*"' "$site/$p.html" | sed 's/.* id="//; s/"$//'); do
+        sed -n '/<nav class="toc"/,/<\/nav>/p' "$site/$p.html" | grep -q "href=\"#$id\"" \
+            || fail "$p.html: section $id is not in the table of contents"
+    done
+done
+ok "every section and subsection is in its page's table of contents"
 
 # The pages link to each other, and the index to both.
 grep -q '<a href="bmb_report.html"><b>bmb_report</b>(1)</a>' "$site/blas-microbenchmark.html" \

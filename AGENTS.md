@@ -675,16 +675,26 @@ as HTML, and nothing else: one source, checked by the same tests, so the
 site cannot say what the pages do not. `make html` builds it in
 `man/html/` with mandoc (`man/html.sh`):
 
-- mandoc converts each page, with `mandoc.css`, the stylesheet mandoc
-  ships (public domain), kept as shipped; `site.css` is appended to it
-  for our own changes (monospace examples).
+- mandoc converts each page (`-Ofragment`); `html.sh` wraps it in the
+  site's layout: a bar to move between pages, a table of contents built
+  from the page's sections, the page's name and description as its title,
+  a footer. It drops what that layout already says: mandoc's header and
+  footer tables, and the NAME section.
+- `site.css` is the whole stylesheet — mandoc's own is not used. It
+  styles the layout and the few classes mandoc gives man(7) pages (`Sh`,
+  `Ss`, `Pp`, `Bd-indent`, `Bl-tag`, `Bl-bullet`, `tbl`); colours are
+  tokens, set for light and for dark. Section names, capitals in a man
+  page, are shown in sentence case by CSS (`text-transform`), so a section
+  named after an acronym would need an exception.
 - `html.sh` adds what mandoc leaves undone for man(7) pages: a reference
   such as `bmb_report(1)` becomes a link — to the site's page, or to
   man7.org for the others — and so does a URL. The pages do not use `.UR`
   for URLs: groff then shows only the link text in a terminal, and the
   URL is lost.
-- `index.html` lists the pages, with the description from their NAME
-  line.
+- `index.html` is the landing page: the description from the first
+  page's NAME line, a card per page, and the README's ddot chart when
+  `IMAGES` points at `doc/images` (`make html` does; a release tarball
+  has no `doc/`, and the page goes without).
 - It converts through a file, never a pipe: in a pipe, a mandoc failure
   was hidden behind `sed`'s success and wrote empty pages without a word.
   `test_man_html.sh` checks it fails now.
