@@ -59,12 +59,14 @@ jobs:
             echo "the browser tests were skipped"; exit 1
           fi
 
-      # test_editorconfig.sh SKIPs outside a git checkout, which this is.
-      - name: The files were checked against .editorconfig
+      # These SKIP outside a git checkout, which this is.
+      - name: The files and their links were checked
         run: |
-          if ! grep -q '^:test-result: PASS' build/test_editorconfig.sh.trs; then
-            cat build/test_editorconfig.sh.log; exit 1
-          fi
+          for t in test_editorconfig.sh test_doc_links.sh; do
+            if ! grep -q '^:test-result: PASS' "build/$t.trs"; then
+              cat "build/$t.log"; exit 1
+            fi
+          done
 
       # Everything goes where --prefix says, and nowhere else: installed
       # into a staging root, nothing may land outside <root>/<prefix>.

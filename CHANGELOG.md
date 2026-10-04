@@ -18,6 +18,9 @@ releases with the same major version can be compared and read by the same
   point is checked against a reference before it is timed, and a wrong
   result stops the run with exit status 2. `-C`/`--no-verify` turns it
   off. Every output now says `# verified:` unless `-C` was given.
+- For contributors: the developer guide is split. `AGENTS.md` keeps what
+  every change needs and points to one file per part of the project in
+  `doc/dev/`; `make check` checks every link between them.
 
 ## [1.2.0] - 2026-10-04
 

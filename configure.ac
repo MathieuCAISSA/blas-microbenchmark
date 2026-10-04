@@ -219,7 +219,7 @@ AS_CASE(["$bmb_blas_backend"],
     dnl builds -- source builds, cluster modules -- have none, so the
     dnl benchmarks get their cblas_* entry points from src/c/netlib instead,
     dnl which forwards to the Fortran symbols. One code path, works either
-    dnl way; see AGENTS.md.
+    dnl way; see doc/dev/backends.md.
     dnl
     dnl The library itself needs care: on Debian/Ubuntu plain -lblas goes
     dnl through update-alternatives and usually lands on OpenBLAS, so look
