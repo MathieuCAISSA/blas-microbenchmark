@@ -71,6 +71,16 @@ MACHINE_FIXTURES = \
 	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cache/index3/type \
 	fixtures/machine/x86/sys/devices/system/node/node0/cpulist \
 	fixtures/machine/x86/sys/devices/system/node/node1/cpulist \
-	fixtures/machine/x86/sys/devices/system/node/online
+	fixtures/machine/x86/sys/devices/system/node/online \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \
+	fixtures/machine/x86/sys/devices/system/cpu/cpu1/cpufreq/scaling_governor \
+	fixtures/machine/x86/sys/devices/system/cpu/intel_pstate/no_turbo \
+	fixtures/machine/laptop/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \
+	fixtures/machine/laptop/sys/devices/system/cpu/cpu1/cpufreq/scaling_governor \
+	fixtures/machine/laptop/sys/devices/system/cpu/intel_pstate/no_turbo \
+	fixtures/machine/amd/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \
+	fixtures/machine/amd/sys/devices/system/cpu/cpu1/cpufreq/scaling_governor \
+	fixtures/machine/amd/sys/devices/system/cpu/cpu2/online \
+	fixtures/machine/amd/sys/devices/system/cpu/cpufreq/boost
 
 EXTRA_DIST = ../netlib/test_netlib_cblas.c $(MACHINE_FIXTURES)

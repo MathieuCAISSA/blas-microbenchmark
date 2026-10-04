@@ -36,6 +36,10 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     if (line[0] != '\0') {
         fprintf(out, "# caches: %s\n", line);
     }
+    bmb_machine_describe_frequency(m, line, sizeof(line));
+    if (line[0] != '\0') {
+        fprintf(out, "# frequency: %s\n", line);
+    }
     if (m->os[0] != '\0') {
         fprintf(out, "# os: %s\n", m->os);
     }
@@ -219,6 +223,15 @@ static void bmb_print_json_machine(FILE *out, const bmb_machine_t *m)
                     m->caches[i].size_bytes);
         }
         fprintf(out, "\n    ]");
+        sep = ",\n";
+    }
+    if (m->governor[0] != '\0') {
+        fprintf(out, "%s    \"governor\": ", sep);
+        bmb_print_json_string(out, m->governor);
+        sep = ",\n";
+    }
+    if (m->turbo >= 0) {
+        fprintf(out, "%s    \"turbo\": %s", sep, m->turbo ? "true" : "false");
         sep = ",\n";
     }
     if (m->os[0] != '\0') {

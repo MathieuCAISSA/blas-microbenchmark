@@ -48,6 +48,9 @@ the code points at them; the ones easiest to break by accident:
 
 - **A series is routine + backend + BLAS string + CPU + label.** Files
   sharing one merge; a duplicate point keeps the fastest and is reported.
+  The frequency governor and turbo are shown, not part of the key, so
+  that older files still merge (see
+  [backends.md](backends.md)).
 - **Colours are assigned once per page**, in a fixed order with OpenBLAS
   first, so a series keeps its colour in every chart and under every
   selector. Never assign them per chart or by rank. The palette is the

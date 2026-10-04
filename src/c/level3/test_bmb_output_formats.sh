@@ -57,5 +57,33 @@ fi
 grep -q '^# label: say "hi"$' fmtl.txt || fail "text output carries no label line"
 grep -q '"label": "say \\"hi\\""' fmtl.json || fail "json label is missing or not escaped"
 
-rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt
+# The CPU frequency (#3), read from the fake sysfs trees of the machine
+# probe's tests: the governor and turbo in every format, and a warning
+# exactly when they can move the frequency during the run.
+F=${srcdir:-.}/../common/fixtures/machine
+BMB_MACHINE_ROOT=$F/x86 ./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o freq.json >freq.txt 2>freq.err \
+    || fail "the run on the x86 fixture failed"
+grep -q '^# frequency: governor performance, turbo off$' freq.txt || fail "no frequency line for a steady machine"
+grep -q '^    "governor": "performance",$' freq.json || fail "json has no governor"
+grep -q '^    "turbo": false,$' freq.json || fail "json has no \"turbo\": false"
+test ! -s freq.err || fail "a steady frequency was warned about: $(cat freq.err)"
+
+BMB_MACHINE_ROOT=$F/laptop ./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o freq.csv -f csv >freq.txt 2>freq.err \
+    || fail "the run on the laptop fixture failed"
+grep -q '^# frequency: governor powersave, turbo on$' freq.csv || fail "csv has no frequency line"
+grep -q 'The CPU frequency can change during the run (governor powersave, turbo on)' freq.err \
+    || fail "no warning for a moving frequency: $(cat freq.err)"
+grep -q 'cpupower frequency-set -g performance' freq.err || fail "the warning does not say what to do"
+grep -q '^Thread count' freq.txt || fail "a moving frequency stopped the run"
+BMB_MACHINE_ROOT=$F/laptop ./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o freq.json >/dev/null 2>&1
+grep -q '^    "turbo": true,$' freq.json || fail "json has no \"turbo\": true"
+
+BMB_MACHINE_ROOT=$F/aarch64 ./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o freq.json >freq.txt 2>freq.err \
+    || fail "the run on the aarch64 fixture failed"
+if grep -q '^# frequency' freq.txt || grep -q '"governor"\|"turbo"' freq.json; then
+    fail "a frequency was written for a machine that exposes none"
+fi
+test ! -s freq.err || fail "a warning without any frequency information: $(cat freq.err)"
+
+rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json
 echo "ok   output formats"

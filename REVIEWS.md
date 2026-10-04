@@ -32,7 +32,9 @@ it comes from in brackets.
 - [ ] No pointer arithmetic before the pointer is checked: offsets into
   a `malloc` result are computed after its NULL check (every `verify()`
   did it before, #12). A cppcheck finding is fixed, or suppressed where
-  it is with the reason ([static analysis](doc/dev/ci.md#static-analysis)).
+  it is with the reason, and the author runs `.github/cppcheck.sh build`
+  before pushing rather than leave it to CI (#3 did)
+  ([static analysis](doc/dev/ci.md#static-analysis)).
 - [ ] Every error is checked and reported: a failed allocation, write or
   `fclose` makes the run fail, never pass short
   ([limitations](doc/dev/benchmarks.md#known-measurement-limitations)).

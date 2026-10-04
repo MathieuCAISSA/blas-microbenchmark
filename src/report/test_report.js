@@ -61,6 +61,8 @@
     if (o.dim2Label) { r.dim2_label = o.dim2Label; }
     if (o.label) { r.label = o.label; }
     if (o.verified) { r.verified = true; }
+    if (o.governor) { r.machine.governor = o.governor; }
+    if (o.turbo !== undefined) { r.machine.turbo = o.turbo; }
     return r;
   }
 
@@ -365,6 +367,31 @@
 
       m = R.buildModel([entry("a.json", { rows: [[1, 8, null, 1e-6, 1, 8]] })]);
       eq(R.anyVerified(m.identities), false, "and not before: a report of older results gets no column of \"no\"");
+    });
+
+    /* ---- The CPU frequency (#3) ---- */
+
+    test("frequency", function () {
+      eq(R.frequencyText({ governor: "performance", turbo: false }), "performance, turbo off", "frequency: governor and turbo");
+      eq(R.frequencyText({ governor: "performance/schedutil" }), "performance/schedutil", "frequency: governors that differ, turbo unknown");
+      eq(R.frequencyText({ turbo: true }), "turbo on", "frequency: turbo alone");
+      eq(R.frequencyText({ cpu: "X" }), "", "frequency: a machine that exposed neither");
+
+      var m = R.buildModel([
+        entry("a.json", { governor: "performance", turbo: false, rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("b.json", { governor: "powersave", turbo: true, rows: [[1, 16, null, 1e-6, 1, 8]] }),
+        entry("c.json", { governor: "performance", turbo: false, rows: [[1, 32, null, 1e-6, 1, 8]] }),
+        entry("d.json", { backend: "blis", blas: "", rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("e.json", { backend: "netlib", blas: "", turbo: true, rows: [[1, 8, null, 1e-6, 1, 8]] })
+      ]);
+      eq(m.identities.map(function (id) { return id.frequencies.join("; "); }),
+         ["performance, turbo off; powersave, turbo on", "", "turbo on"],
+         "a series lists each condition its files ran under, once; none when no file recorded one");
+      eq(m.identities.length, 3, "the frequency does not split a series: files from older versions still merge");
+      eq(R.anyFrequency(m.identities), true, "the Frequency column appears once some file recorded one");
+
+      m = R.buildModel([entry("a.json", { rows: [[1, 8, null, 1e-6, 1, 8]] })]);
+      eq(R.anyFrequency(m.identities), false, "and not before: a report of older results gets no empty column");
     });
 
     /* ---- Formatting ---- */

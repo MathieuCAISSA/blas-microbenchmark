@@ -172,6 +172,84 @@ static void bmb_probe_caches(bmb_machine_t *m, const char *root)
     }
 }
 
+static int bmb_compare_names(const void *a, const void *b)
+{
+    return strcmp((const char *) a, (const char *) b);
+}
+
+/* The governor of every CPU that has one (an offline CPU has none). They
+ * are normally all the same; when they are not, the distinct ones are kept,
+ * sorted, since readdir's order is no order at all. */
+static void bmb_probe_governor(bmb_machine_t *m, const char *root)
+{
+    char path[512];
+    char seen[16][32];
+    int count = 0;
+    DIR *dir;
+    const struct dirent *entry;
+    size_t used = 0;
+    int i;
+
+    snprintf(path, sizeof(path), "%s/sys/devices/system/cpu", root);
+    dir = opendir(path);
+    if (dir == NULL) {
+        return;
+    }
+    while ((entry = readdir(dir)) != NULL) {
+        char governor[32];
+        int known = 0;
+
+        if (strncmp(entry->d_name, "cpu", 3) != 0 || !isdigit((unsigned char) entry->d_name[3])) {
+            continue;
+        }
+        snprintf(path, sizeof(path), "%s/sys/devices/system/cpu/%s/cpufreq/scaling_governor",
+                 root, entry->d_name);
+        if (bmb_read_line(path, governor, sizeof(governor)) != 0 || governor[0] == '\0') {
+            continue;
+        }
+        for (i = 0; i < count; i++) {
+            known = known || strcmp(seen[i], governor) == 0;
+        }
+        if (!known && count < 16) {
+            snprintf(seen[count], sizeof(seen[count]), "%s", governor);
+            count++;
+        }
+    }
+    closedir(dir);
+
+    qsort(seen, (size_t) count, sizeof(seen[0]), bmb_compare_names);
+    for (i = 0; i < count; i++) {
+        int n = snprintf(m->governor + used, sizeof(m->governor) - used, "%s%s",
+                         (i == 0) ? "" : "/", seen[i]);
+
+        if (n < 0 || (size_t) n >= sizeof(m->governor) - used) {
+            break;
+        }
+        used += (size_t) n;
+    }
+}
+
+/* intel_pstate has its own switch; acpi-cpufreq and amd-pstate use the
+ * generic one. */
+static void bmb_probe_turbo(bmb_machine_t *m, const char *root)
+{
+    char path[512];
+    char value[16];
+
+    m->turbo = -1;
+    snprintf(path, sizeof(path), "%s/sys/devices/system/cpu/intel_pstate/no_turbo", root);
+    if (bmb_read_line(path, value, sizeof(value)) == 0 && (strcmp(value, "0") == 0 || strcmp(value, "1") == 0)) {
+        m->turbo = (value[0] == '0');
+        m->turbo_control = BMB_TURBO_INTEL_PSTATE;
+        return;
+    }
+    snprintf(path, sizeof(path), "%s/sys/devices/system/cpu/cpufreq/boost", root);
+    if (bmb_read_line(path, value, sizeof(value)) == 0 && (strcmp(value, "0") == 0 || strcmp(value, "1") == 0)) {
+        m->turbo = (value[0] == '1');
+        m->turbo_control = BMB_TURBO_CPUFREQ_BOOST;
+    }
+}
+
 void bmb_machine_probe_at(const char *root, bmb_machine_t *m)
 {
     struct utsname u;
@@ -192,6 +270,8 @@ void bmb_machine_probe_at(const char *root, bmb_machine_t *m)
 
     bmb_probe_numa(m, root);
     bmb_probe_caches(m, root);
+    bmb_probe_governor(m, root);
+    bmb_probe_turbo(m, root);
 
     if (uname(&u) == 0) {
         snprintf(m->os, sizeof(m->os), "%s %s %s", u.sysname, u.release, u.machine);
@@ -208,7 +288,14 @@ const bmb_machine_t *bmb_machine(void)
     static int probed = 0;
 
     if (!probed) {
-        bmb_machine_probe_at("", &machine);
+        /* A test hook (doc/dev/backends.md). CodeQL reads it as path
+         * injection; it only lets the user who runs the benchmark make it
+         * read, not write, files that user can read already, with no
+         * setuid or other boundary crossed, and the alerts are dismissed
+         * as used in tests. */
+        const char *root = getenv("BMB_MACHINE_ROOT");
+
+        bmb_machine_probe_at((root != NULL) ? root : "", &machine);
         probed = 1;
     }
     return &machine;
@@ -278,4 +365,38 @@ void bmb_machine_describe_caches(const bmb_machine_t *m, char *buf, size_t size)
         }
         used += (size_t) n;
     }
+}
+
+void bmb_machine_describe_frequency(const bmb_machine_t *m, char *buf, size_t size)
+{
+    const char *turbo = (m->turbo == 1) ? "turbo on" : (m->turbo == 0) ? "turbo off" : "";
+
+    if (m->governor[0] != '\0' && turbo[0] != '\0') {
+        snprintf(buf, size, "governor %s, %s", m->governor, turbo);
+    } else if (m->governor[0] != '\0') {
+        snprintf(buf, size, "governor %s", m->governor);
+    } else {
+        snprintf(buf, size, "%s", turbo);
+    }
+}
+
+void bmb_machine_frequency_advice(const bmb_machine_t *m, char *buf, size_t size)
+{
+    const int scaling = m->governor[0] != '\0' && strcmp(m->governor, "performance") != 0;
+    const int turbo = m->turbo == 1;
+    const char *turbo_off = (m->turbo_control == BMB_TURBO_INTEL_PSTATE)
+        ? "echo 1 | sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo"
+        : "echo 0 | sudo tee /sys/devices/system/cpu/cpufreq/boost";
+    char state[192];
+
+    if (!scaling && !turbo) {
+        snprintf(buf, size, "%s", "");
+        return;
+    }
+    bmb_machine_describe_frequency(m, state, sizeof(state));
+    snprintf(buf, size,
+             "The CPU frequency can change during the run (%s), so timings may vary from run "
+             "to run. For stable numbers: %s%s%s.",
+             state, scaling ? "sudo cpupower frequency-set -g performance" : "",
+             (scaling && turbo) ? ", and " : "", turbo ? turbo_off : "");
 }

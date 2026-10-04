@@ -28,8 +28,8 @@ string is a bonus where the library has one (OpenBLAS's
 where it does not.
 
 The machine side of the provenance lives in `bmb_machine.c`, probed once per
-run: CPU model, logical CPUs, NUMA nodes, cpu0's caches, `uname`, and the
-date. Three rules there:
+run: CPU model, logical CPUs, NUMA nodes, cpu0's caches, the CPU frequency
+governor and turbo, `uname`, and the date. Three rules there:
 
 - **Every field is best effort and omitted when unreadable** — never
   guessed, never written empty. A container without sysfs cache entries is
@@ -45,6 +45,26 @@ date. Three rules there:
   The `Provenance` step of each CI job prints what every runner reports.
 - **No hostname, ever** (#1, decision 4). Reports get shared, and on a
   cluster identical nodes have different names.
+
+**The frequency** (#3) is the governor of every CPU that has one
+(`cpuN/cpufreq/scaling_governor`; the distinct ones, sorted and joined by
+`/`, when they differ) and turbo, read from `intel_pstate/no_turbo` or,
+for acpi-cpufreq and amd-pstate, `cpufreq/boost`. When either lets the
+frequency move during a run, the benchmark warns on stderr with the
+commands that fix it, and runs anyway: a laptop still gets numbers, and
+the provenance says under what conditions. Neither is part of the
+report's series key, so files from versions that did not record them
+still merge; the report lists each condition a series' files ran under
+instead. Virtual machines, WSL and most CI runners expose neither, which
+`bmb_<routine> --version` says ("Frequency: not exposed by this system").
+
+**`BMB_MACHINE_ROOT=DIR`** makes `bmb_machine()` probe `DIR/proc` and
+`DIR/sys` instead of the real ones, as `test_bmb_machine` does through
+`bmb_machine_probe_at()`. It is a test hook, so that the output and the
+warning can be checked against the fixtures in
+`src/c/common/fixtures/machine/` (`test_bmb_output_formats.sh`, and the
+report's render test); it is not in the man page. The logical CPU count,
+the OS and the date still come from the real system.
 
 `--label` is the escape hatch for what no probe can see. It goes on a
 comment line of the text and CSV output, so it refuses control characters:
