@@ -257,7 +257,10 @@ OMP_NUM_THREADS is ignored! Set to 4 but option \-t is set to 1.
 .PP
 Without
 .BR \-t ,
-those variables apply as usual.
+those variables apply as usual: the first one set gives the thread count.
+A value that is not a whole number of threads, from 1 to 2147483647
+(0, \-2, 2,1, or one with a blank in it), is ignored with a warning, and
+the next variable is read.
 Netlib reference BLAS is single-threaded, and
 .B \-t
 has no effect with it.

@@ -28,6 +28,12 @@ releases with the same major version can be compared and read by the same
   every change needs and points to one file per part of the project in
   `doc/dev/`; `make check` checks every link between them.
 
+### Fixed
+- A thread-count environment variable that is not a whole number of
+  threads (`OMP_NUM_THREADS=-2`, `99999999999`, `" 3"`) labelled the run
+  with a wrong count, such as 4294967294 threads. It is now ignored with
+  a warning, and the next variable is read.
+
 ## [1.2.0] - 2026-10-04
 
 ### Added

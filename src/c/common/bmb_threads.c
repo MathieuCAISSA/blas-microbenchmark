@@ -1,5 +1,7 @@
 #include <config.h>
 
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -67,8 +69,18 @@ void bmb_threads_resolve(bmb_options_t *opts)
             continue;
         }
 
+        /* A plain positive decimal, no larger than the int the library
+         * takes. strtoul alone would turn "-2" into 4294967294 threads,
+         * and the run would be labelled with it. */
+        errno = 0;
         env_count = strtoul(env_val, &endptr, 10);
-        if (*endptr != '\0' || env_count == 0) {
+        if (env_val[0] < '0' || env_val[0] > '9' || *endptr != '\0' || errno != 0
+            || env_count == 0 || env_count > (unsigned long) INT_MAX) {
+            char msg[256];
+
+            snprintf(msg, sizeof(msg),
+                     "%s=\"%.32s\" is not a number of threads; ignored.", env_vars[i], env_val);
+            bmb_log_warning(msg);
             continue;
         }
 
