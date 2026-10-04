@@ -68,7 +68,7 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
-| | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields, the environment variables, the exit statuses, the commands in the examples |
+| | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the exit statuses, the commands in the examples |
 | | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
 
 The two browser tests SKIP without a browser (see [Testing the

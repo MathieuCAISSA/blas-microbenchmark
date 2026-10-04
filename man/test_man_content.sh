@@ -115,21 +115,28 @@ fi
 ok "a sweep takes $cap points and refuses $((cap + 1)), as the page says"
 
 # ---- JSON fields ------------------------------------------------------
-# Both ways: every key the benchmarks write is in the page, every field
-# the page names is written. The keys of one run with everything on (two
-# dimensions, -s, -l) are all of them; the inline cache entries are not
-# keys of their own line, and are described by the page as caches.
-"$(bin_of dgemv)" -x 0 -i 1 -m 8 -M 8 -s -l x -o "$T/all.json" >/dev/null
-sed -n 's/^ *"\([a-z_0-9]*\)":.*/\1/p' "$T/all.json" | sort -u >"$T/written"
+# The fields the page names are exactly the keys bmb_print.c can write --
+# not those of one run: some are left out where they do not apply, "blas"
+# for a library with no version string (Netlib, NVPL, ArmPL), a machine
+# field the system does not expose. The inline cache entries ({"level":
+# ...}) are described by the page as caches, not field by field.
 section $PAGE OUTPUT | sed -n '/^\.B json$/,/^This is what/p' | sed 1d \
     | sed -n 's/^\.BR\{0,1\} \([a-z_0-9]*\)\( .*\)\{0,1\}$/\1/p' | sort -u >"$T/documented"
-if ! cmp -s "$T/written" "$T/documented"; then
-    echo "--- keys the benchmarks write"
+grep -v '{\\"' "$S/../src/c/common/bmb_print.c" | grep -o '\\"[a-z_0-9]*\\": ' \
+    | sed 's/^\\"\([a-z_0-9]*\)\\": $/\1/' | sort -u >"$T/writable"
+if ! cmp -s "$T/writable" "$T/documented"; then
+    echo "--- keys bmb_print.c writes"
     echo "+++ fields the page names"
-    diff "$T/written" "$T/documented" || true
-    fail "the JSON fields in the page are not the ones the benchmarks write"
+    diff "$T/writable" "$T/documented" || true
+    fail "the JSON fields in the page are not the ones bmb_print.c writes"
 fi
-ok "the page names exactly the $(wc -l <"$T/written") JSON fields the benchmarks write"
+# And what a run with everything on actually writes is all documented, in
+# case a key ever comes from somewhere else than bmb_print.c.
+"$(bin_of dgemv)" -x 0 -i 1 -m 8 -M 8 -s -l x -o "$T/all.json" >/dev/null
+sed -n 's/^ *"\([a-z_0-9]*\)":.*/\1/p' "$T/all.json" | sort -u >"$T/written"
+undocumented=$(comm -23 "$T/written" "$T/documented")
+test -z "$undocumented" || fail "the benchmarks write JSON fields the page does not name: $(echo $undocumented)"
+ok "the page names exactly the $(wc -l <"$T/writable") JSON fields bmb_print.c writes, and a real run writes no other"
 
 # ---- environment ------------------------------------------------------
 grep -o '"[A-Z_]*_NUM_THREADS"' "$S/../src/c/common/bmb_threads.c" | tr -d '"' | sort -u >"$T/read"
