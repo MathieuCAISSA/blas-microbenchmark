@@ -1,10 +1,12 @@
 # Reviewing a change
 
-The one grid for reviewing a pull request here. CI runs what can be
-tested; this is for what no test sees. The author goes through it before
-asking for a merge; the reviewer uses it, and only it, and posts the
-review on the pull request while CI runs: each section, *ok* or what is
-wrong, with the file and line.
+The one grid for reviewing a pull request here. It covers what CI
+enforces, so that the author catches it first, and what no test sees.
+The author goes through it before asking for a merge; the reviewer uses
+it, and only it, and posts the review on the pull request while CI runs:
+each section, *ok* or what is wrong, with the file and line, looked up
+in the file rather than remembered (the first review here cited two
+lines wrong, #26).
 
 Each item is one line, with a link to the rule it comes from. If an item
 and the rule behind it disagree, the rule wins: fix the item.
@@ -30,8 +32,9 @@ it comes from in brackets.
 - [ ] Every error is checked and reported: a failed allocation, write or
   `fclose` makes the run fail, never pass short
   ([limitations](doc/dev/benchmarks.md#known-measurement-limitations)).
-- [ ] Shell: POSIX `sh`, every expansion quoted, no pipe that hides a
-  failure (write to a file, then check it)
+- [ ] Shell: POSIX `sh`; every expansion quoted, unless word splitting
+  is wanted and a comment or `# shellcheck disable=SC2086` says so; no
+  pipe that hides a failure (write to a file, then check it)
   ([the site](doc/dev/documentation.md#the-site)).
 - [ ] awk: a function that calls `match()` resets `RSTART` and
   `RLENGTH` for its caller; copy them before calling it (the link
