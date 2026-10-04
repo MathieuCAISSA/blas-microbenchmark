@@ -96,7 +96,7 @@ static void bmb_probe_numa(bmb_machine_t *m, const char *root)
 {
     char path[512];
     DIR *dir;
-    struct dirent *entry;
+    const struct dirent *entry;
     int nodes = 0;
 
     snprintf(path, sizeof(path), "%s/sys/devices/system/node", root);

@@ -30,6 +30,9 @@ releases with the same major version can be compared and read by the same
   `doc/dev/`; `make check` checks every link between them.
 
 ### Fixed
+- When memory ran out during `--verify`, pointers were computed from the
+  failed allocation before it was checked: undefined behaviour, now
+  gone. Found by cppcheck, which CI now runs, along with CodeQL.
 - A thread-count environment variable that is not a whole number of
   threads (`OMP_NUM_THREADS=-2`, `99999999999`, `" 3"`) labelled the run
   with a wrong count, such as 4294967294 threads. It is now ignored with

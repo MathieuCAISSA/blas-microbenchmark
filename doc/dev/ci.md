@@ -71,6 +71,30 @@ thread-count environment variable (`OPENBLAS_NUM_THREADS`, ...).
 `test_bmb_threads_env.sh` (#24) brought it to 100%, and found on the way
 that `OMP_NUM_THREADS=-2` labelled a run with 4294967294 threads.
 
+## Static analysis
+
+Two analysers read the code rather than run it, so they see the paths no
+test takes:
+
+- The `cppcheck` job runs `.github/cppcheck.sh`, which fails on any
+  finding. A wrong finding is suppressed on the line above it with
+  `/* cppcheck-suppress <id> */` and a comment saying why;
+  `variableScope` (narrowing each variable to its innermost block is a
+  style this code does not follow, not a defect) and
+  `missingIncludeSystem` are off everywhere, with the
+  reason in the script. Its first run found pointer arithmetic on a
+  `malloc` result before the NULL check in every `verify()`, undefined
+  behaviour on the out-of-memory path, and bare `NULL` as the sentinel of
+  a variadic call in the option tests. To run it locally, after
+  configure: `.github/cppcheck.sh build` (`apt install cppcheck`, or
+  `pip install cppcheck`).
+- CodeQL (`codeql.yml`, its own workflow) builds the code and runs
+  GitHub's security and quality queries, which follow data across
+  functions. It runs on every push and pull request, and weekly, since
+  the queries change on their own. Its findings go to the Security tab
+  (code scanning), not to the job's status: each is fixed, or dismissed
+  there with a reason.
+
 ## Sanitizers
 
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is

@@ -29,6 +29,10 @@ it comes from in brackets.
 - [ ] `common/` stays generic: shapes, alpha values and resets belong to
   the routine's file; no exported function without a caller.
 - [ ] Comments say why, not what.
+- [ ] No pointer arithmetic before the pointer is checked: offsets into
+  a `malloc` result are computed after its NULL check (every `verify()`
+  did it before, #12). A cppcheck finding is fixed, or suppressed where
+  it is with the reason ([static analysis](doc/dev/ci.md#static-analysis)).
 - [ ] Every error is checked and reported: a failed allocation, write or
   `fclose` makes the run fail, never pass short
   ([limitations](doc/dev/benchmarks.md#known-measurement-limitations)).

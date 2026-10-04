@@ -127,8 +127,8 @@ development_body() {
     [ -d "$top/.github/workflows" ] || return 0
     echo '<section class="Sh">'
     heading 1 ci "Continuous integration"
-    echo '<p class="Pp">GitHub Actions runs three workflows: CI on every push and pull request, the site on every push to <code>main</code>, the release on a version tag. Each job is described by its workflow file: the comment above it, where it runs, how it configures the build, and its steps in order.</p>'
-    for w in ci pages release; do
+    echo '<p class="Pp">GitHub Actions runs four workflows: CI and CodeQL on every push and pull request (CodeQL weekly as well), the site on every push to <code>main</code>, the release on a version tag. Each job is described by its workflow file: the comment above it, where it runs, how it configures the build, and its steps in order.</p>'
+    for w in ci codeql pages release; do
         f=$top/.github/workflows/$w.yml
         [ -f "$f" ] || continue
         heading 2 "ci-$w" "$(sed -n 's/^name: *//p' "$f" | head -1)"

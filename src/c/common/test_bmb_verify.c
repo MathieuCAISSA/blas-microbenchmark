@@ -51,7 +51,7 @@ static void test_matvec(void)
         1, 2, 3, -100,
         4, 5, 6, -100,
     };
-    double x3[3] = {1, -1, 2}, x2[2] = {1, -1}, ones[3] = {1, 1, 1};
+    const double x3[3] = {1, -1, 2}, x2[2] = {1, -1}, ones[3] = {1, 1, 1};
     double y[3], yabs[3];
 
     bmb_verify_matvec(BMB_VERIFY_FULL, 2, 3, wide, 4, x3, NULL, y, yabs);
@@ -78,7 +78,7 @@ static void test_matvec(void)
 
 static void test_close(void)
 {
-    double want[3] = {1.0, -2.0, 3.0}, scale[3] = {1.0, 2.0, 3.0};
+    const double want[3] = {1.0, -2.0, 3.0}, scale[3] = {1.0, 2.0, 3.0};
     double got[3];
     char msg[256] = "";
 

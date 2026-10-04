@@ -92,14 +92,15 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, inner = (size_t) ctx->k, i;
     double *r = malloc((n + 2 * inner + 8 * m) * sizeof(double));
-    double *t = r + n, *tabs = t + inner, *c0 = tabs + inner, *c0abs = c0 + m;
-    double *y1 = c0abs + m, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
-    double *want = y2abs + m, *scale = want + m;
     int ok;
 
     if (r == NULL) {
         return -1;
     }
+    double *t = r + n, *tabs = t + inner, *c0 = tabs + inner, *c0abs = c0 + m;
+    double *y1 = c0abs + m, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
+    double *want = y2abs + m, *scale = want + m;
+
     (void) inner;
     bmb_verify_probe(r, n);
     for (i = 0; i < m; i++) {

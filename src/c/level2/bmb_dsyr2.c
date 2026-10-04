@@ -94,17 +94,17 @@ static double bytes(size_t dim1, size_t dim2)
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
-    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i, j;
+    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i;
     double *r = malloc((n + 6 * m) * sizeof(double));
-    double *p0 = r + n, *p0abs = p0 + m, *p = p0 + 2 * m, *pabs = p0 + 3 * m;
-    double *want = p0 + 4 * m, *scale = p0 + 5 * m;
     double s1 = 0.0, s1abs = 0.0, s2 = 0.0, s2abs = 0.0;
     int ok;
 
     if (r == NULL) {
         return -1;
     }
-    (void) j;
+    double *p0 = r + n, *p0abs = p0 + m, *p = p0 + 2 * m, *pabs = p0 + 3 * m;
+    double *want = p0 + 4 * m, *scale = p0 + 5 * m;
+
     bmb_verify_probe(r, n);
 
     bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p0, p0abs);

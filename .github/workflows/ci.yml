@@ -581,3 +581,34 @@ jobs:
             build/**/test-suite.log
             build/**/*.sh.log
           if-no-files-found: ignore
+
+  # cppcheck over the C code: what -Wall -Wextra does not see, on paths no
+  # test takes -- its first run found pointer arithmetic on a failed malloc
+  # in every verify(). Any finding fails the job; a wrong one is suppressed
+  # where it is, with the reason (.github/cppcheck.sh). CodeQL runs in its
+  # own workflow, codeql.yml.
+  cppcheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config cppcheck
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      # cppcheck reads config.h, which configure writes.
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure
+
+      - name: cppcheck
+        run: |
+          cppcheck --version
+          .github/cppcheck.sh build
