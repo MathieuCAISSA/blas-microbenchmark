@@ -1,7 +1,8 @@
 # Contributing
 
 Thank you for helping. This file is the short version; the developer guide
-is [AGENTS.md](AGENTS.md), written for people and coding agents alike.
+is [AGENTS.md](AGENTS.md), written for people and coding agents alike,
+and the files in `doc/dev/` it points to.
 
 ## Reporting a problem
 
@@ -47,15 +48,15 @@ every CI job passes. The details are in
   fail, restore it ([AGENTS.md, Tests](AGENTS.md#tests)).
 - A new option, output field or behaviour is in the man page, with the
   same default as in `--help` — the tests check it
-  ([AGENTS.md, Documentation](AGENTS.md#documentation)).
+  ([doc/dev/documentation.md](doc/dev/documentation.md)).
 - The change is in the `[Unreleased]` section of
   [CHANGELOG.md](CHANGELOG.md) if a user would notice it.
 
 Every pull request runs the full CI; it has to pass before merging.
 
-Adding a BLAS routine or a backend has its own checklist in AGENTS.md:
-[a routine](AGENTS.md#adding-a-new-blas-routine-benchmark),
-[a backend](AGENTS.md#backends).
+Adding a BLAS routine or a backend has its own checklist:
+[a routine](doc/dev/benchmarks.md#adding-a-new-blas-routine-benchmark),
+[a backend](doc/dev/backends.md).
 
 ## License
 
