@@ -301,7 +301,7 @@ details[open] > summary { margin-bottom: 12px; }
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
           cpu: machine.cpu || "", label: r.label || "", machine: machine,
-          versions: {}, dates: [], files: [], verifiedFiles: []
+          versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: []
         };
         identityOrder.push(id);
       }
@@ -317,6 +317,8 @@ details[open] > summary { margin-bottom: 12px; }
       if (r.date) { id.dates.push(r.date); }
       if (id.files.indexOf(file) < 0) { id.files.push(file); }
       if (r.verified === true && id.verifiedFiles.indexOf(file) < 0) { id.verifiedFiles.push(file); }
+      var freq = frequencyText(r.machine || {});
+      if (freq && id.frequencies.indexOf(freq) < 0) { id.frequencies.push(freq); }
 
       if (!routine) {
         routine = routines[r.routine] = {
@@ -454,6 +456,25 @@ details[open] > summary { margin-bottom: 12px; }
    * that a report of older results does not fill up with "no". */
   function anyVerified(identities) {
     return identities.some(function (id) { return id.verifiedFiles.length > 0; });
+  }
+
+  /* The conditions the CPU frequency ran under, as the C side records them
+   * (#3): "performance, turbo off"; "" when the machine exposed neither.
+   * They are not part of the series key, so files from versions that did
+   * not record them still merge with newer ones; a series whose files ran
+   * under different conditions lists each, so that the merge shows. */
+  function frequencyText(machine) {
+    var parts = [];
+    if (machine.governor) { parts.push(machine.governor); }
+    if (machine.turbo === true) { parts.push("turbo on"); }
+    if (machine.turbo === false) { parts.push("turbo off"); }
+    return parts.join(", ");
+  }
+
+  /* Like Verified, the Frequency column only appears once some file
+   * recorded one: virtual machines usually expose nothing. */
+  function anyFrequency(identities) {
+    return identities.some(function (id) { return id.frequencies.length > 0; });
   }
 
   function colour(id) { return "var(--s" + id.slot + ")"; }
@@ -1194,6 +1215,7 @@ details[open] > summary { margin-bottom: 12px; }
     buildModel: buildModel, pointsOf: pointsOf, threadCounts: threadCounts,
     defaultThreads: defaultThreads, comparable: comparable, referenceFor: referenceFor,
     verificationText: verificationText, anyVerified: anyVerified,
+    frequencyText: frequencyText, anyFrequency: anyFrequency,
     cpuName: cpuName, plural: plural, fmtRate: fmtRate, fmtSize: fmtSize,
     fmtBytes: fmtBytes, fmtTime: fmtTime, metricField: metricField,
     sliceForSize: sliceForSize, sizeData: sizeData, cacheMarkers: cacheMarkers,
@@ -1302,9 +1324,11 @@ details[open] > summary { margin-bottom: 12px; }
   var pt = el("table", "wrap");
   var phead = el("tr");
   var verifiedCol = anyVerified(identityOrder);
-  ["Series", "BLAS library", "CPU", "Caches", "OS", "Measured"].concat(verifiedCol ? ["Verified"] : [], ["Files"]).forEach(function (h) {
+  var frequencyCol = anyFrequency(identityOrder);
+  ["Series", "BLAS library", "CPU", "Caches"].concat(frequencyCol ? ["Frequency"] : [], ["OS", "Measured"], verifiedCol ? ["Verified"] : [], ["Files"]).forEach(function (h) {
     var th = el("th", null, h);
     if (h === "Verified") { th.title = "Each result checked against a reference before it was timed (bmb_<routine> --verify)"; }
+    if (h === "Frequency") { th.title = "The CPU frequency governor and turbo the results were measured under; several when the files of a series differ"; }
     phead.appendChild(th);
   });
   var pthead = el("thead");
@@ -1330,6 +1354,7 @@ details[open] > summary { margin-bottom: 12px; }
     tr.appendChild(el("td", null, (id.machine.caches || []).map(function (c) {
       return "L" + c.level + (c.type === "data" ? "d" : c.type === "instruction" ? "i" : "") + " " + fmtBytes(c.size_bytes);
     }).join(", ")));
+    if (frequencyCol) { tr.appendChild(el("td", null, id.frequencies.join("; "))); }
     tr.appendChild(el("td", null, id.machine.os || ""));
     var dates = id.dates.slice().sort();
     tr.appendChild(el("td", null, dates.length ? dates[0].slice(0, 10) + (dates[dates.length - 1].slice(0, 10) !== dates[0].slice(0, 10) ? " → " + dates[dates.length - 1].slice(0, 10) : "") : ""));

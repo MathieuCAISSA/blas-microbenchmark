@@ -580,6 +580,8 @@ void bmb_options_print_version(void)
     if (line[0] != '\0') {
         printf("Caches: %s\n", line);
     }
+    bmb_machine_describe_frequency(m, line, sizeof(line));
+    printf("Frequency: %s\n", (line[0] != '\0') ? line : "not exposed by this system");
     if (m->os[0] != '\0') {
         printf("OS: %s\n", m->os);
     }

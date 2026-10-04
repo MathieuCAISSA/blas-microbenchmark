@@ -126,11 +126,11 @@ for paths no test takes, then decide whether one should.
 | | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, the comparison and its message, the tolerance, the probe vector, the corruption hook |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
 | | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON |
-| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form |
+| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, and the frequency governor and turbo with the advice they get |
 | | `test_netlib_cblas` | (netlib only) the row-major → column-major shim against naive references |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
-| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label |
+| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`) |
 | | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
 | `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |

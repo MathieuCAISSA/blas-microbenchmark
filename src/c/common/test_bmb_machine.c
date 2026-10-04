@@ -77,6 +77,36 @@ static void test_fixtures(void)
     check_str(buf, "L1d 32K, L1i 32K, L2 512K, L3 32M", "x86: cache sizes parsed, 32768K read as 32M");
     check(m.cache_count == 4 && m.caches[3].size_bytes == 33554432ULL,
           "x86: L3 size in bytes");
+    check_str(m.governor, "performance", "x86: the governor, the same on both CPUs, said once");
+    check(m.turbo == 0 && m.turbo_control == BMB_TURBO_INTEL_PSTATE, "x86: turbo off, through intel_pstate");
+    bmb_machine_describe_frequency(&m, buf, sizeof(buf));
+    check_str(buf, "governor performance, turbo off", "x86: frequency described");
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "", "x86: a steady frequency, no advice");
+
+    fixture("laptop", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check(m.turbo == 1 && m.turbo_control == BMB_TURBO_INTEL_PSTATE, "laptop: no_turbo 0 is turbo on");
+    bmb_machine_describe_frequency(&m, buf, sizeof(buf));
+    check_str(buf, "governor powersave, turbo on", "laptop: frequency described");
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "The CPU frequency can change during the run (governor powersave, turbo on), "
+              "so timings may vary from run to run. For stable numbers: sudo cpupower "
+              "frequency-set -g performance, and echo 1 | sudo tee "
+              "/sys/devices/system/cpu/intel_pstate/no_turbo.",
+              "laptop: advice for both, turbo through intel_pstate");
+
+    fixture("amd", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check_str(m.governor, "performance/schedutil",
+              "amd: governors that differ, each once, sorted; the offline CPU skipped");
+    check(m.turbo == 1 && m.turbo_control == BMB_TURBO_CPUFREQ_BOOST, "amd: boost 1 is turbo on");
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "The CPU frequency can change during the run (governor performance/schedutil, "
+              "turbo on), so timings may vary from run to run. For stable numbers: sudo cpupower "
+              "frequency-set -g performance, and echo 0 | sudo tee "
+              "/sys/devices/system/cpu/cpufreq/boost.",
+              "amd: one CPU not on performance is enough; turbo through cpufreq/boost");
 
     /* The form that must never change: this string is part of the report's
      * series key, so a "nicer" rewrite would stop files from one machine
@@ -88,6 +118,11 @@ static void test_fixtures(void)
     check(m.cache_count == 0, "aarch64 fixture without sysfs: no caches invented");
     bmb_machine_describe_caches(&m, buf, sizeof(buf));
     check_str(buf, "", "no caches, empty description");
+
+    bmb_machine_describe_frequency(&m, buf, sizeof(buf));
+    check_str(buf, "", "aarch64 fixture: no frequency information, none described");
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "", "aarch64 fixture: nothing known, no advice");
 
     fixture("does-not-exist", root, sizeof(root));
     bmb_machine_probe_at(root, &m);
@@ -125,6 +160,29 @@ static void test_describe(void)
     m.logical_cpus = 0;
     bmb_machine_describe_cpu(&m, buf, sizeof(buf));
     check_str(buf, "", "describe: nothing known, nothing said");
+
+    m.turbo = -1;
+    snprintf(m.governor, sizeof(m.governor), "powersave");
+    bmb_machine_describe_frequency(&m, buf, sizeof(buf));
+    check_str(buf, "governor powersave", "frequency: a governor, turbo unknown");
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "The CPU frequency can change during the run (governor powersave), so timings "
+              "may vary from run to run. For stable numbers: sudo cpupower frequency-set -g "
+              "performance.", "advice: the governor alone");
+
+    m.governor[0] = '\0';
+    m.turbo = 1;
+    m.turbo_control = BMB_TURBO_CPUFREQ_BOOST;
+    bmb_machine_describe_frequency(&m, buf, sizeof(buf));
+    check_str(buf, "turbo on", "frequency: turbo, governor unknown");
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "The CPU frequency can change during the run (turbo on), so timings may vary "
+              "from run to run. For stable numbers: echo 0 | sudo tee "
+              "/sys/devices/system/cpu/cpufreq/boost.", "advice: turbo alone");
+
+    m.turbo = 0;
+    bmb_machine_frequency_advice(&m, buf, sizeof(buf));
+    check_str(buf, "", "advice: turbo off and no governor known, none");
 }
 
 int main(void)
@@ -138,7 +196,7 @@ int main(void)
 
     printf("     cpu=\"%s\" logical_cpus=%ld numa_nodes=%d caches=%d\n",
            m->cpu, m->logical_cpus, m->numa_nodes, m->cache_count);
-    printf("     os=\"%s\" date=\"%s\"\n", m->os, m->date);
+    printf("     os=\"%s\" date=\"%s\" governor=\"%s\" turbo=%d\n", m->os, m->date, m->governor, m->turbo);
 
     check(bmb_machine() == m, "probed once, the same machine on every call");
     check(m->os[0] != '\0', "os from uname");

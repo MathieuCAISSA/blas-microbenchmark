@@ -113,8 +113,8 @@ Default: on.
 Do not check the results.
 .TP
 .BI "\-l, \-\-label " text
-Tag the results, for what no automatic field records: turbo off, a BIOS
-setting, a NUMA binding.
+Tag the results, for what no automatic field records: a BIOS setting, a
+NUMA binding, SMT off.
 1 to 200 characters, no control characters.
 Default: none, and no label is written.
 .TP
@@ -281,6 +281,7 @@ Every result starts with where it came from:
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
+# frequency: governor performance, turbo off
 # os: Linux 6.6.87 x86_64
 # date: 2026\-10\-02T09:05:04Z
 # routine: dgemm
@@ -290,6 +291,16 @@ Every result starts with where it came from:
 The library's version string, where it exposes one, tells apart two
 builds of the same library.
 The caches show where a sweep leaves each level.
+The frequency line gives the CPU frequency governor (several, joined by
+.BR / ,
+when CPUs differ) and whether turbo is on, as Linux exposes them in
+.IR /sys ;
+virtual machines and containers often expose neither.
+When either lets the frequency change during the run, a governor other
+than
+.B performance
+or turbo on, a warning on standard error says so and gives the commands
+that fix it; the run goes on.
 A field that cannot be read on a machine is left out, never guessed.
 The hostname is deliberately not recorded.
 With
@@ -327,7 +338,10 @@ with
 .BR cpu ,
 .BR logical_cpus ,
 .BR numa_nodes ,
-.B caches
+.BR caches ,
+.BR governor ,
+.B turbo
+(true or false)
 and
 .BR os ;
 .B routine
@@ -457,7 +471,8 @@ numactl \-\-cpunodebind=0 \-\-membind=0 bmb_dgemm \-t 1:16
 .EE
 .RE
 .PP
-Two conditions on the same machine, told apart in the report:
+Two conditions on the same machine, told apart in the report by their
+labels (turbo is recorded, but a series is not split by it):
 .PP
 .RS
 .EX

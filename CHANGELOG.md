@@ -10,6 +10,12 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- The CPU frequency governor and turbo are recorded with every result
+  (`# frequency:`, and `governor` and `turbo` in the JSON `machine`
+  object) and shown in the report's provenance table. When they let the
+  frequency change during a run, a warning says so and gives the
+  commands that fix it; the run goes on. `--version` says what the
+  system exposes.
 - `REVIEWS.md`, the checklist every pull request is reviewed against.
 - A code of conduct, the Contributor Covenant 3.0
   (`CODE_OF_CONDUCT.md`); reports go through GitHub.

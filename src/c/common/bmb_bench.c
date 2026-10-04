@@ -4,6 +4,7 @@
 
 #include "bmb_bench.h"
 #include "bmb_log.h"
+#include "bmb_machine.h"
 #include "bmb_print.h"
 #include "bmb_result.h"
 #include "bmb_threads.h"
@@ -343,6 +344,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     bmb_result_set_t rs;
     size_t ti;
     int status = EXIT_SUCCESS;
+    char advice[512];
 
     /* Freed on the early exits too: -o may already have been parsed by the
      * time -h, -V or a bad option is reached, and leaving it allocated makes
@@ -366,6 +368,13 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         bmb_log_error("--verify: this benchmark has no check of its result.");
         bmb_options_free(&opts);
         return EXIT_FAILURE;
+    }
+
+    /* A warning, never a refusal: a laptop still gets its numbers, and the
+     * provenance says under what conditions they were measured. */
+    bmb_machine_frequency_advice(bmb_machine(), advice, sizeof(advice));
+    if (advice[0] != '\0') {
+        bmb_log_warning(advice);
     }
 
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,

@@ -4,8 +4,14 @@ bmb_machine_probe_at(). They follow the real files' layout and formatting
 against what kernels actually write.
 
   x86/      an x86 CPU with a "model name", two NUMA nodes (and the
-            non-node "online" entry real sysfs has beside them), and four
-            caches on cpu0.
+            non-node "online" entry real sysfs has beside them), four
+            caches on cpu0, and a steady frequency: the performance
+            governor on both CPUs, turbo off through intel_pstate.
+  laptop/   only a frequency that moves: the powersave governor, turbo
+            on through intel_pstate (no_turbo 0).
+  amd/      only a frequency, set differently on two CPUs (performance
+            and schedutil), a third CPU offline and so without cpufreq,
+            and turbo on through the generic cpufreq/boost.
   aarch64/  an Arm CPU as GitHub's arm64 runners report it: no "model
             name", only implementer and part codes -- and no sys/ at all,
             which is also what a container without sysfs looks like.
