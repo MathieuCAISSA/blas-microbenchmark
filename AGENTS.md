@@ -130,12 +130,12 @@ for paths no test takes, then decide whether one should.
 | | `test_netlib_cblas` | (netlib only) the row-major → column-major shim against naive references |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
-| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`) |
+| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
 | | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
 | `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
-| | `test_bmb_report_render.sh` | the page in a real browser: every chart draws |
-| | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
+| | `test_bmb_report_render.sh` | the page in a real browser: every chart draws; a series run four times gets its band, the noise test and a raw row per run |
+| | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`), including the Mann-Whitney p-values against an independent count |
 | top | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
 | | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |

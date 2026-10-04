@@ -51,6 +51,23 @@ the code points at them; the ones easiest to break by accident:
   The frequency governor and turbo are shown, not part of the key, so
   that older files still merge (see
   [backends.md](backends.md)).
+- **Repeated runs (#4).** Every measurement of a point is kept in its
+  `runs`; the curve still goes through the fastest, as the benchmark
+  reports the fastest sample. The band of
+  a series with repeated runs goes from the fastest run to the slowest,
+  and takes the place of the `-s` band (fastest sample to mean). The raw
+  data has a row per run.
+- **Beyond noise is a Mann-Whitney U test**, two-sided, at p < 0.05, on
+  the runs' times of the series and of the reference at that point
+  (`noiseVerdict`); the user chose it over a range overlap and a fixed
+  threshold. It assumes no distribution, which timings, skewed by
+  interruptions, do not follow. Exact by counting the splits of the
+  pooled ranks up to 20000 of them, normal approximation beyond. A point
+  within the noise is hollow. With too few runs for any outcome to reach
+  0.05 (`minP`: 3 against 3 gives 0.1) the verdict is "few", drawn as
+  before and said in a note: never call a difference noise when nothing
+  could have shown otherwise. The p-values in `test_report.js` were
+  checked against an independent count in Python.
 - **Colours are assigned once per page**, in a fixed order with OpenBLAS
   first, so a series keeps its colour in every chart and under every
   selector. Never assign them per chart or by rank. The palette is the

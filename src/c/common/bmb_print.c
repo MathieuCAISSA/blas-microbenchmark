@@ -65,8 +65,8 @@ void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "%-14s", "GB/s");
     }
     if (rs->has_stats) {
-        fprintf(out, "%-16s%-16s%-16s%-14s", "mean [s]", "stddev [s]", "max [s]",
-                "calls/sample");
+        fprintf(out, "%-16s%-16s%-16s%-14s%-16s", "mean [s]", "stddev [s]", "max [s]",
+                "calls/sample", "median [s]");
     }
     fprintf(out, "\n");
 }
@@ -87,8 +87,8 @@ void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
         fprintf(out, "%-14.3f", row->gbytes_s);
     }
     if (rs->has_stats) {
-        fprintf(out, "%-16.9f%-16.9f%-16.9f%-14u", row->mean_s, row->stddev_s, row->max_s,
-                row->batch);
+        fprintf(out, "%-16.9f%-16.9f%-16.9f%-14u%-16.9f", row->mean_s, row->stddev_s, row->max_s,
+                row->batch, row->median_s);
     }
     fprintf(out, "\n");
 
@@ -144,7 +144,7 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, ",gbytes_per_s");
     }
     if (rs->has_stats) {
-        fprintf(out, ",mean_s,stddev_s,max_s,calls_per_sample");
+        fprintf(out, ",mean_s,stddev_s,max_s,calls_per_sample,median_s");
     }
     fprintf(out, "\n");
 
@@ -164,8 +164,8 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
             fprintf(out, ",%.6f", row->gbytes_s);
         }
         if (rs->has_stats) {
-            fprintf(out, ",%.9f,%.9f,%.9f,%u", row->mean_s, row->stddev_s, row->max_s,
-                    row->batch);
+            fprintf(out, ",%.9f,%.9f,%.9f,%u,%.9f", row->mean_s, row->stddev_s, row->max_s,
+                    row->batch, row->median_s);
         }
         fprintf(out, "\n");
     }
@@ -300,8 +300,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         }
         if (rs->has_stats) {
             fprintf(out, ",\n      \"mean_s\": %.9f,\n      \"stddev_s\": %.9f,"
-                         "\n      \"max_s\": %.9f,\n      \"calls_per_sample\": %u",
-                    row->mean_s, row->stddev_s, row->max_s, row->batch);
+                         "\n      \"max_s\": %.9f,\n      \"calls_per_sample\": %u,"
+                         "\n      \"median_s\": %.9f",
+                    row->mean_s, row->stddev_s, row->max_s, row->batch, row->median_s);
         }
         fprintf(out, "\n    }%s\n", (i + 1 < rs->count) ? "," : "");
     }

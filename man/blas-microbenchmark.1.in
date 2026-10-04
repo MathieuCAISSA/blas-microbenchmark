@@ -100,7 +100,8 @@ Also report, per point, the mean of the samples, their standard deviation
 .I n
 rather than
 .IR n \-1),
-the slowest sample and the batch size.
+the slowest sample, the batch size and the median of the samples, as
+columns in that order after the rates.
 .TP
 .B "\-c, \-\-verify"
 Before timing each point, check that the library computes the right
@@ -362,9 +363,10 @@ and with
 .BR \-s ,
 .BR mean_s ,
 .BR stddev_s ,
-.B max_s
+.BR max_s ,
+.B calls_per_sample
 and
-.BR calls_per_sample .
+.BR median_s .
 A field that does not apply is left out.
 This is what
 .BR bmb_report (1)
