@@ -2,7 +2,7 @@
 .\" blas-microbenchmark(1). configure turns blas-microbenchmark.1.in into
 .\" blas-microbenchmark.1; edit the .in. test_man.sh checks that every
 .\" option of --help is here and that this renders without warnings.
-.TH BLAS-MICROBENCHMARK 1 "" "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.TH BLAS-MICROBENCHMARK 1 2026-10-04 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
 .\" No hyphenation, no justification: both hurt in a terminal, and
 .\" hyphenation splits literals such as "# label:".
 .nh
@@ -250,31 +250,42 @@ e.g.\&
 in pandas.
 .TP
 .B json
-one object: the same information as fields
-.RB ( version ,
+one object holding the same information as fields:
+.BR version ,
 .BR backend ,
 .BR blas ,
 .BR label ,
-.BR date ,
-a
+.BR date ;
 .B machine
-object, the
+with
+.BR cpu ,
+.BR logical_cpus ,
+.BR numa_nodes ,
+.B caches
+and
+.BR os ;
 .B routine
-and what its two dimensions are), then a
+and, naming its dimensions,
+.B dim1_label
+and
+.BR dim2_label .
+Then a
 .B results
-array with one object per point
-.RB ( thread_count ,
+array, one object per point:
+.BR thread_count ,
 .BR dim1 ,
 .BR dim2 ,
 .BR time_s ,
 .BR gflops ,
 .BR gbytes_per_s ,
 and with
-.BR \-s :
+.BR \-s ,
 .BR mean_s ,
 .BR stddev_s ,
-.BR max_s ,
-.BR calls_per_sample ).
+.B max_s
+and
+.BR calls_per_sample .
+A field that does not apply is left out.
 This is what
 .BR bmb_report (1)
 reads.

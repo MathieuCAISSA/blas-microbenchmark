@@ -66,11 +66,16 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
-| `man` | `test_man.sh` | the man pages render without warnings, list exactly the options of `--help`, name every benchmark, and escape the hyphens of anything a reader might paste |
+| `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
+| | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
+| | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields, the environment variables, the exit statuses, the commands in the examples |
+| | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
 
 The two browser tests SKIP without a browser (see [Testing the
-page](#testing-the-page)) and `test_man.sh` without groff; every other
-test runs anywhere.
+page](#testing-the-page)), and the man page tests without groff or
+`man`; every other test runs anywhere. The mandoc lint is left out, with a
+note in the log, where mandoc is not installed. `BMB_MAN_STRICT=1` turns
+each of those into a failure — the `man` CI job sets it.
 
 Three rules the existing tests follow, and new ones should too:
 
@@ -244,7 +249,7 @@ beating the rest.
 Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
 `<prog>_SOURCES`), add the routine to `ROUTINES` in `man/Makefile.am` and
 to the NAME line and the routine tables of `man/blas-microbenchmark.1.in`
-(`test_man.sh` fails until the first two are done), and add a
+(`test_man_content.sh` fails until all three are done), and add a
 `test_bmb_<routine>.sh` smoke test — copy one
 from the same directory, it is a single `bmb_check_run` call naming the
 binary, the routine and how many data rows the sweep should produce. Add it
@@ -614,9 +619,25 @@ Two places, for two readers:
   or behaviour goes there, not into the README.
 
 `--help` is the summary and ends by pointing at the man page.
-`test_man.sh` fails when the options in the man page and in `--help`
-differ, so adding an option to `bmb_options.c` means adding it to the man
-page in the same change.
+
+**The man pages are tested like code** (`man/test_man_*.sh`, see the
+table in [Tests](#tests)), because a page can render perfectly and still
+describe last year's program. Most checks run the program and compare
+with what the page says, both ways where it can: an option in `--help`
+but not in the page fails, and so does a JSON field the page names but no
+benchmark writes. So:
+
+- a new option goes into `bmb_options.c` and the page in the same change,
+  with the same default;
+- a new JSON field, environment variable or exit status goes into the
+  page too;
+- an example in the page must use a program that exists and options it
+  takes; the sweep examples, and the point limit, are run to check the
+  sizes they claim.
+
+Each check was made to fail on purpose before it was relied on — a wrong
+default, swapped dimensions, a missing field, an alias pointing nowhere,
+an uninstall that leaves files — see the commit that added them.
 
 How the man pages are built, and why:
 
@@ -631,8 +652,9 @@ How the man pages are built, and why:
   paths, commands, `.EX` examples. groff 1.23 renders a plain `-` as a
   typographic hyphen (U+2010) on most systems, which no shell accepts.
   Debian and Ubuntu map it back to ASCII in their `man.local`, so the bug
-  is invisible here; `test_man.sh` checks the source for that reason, not
-  the rendering. The substitution escapes the hyphens of the install path
+  is invisible here. `test_man_render.sh` checks the source, and renders
+  the pages with an empty `man.local` first in groff's macro path (`-M`),
+  which gives upstream groff's output on any system. The substitution escapes the hyphens of the install path
   itself — with `$(...)`, not backquotes, which eat one level of
   backslashes (they did, once).
 - `.nh` and `.ds AD l` at the top turn off hyphenation and justification:
@@ -701,6 +723,13 @@ once in Firefox (through geckodriver) and once in Edge, both preinstalled
 on the runner image — Edge is installed from Microsoft's repository if it
 ever stops being. It exists because Firefox is the browser users are told
 to use, and Chrome passing says nothing about it.
+
+The `man` job runs the man page tests in a Fedora container: another
+groff and man-db build than Ubuntu's, plus mandoc for its lint, with
+`BMB_MAN_STRICT=1` so that a missing tool fails instead of skipping. It
+builds without `--enable-werror`, since Fedora's newer GCC is not what it
+is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
+it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot

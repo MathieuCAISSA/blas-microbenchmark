@@ -8,7 +8,7 @@ CLEANFILES = $(man1_MANS)
 
 # One alias page per benchmark, so that "man bmb_dgemm" opens the shared
 # page. Written at install time: twenty one-line files are not worth
-# keeping in the tree. test_man.sh checks this list against the benchmarks
+# keeping in the tree. test_man_content.sh checks this list against the benchmarks
 # actually built.
 ROUTINES = dasum daxpy dcopy ddot dnrm2 dscal dswap \
 	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv \
@@ -32,7 +32,10 @@ install-data-hook:
 uninstall-hook:
 	for r in $(ROUTINES); do rm -f "$(DESTDIR)$(man1dir)/bmb_$$r.1"; done
 
-TESTS = test_man.sh
-AM_TESTS_ENVIRONMENT = ROUTINES='$(ROUTINES)'; export ROUTINES;
+TESTS = test_man_render.sh test_man_options.sh test_man_content.sh test_man_install.sh
+AM_TESTS_ENVIRONMENT = \
+	ROUTINES='$(ROUTINES)' MAKE='$(MAKE)' mandir='$(mandir)' \
+	man1dir='$(man1dir)' pkglibexecdir='$(pkglibexecdir)'; \
+	export ROUTINES MAKE mandir man1dir pkglibexecdir;
 
-EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in $(TESTS)
+EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in man_helper.sh $(TESTS)

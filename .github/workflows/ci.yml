@@ -254,6 +254,57 @@ jobs:
             build/src/report/*.d/
           if-no-files-found: ignore
 
+  # The man pages, on another distribution than the other jobs: Fedora, with
+  # its own groff and man-db builds, and mandoc, whose lint is stricter than
+  # groff. BMB_MAN_STRICT turns a missing tool into a failure rather than a
+  # SKIP, so this job cannot pass without checking everything. No
+  # --enable-werror: Fedora's newer GCC is not what this job is testing.
+  man:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            gcc make autoconf automake libtool pkgconf-pkg-config openblas-devel \
+            groff man-db mandoc diffutils findutils git
+
+      - uses: actions/checkout@v4
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      # Fedora keeps cblas.h in /usr/include/openblas, which configure only
+      # finds through the hint a cluster module would also set.
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          OPENBLAS_INCDIR=/usr/include/openblas ../configure
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: Tools
+        run: |
+          groff --version | head -1
+          man --version
+          mandoc -V 2>&1 | head -1 || true
+
+      - name: Man page tests, nothing skipped
+        env:
+          BMB_MAN_STRICT: 1
+        run: make -C build/man check
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-man
+          path: build/man/*.log
+          if-no-files-found: ignore
+
   # NVPL and ArmPL both target aarch64 (NVIDIA Grace / Arm servers), so these
   # two jobs run on GitHub's arm64-hosted runners (free for public repos)
   # instead of ubuntu-latest.
