@@ -66,9 +66,10 @@ There is no threshold, on purpose: a number to keep above invites tests
 written for the number. The report is for finding paths no test takes.
 When it was added (1.3.0-dev) it read 90% of lines, 77% of branches; the
 gaps were the out-of-memory paths of every benchmark, the option
-parser's error messages, and `bmb_threads.c` at 38%: no test sets a
-thread-count environment variable (`OPENBLAS_NUM_THREADS`, ...), so
-neither its use nor the warning when it disagrees with `-t` is run.
+parser's error messages, and `bmb_threads.c` at 38%: no test set a
+thread-count environment variable (`OPENBLAS_NUM_THREADS`, ...).
+`test_bmb_threads_env.sh` (#24) brought it to 100%, and found on the way
+that `OMP_NUM_THREADS=-2` labelled a run with 4294967294 threads.
 
 ## Sanitizers
 
