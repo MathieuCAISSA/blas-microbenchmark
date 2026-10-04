@@ -1,8 +1,8 @@
 #!/bin/sh
-# Runs every benchmark with --verify, and proves each check can fail:
-# with BMB_VERIFY_CORRUPT set, every benchmark's check sees its result
-# altered by a relative 1e-6, and has to stop with exit status 2, say what
-# is wrong, and write no results file.
+# Runs every benchmark with --verify (on by default), and proves each check
+# can fail: with BMB_VERIFY_CORRUPT set, every benchmark's check sees its
+# result altered by a relative 1e-6, and has to stop with exit status 2,
+# say what is wrong, and write no results file.
 #
 # Without it, every benchmark has to pass at several sizes, non-square
 # shapes and two thread counts -- a library can be right at one and wrong
@@ -57,13 +57,24 @@ done
 test "$n" -ge 20 || fail "only $n benchmarks found"
 echo "ok   all $n benchmarks pass --verify, and each one's check catches a corrupted result"
 
-# Without --verify: nothing claimed, and the corruption hook does nothing.
-level3/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/plain.json" >"$T/plain.out"
-grep -q '^# verified' "$T/plain.out" && fail "a run without --verify claims verified results"
-grep -q '"verified"' "$T/plain.json" && fail "a run without --verify has \"verified\" in its JSON"
-BMB_VERIFY_CORRUPT=1 level3/bmb_dgemm -x 0 -i 1 -m 8 >/dev/null \
-    || fail "BMB_VERIFY_CORRUPT changed a run without --verify"
-echo "ok   without --verify, no claim, and BMB_VERIFY_CORRUPT has no effect"
+# On by default: no option, and the results are checked.
+level3/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"
+grep -q '^# verified: ' "$T/default.out" || fail "a run with no option is not verified"
+grep -q '^  "verified": true,$' "$T/default.json" || fail "a run with no option has no \"verified\": true"
+set +e
+BMB_VERIFY_CORRUPT=1 level3/bmb_dgemm -x 0 -i 1 -m 8 >/dev/null 2>&1
+rc=$?
+set -e
+test "$rc" -eq 2 || fail "a wrong result went through a run with no option (exit $rc)"
+echo "ok   with no option, the results are checked, and a wrong one stops the run"
+
+# -C: nothing claimed, and the corruption hook does nothing.
+level3/bmb_dgemm -x 0 -i 1 -m 8 -C -o "$T/plain.json" >"$T/plain.out"
+grep -q '^# verified' "$T/plain.out" && fail "a run with -C claims verified results"
+grep -q '"verified"' "$T/plain.json" && fail "a run with -C has \"verified\" in its JSON"
+BMB_VERIFY_CORRUPT=1 level3/bmb_dgemm -x 0 -i 1 -m 8 --no-verify >/dev/null \
+    || fail "BMB_VERIFY_CORRUPT changed a run with --no-verify"
+echo "ok   with -C or --no-verify, no claim, and BMB_VERIFY_CORRUPT has no effect"
 
 rm -rf "$T"
 echo "all checks passed"

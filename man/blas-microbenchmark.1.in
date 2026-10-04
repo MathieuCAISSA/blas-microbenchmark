@@ -107,7 +107,10 @@ Before timing each point, check that the library computes the right
 result there; stop with exit status 2 if it does not.
 See
 .BR "CHECKING RESULTS" .
-Default: off.
+Default: on.
+.TP
+.B "\-C, \-\-no\-verify"
+Do not check the results.
 .TP
 .BI "\-l, \-\-label " text
 Tag the results, for what no automatic field records: turbo off, a BIOS
@@ -195,9 +198,9 @@ a rate built from that traffic would not measure bandwidth.
 A benchmark times a call whatever it computes: a library that gets the
 result wrong \(em a broken build, a bug at one size or thread count \(em
 can look fast.
-With
-.BR \-c ,
-each point is first checked: one call on the operands about to be timed,
+So each point is first checked, unless
+.B \-C
+is given: one call on the operands about to be timed,
 at that size and thread count, compared with a reference computed
 independently.
 .PP
@@ -232,6 +235,12 @@ and the element that differs; nothing more is measured, and no
 file is written.
 The check needs memory for a few vectors the size of the result, and
 for daxpy, dswap, dgemv and dsymv a copy of the vector they write.
+.PP
+The check is on by default, as it is in STREAM and HPL: a number from a
+library that computes the wrong thing is worth less than none.
+.B \-C
+turns it off, for a library already checked, or where that memory
+matters.
 .SH THREADS
 .B \-t
 sets the number of threads through the library's own interface.
@@ -284,9 +293,9 @@ With
 .BR \-l ,
 a
 .B "#\ label:"
-line follows the backend, and with
-.BR \-c ,
-a
+line follows the backend, and unless
+.B \-C
+was given, a
 .B "#\ verified:"
 line comes next.
 .PP
@@ -349,9 +358,9 @@ reads.
 .B \-o
 file could not be written \(em a table cut short by a full disk must not
 pass for a complete one;
-2 when
-.B \-c
-found a wrong result, in which case nothing is written to the
+2 when a result was wrong (see
+.BR "CHECKING RESULTS" ),
+in which case nothing is written to the
 .B \-o
 file.
 .SH ENVIRONMENT
@@ -397,12 +406,12 @@ bmb_ddot \-v 1024:16777216 \-s \-o ddot.csv
 .EE
 .RE
 .PP
-Check that the library computes the right thing at every size and thread
-count, as well as timing it:
+Every point is checked before it is timed. For a library already
+checked, skip that:
 .PP
 .RS
 .EX
-bmb_dgemm \-m 512:4096 \-t 1:8 \-c \-o dgemm.json
+bmb_dgemm \-m 512:4096 \-t 1:8 \-C \-o dgemm.json
 .EE
 .RE
 .PP

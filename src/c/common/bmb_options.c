@@ -28,6 +28,7 @@ static const struct option bmb_long_options[] = {
     {"thread-count",   required_argument, NULL, 't'},
     {"statistics",     no_argument,       NULL, 's'},
     {"verify",         no_argument,       NULL, 'c'},
+    {"no-verify",      no_argument,       NULL, 'C'},
     {"label",          required_argument, NULL, 'l'},
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
@@ -36,7 +37,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:b:v:m:M:t:scl:o:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:t:scCl:o:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -372,7 +373,10 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->thread_count_set = 0;
 
     opts->statistics = 0;
-    opts->verify = 0;
+    /* On by default, as STREAM and HPL check theirs: a number from a
+     * library that computes the wrong thing is worth less than none, and
+     * the check costs next to nothing (see bmb_verify.h). */
+    opts->verify = 1;
 
     opts->output_file = NULL;
     opts->output_format = BMB_FORMAT_CSV;
@@ -455,6 +459,10 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             opts->verify = 1;
             break;
 
+        case 'C':
+            opts->verify = 0;
+            break;
+
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
                 return BMB_OPTIONS_ERROR;
@@ -527,7 +535,8 @@ void bmb_options_print_help(const char *prog_name)
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
         "  -s, --statistics              add mean/stddev/max and the batch size (default: off)\n"
         "  -c, --verify                  check each point's result against a reference before\n"
-        "                                 timing it; stop, exit 2, if it is wrong (default: off)\n"
+        "                                 timing it; stop, exit 2, if it is wrong (default: on)\n"
+        "  -C, --no-verify               do not check the results\n"
         "  -l, --label <text>            tag the results, e.g. \"turbo off\" (default: none)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"

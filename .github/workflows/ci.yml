@@ -44,6 +44,11 @@ jobs:
       - name: make check
         run: make -C build check
 
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        run: .github/verify-sweep.sh build
+
       # The browser tests SKIP without a browser, which make check counts
       # as a pass. The x86 runners have Chrome, so here a SKIP means the
       # page went unchecked: fail instead.
@@ -128,6 +133,11 @@ jobs:
       - name: make check
         run: make -C build check
 
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        run: .github/verify-sweep.sh build
+
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -171,6 +181,11 @@ jobs:
       # column-major translation against naive reference implementations.
       - name: make check
         run: make -C build check
+
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        run: .github/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -358,6 +373,11 @@ jobs:
       - name: make check
         run: make -C build check
 
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        run: .github/verify-sweep.sh build
+
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -406,6 +426,11 @@ jobs:
 
       - name: make check
         run: make -C build check
+
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        run: .github/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -463,6 +488,15 @@ jobs:
           LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/lsan-suppressions.txt
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: make -C build check
+
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        env:
+          ASAN_OPTIONS: detect_leaks=1
+          LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/lsan-suppressions.txt
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: .github/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()

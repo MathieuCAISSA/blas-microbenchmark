@@ -9,6 +9,12 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Changed
+- `--verify` is on by default, as the check is in STREAM and HPL: every
+  point is checked against a reference before it is timed, and a wrong
+  result stops the run with exit status 2. `-C`/`--no-verify` turns it
+  off. Every output now says `# verified:` unless `-C` was given.
+
 ## [1.2.0] - 2026-10-04
 
 ### Added

@@ -55,9 +55,9 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 
 | Where | Test | What it pins down |
 |---|---|---|
-| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label` |
+| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C` |
 | | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, the comparison and its message, the tolerance, the probe vector, the corruption hook |
-| `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, and each one's check catches a corrupted result: exit 2, a message, no results file |
+| `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
 | | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form |
 | | `test_netlib_cblas` | (netlib only) the row-major → column-major shim against naive references |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
@@ -277,7 +277,10 @@ nothing, or one whose timings had collapsed to zero.
 
 ### Checking results (`--verify`)
 
-`-c`/`--verify` checks each point before timing it: the driver resets the
+`--verify` is **on by default** (`-C`/`--no-verify` turns it off; `-c`
+stays, so that a command line can say it): STREAM and HPL check theirs,
+and the check costs next to nothing. It checks each point before timing
+it: the driver resets the
 operands, calls the routine's `verify()`, and stops the run with exit
 status 2 (`BMB_EXIT_WRONG_RESULT`) and no `-o` file if it reports a wrong
 result. `verify()` makes one call on the very operands about to be timed
@@ -850,6 +853,14 @@ it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 
 The site is published by its own workflow, `pages.yml` (see [The
 site](#the-site)), not by `ci.yml`.
+
+Every job that builds the benchmarks also runs `.github/verify-sweep.sh`
+("Verified at real sizes"): all 20, checked at sizes a user measures — a
+few MB per operand — with non-square shapes and 1, 2 and 4 threads, on
+that job's library. `make check` runs `--verify` on tiny sizes only, and
+a tolerance too tight for a real size, or a library that is only wrong
+once it splits the work between threads, would get through it. It takes
+seconds; the sanitizers job runs it under ASan and UBSan too.
 
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot

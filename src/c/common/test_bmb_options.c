@@ -176,6 +176,8 @@ static void test_defaults(void)
         fail("defaults", "thread count is not a single 1");
     } else if (opts.statistics != 0 || opts.output_file != NULL) {
         fail("defaults", "statistics/output are not off");
+    } else if (opts.verify != 1) {
+        fail("defaults", "--verify is not on");
     } else if (opts.vector_size_set || opts.matrix_dim1_set
                || opts.matrix_dim2_set || opts.thread_count_set) {
         fail("defaults", "an option is marked as given when none were");
@@ -364,6 +366,37 @@ int main(void)
         memset(long_label, 'a', 201);
         long_label[201] = '\0';
         check_count_option("--label", long_label, 0);
+    }
+
+    /* ---- --verify, on by default ---- */
+    {
+        static const struct {
+            const char *a, *b;
+            int want;
+            const char *what;
+        } cases[] = {
+            {"-c", NULL, 1, "-c turns the check on"},
+            {"--verify", NULL, 1, "--verify turns the check on"},
+            {"-C", NULL, 0, "-C turns it off"},
+            {"--no-verify", NULL, 0, "--no-verify turns it off"},
+            {"-C", "-c", 1, "-C -c: the last one wins, on"},
+            {"-c", "-C", 0, "-c -C: the last one wins, off"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+
+            if (parse_args(&opts, cases[i].a, cases[i].b, NULL) != BMB_OPTIONS_OK) {
+                fail(cases[i].what, "was rejected");
+            } else if (opts.verify != cases[i].want) {
+                fail(cases[i].what, "left the check in the wrong state");
+                bmb_options_free(&opts);
+            } else {
+                ok(cases[i].what);
+                bmb_options_free(&opts);
+            }
+        }
     }
 
     /* ---- provenance ---- */
