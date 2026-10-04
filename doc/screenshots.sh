@@ -1,5 +1,6 @@
 #!/bin/sh
-# Captures the charts shown in the README from a report, in light and dark:
+# Captures the charts and tables shown in the README and on the
+# documentation site from a report, in light and dark:
 #
 #     doc/screenshots.sh report.html doc/images
 #
@@ -23,16 +24,22 @@ page="file://$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 out=$2
 mkdir -p "$out"
 
-# name  window width  routine  text in the chart's title
+# name  window width  what  [routine  text in the chart's title]
+#
+# what is "chart" (a chart, found by its routine and title), "summary" (the
+# tiles and the table of where the results came from) or "rawdata" (the
+# raw data table, opened, its first rows fading out).
 #
 # The page lays charts out to the width they get. At 1200px the line charts
 # sit two to a row, about 540px each; the heatmap spans the whole row, so it
 # is taken at a width that gives it about the same size and proportions,
 # and the README can show the four as a regular grid.
-SHOTS='ddot-size 1200 ddot Performance against size
-dgemm-ratio 1200 dgemm compared with
-dgemm-threads 1200 dgemm Thread scaling
-dgemv-shapes 640 dgemv Shapes'
+SHOTS='ddot-size 1200 chart ddot Performance against size
+dgemm-ratio 1200 chart dgemm compared with
+dgemm-threads 1200 chart dgemm Thread scaling
+dgemv-shapes 640 chart dgemv Shapes
+summary 1000 summary
+rawdata 1000 rawdata'
 
 gd=${BMB_GECKODRIVER:-geckodriver}
 port=$((20000 + $$ % 20000))
@@ -61,16 +68,29 @@ until curl -s "$base/status" >/dev/null 2>&1; do
     sleep 1
 done
 
-# Finds the figure whose title contains the text, in the routine's section.
-# No double quotes in it, so it can sit in a JSON string as is.
-FIND="var secs = document.querySelectorAll('main section');
+# Finds the element to capture: arguments are what, then the routine and
+# the title text for a chart. No double quotes in it, so it can sit in a
+# JSON string as is.
+FIND="if (arguments[0] === 'summary') {
+  var s = document.querySelector('main section'); s.style.padding = '16px 16px 4px';
+  s.scrollIntoView(); return s;
+}
+if (arguments[0] === 'rawdata') {
+  var d = document.querySelector('main details.card');
+  d.open = true;
+  var w = d.querySelector('.table-wrap');
+  w.style.maxHeight = '400px'; w.style.overflow = 'hidden';
+  w.style.maskImage = 'linear-gradient(to bottom, black 70%, transparent)';
+  d.scrollIntoView(); return d;
+}
+var secs = document.querySelectorAll('main section');
 for (var i = 0; i < secs.length; i++) {
   var h = secs[i].querySelector('h2');
-  if (!h || h.textContent !== arguments[0]) { continue; }
+  if (!h || h.textContent !== arguments[1]) { continue; }
   var figs = secs[i].querySelectorAll('figure');
   for (var j = 0; j < figs.length; j++) {
     var t = figs[j].querySelector('h3');
-    if (t && t.textContent.indexOf(arguments[1]) >= 0) { figs[j].scrollIntoView(); return figs[j]; }
+    if (t && t.textContent.indexOf(arguments[2]) >= 0) { figs[j].scrollIntoView(); return figs[j]; }
   }
 }
 return null;"
@@ -84,14 +104,14 @@ for theme in light dark; do
     [ -n "$sid" ] || fail "Firefox did not start: $resp"
     wd POST "/session/$sid/url" "{\"url\":\"$page\"}" >/dev/null
 
-    printf '%s\n' "$SHOTS" | while read -r name width routine title; do
+    printf '%s\n' "$SHOTS" | while read -r name width what routine title; do
         # The charts redraw on the resize event, which Firefox delivers
         # asynchronously: give it a moment.
         wd POST "/session/$sid/window/rect" "{\"width\":$width,\"height\":1600}" >/dev/null
         sleep 1
-        el=$(wd POST "/session/$sid/execute/sync" "{\"script\":\"$FIND\",\"args\":[\"$routine\",\"$title\"]}" \
+        el=$(wd POST "/session/$sid/execute/sync" "{\"script\":\"$FIND\",\"args\":[\"$what\",\"$routine\",\"$title\"]}" \
             | sed -n 's/.*"element-6066-11e4-a52e-4f735466cecf":"\([^"]*\)".*/\1/p')
-        [ -n "$el" ] || fail "no \"$title\" chart for $routine in $1"
+        [ -n "$el" ] || fail "no $what${title:+ \"$title\"}${routine:+ for $routine} in $1"
         wd GET "/session/$sid/element/$el/screenshot" \
             | sed -n 's/.*"value":"\([^"]*\)".*/\1/p' | base64 -d >"$out/$name-$theme.png"
         test -s "$out/$name-$theme.png" || fail "empty screenshot for $name ($theme)"

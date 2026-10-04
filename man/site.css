@@ -87,11 +87,13 @@ a:hover { text-decoration-color: currentColor; }
 .toc a { display: block; padding: 0.2rem 0.5rem; margin-left: -0.5rem; border-radius: 5px;
          color: var(--muted); text-decoration: none; }
 .toc a:hover { color: var(--fg); background: var(--surface); }
-/* Section names are capitals in a man page: shown in sentence case. */
-.toc .toc-sh > a { text-transform: lowercase; }
-.toc .toc-sh > a::first-letter { text-transform: uppercase; }
+/* Section names are capitals in a man page: shown in sentence case. The
+ * site's own headings (keep-case) are written as they should appear. */
+.toc .toc-sh:not(.keep-case) > a { text-transform: lowercase; }
+.toc .toc-sh:not(.keep-case) > a::first-letter { text-transform: uppercase; }
 
 .page { padding: 2.25rem 0 4rem; max-width: 46rem; }
+.page.wide { max-width: 60rem; }
 .page-title { font-size: 2rem; line-height: 1.2; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .page-title .mansect { color: var(--muted); font-weight: 500; }
 .page-desc { margin: 0.4rem 0 0; color: var(--muted); font-size: 1.125rem; }
@@ -101,10 +103,12 @@ a:hover { text-decoration-color: currentColor; }
 .site-footer-inner { padding-top: 1.25rem; padding-bottom: 2rem; }
 
 @media (max-width: 56rem) {
-  /* The bar takes two rows, the pages' names on the second. */
-  :root { --bar: 5.6rem; }
-  .topbar-inner { flex-wrap: wrap; align-content: center; gap: 0.25rem 0.75rem; }
-  .topnav { margin-left: -0.65rem; width: calc(100% + 0.65rem); }
+  /* The bar wraps, the links below the name, and scrolls away with the
+   * page: its height now depends on the width, so it cannot stick. */
+  :root { --bar: 0rem; }
+  .topbar { position: static; height: auto; }
+  .topbar-inner { flex-wrap: wrap; gap: 0.25rem 0.75rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
+  .topnav { flex-wrap: wrap; margin-left: -0.65rem; width: calc(100% + 0.65rem); overflow: visible; }
   .layout { display: block; }
   .toc { display: none; }
   .page { padding-top: 1.5rem; }
@@ -123,6 +127,7 @@ h1.Sh {
   text-transform: lowercase;
 }
 h1.Sh::first-letter { text-transform: uppercase; }
+h1.Sh.keep-case { text-transform: none; }
 section.Sh:first-child { margin-top: 1.5rem; }
 h2.Ss { font-size: 1.075rem; font-weight: 650; margin: 1.75rem 0 0.4rem; }
 a.permalink { color: inherit; text-decoration: none; }
@@ -191,8 +196,11 @@ table.tbl td:first-child { color: var(--muted); white-space: nowrap; }
 .card-desc::first-letter { text-transform: uppercase; }
 .card-cmd { margin: 0.75rem 0 0; font: 0.8rem var(--mono); color: var(--muted); }
 
-.shot { margin: 3rem 0 0; }
-.shot img { display: block; width: 100%; max-width: 40rem; height: auto;
+.shot { margin: 1rem 0 1.5rem; }
+.landing .shot { margin-top: 3rem; max-width: 40rem; }
+.shot img { display: block; width: 100%; height: auto;
             border-radius: 12px; border: 1px solid var(--border); }
 .shot figcaption { margin-top: 0.6rem; color: var(--muted); font-size: 0.9rem; }
+.shots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+              gap: 0 1.25rem; align-items: start; }
 .note { margin-top: 2.5rem; color: var(--muted); font-size: 0.9rem; }

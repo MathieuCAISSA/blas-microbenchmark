@@ -26,10 +26,39 @@ for bad in "$T/no-such-mandoc" false; do
 done
 ok "html.sh fails when mandoc is missing or fails"
 
-for f in index.html site.css blas-microbenchmark.html bmb_report.html; do
+if BENCH_DIR="$T/nowhere" srcdir=${srcdir:-.} "${SHELL:-/bin/sh}" "${srcdir:-.}/html.sh" "$T/bad" "$PACKAGE_VERSION" $PAGES \
+    >/dev/null 2>&1; then
+    fail "html.sh succeeded without the benchmarks it runs for outputs.html"
+fi
+ok "html.sh fails when the benchmarks are not built"
+
+for f in index.html site.css blas-microbenchmark.html bmb_report.html outputs.html; do
     test -s "$site/$f" || fail "the site has no $f"
 done
-ok "the site has the index, the stylesheet and both pages"
+ok "the site has the index, the stylesheet, both pages and the outputs"
+
+# The outputs are runs of this version, made as the page was built: the
+# table, the CSV and the JSON each carry its version, and the commands
+# shown are benchmarks.
+o=$site/outputs.html
+for id in terminal csv json; do
+    grep -q "id=\"$id\"" "$o" || fail "outputs.html has no $id section"
+done
+test "$(grep -c "^# blas-microbenchmark $PACKAGE_VERSION\$" "$o")" -ge 2 \
+    || fail "outputs.html does not show this version's table and CSV"
+grep -q "^  \"version\": \"$PACKAGE_VERSION\",\$" "$o" || fail "outputs.html does not show this version's JSON"
+test "$(grep -c '^\$ bmb_d[a-z0-9]* ' "$o")" -eq 3 || fail "outputs.html does not show the three benchmark commands"
+grep -q '^Thread count' "$o" || fail "outputs.html shows no table header"
+grep -q '^thread_count,' "$o" || fail "outputs.html shows no CSV header"
+# The report's screenshots come with a git checkout (doc/images), not with
+# a release tarball.
+if [ -d "${srcdir:-.}/../doc/images" ]; then
+    for id in report summary charts raw; do
+        grep -q "id=\"$id\"" "$o" || fail "outputs.html has no $id section, although doc/images is there"
+    done
+    test "$(grep -c '<img ' "$o")" -eq 6 || fail "outputs.html does not show the six screenshots of the report"
+fi
+ok "outputs.html shows this version's table, CSV and JSON, and the report when doc/images is there"
 
 for f in "$site"/*.html; do
     grep -q "blas-microbenchmark $PACKAGE_VERSION" "$f" || fail "$(basename "$f") does not give the version, $PACKAGE_VERSION"

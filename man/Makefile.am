@@ -32,12 +32,13 @@ install-data-hook:
 uninstall-hook:
 	for r in $(ROUTINES); do rm -f "$(DESTDIR)$(man1dir)/bmb_$$r.1"; done
 
-# The documentation site: the man pages as HTML, with an index, in html/.
+# The documentation site: the man pages as HTML, an index, and a page of
+# outputs made by running the benchmarks (so build them first), in html/.
 # Built on demand by "make html" (Automake's own html target, extended
 # through html-local), with mandoc; .github/workflows/pages.yml publishes
 # it. Not installed: the installed documentation is the man pages.
 html-local: $(man1_MANS)
-	$(AM_V_GEN)srcdir='$(srcdir)' IMAGES='$(top_srcdir)/doc/images' \
+	$(AM_V_GEN)srcdir='$(srcdir)' IMAGES='$(top_srcdir)/doc/images' BENCH_DIR=../src/c \
 	    $(SHELL) $(srcdir)/html.sh html '$(PACKAGE_VERSION)' $(man1_MANS)
 
 clean-local:

@@ -130,6 +130,9 @@ The manual pages, also online at
 - `man blas-microbenchmark` (also `man bmb_dgemm`, and so on) — the
   benchmarks.
 - `man bmb_report` — the report.
+- [What they produce](https://mathieucaissa.github.io/blas-microbenchmark/outputs.html):
+  the table, CSV and JSON of a run, and the report's summary, charts and
+  raw data.
 - Before installing, from the build directory: `man -l man/blas-microbenchmark.1`.
 - [AGENTS.md](AGENTS.md) — for contributors: building from git, the tests,
   adding a routine, CI.

@@ -69,7 +69,7 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
 | | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the exit statuses, the commands in the examples |
-| | `test_man_html.sh` | the site built from the pages: every page there, every link leads to a file and an anchor of the site or to https, nothing loaded from elsewhere, the pages linked to each other, every option of `--help` on its page; and `html.sh` fails without mandoc |
+| | `test_man_html.sh` | the site built from the pages: every page there, every link leads to a file and an anchor of the site or to https, nothing loaded from elsewhere, every section in its page's table of contents, the pages linked to each other, every option of `--help` on its page, the outputs page showing this version's table, CSV and JSON (and the report's screenshots in a git checkout); `html.sh` fails without mandoc or without the benchmarks |
 | | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
 
 The two browser tests SKIP without a browser (see [Testing the
@@ -588,18 +588,23 @@ right, not that they are readable.
 
 ### The README's images
 
-`doc/images/` holds the four charts the README shows, each in light and
-dark (`<picture>` picks one by the reader's GitHub theme). They are real
-results, made by the commands in the README's report section, and
-`doc/screenshots.sh` captures them from the report those produce:
+`doc/images/` holds the screenshots of a report shown by the README (the
+four charts) and by the site (those, the summary and the raw data
+table), each in light and dark (`<picture>` picks one by the reader's
+theme). They are real results, made by the commands in the README's
+report section, and `doc/screenshots.sh` captures them from the report
+those produce. Run `bmb_report` from the directory holding `results/`,
+so the file names the summary and the raw data show are
+`results/...`, not the paths of your machine:
 
 ```bash
-bmb_report results/*.json > report.html
-doc/screenshots.sh report.html doc/images
+cd somewhere && bmb_report results/*.json > report.html
+doc/screenshots.sh report.html path/to/doc/images
 ```
 
-It drives Firefox over WebDriver and screenshots each chart's own element
-at twice the CSS resolution, so nothing around the chart gets in. The
+It drives Firefox over WebDriver and screenshots each element on its own
+at twice the CSS resolution, so nothing around it gets in; it opens the
+raw data table and fades it out after its first rows. The
 README shows the four as a 2×2 grid, so they need about the same
 proportions: the heatmap, which spans a whole row of the page, is taken at
 a narrower window than the line charts (the width is per chart, in
@@ -695,6 +700,13 @@ site cannot say what the pages do not. `make html` builds it in
   page's NAME line, a card per page, and the README's ddot chart when
   `IMAGES` points at `doc/images` (`make html` does; a release tarball
   has no `doc/`, and the page goes without).
+- `outputs.html` shows what the tools produce. The table, CSV and JSON
+  are not copies: `html.sh` runs the benchmarks (`BENCH_DIR`, the built
+  `src/c`, so `make` comes before `make html`) as it builds the page, and
+  shows each command exactly as it ran — they are always this version's
+  output, from the machine that built the site. Keep those runs small.
+  Below them, the report's summary, four charts and raw data, as
+  screenshots from `doc/images`.
 - It converts through a file, never a pipe: in a pipe, a mandoc failure
   was hidden behind `sed`'s success and wrote empty pages without a word.
   `test_man_html.sh` checks it fails now.
