@@ -42,7 +42,7 @@ with an issue of its own), then tagged on `main` once merged.
    redo `doc/images` (see [The README's images](report.md#the-readmes-images)).
 4. **Check**: `make distcheck`, and the browser tests in Firefox
    (`BMB_BROWSER=firefox make check`); commit, push the branch, open the
-   pull request, and merge it once every CI job passes.
+   pull request, and merge it once every required check passes.
 5. **Tag and publish**, from the merged `main`:
 
    ```bash

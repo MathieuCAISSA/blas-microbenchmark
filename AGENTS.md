@@ -67,7 +67,7 @@ git switch -c issue-<N>-<short-name> origin/main   # e.g. issue-3-cpu-frequency
 git push -u origin issue-<N>-<short-name>
 gh pr create --fill          # the body says "Closes #<N>"
 # while CI runs: review the diff against REVIEWS.md, post it on the PR
-gh pr checks --watch         # every CI job must pass
+gh pr checks --watch         # every required check must pass
 gh pr merge --merge          # a merge commit keeps the detailed commits
 ```
 
@@ -80,8 +80,9 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
 - `main` is protected: a pull request cannot be merged until every
   required check passes, and `main` cannot be force-pushed or deleted.
   Every job of `ci.yml` is required except `coverage`, which has no
-  threshold; CodeQL's findings go to the Security tab, not to a check
-  ([CI](doc/dev/ci.md)). A new job is added to the required checks
+  threshold. CodeQL is not required: its pull request check fails on a
+  new alert in the diff, and its run on `main` while any alert is open
+  ([CI](doc/dev/ci.md#static-analysis)). A new job is added to the required checks
   (branch protection settings) when it merges. The repository
   deletes a branch once its pull request is merged; the issue closes
   itself through "Closes #N".
@@ -107,7 +108,7 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 
 To see which lines of the C code the tests never reach, build with
 coverage in a directory of its own and run `gcovr` (`apt install gcovr`)
-over it; the `coverage` CI job does the same on every push (see
+over it; the `coverage` CI job does the same on every pull request (see
 [doc/dev/ci.md](doc/dev/ci.md#coverage)):
 
 ```bash
@@ -124,10 +125,10 @@ for paths no test takes, then decide whether one should.
 |---|---|---|
 | `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C` |
 | | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, the comparison and its message, the tolerance, the probe vector, the corruption hook |
+| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, and the frequency governor and turbo with the advice they get |
+| | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
 | | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON |
-| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, and the frequency governor and turbo with the advice they get |
-| | `test_netlib_cblas` | (netlib only) the row-major → column-major shim against naive references |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
@@ -146,9 +147,13 @@ for paths no test takes, then decide whether one should.
 | | `test_man_html.sh` | the site built from the pages: every page there, every link leads to a file and an anchor of the site or to https, nothing loaded from elsewhere, every section in its page's table of contents, the pages linked to each other, every option of `--help` on its page, the outputs page showing this version's table, CSV and JSON (and the report's screenshots in a git checkout); `html.sh` fails without mandoc or without the benchmarks |
 | | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
 
-The two browser tests SKIP without a browser (see [Testing the
-page](doc/dev/report.md#testing-the-page)), and the man page tests without groff or
-`man`; every other test runs anywhere. The mandoc lint is left out, with a
+Some tests SKIP where what they need is missing: the two browser tests
+without a browser (see [Testing the
+page](doc/dev/report.md#testing-the-page)), the man page tests without
+groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
+and `test_doc_links.sh` outside a git checkout, `test_actions_pinned.sh`
+without `.github/`; `test_netlib_cblas` is only built for Netlib. Every
+other test runs anywhere. The mandoc lint is left out, with a
 note in the log, where mandoc is not installed. `BMB_MAN_STRICT=1` turns
 each of those into a failure — the `man` CI job sets it.
 
@@ -173,7 +178,10 @@ Three rules the existing tests follow, and new ones should too:
 src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
                  # (thread-count resolution), bmb_build (what this build is),
-                 # bmb_machine (what it runs on), bmb_log, bmb_timer
+                 # bmb_machine (what it runs on), bmb_verify (--verify's
+                 # references), bmb_log, bmb_timer; fixtures/machine/, the
+                 # fake /proc and /sys trees of test_bmb_machine
+src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
@@ -186,6 +194,9 @@ man/             # the man pages, blas-microbenchmark(1) and bmb_report(1),
 doc/             # the README's chart images, and screenshots.sh, which
                  # makes them
 doc/dev/         # the rest of this guide, one file per part (see above)
+.github/         # the workflows (ci, codeql, pages, release), the scripts
+                 # CI runs (cppcheck.sh, verify-sweep.sh), the issue and
+                 # pull request templates, Dependabot's settings
 ```
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
@@ -220,7 +231,7 @@ The cost is that no benchmark lands in `$PATH`; README.md gives the two
 lines that put the three directories there. The one exception is
 `bmb_report`, a single user-facing command, which goes to `$(bindir)` — and
 so follows `--prefix`, `--bindir` and `DESTDIR` like anything else Automake
-installs. CI checks that on every push (the `openblas` job's "Install
+installs. CI checks that on every pull request (the `openblas` job's "Install
 layout" step: nothing may land outside the prefix), and the release
 workflow checks it again from the tarball.
 

@@ -3,8 +3,8 @@
 What each CI job is for. Start at [AGENTS.md](../../AGENTS.md).
 
 `ci.yml` gives its jobs a read-only token (`permissions: contents:
-read`); only `pages.yml` and `release.yml` ask for more, for what they
-publish. Every action is pinned to a full commit SHA, with its version
+read`); only `pages.yml`, `release.yml` and `codeql.yml` ask for more:
+the first two for what they publish, CodeQL to upload its results. Every action is pinned to a full commit SHA, with its version
 in a comment (`actions/checkout@3d3c42e… # v7.0.1`): a tag can be moved to
 other code, a commit cannot. `test_actions_pinned.sh` refuses anything
 else. Dependabot (`.github/dependabot.yml`) proposes updates of the
@@ -17,7 +17,8 @@ new job goes into the required checks (the branch protection settings)
 when it merges, or it can fail without stopping anything.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
-`configure --enable-werror`, `make`, and `make check` on every push/PR,
+`configure --enable-werror`, `make`, and `make check` on every pull
+request and push to `main`,
 once per implemented backend: `openblas`, `blis` and `netlib` on
 `ubuntu-latest`, `nvpl` and `armpl` on `ubuntu-24.04-arm` (GitHub's free
 Linux arm64 hosted runner for public repos — both those backends are
@@ -49,8 +50,9 @@ it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
-Every job that builds the benchmarks also runs `.github/verify-sweep.sh`
-("Verified at real sizes"): all 20, checked at sizes a user measures — a
+The six jobs that test a library (`openblas`, `blis`, `netlib`, `nvpl`,
+`armpl`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
+real sizes"): all 20, checked at sizes a user measures — a
 few MB per operand — with non-square shapes and 1, 2 and 4 threads, on
 that job's library. `make check` runs `--verify` on tiny sizes only, and
 a tolerance too tight for a real size, or a library that is only wrong
@@ -93,10 +95,11 @@ test takes:
   `pip install cppcheck`).
 - CodeQL (`codeql.yml`, its own workflow) builds the code and runs
   GitHub's security and quality queries, which follow data across
-  functions. It runs on every push and pull request, and weekly, since
-  the queries change on their own. Its findings go to the Security tab
-  (code scanning), not to the job's status: each is fixed, or dismissed
-  there with a reason.
+  functions. It runs on every pull request and push to `main`, and
+  weekly, since the queries change on their own. Its findings go to the
+  Security tab (code scanning), where each is fixed, or dismissed with a
+  reason; a pull request's `CodeQL` check fails on a new one in its
+  diff, and the run on `main` fails while any is open (below).
 
   **A pull request's analysis only reports on the lines it changes**
   (its `CodeQL` check fails on a new alert there); the full picture is

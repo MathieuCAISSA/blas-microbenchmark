@@ -2,9 +2,12 @@
  *
  * Every field it fills is best effort by design: a container without sysfs
  * cache information, or an aarch64 kernel without a "model name" line, is a
- * legitimate "unknown", not a failure. So this checks only what any Linux
- * box guarantees (uname, sysconf, the clock), and that whatever *was*
- * recorded is sane -- a cache of size 0 or level 9 would be a parsing bug. */
+ * legitimate "unknown", not a failure. So on the real machine this checks
+ * only what any Linux box guarantees (uname, sysconf, the clock), and that
+ * whatever *was* recorded is sane -- a cache of size 0 or level 9 would be
+ * a parsing bug. Exact values are checked on fake /proc and /sys trees
+ * (fixtures/machine/): the CPU string, NUMA nodes, caches, the frequency
+ * governor and turbo, and the advice they get. */
 
 #include <stdio.h>
 #include <stdlib.h>

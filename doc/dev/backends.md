@@ -34,7 +34,9 @@ governor and turbo, `uname`, and the date. Three rules there:
 - **Every field is best effort and omitted when unreadable** — never
   guessed, never written empty. A container without sysfs cache entries is
   a legitimate "unknown", which is why `test_bmb_machine` checks only what
-  every Linux box guarantees plus the sanity of whatever was recorded.
+  every Linux box guarantees plus the sanity of whatever was recorded on
+  the real machine, and exact values on the fake trees in
+  `src/c/common/fixtures/machine/`.
 - **On aarch64 there is no `model name`** in `/proc/cpuinfo`, only
   implementer and part codes, so the probe records them raw:
   `implementer 0x41, part 0xd49` on GitHub's arm64 runners (an ARM

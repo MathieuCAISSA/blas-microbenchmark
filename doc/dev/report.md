@@ -114,7 +114,7 @@ then Firefox if geckodriver is there too; with none, the tests SKIP.
 
 | Browser | CI | Locally |
 |---|---|---|
-| Chrome | the x86 jobs (`openblas`, `blis`, `netlib`, `sanitizers`) | found on its own |
+| Chrome | the x86 jobs (`openblas`, `blis`, `netlib`, `sanitizers`, `coverage`) | found on its own |
 | Firefox | `browsers` job | `BMB_BROWSER=firefox make check` |
 | Edge | `browsers` job | `BMB_BROWSER=microsoft-edge make check` |
 
