@@ -13,9 +13,9 @@ set -e
 build=${1:?usage: $0 BUILD_DIR}
 test -f "$build/config.h" || { echo "no $build/config.h: run configure first" >&2; exit 1; }
 
-# variableScope: the code declares a function's variables at the top of
-# it, on purpose; moving each into the narrowest block is a style, not a
-# defect.
+# variableScope: moving each variable into its innermost block is a style
+# this code does not follow (most are declared at the top of their
+# function); it is not a defect.
 # missingIncludeSystem: cppcheck is not given the system headers; it knows
 # the C and POSIX functions from its own library files instead.
 exec cppcheck \

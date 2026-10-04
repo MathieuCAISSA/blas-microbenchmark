@@ -79,8 +79,9 @@ test takes:
 - The `cppcheck` job runs `.github/cppcheck.sh`, which fails on any
   finding. A wrong finding is suppressed on the line above it with
   `/* cppcheck-suppress <id> */` and a comment saying why;
-  `variableScope` (the code declares variables at the top of a function,
-  on purpose) and `missingIncludeSystem` are off everywhere, with the
+  `variableScope` (narrowing each variable to its innermost block is a
+  style this code does not follow, not a defect) and
+  `missingIncludeSystem` are off everywhere, with the
   reason in the script. Its first run found pointer arithmetic on a
   `malloc` result before the NULL check in every `verify()`, undefined
   behaviour on the out-of-memory path, and bare `NULL` as the sentinel of
