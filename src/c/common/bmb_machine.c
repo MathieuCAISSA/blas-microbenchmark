@@ -172,9 +172,9 @@ static void bmb_probe_caches(bmb_machine_t *m, const char *root)
     }
 }
 
-static int bmb_compare_strings(const void *a, const void *b)
+static int bmb_compare_names(const void *a, const void *b)
 {
-    return strcmp(*(const char *const *) a, *(const char *const *) b);
+    return strcmp((const char *) a, (const char *) b);
 }
 
 /* The governor of every CPU that has one (an offline CPU has none). They
@@ -184,7 +184,6 @@ static void bmb_probe_governor(bmb_machine_t *m, const char *root)
 {
     char path[512];
     char seen[16][32];
-    const char *sorted[16];
     int count = 0;
     DIR *dir;
     const struct dirent *entry;
@@ -218,13 +217,10 @@ static void bmb_probe_governor(bmb_machine_t *m, const char *root)
     }
     closedir(dir);
 
-    for (i = 0; i < count; i++) {
-        sorted[i] = seen[i];
-    }
-    qsort(sorted, (size_t) count, sizeof(sorted[0]), bmb_compare_strings);
+    qsort(seen, (size_t) count, sizeof(seen[0]), bmb_compare_names);
     for (i = 0; i < count; i++) {
         int n = snprintf(m->governor + used, sizeof(m->governor) - used, "%s%s",
-                         (i == 0) ? "" : "/", sorted[i]);
+                         (i == 0) ? "" : "/", seen[i]);
 
         if (n < 0 || (size_t) n >= sizeof(m->governor) - used) {
             break;
