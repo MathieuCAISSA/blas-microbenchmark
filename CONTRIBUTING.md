@@ -11,10 +11,10 @@ For a bug or a number that looks wrong, include what
 `bmb_<routine> --version` prints: it names the version, the BLAS library
 and the machine, which is most of what is needed to reproduce a result.
 
-A security problem goes through [SECURITY.md](SECURITY.md) instead, not a
+A security problem goes through [SECURITY.md](.github/SECURITY.md) instead, not a
 public issue.
 
-Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md)
+Everyone taking part follows the [code of conduct](.github/CODE_OF_CONDUCT.md)
 (the Contributor Covenant 3.0). It says how to report a problem with
 someone's behaviour, publicly or not.
 
@@ -44,7 +44,7 @@ every required CI job passes (all but `coverage`). The details are in
 
 ## Before opening a pull request
 
-Go through [REVIEWS.md](REVIEWS.md): it is the grid every pull request is
+Go through [REVIEWS.md](.github/REVIEWS.md): it is the grid every pull request is
 reviewed against, and the review is posted on the pull request while CI
 runs. The essentials:
 

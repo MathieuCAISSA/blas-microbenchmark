@@ -66,14 +66,14 @@ git switch -c issue-<N>-<short-name> origin/main   # e.g. issue-3-cpu-frequency
 # ... commits, each one building and passing make check ...
 git push -u origin issue-<N>-<short-name>
 gh pr create --fill          # the body says "Closes #<N>"
-# while CI runs: review the diff against REVIEWS.md, post it on the PR
+# while CI runs: review the diff against .github/REVIEWS.md, post it on the PR
 gh pr checks --watch         # every required check must pass
 gh pr merge --merge          # a merge commit keeps the detailed commits
 ```
 
 - One issue, one branch: work that turns out to be two things becomes two
   issues.
-- Every pull request is reviewed against [REVIEWS.md](REVIEWS.md), and
+- Every pull request is reviewed against [REVIEWS.md](.github/REVIEWS.md), and
   only against it: each section *ok* or what is wrong, posted on the pull
   request (`gh pr comment`) while CI runs. Fix what it finds before
   merging. A bug a review should have caught adds an item to it.
@@ -137,7 +137,7 @@ for paths no test takes, then decide whether one should.
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws; a series run four times gets its band, the noise test and a raw row per run |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`), including the Mann-Whitney p-values against an independent count |
-| top | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
+| `tests` | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
 | | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
@@ -194,10 +194,20 @@ man/             # the man pages, blas-microbenchmark(1) and bmb_report(1),
 doc/             # the README's chart images, and screenshots.sh, which
                  # makes them
 doc/dev/         # the rest of this guide, one file per part (see above)
+tests/           # the project's own tests: the release files, the
+                 # editor settings, the documentation's links, the pins
 .github/         # the workflows (ci, codeql, pages, release), the scripts
                  # CI runs (cppcheck.sh, verify-sweep.sh), the issue and
-                 # pull request templates, Dependabot's settings
+                 # pull request templates, Dependabot's settings, and the
+                 # community files GitHub reads there: CODE_OF_CONDUCT.md,
+                 # SECURITY.md, and REVIEWS.md beside the PR template
 ```
+
+The top of the repository holds only what has to be there: the README,
+the LICENSE, CHANGELOG.md, CONTRIBUTING.md, this file (where coding
+agents look), CITATION.cff (where GitHub looks), the build files
+(`configure.ac`, `Makefile.am`, `autogen.sh`) and the dot files. A new
+file goes in one of the directories above.
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
 installed); each `level{1,2,3}` routine builds to its own installed

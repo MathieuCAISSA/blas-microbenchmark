@@ -18,14 +18,14 @@ it comes from in brackets.
 ## The change
 
 - [ ] It does what its issue asks, and nothing else; anything more is
-  another issue ([AGENTS.md](AGENTS.md#working-on-an-issue)).
+  another issue ([AGENTS.md](../AGENTS.md#working-on-an-issue)).
 - [ ] Each commit builds and passes `make check`, and its message says
   why, not only what.
 
 ## Code quality
 
 - [ ] No new warning under `-Wall -Wextra`; `_POSIX_C_SOURCE` first in a
-  file using POSIX functions ([code style](AGENTS.md#code-style)).
+  file using POSIX functions ([code style](../AGENTS.md#code-style)).
 - [ ] `common/` stays generic: shapes, alpha values and resets belong to
   the routine's file; no exported function without a caller.
 - [ ] Comments say why, not what.
@@ -34,14 +34,14 @@ it comes from in brackets.
   did it before, #12). A cppcheck finding is fixed, or suppressed where
   it is with the reason, and the author runs `.github/cppcheck.sh build`
   before pushing rather than leave it to CI (#3 did)
-  ([static analysis](doc/dev/ci.md#static-analysis)).
+  ([static analysis](../doc/dev/ci.md#static-analysis)).
 - [ ] Every error is checked and reported: a failed allocation, write or
   `fclose` makes the run fail, never pass short
-  ([limitations](doc/dev/benchmarks.md#known-measurement-limitations)).
+  ([limitations](../doc/dev/benchmarks.md#known-measurement-limitations)).
 - [ ] Shell: POSIX `sh`; every expansion quoted, unless word splitting
   is wanted and a comment or `# shellcheck disable=SC2086` says so; no
   pipe that hides a failure (write to a file, then check it)
-  ([the site](doc/dev/documentation.md#the-site)).
+  ([the site](../doc/dev/documentation.md#the-site)).
 - [ ] awk: a function that calls `match()` resets `RSTART` and
   `RLENGTH` for its caller; copy them before calling it (the link
   checker checked links twice, #16).
@@ -50,7 +50,7 @@ it comes from in brackets.
 
 - [ ] New behaviour has a test, and the test was seen to fail with the
   code it guards broken, by a mutation that still compiles
-  ([tests](AGENTS.md#tests)).
+  ([tests](../AGENTS.md#tests)).
 - [ ] Tiny sizes only; nothing allocates more than a few MB.
 - [ ] Current formats are generated, not kept as fixtures.
 - [ ] A test that SKIPs where its tool is missing is required to pass
@@ -58,7 +58,7 @@ it comes from in brackets.
 - [ ] A check reads what it checks: a tool's real output, not its exit
   status alone (`gh attestation verify` prints nothing outside a
   terminal, #13), and only the part of a page that was rendered
-  ([testing the page](doc/dev/report.md#testing-the-page)).
+  ([testing the page](../doc/dev/report.md#testing-the-page)).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
 
@@ -68,20 +68,20 @@ it comes from in brackets.
   is parsed strictly: digits only, within bounds. `strtoul` takes `-2`
   and wraps it (4294967294 threads, #24).
 - [ ] Sizes cannot wrap `size_t` or the `int` BLAS takes
-  ([test_bmb_size_limits.sh](AGENTS.md#tests)).
+  ([test_bmb_size_limits.sh](../AGENTS.md#tests)).
 - [ ] Anything from a result file reaches the report's DOM through
   `textContent`, never `innerHTML`; the page loads nothing from
-  elsewhere ([the page](doc/dev/report.md#the-page)).
+  elsewhere ([the page](../doc/dev/report.md#the-page)).
 - [ ] An environment variable that reaches a file path has, next to its
   `getenv`, the reason it is safe (CodeQL flags it as path injection;
   `BMB_MACHINE_ROOT`, #3).
 - [ ] After the merge, the CodeQL run on `main` is green: it fails while
   an alert is open there, which a pull request's analysis, covering only
   its diff, does not show (#12 showed none while `main` had four;
-  [static analysis](doc/dev/ci.md#static-analysis)).
+  [static analysis](../doc/dev/ci.md#static-analysis)).
 - [ ] A new action is pinned to a commit SHA with its version; a
   workflow asks only for the permissions it needs
-  ([CI](doc/dev/ci.md)).
+  ([CI](../doc/dev/ci.md)).
 - [ ] Nothing personal in what is published: no hostname, no email.
 
 ## Validity of the measurements
@@ -90,23 +90,23 @@ What makes a benchmark wrong without making it fail.
 
 - [ ] `call()` makes the one BLAS call and nothing else; copies and
   resets happen in `reset()`, outside the timed window
-  ([adding a routine](doc/dev/benchmarks.md#adding-a-new-blas-routine-benchmark)).
+  ([adding a routine](../doc/dev/benchmarks.md#adding-a-new-blas-routine-benchmark)).
 - [ ] An operand that drifts over calls (to infinity, to denormals) is
   reset often enough, and `reset_every_call` is set only when needed.
 - [ ] Rates use the conventional BLAS counts; level 3 declares no GB/s
-  ([which rate](doc/dev/benchmarks.md#which-rate-a-routine-declares)).
+  ([which rate](../doc/dev/benchmarks.md#which-rate-a-routine-declares)).
 - [ ] `verify()` calls `bmb_verify_perturb()`, and its tolerance was not
   widened to make a failure go away
-  ([checking results](doc/dev/benchmarks.md#checking-results---verify)).
+  ([checking results](../doc/dev/benchmarks.md#checking-results---verify)).
 - [ ] A number shown to the user is the one that was used: thread count,
   sizes, backend, the CPU string (whose form never changes)
-  ([backends](doc/dev/backends.md)).
+  ([backends](../doc/dev/backends.md)).
 
 ## Documentation
 
 - [ ] A new option, output field, environment variable or exit status is
   in the man page, with the same default as `--help`
-  ([documentation](doc/dev/documentation.md)).
+  ([documentation](../doc/dev/documentation.md)).
 - [ ] The README stays short; the reference is the man page.
 - [ ] `CHANGELOG.md` has an entry under `[Unreleased]` if a user would
   notice the change.
