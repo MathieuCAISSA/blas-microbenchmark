@@ -44,6 +44,10 @@ every CI job passes. The details are in
 
 ## Before opening a pull request
 
+Go through [REVIEWS.md](REVIEWS.md): it is the grid every pull request is
+reviewed against, and the review is posted on the pull request while CI
+runs. The essentials:
+
 - `make check` passes. It holds every file to
   [.editorconfig](.editorconfig), which most editors follow, natively or
   with a plugin. `make distcheck` too if you touched `configure.ac`, a

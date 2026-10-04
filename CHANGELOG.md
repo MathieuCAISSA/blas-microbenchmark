@@ -10,6 +10,7 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `REVIEWS.md`, the checklist every pull request is reviewed against.
 - A code of conduct, the Contributor Covenant 3.0
   (`CODE_OF_CONDUCT.md`); reports go through GitHub.
 - Release tarballs carry a signed attestation of where they were built:
