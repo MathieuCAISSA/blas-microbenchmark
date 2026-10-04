@@ -72,6 +72,12 @@ it comes from in brackets.
 - [ ] Anything from a result file reaches the report's DOM through
   `textContent`, never `innerHTML`; the page loads nothing from
   elsewhere ([the page](doc/dev/report.md#the-page)).
+- [ ] An environment variable that reaches a file path has, next to its
+  `getenv`, the reason it is safe (CodeQL flags it as path injection;
+  `BMB_MACHINE_ROOT`, #3).
+- [ ] After the merge, no CodeQL alert is open on `main`: a pull
+  request's analysis only covers its diff (#12 showed none while `main`
+  had four; [static analysis](doc/dev/ci.md#static-analysis)).
 - [ ] A new action is pinned to a commit SHA with its version; a
   workflow asks only for the permissions it needs
   ([CI](doc/dev/ci.md)).
