@@ -288,6 +288,11 @@ const bmb_machine_t *bmb_machine(void)
     static int probed = 0;
 
     if (!probed) {
+        /* A test hook (doc/dev/backends.md). CodeQL reads it as path
+         * injection; it only lets the user who runs the benchmark make it
+         * read, not write, files that user can read already, with no
+         * setuid or other boundary crossed, and the alerts are dismissed
+         * as used in tests. */
         const char *root = getenv("BMB_MACHINE_ROOT");
 
         bmb_machine_probe_at((root != NULL) ? root : "", &machine);
