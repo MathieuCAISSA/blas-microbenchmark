@@ -70,7 +70,9 @@ jobs:
           test -f $P/share/man/man1/blas-microbenchmark.1
           test -f $P/share/man/man1/bmb_report.1
           grep -qx '.so man1/blas-microbenchmark.1' $P/share/man/man1/bmb_dgemm.1
-          grep -q 'opt/bmb\\-test/libexec' $P/share/man/man1/blas-microbenchmark.1
+          # The page gives the install path, as the reader sees it.
+          MANPAGER=cat MANWIDTH=200 man -l $P/share/man/man1/blas-microbenchmark.1 \
+            | grep -qF /opt/bmb-test/libexec/blas-microbenchmark/level1
           $P/libexec/blas-microbenchmark/level3/bmb_dgemm -x 0 -i 1 -m 16 -o r.json >/dev/null
           $P/bin/bmb_report r.json > r.html
           grep -qi '^<!doctype html>' r.html
