@@ -1,7 +1,9 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* dim1 = M, dim2 = N. A (M x N) is updated in place: A += alpha * x * y^T. */
 typedef struct {
@@ -87,6 +89,39 @@ static double bytes(size_t dim1, size_t dim2)
     return 8.0 * (2.0 * d1 * d2 + d1 + d2);
 }
 
+/* --verify, by random projection: A*r against A0*r + alpha*x*(y.r). */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t m = (size_t) ctx->m, n = (size_t) ctx->n, i, j;
+    double *r = malloc((n + 6 * m) * sizeof(double));
+    double *p0 = r + n, *p0abs = p0 + m, *p = p0 + 2 * m, *pabs = p0 + 3 * m;
+    double *want = p0 + 4 * m, *scale = p0 + 5 * m;
+    double s1 = 0.0, s1abs = 0.0;
+    int ok;
+
+    if (r == NULL) {
+        return -1;
+    }
+    (void) j;
+    bmb_verify_probe(r, n);
+    for (j = 0; j < n; j++) {
+        s1 += ctx->y[j] * r[j];
+        s1abs += fabs(ctx->y[j] * r[j]);
+    }
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p0, p0abs);
+    call(ctx);
+    bmb_verify_perturb(&ctx->a[0]);
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p, pabs);
+    for (i = 0; i < m; i++) {
+        want[i] = p0[i] + ctx->alpha * ctx->x[i] * s1;
+        scale[i] = pabs[i] + p0abs[i] + fabs(ctx->alpha * ctx->x[i]) * s1abs;
+    }
+    ok = bmb_verify_close("A*r, for a random vector r", p, want, scale, m, bmb_verify_tolerance(n), msg, size);
+    free(r);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -98,6 +133,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

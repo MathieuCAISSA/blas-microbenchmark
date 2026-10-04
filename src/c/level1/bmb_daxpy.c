@@ -1,7 +1,10 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 typedef struct {
     int n;
@@ -78,6 +81,30 @@ static double bytes(size_t dim1, size_t dim2)
     return 24.0 * d1;
 }
 
+/* --verify: y0 + alpha * x, element by element. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t n = (size_t) ctx->n, i;
+    double *y0 = malloc(3 * n * sizeof(double));
+    double *want = y0 + n, *scale = y0 + 2 * n;
+    int ok;
+
+    if (y0 == NULL) {
+        return -1;
+    }
+    memcpy(y0, ctx->y, n * sizeof(double));
+    call(ctx);
+    bmb_verify_perturb(&ctx->y[0]);
+    for (i = 0; i < n; i++) {
+        want[i] = y0[i] + ctx->alpha * ctx->x[i];
+        scale[i] = fabs(y0[i]) + fabs(ctx->alpha * ctx->x[i]);
+    }
+    ok = bmb_verify_close("y", ctx->y, want, scale, n, bmb_verify_tolerance(1), msg, size);
+    free(y0);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -89,6 +116,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

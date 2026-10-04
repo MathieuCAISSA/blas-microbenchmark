@@ -87,7 +87,7 @@ development_body() {
 
     heading 2 tests-benchmarks "The benchmarks"
     echo '<dl class="Bl-tag">'
-    for f in "$top"/src/c/common/test_*.c "$top"/src/c/netlib/test_*.c; do
+    for f in "$top"/src/c/common/test_*.c "$top"/src/c/netlib/test_*.c "$top"/src/c/test_*.sh; do
         [ -f "$f" ] && test_entry "$f"
     done
     smoke=0

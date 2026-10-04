@@ -67,7 +67,8 @@ There are 20 benchmarks, `bmb_<routine>`, covering levels 1 to 3:
 `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap`, `dgemv` `dger`
 `dsymv` `dsyr` `dsyr2` `dtrmv` `dtrsv`, `dgemm` `dsymm` `dsyrk` `dsyr2k`
 `dtrmm` `dtrsm`. They all take the same options: sizes to sweep
-(`-v`, `-m`, `-M`), thread counts (`-t`), a file to save to (`-o`).
+(`-v`, `-m`, `-M`), thread counts (`-t`), a file to save to (`-o`), and
+`-c` to check that the library computes the right result before timing it.
 `bmb_dgemm --help` lists them, and
 **`man blas-microbenchmark`** explains everything: sweeps, how a number is
 measured, threads and NUMA, the output formats.

@@ -123,6 +123,44 @@ static unsigned int bmb_choose_batch(const bmb_benchmark_t *bench, void *ctx)
     return bmb_batch_from(bmb_time_batch(bench, ctx, batch));
 }
 
+/* --verify, for one point: one call on the operands about to be timed,
+ * checked against a reference. 0 when the result is right, -2 when it is
+ * wrong, -1 when it could not be checked. */
+static int bmb_verify_point(const bmb_benchmark_t *bench, void *ctx,
+                            unsigned int thread_count, size_t dim1, size_t dim2)
+{
+    char what[512];
+    char where[256];
+    char msg[1024];
+    int v;
+
+    if (bench->dim2_label != NULL) {
+        snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %u thread%s", bench->routine_name,
+                 bench->dim1_label, dim1, bench->dim2_label, dim2,
+                 thread_count, thread_count == 1 ? "" : "s");
+    } else {
+        snprintf(where, sizeof(where), "%s, %s %zu, %u thread%s", bench->routine_name,
+                 bench->dim1_label, dim1, thread_count, thread_count == 1 ? "" : "s");
+    }
+
+    if (bench->reset != NULL) {
+        bench->reset(ctx);
+    }
+    what[0] = '\0';
+    v = bench->verify(ctx, what, sizeof(what));
+    if (v < 0) {
+        snprintf(msg, sizeof(msg), "%s: the result could not be checked (out of memory).", where);
+        bmb_log_error(msg);
+        return -1;
+    }
+    if (v > 0) {
+        snprintf(msg, sizeof(msg), "Wrong result: %s: %s. Nothing measured from here on.", where, what);
+        bmb_log_error(msg);
+        return -2;
+    }
+    return 0;
+}
+
 static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                         unsigned int thread_count, size_t dim1, size_t dim2,
                         bmb_result_row_t *row)
@@ -131,6 +169,7 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     double *times;
     unsigned int batch;
     unsigned int i;
+    int v;
 
     bmb_threads_set(thread_count);
 
@@ -138,6 +177,16 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     if (ctx == NULL) {
         bmb_log_error("Benchmark setup failed (out of memory?); skipping this data point.");
         return -1;
+    }
+
+    /* Checked on the very operands that are timed next, at this size and
+     * thread count: a library can be right at one and wrong at another. */
+    if (opts->verify) {
+        v = bmb_verify_point(bench, ctx, thread_count, dim1, dim2);
+        if (v != 0) {
+            bench->teardown(ctx);
+            return v;
+        }
     }
 
     for (i = 0; i < opts->warmup; i++) {
@@ -195,9 +244,11 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                        bmb_result_set_t *rs)
 {
     bmb_result_row_t row;
+    int r;
 
-    if (bmb_run_one(bench, opts, thread_count, dim1, dim2, &row) != 0) {
-        return -1;
+    r = bmb_run_one(bench, opts, thread_count, dim1, dim2, &row);
+    if (r != 0) {
+        return r;
     }
 
     bmb_print_txt_row(stdout, rs, &row);
@@ -223,28 +274,36 @@ static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opt
     for (i1 = 0; i1 < range1->count; i1++) {
         size_t d1 = range1->values[i1];
 
+        int r = 0;
+
         if (bench->dim2_label != NULL && !opts->matrix_dim2_set) {
             /* No -M: square matrices, dim2 following dim1 point by point.
              * Taking -M's *range* from -m instead, as this once did, made
              * `-m 512:2048` measure all nine M x N combinations where three
              * were asked for -- N^2 runs for N sizes, most of them shapes
              * nobody requested, while --help promised square matrices. */
-            if (bmb_record(bench, opts, thread_count, d1, d1, rs) != 0) {
-                status = -1;
-            }
+            r = bmb_record(bench, opts, thread_count, d1, d1, rs);
         } else if (bench->dim2_label != NULL) {
             size_t i2;
 
             /* -M given: every combination, the grid a heatmap needs. */
-            for (i2 = 0; i2 < range2->count; i2++) {
-                if (bmb_record(bench, opts, thread_count, d1, range2->values[i2], rs) != 0) {
-                    status = -1;
+            for (i2 = 0; i2 < range2->count && r != -2; i2++) {
+                int r2 = bmb_record(bench, opts, thread_count, d1, range2->values[i2], rs);
+
+                if (r2 != 0) {
+                    r = r2;
                 }
             }
         } else {
-            if (bmb_record(bench, opts, thread_count, d1, 0, rs) != 0) {
-                status = -1;
-            }
+            r = bmb_record(bench, opts, thread_count, d1, 0, rs);
+        }
+        /* A wrong result ends the run: numbers for a library that computes
+         * the wrong thing are not worth having. */
+        if (r == -2) {
+            return -2;
+        }
+        if (r != 0) {
+            status = -1;
         }
     }
 
@@ -303,21 +362,34 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
+    if (opts.verify && bench->verify == NULL) {
+        bmb_log_error("--verify: this benchmark has no check of its result.");
+        bmb_options_free(&opts);
+        return EXIT_FAILURE;
+    }
 
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
     rs.label = opts.label;
+    rs.verified = opts.verify;
     bmb_print_txt_begin(stdout, &rs);
 
     for (ti = 0; ti < opts.thread_count.count; ti++) {
         unsigned int thread_count = (unsigned int) opts.thread_count.values[ti];
+        int r = bmb_sweep_dim1(bench, &opts, thread_count, &rs);
 
-        if (bmb_sweep_dim1(bench, &opts, thread_count, &rs) != 0) {
+        if (r == -2) {
+            status = BMB_EXIT_WRONG_RESULT;
+            break;
+        }
+        if (r != 0) {
             status = EXIT_FAILURE;
         }
     }
 
-    if (bmb_print_save(&rs, &opts) != 0) {
+    /* After a wrong result, no file: it would be read as a complete set
+     * of verified results. */
+    if (status != BMB_EXIT_WRONG_RESULT && bmb_print_save(&rs, &opts) != 0) {
         status = EXIT_FAILURE;
     }
     if (bmb_print_check_stream(stdout, "the results to stdout") != 0) {

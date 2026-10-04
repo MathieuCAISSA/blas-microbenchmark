@@ -24,6 +24,9 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
     }
+    if (rs->verified) {
+        fprintf(out, "# verified: every point, against a reference, before it was timed\n");
+    }
 
     bmb_machine_describe_cpu(m, line, sizeof(line));
     if (line[0] != '\0') {
@@ -243,6 +246,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "  \"label\": ");
         bmb_print_json_string(out, rs->label);
         fprintf(out, ",\n");
+    }
+    if (rs->verified) {
+        fprintf(out, "  \"verified\": true,\n");
     }
     bmb_print_json_machine(out, bmb_machine());
     fprintf(out, "  \"routine\": \"%s\",\n", rs->routine_name);

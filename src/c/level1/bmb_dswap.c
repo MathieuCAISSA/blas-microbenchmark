@@ -1,7 +1,9 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 typedef struct {
     int n;
@@ -65,6 +67,28 @@ static double bytes(size_t dim1, size_t dim2)
     return 32.0 * d1;
 }
 
+/* --verify: x and y are now exactly each other's. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t n = (size_t) ctx->n;
+    double *x0 = malloc(2 * n * sizeof(double));
+    double *y0 = x0 + n;
+    int ok;
+
+    if (x0 == NULL) {
+        return -1;
+    }
+    memcpy(x0, ctx->x, n * sizeof(double));
+    memcpy(y0, ctx->y, n * sizeof(double));
+    call(ctx);
+    bmb_verify_perturb(&ctx->x[0]);
+    ok = bmb_verify_close("x", ctx->x, y0, NULL, n, 0.0, msg, size)
+         && bmb_verify_close("y", ctx->y, x0, NULL, n, 0.0, msg, size);
+    free(x0);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -76,6 +100,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.bytes = bytes;
 
     return bmb_benchmark_main(argc, argv, &bench);

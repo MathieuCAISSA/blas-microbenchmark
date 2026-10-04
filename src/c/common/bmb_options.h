@@ -46,6 +46,7 @@ typedef struct {
     int thread_count_set;     /* whether -t/--thread-count was given */
 
     int statistics;           /* -s, --statistics */
+    int verify;               /* -c, --verify */
 
     char *label;              /* -l, --label; NULL when not given */
 

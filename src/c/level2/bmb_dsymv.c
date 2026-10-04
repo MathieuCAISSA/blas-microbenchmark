@@ -1,7 +1,10 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <math.h>
+#include <string.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* Square routine: only dim1 (= N) is used, swept via --matrix-dim1. */
 typedef struct {
@@ -88,6 +91,31 @@ static double bytes(size_t dim1, size_t dim2)
     return 8.0 * (d1 * (d1 + 1.0) / 2.0 + 3.0 * d1);
 }
 
+/* --verify: alpha * A * x + beta * y0, recomputed. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i;
+    double *y0 = malloc(5 * m * sizeof(double));
+    double *t = y0 + m, *tabs = y0 + 2 * m, *want = y0 + 3 * m, *scale = y0 + 4 * m;
+    int ok;
+
+    if (y0 == NULL) {
+        return -1;
+    }
+    memcpy(y0, ctx->y, m * sizeof(double));
+    call(ctx);
+    bmb_verify_perturb(&ctx->y[0]);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, m, n, ctx->a, n, ctx->x, NULL, t, tabs);
+    for (i = 0; i < m; i++) {
+        want[i] = ctx->alpha * t[i] + ctx->beta * y0[i];
+        scale[i] = fabs(ctx->alpha) * tabs[i] + fabs(ctx->beta * y0[i]);
+    }
+    ok = bmb_verify_close("y", ctx->y, want, scale, m, bmb_verify_tolerance(n), msg, size);
+    free(y0);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -99,6 +127,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

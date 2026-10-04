@@ -12,7 +12,8 @@ libbmbcommon_a_SOURCES = \
 	bmb_result.c bmb_result.h \
 	bmb_print.c bmb_print.h \
 	bmb_threads.c bmb_threads.h \
-	bmb_bench.c bmb_bench.h
+	bmb_bench.c bmb_bench.h \
+	bmb_verify.c bmb_verify.h
 
 # The option layer decides which sizes get measured and rejects the ones
 # that cannot be, so its mistakes are silent: a sweep that drops its
@@ -21,6 +22,13 @@ libbmbcommon_a_SOURCES = \
 check_PROGRAMS = test_bmb_options test_bmb_machine
 test_bmb_options_SOURCES = test_bmb_options.c
 test_bmb_options_LDADD = libbmbcommon.a
+
+# The arithmetic every --verify check rests on: the reference products,
+# the comparison, the tolerance. Each benchmark's own check is tested end
+# to end by ../test_bmb_verify.sh.
+check_PROGRAMS += test_bmb_verify
+test_bmb_verify_SOURCES = test_bmb_verify.c
+test_bmb_verify_LDADD = libbmbcommon.a -lm
 
 # The machine probe reads procfs and sysfs, whose contents vary by kernel,
 # architecture and container, so it is checked on every CI runner.

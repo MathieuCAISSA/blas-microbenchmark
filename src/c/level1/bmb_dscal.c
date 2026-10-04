@@ -1,8 +1,10 @@
 #include <cblas.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* X is scaled in place, so it shrinks by alpha at every call: over a long
  * --iterations run it would reach denormals and slow the routine down
@@ -90,6 +92,30 @@ static double bytes(size_t dim1, size_t dim2)
     return 16.0 * d1;
 }
 
+/* --verify: alpha times the template, element by element. The driver has
+ * just restored x from it. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t n = (size_t) ctx->n, i;
+    double *want = malloc(2 * n * sizeof(double));
+    double *scale = want + n;
+    int ok;
+
+    if (want == NULL) {
+        return -1;
+    }
+    call(ctx);
+    bmb_verify_perturb(&ctx->x[0]);
+    for (i = 0; i < n; i++) {
+        want[i] = ctx->alpha * ctx->x0[i];
+        scale[i] = fabs(want[i]);
+    }
+    ok = bmb_verify_close("x", ctx->x, want, scale, n, bmb_verify_tolerance(1), msg, size);
+    free(want);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -102,6 +128,7 @@ int main(int argc, char *argv[])
     bench.call = call;
     bench.reset = reset;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

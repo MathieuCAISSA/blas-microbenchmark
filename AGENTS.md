@@ -56,6 +56,8 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | Where | Test | What it pins down |
 |---|---|---|
 | `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label` |
+| | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, the comparison and its message, the tolerance, the probe vector, the corruption hook |
+| `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, and each one's check catches a corrupted result: exit 2, a message, no results file |
 | | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form |
 | | `test_netlib_cblas` | (netlib only) the row-major → column-major shim against naive references |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
@@ -172,7 +174,10 @@ buffer, `src/c/level3/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
    and the minimum memory traffic of one call, for the `GFLOP/s` and `GB/s`
    columns. See below for which of the two a routine should declare.
 6. `teardown(void *ctx)`: free everything.
-7. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
+7. `verify(void *ctx, char *msg, size_t size)`: for `--verify`, make one
+   call and check its result against a reference — see [Checking
+   results](#checking-results---verify).
+8. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
    whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, and the
    function pointers above) and call `bmb_benchmark_main(argc, argv, &bench)`.
 
@@ -269,6 +274,38 @@ routine header, a timing column, the expected number of data rows, and
 every field on those rows a positive number with exactly one nine-decimal
 timing column. Exit status alone would accept a benchmark that printed
 nothing, or one whose timings had collapsed to zero.
+
+### Checking results (`--verify`)
+
+`-c`/`--verify` checks each point before timing it: the driver resets the
+operands, calls the routine's `verify()`, and stops the run with exit
+status 2 (`BMB_EXIT_WRONG_RESULT`) and no `-o` file if it reports a wrong
+result. `verify()` makes one call on the very operands about to be timed
+— same size, same thread count, same parameters — and compares the
+result with a reference from `bmb_verify.h`:
+
+- levels 1 and 2 are recomputed directly, about one call's work;
+- level 3 is checked by random projection (Freivalds): `C*r` against
+  `A*(B*r)` for a probe vector `r`, O(N^2) instead of O(N^3); `dtrsm` and
+  `dtrsv` by their residual; `dger`, `dsyr`, `dsyr2` by projecting the
+  whole matrix, which also covers the triangle they must not touch;
+  `dsyrk`/`dsyr2k` project their untouched strictly lower part before and
+  after the call, and require it identical to the bit.
+
+Every reference comes with the size of its terms (`|A||x|` for `A*x`), and
+the tolerance is a rounding-error bound relative to that:
+`bmb_verify_tolerance(terms)` is 2.3e-10 for a 65536-wide product. Do not
+widen it to make a failure go away: a check that fails on a correct
+library is a wrong reference, to be fixed.
+
+**`BMB_VERIFY_CORRUPT=1`** makes every `verify()` alter one element of the
+library's result by a relative 1e-6 (`bmb_verify_perturb()`) before
+comparing. It exists so that `src/c/test_bmb_verify.sh` can prove each of
+the 20 checks fails when it should. A new routine's `verify()` must call
+`bmb_verify_perturb()` on its result, or that test fails for it. Beyond
+the hook, each check was also seen to catch a real wrong computation — a
+transposed `dgemm`, a `dsyrk` or `dsyr2` on the wrong triangle, a `dtrsv`
+solving with the transpose.
 
 ## Backends
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 typedef struct {
     int n;
@@ -65,6 +66,16 @@ static double bytes(size_t dim1, size_t dim2)
     return 16.0 * d1;
 }
 
+/* --verify: y is now exactly x. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+
+    call(ctx);
+    bmb_verify_perturb(&ctx->y[0]);
+    return !bmb_verify_close("y", ctx->y, ctx->x, NULL, (size_t) ctx->n, 0.0, msg, size);
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -76,6 +87,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.bytes = bytes;
 
     return bmb_benchmark_main(argc, argv, &bench);

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
  * X is overwritten in place by cblas_dtrmv(); it is restored from x0
@@ -97,6 +98,27 @@ static double bytes(size_t dim1, size_t dim2)
     return 8.0 * (d1 * (d1 + 1.0) / 2.0 + 2.0 * d1);
 }
 
+/* --verify: U times the template, recomputed. The driver has just
+ * restored x from it. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t n = (size_t) ctx->n;
+    double *want = malloc(2 * n * sizeof(double));
+    double *scale = want + n;
+    int ok;
+
+    if (want == NULL) {
+        return -1;
+    }
+    call(ctx);
+    bmb_verify_perturb(&ctx->x[0]);
+    bmb_verify_matvec(BMB_VERIFY_UPPER, n, n, ctx->a, n, ctx->x0, NULL, want, scale);
+    ok = bmb_verify_close("x", ctx->x, want, scale, n, bmb_verify_tolerance(n), msg, size);
+    free(want);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -110,6 +132,7 @@ int main(int argc, char *argv[])
     bench.reset = reset;
     bench.reset_every_call = 1;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

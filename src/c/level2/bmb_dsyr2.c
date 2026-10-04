@@ -1,7 +1,9 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
  * A (N x N, upper triangle) is updated in place: A += alpha*(x*y^T + y*x^T). */
@@ -86,6 +88,42 @@ static double bytes(size_t dim1, size_t dim2)
     return 8.0 * (d1 * (d1 + 1.0) + 2.0 * d1);
 }
 
+/* --verify, by random projection: A*r against A0*r plus the update's
+ * upper triangle times r, the strictly lower part having to stay as it
+ * was -- which the projection of the whole matrix also checks. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i, j;
+    double *r = malloc((n + 6 * m) * sizeof(double));
+    double *p0 = r + n, *p0abs = p0 + m, *p = p0 + 2 * m, *pabs = p0 + 3 * m;
+    double *want = p0 + 4 * m, *scale = p0 + 5 * m;
+    double s1 = 0.0, s1abs = 0.0, s2 = 0.0, s2abs = 0.0;
+    int ok;
+
+    if (r == NULL) {
+        return -1;
+    }
+    (void) j;
+    bmb_verify_probe(r, n);
+
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p0, p0abs);
+    call(ctx);
+    bmb_verify_perturb(&ctx->a[0]);
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p, pabs);
+    for (i = m; i-- > 0;) {
+        s1 += ctx->y[i] * r[i];
+        s1abs += fabs(ctx->y[i] * r[i]);
+        s2 += ctx->x[i] * r[i];
+        s2abs += fabs(ctx->x[i] * r[i]);
+        want[i] = p0[i] + ctx->alpha * (ctx->x[i] * s1 + ctx->y[i] * s2);
+        scale[i] = pabs[i] + p0abs[i] + fabs(ctx->alpha) * (fabs(ctx->x[i]) * s1abs + fabs(ctx->y[i]) * s2abs);
+    }
+    ok = bmb_verify_close("A*r, for a random vector r", p, want, scale, m, bmb_verify_tolerance(n), msg, size);
+    free(r);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -97,6 +135,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

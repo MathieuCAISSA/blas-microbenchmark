@@ -1,8 +1,10 @@
 #include <cblas.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* Side = Left: A is M x M triangular, B and C share the M x N shape.
  * dim1 = M, dim2 = N. B is overwritten in place by cblas_dtrmm(); it is
@@ -92,6 +94,36 @@ static double flops(size_t dim1, size_t dim2)
     return d2 * d1 * (d1 + 1.0);
 }
 
+/* --verify, by random projection: B*r against alpha*U*(B0*r), B0 being the
+ * template the driver has just restored B from. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t m = (size_t) ctx->m, n = (size_t) ctx->n, i;
+    double *r = malloc((n + 8 * m) * sizeof(double));
+    double *t = r + n, *tabs = t + m, *y1 = tabs + m, *y1abs = y1 + m;
+    double *y2 = y1abs + m, *y2abs = y2 + m, *want = y2abs + m, *scale = want + m;
+    int ok;
+
+    if (r == NULL) {
+        return -1;
+    }
+    bmb_verify_probe(r, n);
+    call(ctx);
+    bmb_verify_perturb(&ctx->b[0]);
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->b, n, r, NULL, y1, y1abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->b0, n, r, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_UPPER, m, m, ctx->a, m, t, tabs, y2, y2abs);
+    for (i = 0; i < m; i++) {
+        want[i] = ctx->alpha * y2[i];
+        scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i];
+    }
+    ok = bmb_verify_close("B*r, for a random vector r", y1, want, scale, m,
+                          bmb_verify_tolerance(m + n), msg, size);
+    free(r);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -105,6 +137,7 @@ int main(int argc, char *argv[])
     bench.reset = reset;
     bench.reset_every_call = 1;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
 
     return bmb_benchmark_main(argc, argv, &bench);

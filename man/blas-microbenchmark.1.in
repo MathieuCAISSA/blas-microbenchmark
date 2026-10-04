@@ -102,6 +102,13 @@ rather than
 .IR n \-1),
 the slowest sample and the batch size.
 .TP
+.B "\-c, \-\-verify"
+Before timing each point, check that the library computes the right
+result there; stop with exit status 2 if it does not.
+See
+.BR "CHECKING RESULTS" .
+Default: off.
+.TP
 .BI "\-l, \-\-label " text
 Tag the results, for what no automatic field records: turbo off, a BIOS
 setting, a NUMA binding.
@@ -184,6 +191,47 @@ the bytes the routine must move \(em each operand read once, each result
 written once, counted the way STREAM counts them \(em divided by the time.
 Levels 1 and 2 only: level 3 routines reuse their operands from cache, so
 a rate built from that traffic would not measure bandwidth.
+.SH CHECKING RESULTS
+A benchmark times a call whatever it computes: a library that gets the
+result wrong \(em a broken build, a bug at one size or thread count \(em
+can look fast.
+With
+.BR \-c ,
+each point is first checked: one call on the operands about to be timed,
+at that size and thread count, compared with a reference computed
+independently.
+.PP
+Level 1 and 2 results are recomputed directly, which costs about one
+more call.
+Level 3 results are checked by random projection: for a random vector
+.IR r ,
+.I C*r
+is compared with
+.IR A*(B*r) ,
+and for dtrsm the residual
+.I U*(X*r)
+with
+.IR B*r .
+That takes as long as a level 2 call, where recomputing
+.I C
+would take as long as the call itself, and a wrong
+.I C
+gives a wrong
+.I C*r
+for almost every
+.IR r .
+Routines that update one triangle are also checked to leave the other
+as it was.
+.PP
+The tolerance is a bound on rounding error, proportional to the number
+of terms in each element and to their magnitudes: a correct library is
+well inside it, a wrong one far outside.
+A wrong result is reported with the routine, the size, the thread count
+and the element that differs; nothing more is measured, and no
+.B \-o
+file is written.
+The check needs memory for a few vectors the size of the result, and
+for daxpy, dswap, dgemv and dsymv a copy of the vector they write.
 .SH THREADS
 .B \-t
 sets the number of threads through the library's own interface.
@@ -236,7 +284,11 @@ With
 .BR \-l ,
 a
 .B "#\ label:"
-line follows the routine.
+line follows the backend, and with
+.BR \-c ,
+a
+.B "#\ verified:"
+line comes next.
 .PP
 With
 .BR \-o ,
@@ -256,6 +308,7 @@ one object holding the same information as fields:
 .BR backend ,
 .BR blas ,
 .BR label ,
+.BR verified ,
 .BR date ;
 .B machine
 with
@@ -295,7 +348,12 @@ reads.
 1 for an invalid option or size, or when standard output or the
 .B \-o
 file could not be written \(em a table cut short by a full disk must not
-pass for a complete one.
+pass for a complete one;
+2 when
+.B \-c
+found a wrong result, in which case nothing is written to the
+.B \-o
+file.
 .SH ENVIRONMENT
 The thread-count variables the library reads, in the order it reads them:
 .TP
@@ -336,6 +394,15 @@ Sweep ddot from 1K to 16M elements, with the statistics, saved as CSV:
 .RS
 .EX
 bmb_ddot \-v 1024:16777216 \-s \-o ddot.csv
+.EE
+.RE
+.PP
+Check that the library computes the right thing at every size and thread
+count, as well as timing it:
+.PP
+.RS
+.EX
+bmb_dgemm \-m 512:4096 \-t 1:8 \-c \-o dgemm.json
 .EE
 .RE
 .PP

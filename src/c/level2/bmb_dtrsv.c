@@ -1,8 +1,10 @@
 #include <cblas.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
  * X is overwritten in place by cblas_dtrsv(); it is restored from x0
@@ -96,6 +98,30 @@ static double bytes(size_t dim1, size_t dim2)
     return 8.0 * (d1 * (d1 + 1.0) / 2.0 + 2.0 * d1);
 }
 
+/* --verify: the residual. U times the solution must give back the
+ * template, which the driver has just restored x from. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t n = (size_t) ctx->n, i;
+    double *ux = malloc(3 * n * sizeof(double));
+    double *uxabs = ux + n, *scale = ux + 2 * n;
+    int ok;
+
+    if (ux == NULL) {
+        return -1;
+    }
+    call(ctx);
+    bmb_verify_perturb(&ctx->x[0]);
+    bmb_verify_matvec(BMB_VERIFY_UPPER, n, n, ctx->a, n, ctx->x, NULL, ux, uxabs);
+    for (i = 0; i < n; i++) {
+        scale[i] = uxabs[i] + fabs(ctx->x0[i]);
+    }
+    ok = bmb_verify_close("U*x, the residual", ux, ctx->x0, scale, n, bmb_verify_tolerance(n), msg, size);
+    free(ux);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -109,6 +135,7 @@ int main(int argc, char *argv[])
     bench.reset = reset;
     bench.reset_every_call = 1;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

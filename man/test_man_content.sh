@@ -159,7 +159,9 @@ test "$(status "$DDOT" -v 0)" -eq 1 || fail "an invalid size did not exit 1"
 if [ -w /dev/full ]; then
     test "$(status "$DDOT" -x 0 -i 1 -v 8 -o /dev/full)" -eq 1 || fail "an unwritable -o file did not exit 1"
 fi
-ok "the benchmarks exit 0 or 1 when blas-microbenchmark(1) says"
+section $PAGE "EXIT STATUS" | grep -q '^2 when' || fail "blas-microbenchmark(1) EXIT STATUS does not give 2"
+test "$(BMB_VERIFY_CORRUPT=1 status "$DDOT" -x 0 -i 1 -v 8 -c)" -eq 2 || fail "a wrong result under -c did not exit 2"
+ok "the benchmarks exit 0, 1 or 2 when blas-microbenchmark(1) says"
 
 "$DDOT" -x 0 -i 1 -v 8 -o "$T/r.json" >/dev/null
 test "$(status "$REPORT" "$T/r.json")" -eq 0 || fail "bmb_report on a valid result did not exit 0"

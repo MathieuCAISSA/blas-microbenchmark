@@ -10,6 +10,11 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `-c`/`--verify`: before timing each point, check that the library
+  computes the right result there, against a reference computed
+  independently (by random projection for level 3, at the cost of a level
+  2 call). A wrong result stops the run with exit status 2 and writes no
+  results file; verified results say so (`# verified:`, `"verified": true`).
 - `CONTRIBUTING.md`, `SECURITY.md`, `CITATION.cff` and this changelog,
   shipped in the release tarball too; issue and pull request templates.
 - Releases carry a `SHA256SUMS` file for the tarball.

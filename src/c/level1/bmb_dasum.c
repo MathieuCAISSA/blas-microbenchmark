@@ -1,7 +1,9 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 typedef struct {
     int n;
@@ -69,6 +71,23 @@ static double bytes(size_t dim1, size_t dim2)
     return 8.0 * d1;
 }
 
+/* --verify: the sum of |x|, recomputed. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    double got, want = 0.0;
+    int i;
+
+    call(ctx);
+    got = ctx->sink;
+    bmb_verify_perturb(&got);
+    for (i = 0; i < ctx->n; i++) {
+        want += fabs(ctx->x[i]);
+    }
+    return !bmb_verify_close("the sum", &got, &want, &want, 1,
+                             bmb_verify_tolerance((size_t) ctx->n), msg, size);
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -80,6 +99,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
     bench.bytes = bytes;
 

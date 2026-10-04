@@ -47,6 +47,16 @@ typedef double (*bmb_bench_flops_fn)(size_t dim1, size_t dim2);
  * it informs. */
 typedef double (*bmb_bench_bytes_fn)(size_t dim1, size_t dim2);
 
+/* --verify: makes one call on the operands the benchmark is about to time
+ * and checks its result against a reference (see bmb_verify.h). Returns 0
+ * when it is right, 1 when it is wrong -- describing what is wrong in msg
+ * -- and -1 when it could not check (out of memory). The driver resets the
+ * operands before it, and again before timing, as usual. */
+typedef int (*bmb_bench_verify_fn)(void *ctx, char *msg, size_t size);
+
+/* The exit status of a run that --verify stopped on a wrong result. */
+#define BMB_EXIT_WRONG_RESULT 2
+
 typedef struct {
     const char *routine_name;
 
@@ -78,6 +88,7 @@ typedef struct {
 
     bmb_bench_flops_fn flops; /* optional, may stay NULL */
     bmb_bench_bytes_fn bytes; /* optional, may stay NULL */
+    bmb_bench_verify_fn verify;
 } bmb_benchmark_t;
 
 /* Parses argv, resolves the effective thread count (option vs. env var),

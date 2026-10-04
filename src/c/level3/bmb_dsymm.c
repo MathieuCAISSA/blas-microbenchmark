@@ -1,7 +1,9 @@
 #include <cblas.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_verify.h"
 
 /* Side = Left: A is M x M symmetric, B and C are M x N.
  * dim1 = M, dim2 = N. */
@@ -80,6 +82,43 @@ static double flops(size_t dim1, size_t dim2)
     return 2.0 * d1 * d1 * d2;
 }
 
+/* --verify, by random projection: C*r against alpha*A*(B*r) + beta*C0*r, A symmetric. */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    size_t m = (size_t) ctx->m, n = (size_t) ctx->n, inner = (size_t) ctx->m, i;
+    double *r = malloc((n + 2 * inner + 8 * m) * sizeof(double));
+    double *t = r + n, *tabs = t + inner, *c0 = tabs + inner, *c0abs = c0 + m;
+    double *y1 = c0abs + m, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
+    double *want = y2abs + m, *scale = want + m;
+    int ok;
+
+    if (r == NULL) {
+        return -1;
+    }
+    (void) inner;
+    bmb_verify_probe(r, n);
+    for (i = 0; i < m; i++) {
+        c0[i] = c0abs[i] = 0.0;
+    }
+    if (ctx->beta != 0.0) {
+        bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->c, n, r, NULL, c0, c0abs);
+    }
+    call(ctx);
+    bmb_verify_perturb(&ctx->c[0]);
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->c, n, r, NULL, y1, y1abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->b, n, r, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, m, m, ctx->a, m, t, tabs, y2, y2abs);
+    for (i = 0; i < m; i++) {
+        want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
+        scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];
+    }
+    ok = bmb_verify_close("C*r, for a random vector r", y1, want, scale, m,
+                          bmb_verify_tolerance(inner + n), msg, size);
+    free(r);
+    return !ok;
+}
+
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
@@ -91,6 +130,7 @@ int main(int argc, char *argv[])
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
+    bench.verify = verify;
     bench.flops = flops;
 
     return bmb_benchmark_main(argc, argv, &bench);
