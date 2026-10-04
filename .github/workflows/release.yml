@@ -87,14 +87,28 @@ jobs:
           subject-path: build/blas-microbenchmark-*.tar.gz
 
       # What a user will run: an attestation that does not verify must not
-      # ship.
+      # ship. gh prints nothing outside a terminal, so read its JSON: the
+      # attested digest has to be the tarball's. And a changed tarball has
+      # to be refused, or the check proves nothing.
       - name: Verify the attestation
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh attestation verify build/blas-microbenchmark-*.tar.gz \
-            --repo "$GITHUB_REPOSITORY" \
-            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          f=$(ls build/blas-microbenchmark-*.tar.gz)
+          signer="$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          gh attestation verify "$f" --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$signer" --format json > attestation.json
+          digest=$(sha256sum "$f" | cut -d' ' -f1)
+          jq -e --arg d "$digest" \
+            'any(.[].verificationResult.statement.subject[]; .digest.sha256 == $d)' attestation.json
+          jq -r '.[0].verificationResult.signature.certificate.buildSignerURI' attestation.json
+          echo "verified: $(basename "$f"), sha256 $digest"
+          cp "$f" changed.tar.gz && printf x >> changed.tar.gz
+          if gh attestation verify changed.tar.gz --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$signer" >/dev/null 2>&1; then
+            echo "a changed tarball verified"; exit 1
+          fi
+          echo "a changed tarball is refused"
 
       - name: Upload the tarball to the release
         if: github.event_name == 'push' || inputs.publish
