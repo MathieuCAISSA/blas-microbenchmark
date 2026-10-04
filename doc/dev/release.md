@@ -8,8 +8,22 @@ those are plain git exports with no `configure` in them.
 
 `.github/workflows/release.yml` handles that: on a pushed `v*` tag it
 builds the tarball, verifies it unpacks and builds with no Autotools
-present, then uploads it with its `SHA256SUMS` — *creating* the release if
-the tag has none yet.
+present, attests where it was built, checks that attestation as a user
+would (`gh attestation verify`), then uploads it with its `SHA256SUMS` —
+*creating* the release if the tag has none yet.
+
+The attestation is a Sigstore-signed SLSA provenance statement, stored
+with the repository (not as a release asset): it says the tarball with
+this digest was built by `release.yml`, in this repository, from this
+commit. It needs the job's `id-token: write` and `attestations: write`.
+
+To try a change to the workflow without touching a published release,
+run it on the branch with `publish` off: it builds, attests and verifies,
+and uploads nothing.
+
+```bash
+gh workflow run release.yml --ref <branch> -f tag=vX.Y.Z -f publish=false
+```
 
 A release is prepared on a branch like any change (`release-X.Y.Z`,
 with an issue of its own), then tagged on `main` once merged.
@@ -38,7 +52,8 @@ with an issue of its own), then tagged on `main` once merged.
    ```
 
 6. **Verify the tarball** the release carries: download it with its
-   `SHA256SUMS` and run `sha256sum -c SHA256SUMS`, then
+   `SHA256SUMS` and run `sha256sum -c SHA256SUMS` and `gh attestation
+   verify <tarball> --repo MathieuCAISSA/blas-microbenchmark`, then
    `./configure --prefix=...`, `make check`, `make install` — the man
    pages included — on a machine with no Autotools if you can.
 7. **Back to development**: on another short branch and pull request,
