@@ -109,7 +109,7 @@ development_body() {
     done
     echo '</dl>'
 
-    heading 2 tests-project "The release files"
+    heading 2 tests-project "The project files"
     echo '<dl class="Bl-tag">'
     for f in "$top"/test_*.sh; do
         [ -f "$f" ] && test_entry "$f"
