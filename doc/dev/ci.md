@@ -101,8 +101,9 @@ test takes:
   **A pull request's analysis only reports on the lines it changes**
   (its `CodeQL` check fails on a new alert there); the full picture is
   the analysis of `main`. #12's pull request showed no result while
-  `main` had four. After merging, list what is open, and fix or dismiss
-  each:
+  `main` had four. So outside pull requests (on `main`, weekly, by
+  hand), the workflow's last step fails while an alert is open on the
+  branch it analysed, and lists them. To list them yourself:
 
   ```bash
   gh api 'repos/MathieuCAISSA/blas-microbenchmark/code-scanning/alerts?state=open' \
