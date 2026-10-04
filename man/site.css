@@ -154,6 +154,10 @@ dl.Bl-tag > dt:first-child { margin-top: 0; }
 dl.Bl-tag > dt b { font-weight: 600; }
 dl.Bl-tag > dt i { color: var(--muted); }
 dl.Bl-tag > dd { margin: 0.15rem 0 0 1.5rem; }
+dl.Bl-tag > dd > .Pp:first-child { margin-top: 0; }
+.dt-where { font-family: var(--sans); font-size: 0.8rem; color: var(--muted); margin-left: 0.5rem; }
+.steps { color: var(--muted); font-size: 0.875rem; }
+.where { margin-top: -0.25rem; color: var(--muted); font-size: 0.875rem; }
 
 ul.Bl-bullet { margin: 0.7rem 0; padding-left: 1.25rem; }
 ul.Bl-bullet > li { margin: 0.35rem 0; }
@@ -184,7 +188,7 @@ table.tbl td:first-child { color: var(--muted); white-space: nowrap; }
 .button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .button.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--fg)); }
 
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
          gap: 1rem; margin-top: 3rem; }
 .card {
   display: block; padding: 1.1rem 1.25rem; border: 1px solid var(--border); border-radius: 10px;

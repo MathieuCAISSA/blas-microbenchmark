@@ -32,10 +32,39 @@ if BENCH_DIR="$T/nowhere" srcdir=${srcdir:-.} "${SHELL:-/bin/sh}" "${srcdir:-.}/
 fi
 ok "html.sh fails when the benchmarks are not built"
 
-for f in index.html site.css blas-microbenchmark.html bmb_report.html outputs.html; do
+for f in index.html site.css blas-microbenchmark.html bmb_report.html outputs.html development.html; do
     test -s "$site/$f" || fail "the site has no $f"
 done
-ok "the site has the index, the stylesheet, both pages and the outputs"
+ok "the site has the index, the stylesheet, both pages, the outputs and the development page"
+
+# development.html: every test the Makefiles run is on it -- the
+# per-routine smoke tests as one entry, counted -- and, in a git checkout,
+# every job of the CI workflow.
+top=${srcdir:-.}/..
+d=$site/development.html
+n=0
+for t in $(grep -ho 'test_[a-z0-9_]*\(\.sh\|\.js\)\{0,1\}' "$top"/src/c/*/Makefile.am "$top"/src/report/Makefile.am "$top"/Makefile.am \
+           | sed 's/_$//' | grep -v '^test_helper' | sort -u); do
+    case $t in
+        test_bmb_*.sh) r=${t#test_bmb_}; r=${r%.sh}
+                       case " $(echo $ROUTINES) " in *" $r "*) continue ;; esac ;;
+    esac
+    case $t in *.sh | *.js) ;; *) t=$t.c ;; esac
+    grep -q "<dt><code>$t</code>" "$d" || fail "development.html does not describe $t"
+    n=$((n + 1))
+done
+for t in "$top"/man/test_man_*.sh; do
+    grep -q "<dt><code>$(basename "$t")</code>" "$d" || fail "development.html does not describe $(basename "$t")"
+    n=$((n + 1))
+done
+grep -q "$(echo $ROUTINES | wc -w) of them" "$d" || fail "development.html does not count the $(echo $ROUTINES | wc -w) smoke tests"
+if [ -f "$top/.github/workflows/ci.yml" ]; then
+    for job in $(sed -n '/^jobs:/,$ s/^  \([A-Za-z0-9_-]*\):$/\1/p' "$top/.github/workflows/ci.yml"); do
+        grep -q "<dt><code>$job</code>" "$d" || fail "development.html does not describe the CI job $job"
+        n=$((n + 1))
+    done
+fi
+ok "development.html describes all $n tests and CI jobs, and the smoke tests"
 
 # The outputs are runs of this version, made as the page was built: the
 # table, the CSV and the JSON each carry its version, and the commands

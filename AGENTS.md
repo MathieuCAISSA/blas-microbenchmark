@@ -107,7 +107,8 @@ src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
 man/             # the man pages, blas-microbenchmark(1) and bmb_report(1),
-                 # and html.sh, which makes the documentation site of them
+                 # and html.sh and devpage.sh, which make the documentation
+                 # site
 doc/             # the README's chart images, and screenshots.sh, which
                  # makes them
 ```
@@ -474,7 +475,7 @@ as the report itself, which `assemble.awk` takes from `PACKAGE_VERSION`.
 Everything else is refused *before* anything is written, with the file name
 and the reason, because a page silently missing one backend would be read
 as complete. That is also why `main` carries a `-dev` version between
-releases (`1.0.0-dev`): its own results have to be accepted by its own
+releases (`1.2.0-dev` after 1.1.0): its own results have to be accepted by its own
 report. `src/report/fixtures/` holds files in each refused format, laid out
 exactly as those versions wrote them — taken from the git history, not
 from memory. Current-format input is never a fixture: the test generates it
@@ -619,11 +620,14 @@ Two places, for two readers:
 
 - **README.md** is for the first five minutes: what this is, installing it,
   one run, the report, the backends. Keep it short; it was cut from 458
-  lines to 136 once, because nobody found anything in it.
+  lines to about 140 once, because nobody found anything in it.
 - **The man pages** are the reference: `blas-microbenchmark(1)` for every
   benchmark (options, sweeps, how a number is measured, threads, output,
   exit status, examples) and `bmb_report(1)`. A new option, output field
   or behaviour goes there, not into the README.
+
+The site (below) publishes the man pages, the outputs, and the tests and
+CI — each generated from its source, not written twice.
 
 `--help` is the summary and ends by pointing at the man page.
 
@@ -661,9 +665,9 @@ How the man pages are built, and why:
   Debian and Ubuntu map it back to ASCII in their `man.local`, so the bug
   is invisible here. `test_man_render.sh` checks the source, and renders
   the pages with an empty `man.local` first in groff's macro path (`-M`),
-  which gives upstream groff's output on any system. The substitution escapes the hyphens of the install path
-  itself — with `$(...)`, not backquotes, which eat one level of
-  backslashes (they did, once).
+  which gives upstream groff's output on any system. The substitution
+  escapes the hyphens of the install path itself — with `$(...)`, not
+  backquotes, which eat one level of backslashes (they did, once).
 - `.nh` and `.ds AD l` at the top turn off hyphenation and justification:
   both look bad in a terminal, and hyphenation splits literals. `.ad l`
   alone does not stick, since the `man` macros reset the adjustment from
@@ -675,10 +679,11 @@ from the build directory.
 
 ### The site
 
-<https://mathieucaissa.github.io/blas-microbenchmark/> is the man pages
-as HTML, and nothing else: one source, checked by the same tests, so the
-site cannot say what the pages do not. `make html` builds it in
-`man/html/` with mandoc (`man/html.sh`):
+<https://mathieucaissa.github.io/blas-microbenchmark/> is generated, all
+of it: the man pages as HTML, the outputs of real runs, and the tests and
+CI as their own sources describe them. Nothing on it is written twice, so
+it cannot say what the sources do not. `make html` builds it in
+`man/html/` with mandoc (`man/html.sh`), after `make`:
 
 - mandoc converts each page (`-Ofragment`); `html.sh` wraps it in the
   site's layout: a bar to move between pages, a table of contents built
@@ -707,6 +712,14 @@ site cannot say what the pages do not. `make html` builds it in
   output, from the machine that built the site. Keep those runs small.
   Below them, the report's summary, four charts and raw data, as
   screenshots from `doc/images`.
+- `development.html` lists every test and every CI job (`man/devpage.sh`).
+  A test is described by **the first paragraph of its header comment**,
+  and a CI job by **the comment above it** in its workflow, its runner,
+  its configure line and its step names. Those comments are published:
+  write the first paragraph of a new test's comment as a description of
+  what it checks, and give a new CI job a comment saying why it exists.
+  `test_man_html.sh` fails when a test the Makefiles run, or a job of
+  `ci.yml`, is missing from the page.
 - It converts through a file, never a pipe: in a pipe, a mandoc failure
   was hidden behind `sed`'s success and wrote empty pages without a word.
   `test_man_html.sh` checks it fails now.
@@ -714,7 +727,7 @@ site cannot say what the pages do not. `make html` builds it in
 `.github/workflows/pages.yml` publishes it on every push to `main`, after
 running the man page tests strictly on the same commit. The site
 therefore describes `main`, which can be ahead of the latest release; the
-index says so.
+index says so, and the version it shows ends in `-dev` between releases.
 
 ## Known measurement limitations
 
@@ -764,9 +777,13 @@ aarch64-only). Keep it green — a routine that only works "on my machine"
 isn't done.
 
 The `openblas` job also installs into a staging root and fails if anything
-lands outside `--prefix`, or if `bin/bmb_report` and the `libexec`
-benchmarks are not where the README says; and it fails if the browser
-tests skipped, since the x86 runners have Chrome.
+lands outside `--prefix`, or if `bin/bmb_report`, the `libexec`
+benchmarks and the man pages are not where the README says; and it fails
+if the browser tests skipped, since the x86 runners have Chrome.
+
+The comment above each job is published on the site's Development page,
+with its runner, configure line and steps: keep it saying why the job
+exists.
 
 The `browsers` job builds with OpenBLAS and runs only `src/report`'s tests,
 once in Firefox (through geckodriver) and once in Edge, both preinstalled
@@ -813,14 +830,30 @@ those are plain git exports with no `configure` in them.
 builds the tarball, verifies it unpacks and builds with no Autotools
 present, then uploads it — *creating* the release if the tag has none yet.
 
-```bash
-# 1. bump the version in configure.ac (AC_INIT), commit, push
-# 2. tag it -- this is what kicks the workflow off
-git tag -a vX.Y.Z -m "..."
-git push origin vX.Y.Z
-# 3. wait for the workflow (~30s), then write the release notes
-gh release edit vX.Y.Z --title vX.Y.Z --notes "..."
-```
+1. **Version**: set `AC_INIT` in `configure.ac` to `X.Y.Z`, dropping the
+   `-dev`.
+2. **Man pages**: if one changed since the last release, set the date in
+   its `.TH` line (`man/*.1.in`) to today.
+3. **README**: replace the Quick start output with what the new version
+   really prints (`bmb_dgemm -m 512:2048`). If the report's look changed,
+   redo `doc/images` (see [The README's images](#the-readmes-images)).
+4. **Check**: `make distcheck`, and the browser tests in Firefox
+   (`BMB_BROWSER=firefox make check`); commit, push, and wait for every CI
+   job to pass.
+5. **Tag and publish**:
+
+   ```bash
+   git tag -a vX.Y.Z -m "blas-microbenchmark X.Y.Z"
+   git push origin vX.Y.Z
+   # wait for the workflow (~30s), then write the release notes
+   gh release edit vX.Y.Z --title vX.Y.Z --notes-file notes.md
+   ```
+
+6. **Verify the tarball** the release carries: download it, then
+   `./configure --prefix=...`, `make check`, `make install` — the man
+   pages included — on a machine with no Autotools if you can.
+7. **Back to development**: set `AC_INIT` to the next minor version with
+   `-dev` (`X.(Y+1).0-dev`), commit, push.
 
 Note the order: **edit the notes, don't create the release**. The workflow
 gets there within about half a minute of the tag push and creates it with

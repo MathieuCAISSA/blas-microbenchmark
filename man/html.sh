@@ -22,6 +22,10 @@
 # and screenshots of a report. BENCH_DIR is the directory holding the
 # built benchmarks (level1, level2, level3).
 #
+# And development.html: every test and every CI job, described by their
+# own sources (devpage.sh, sourced from here); TOP is the top of the
+# source tree, by default srcdir's parent.
+#
 # Needs mandoc (MANDOC overrides the command). srcdir locates site.css. If
 # IMAGES names a directory holding the screenshots -- doc/images in a git
 # checkout -- the index and outputs.html show them; a release tarball has
@@ -41,6 +45,8 @@ if ! command -v "$MANDOC" >/dev/null 2>&1; then
     exit 1
 fi
 REPO=https://github.com/MathieuCAISSA/blas-microbenchmark
+TOP=${TOP:-${srcdir:-.}/..}
+. "${srcdir:-.}/devpage.sh"
 BENCH_DIR=${BENCH_DIR:-../src/c}
 for l in 1 2 3; do
     if [ ! -d "$BENCH_DIR/level$l" ]; then
@@ -138,9 +144,11 @@ topbar() {
         [ "$n" = "$1" ] && current=' aria-current="page"'
         echo "    <a href=\"$n.html\"$current>$n(1)</a>"
     done
-    current=
-    [ "$1" = outputs ] && current=' aria-current="page"'
-    echo "    <a href=\"outputs.html\"$current>Outputs</a>"
+    for p in outputs:Outputs development:Development; do
+        current=
+        [ "$1" = "${p%%:*}" ] && current=' aria-current="page"'
+        echo "    <a href=\"${p%%:*}.html\"$current>${p#*:}</a>"
+    done
     echo "    <a href=\"$REPO\">GitHub</a>"
     echo '  </nav>'
     echo '</div></header>'
@@ -309,6 +317,28 @@ done
 } >"$out/outputs.html"
 rm -rf "$out/outputs.body" "$out/.run"
 
+# How it is tested.
+{
+    head_html "Development &mdash; blas-microbenchmark" "How blas-microbenchmark is tested, and what its CI runs"
+    topbar development
+    development_body "$TOP" >"$out/development.body"
+    echo '<div class="layout">'
+    echo '<nav class="toc" aria-label="On this page">'
+    echo '<p class="toc-title">On this page</p>'
+    toc <"$out/development.body"
+    echo '</nav>'
+    echo '<main class="page wide">'
+    echo '<h1 class="page-title">Development</h1>'
+    echo "<p class=\"page-desc\">How it is tested, and what CI runs. To work on it, start with <a href=\"$REPO/blob/main/AGENTS.md\">AGENTS.md</a>.</p>"
+    echo '<div class="manual-text">'
+    cat "$out/development.body"
+    echo '</div>'
+    echo '</main>'
+    echo '</div>'
+    footer_html ""
+} >"$out/development.html"
+rm -f "$out/development.body"
+
 # The index: what the project is, a card per page, and the chart.
 first=$(basename "$1" .1)
 {
@@ -338,6 +368,11 @@ first=$(basename "$1" .1)
     echo '    <div class="card-title">Outputs</div>'
     echo '    <p class="card-desc">What the benchmarks print and save, and the report they make</p>'
     echo '    <p class="card-cmd">table, CSV, JSON, charts</p>'
+    echo '  </a>'
+    echo '  <a class="card" href="development.html">'
+    echo '    <div class="card-title">Development</div>'
+    echo '    <p class="card-desc">How it is tested, and what CI runs</p>'
+    echo '    <p class="card-cmd">make check</p>'
     echo '  </a>'
     echo '</div>'
     if have_image ddot-size; then
