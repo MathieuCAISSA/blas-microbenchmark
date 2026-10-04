@@ -666,8 +666,14 @@ How the man pages are built, and why:
   is invisible here. `test_man_render.sh` checks the source, and renders
   the pages with an empty `man.local` first in groff's macro path (`-M`),
   which gives upstream groff's output on any system. The substitution
-  escapes the hyphens of the install path itself — with `$(...)`, not
-  backquotes, which eat one level of backslashes (they did, once).
+  escapes the hyphens of the install path itself, and of the version (a
+  `-dev` one appears in an example; the tests caught it on the first
+  `-dev` build) — with `$(...)`, not backquotes, which eat one level of
+  backslashes (they did, once).
+- Each `/` of the install path is followed by `\:`, an invisible place
+  groff may break the line: without it, a long `--prefix` overflows the
+  FILES section and `man` prints "cannot break line" warnings above the
+  page.
 - `.nh` and `.ds AD l` at the top turn off hyphenation and justification:
   both look bad in a terminal, and hyphenation splits literals. `.ad l`
   alone does not stick, since the `man` macros reset the adjustment from
