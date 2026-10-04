@@ -96,7 +96,9 @@ firefox report.html
 The page is a single self-contained file — nothing is fetched, so it opens
 without a network and can be sent as is. It shows performance against
 size with the caches marked, each library compared with OpenBLAS, thread
-scaling, a heatmap for sweeps over both dimensions, and the raw data;
+scaling, a heatmap for sweeps over both dimensions, and the raw data.
+Run each command several times, into separate files, and it shows how
+far the runs spread and tells which differences are beyond that noise;
 `man bmb_report` has the details.
 
 <p>
@@ -149,9 +151,9 @@ The manual pages, also online at
 - [Development](https://mathieucaissa.github.io/blas-microbenchmark/development.html):
   every test and what CI runs.
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release.
-- [CONTRIBUTING.md](CONTRIBUTING.md), then [AGENTS.md](AGENTS.md) — for
-  contributors: building from git, the tests, adding a routine, CI,
-  cutting a release.
+- [CONTRIBUTING.md](CONTRIBUTING.md), then [AGENTS.md](AGENTS.md) and
+  the files in [doc/dev/](doc/dev/) it points to — for contributors:
+  building from git, the tests, adding a routine, CI, cutting a release.
 
 ## Citing
 

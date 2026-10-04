@@ -7,7 +7,7 @@
 # run the page, and looks at the DOM it ends up with.
 #
 # It needs a browser (see browser.sh); without one it reports SKIP rather
-# than failing. CI runs it in Chrome and in Firefox.
+# than failing. CI runs it in Chrome, Firefox and Edge.
 set -e
 
 T=render-test.d

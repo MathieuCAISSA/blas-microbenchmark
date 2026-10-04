@@ -280,6 +280,7 @@ Every result starts with where it came from:
 .EX
 # blas\-microbenchmark @PACKAGE_VERSION@
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
+# verified: every point, against a reference, before it was timed
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # frequency: governor performance, turbo off
@@ -399,6 +400,10 @@ NVPL, ArmPL
 .PP
 .BR OMP_PROC_BIND " and " OMP_PLACES
 pin the threads of the OpenMP-threaded libraries.
+.PP
+.BR NO_COLOR ,
+when set and not empty, turns off the colours of warnings and errors,
+which are only used on a terminal anyway.
 .SH FILES
 .TP
 .I @pkglibexecdir@/level1

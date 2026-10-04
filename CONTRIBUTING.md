@@ -39,7 +39,7 @@ lists every test and every CI job.
 Every change has an issue and a branch of its own, named after it
 (`issue-<N>-<short-name>`), and reaches `main` through a pull request whose
 description says `Closes #<N>`. `main` only accepts a pull request once
-every CI job passes. The details are in
+every required CI job passes (all but `coverage`). The details are in
 [AGENTS.md, Working on an issue](AGENTS.md#working-on-an-issue).
 
 ## Before opening a pull request
