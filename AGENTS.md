@@ -69,6 +69,7 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
 | | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the exit statuses, the commands in the examples |
+| | `test_man_html.sh` | the site built from the pages: every page there, every link leads to a file and an anchor of the site or to https, nothing loaded from elsewhere, the pages linked to each other, every option of `--help` on its page; and `html.sh` fails without mandoc |
 | | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
 
 The two browser tests SKIP without a browser (see [Testing the
@@ -105,7 +106,8 @@ src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
-man/             # the man pages, blas-microbenchmark(1) and bmb_report(1)
+man/             # the man pages, blas-microbenchmark(1) and bmb_report(1),
+                 # and html.sh, which makes the documentation site of them
 doc/             # the README's chart images, and screenshots.sh, which
                  # makes them
 ```
@@ -666,6 +668,32 @@ How the man pages are built, and why:
 To read a page without installing it: `man -l man/blas-microbenchmark.1`
 from the build directory.
 
+### The site
+
+<https://mathieucaissa.github.io/blas-microbenchmark/> is the man pages
+as HTML, and nothing else: one source, checked by the same tests, so the
+site cannot say what the pages do not. `make html` builds it in
+`man/html/` with mandoc (`man/html.sh`):
+
+- mandoc converts each page, with `mandoc.css`, the stylesheet mandoc
+  ships (public domain), kept as shipped; `site.css` is appended to it
+  for our own changes (monospace examples).
+- `html.sh` adds what mandoc leaves undone for man(7) pages: a reference
+  such as `bmb_report(1)` becomes a link — to the site's page, or to
+  man7.org for the others — and so does a URL. The pages do not use `.UR`
+  for URLs: groff then shows only the link text in a terminal, and the
+  URL is lost.
+- `index.html` lists the pages, with the description from their NAME
+  line.
+- It converts through a file, never a pipe: in a pipe, a mandoc failure
+  was hidden behind `sed`'s success and wrote empty pages without a word.
+  `test_man_html.sh` checks it fails now.
+
+`.github/workflows/pages.yml` publishes it on every push to `main`, after
+running the man page tests strictly on the same commit. The site
+therefore describes `main`, which can be ahead of the latest release; the
+index says so.
+
 ## Known measurement limitations
 
 Recorded here so they are not mistaken for bugs, and not "fixed" without
@@ -730,6 +758,9 @@ groff and man-db build than Ubuntu's, plus mandoc for its lint, with
 builds without `--enable-werror`, since Fedora's newer GCC is not what it
 is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
 it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
+
+The site is published by its own workflow, `pages.yml` (see [The
+site](#the-site)), not by `ci.yml`.
 
 The `sanitizers` job rebuilds at `-O1` under ASan and UBSan. It is
 not a duplicate of the `openblas` job: it sees what a plain build cannot

@@ -32,10 +32,22 @@ install-data-hook:
 uninstall-hook:
 	for r in $(ROUTINES); do rm -f "$(DESTDIR)$(man1dir)/bmb_$$r.1"; done
 
-TESTS = test_man_render.sh test_man_options.sh test_man_content.sh test_man_install.sh
+# The documentation site: the man pages as HTML, with an index, in html/.
+# Built on demand by "make html" (Automake's own html target, extended
+# through html-local), with mandoc; .github/workflows/pages.yml publishes
+# it. Not installed: the installed documentation is the man pages.
+html-local: $(man1_MANS)
+	$(AM_V_GEN)srcdir='$(srcdir)' $(SHELL) $(srcdir)/html.sh html '$(PACKAGE_VERSION)' $(man1_MANS)
+
+clean-local:
+	rm -rf html
+
+TESTS = test_man_render.sh test_man_options.sh test_man_content.sh test_man_install.sh \
+	test_man_html.sh
 AM_TESTS_ENVIRONMENT = \
 	ROUTINES='$(ROUTINES)' MAKE='$(MAKE)' mandir='$(mandir)' \
-	man1dir='$(man1dir)' pkglibexecdir='$(pkglibexecdir)'; \
-	export ROUTINES MAKE mandir man1dir pkglibexecdir;
+	man1dir='$(man1dir)' pkglibexecdir='$(pkglibexecdir)' PACKAGE_VERSION='$(PACKAGE_VERSION)'; \
+	export ROUTINES MAKE mandir man1dir pkglibexecdir PACKAGE_VERSION;
 
-EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in man_helper.sh $(TESTS)
+EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in man_helper.sh html.sh mandoc.css site.css \
+	$(TESTS)

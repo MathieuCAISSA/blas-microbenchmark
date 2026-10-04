@@ -1,0 +1,6 @@
+
+/* blas-microbenchmark's additions to mandoc.css, which html.sh appends to
+ * it. mandoc.css is kept as mandoc ships it. */
+
+/* The examples are commands to paste: monospace, as in a terminal. */
+pre {		font-family: monospace; }

@@ -1,6 +1,6 @@
-.\" bmb_report(1). configure turns bmb_report.1.in into bmb_report.1; edit
-.\" the .in. test_man.sh checks that every option of --help is here and
-.\" that this renders without warnings.
+.\" bmb_report(1). make turns bmb_report.1.in into bmb_report.1, then into the
+.\" site's bmb_report.html; edit the .in. man/test_man_*.sh check it
+.\" against the programs: see AGENTS.md, "Documentation".
 .TH BMB_REPORT 1 2026-10-04 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
 .\" No hyphenation, no justification: both hurt in a terminal, and
 .\" hyphenation splits literals such as "# label:".

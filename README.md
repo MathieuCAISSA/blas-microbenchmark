@@ -124,6 +124,9 @@ Chosen when building, and each one built and tested in CI:
 
 ## Documentation
 
+The manual pages, also online at
+**[mathieucaissa.github.io/blas-microbenchmark](https://mathieucaissa.github.io/blas-microbenchmark/)**:
+
 - `man blas-microbenchmark` (also `man bmb_dgemm`, and so on) — the
   benchmarks.
 - `man bmb_report` — the report.

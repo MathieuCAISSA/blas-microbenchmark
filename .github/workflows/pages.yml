@@ -1,0 +1,68 @@
+name: Pages
+
+# The documentation site: the man pages as HTML (make html, in man/),
+# published on GitHub Pages from main. It is published only once the man
+# page tests pass on the same commit, so the site never shows a page they
+# would have refused.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push replaces one still waiting.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config mandoc
+
+      - name: Build
+        run: |
+          ./autogen.sh
+          mkdir -p build
+          cd build
+          ../configure
+          make -j"$(nproc)"
+
+      # The tests compare the pages with the programs, so those are built
+      # above; strict, so that a missing tool cannot let a page through.
+      - name: Man page tests
+        env:
+          BMB_MAN_STRICT: 1
+        run: make -C build/man check
+
+      - name: Build the site
+        run: make -C build html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/man/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
