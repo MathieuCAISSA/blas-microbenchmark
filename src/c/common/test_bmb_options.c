@@ -34,7 +34,11 @@ static void ok(const char *what)
     printf("ok   %s\n", what);
 }
 
-/* Parses a command line given as a NULL-terminated argument list. */
+/* The end of parse_args()'s arguments. A bare NULL may be a plain 0, an
+ * int, which va_arg(ap, const char *) must not read. */
+#define ARGS_END ((const char *) NULL)
+
+/* Parses a command line given as an argument list ending in ARGS_END. */
 static bmb_options_status_t parse_args(bmb_options_t *opts, ...)
 {
     char *argv[16];
@@ -84,7 +88,7 @@ static void check_sweep(const char *spec, const char *expected)
 
     snprintf(what, sizeof(what), "-v %.100s", spec);
 
-    if (parse_args(&opts, "-v", spec, NULL) != BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-v", spec, ARGS_END) != BMB_OPTIONS_OK) {
         if (expected == NULL) {
             ok(what);
         } else {
@@ -119,7 +123,7 @@ static void check_count_option(const char *flag, const char *value, int accepted
 
     snprintf(what, sizeof(what), "%s %.60s", flag, value);
 
-    if (parse_args(&opts, flag, value, NULL) == BMB_OPTIONS_OK) {
+    if (parse_args(&opts, flag, value, ARGS_END) == BMB_OPTIONS_OK) {
         if (accepted) {
             ok(what);
         } else {
@@ -143,7 +147,7 @@ static void check_point_count(const char *spec, size_t expected)
 
     snprintf(what, sizeof(what), "-v %.100s point count", spec);
 
-    if (parse_args(&opts, "-v", spec, NULL) != BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-v", spec, ARGS_END) != BMB_OPTIONS_OK) {
         fail(what, "rejected, should have been accepted");
         return;
     }
@@ -162,7 +166,7 @@ static void test_defaults(void)
     bmb_options_t opts;
     char got[64];
 
-    if (parse_args(&opts, NULL) != BMB_OPTIONS_OK) {
+    if (parse_args(&opts, ARGS_END) != BMB_OPTIONS_OK) {
         fail("defaults", "an empty command line was rejected");
         return;
     }
@@ -198,7 +202,7 @@ static void test_dim2(void)
     bmb_options_t opts;
     char dim2[64];
 
-    if (parse_args(&opts, "-m", "8:32", NULL) != BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-m", "8:32", ARGS_END) != BMB_OPTIONS_OK) {
         fail("-m without -M", "-m 8:32 was rejected");
         return;
     }
@@ -209,7 +213,7 @@ static void test_dim2(void)
     }
     bmb_options_free(&opts);
 
-    if (parse_args(&opts, "-m", "8", "-M", "16:32", NULL) != BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-m", "8", "-M", "16:32", ARGS_END) != BMB_OPTIONS_OK) {
         fail("-M given", "-m 8 -M 16:32 was rejected");
         return;
     }
@@ -226,7 +230,7 @@ static void test_output_format(void)
 {
     bmb_options_t opts;
 
-    if (parse_args(&opts, "-o", "r.json", NULL) == BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-o", "r.json", ARGS_END) == BMB_OPTIONS_OK) {
         if (opts.output_format != BMB_FORMAT_JSON) {
             fail("-o r.json", "format was not inferred as json");
         } else {
@@ -237,7 +241,7 @@ static void test_output_format(void)
         fail("-o r.json", "rejected");
     }
 
-    if (parse_args(&opts, "-o", "r.json", "-f", "csv", NULL) == BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-o", "r.json", "-f", "csv", ARGS_END) == BMB_OPTIONS_OK) {
         if (opts.output_format != BMB_FORMAT_CSV) {
             fail("-f csv with -o r.json", "explicit -f did not win");
         } else {
@@ -248,7 +252,7 @@ static void test_output_format(void)
         fail("-f csv with -o r.json", "rejected");
     }
 
-    if (parse_args(&opts, "-f", "xml", NULL) == BMB_OPTIONS_OK) {
+    if (parse_args(&opts, "-f", "xml", ARGS_END) == BMB_OPTIONS_OK) {
         fail("-f xml", "accepted, should have been rejected");
         bmb_options_free(&opts);
     } else {
@@ -329,7 +333,7 @@ int main(void)
         bmb_options_t opts;
         char long_label[256];
 
-        if (parse_args(&opts, NULL) == BMB_OPTIONS_OK) {
+        if (parse_args(&opts, ARGS_END) == BMB_OPTIONS_OK) {
             if (opts.label != NULL) {
                 fail("no --label", "a label is set although none was given");
             } else {
@@ -338,7 +342,7 @@ int main(void)
             bmb_options_free(&opts);
         }
 
-        if (parse_args(&opts, "--label", "turbo off", NULL) == BMB_OPTIONS_OK
+        if (parse_args(&opts, "--label", "turbo off", ARGS_END) == BMB_OPTIONS_OK
             && opts.label != NULL && strcmp(opts.label, "turbo off") == 0) {
             ok("--label \"turbo off\"");
             bmb_options_free(&opts);
@@ -346,7 +350,7 @@ int main(void)
             fail("--label \"turbo off\"", "was not stored as given");
         }
 
-        if (parse_args(&opts, "-l", "x", "-l", "y", NULL) == BMB_OPTIONS_OK
+        if (parse_args(&opts, "-l", "x", "-l", "y", ARGS_END) == BMB_OPTIONS_OK
             && opts.label != NULL && strcmp(opts.label, "y") == 0) {
             ok("the last --label wins");
             bmb_options_free(&opts);
@@ -387,7 +391,7 @@ int main(void)
         for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
             bmb_options_t opts;
 
-            if (parse_args(&opts, cases[i].a, cases[i].b, NULL) != BMB_OPTIONS_OK) {
+            if (parse_args(&opts, cases[i].a, cases[i].b, ARGS_END) != BMB_OPTIONS_OK) {
                 fail(cases[i].what, "was rejected");
             } else if (opts.verify != cases[i].want) {
                 fail(cases[i].what, "left the check in the wrong state");
@@ -403,12 +407,12 @@ int main(void)
     {
         bmb_options_t opts;
 
-        if (parse_args(&opts, "-V", NULL) != BMB_OPTIONS_VERSION) {
+        if (parse_args(&opts, "-V", ARGS_END) != BMB_OPTIONS_VERSION) {
             fail("-V", "did not report BMB_OPTIONS_VERSION");
         } else {
             ok("-V");
         }
-        if (parse_args(&opts, "--version", NULL) != BMB_OPTIONS_VERSION) {
+        if (parse_args(&opts, "--version", ARGS_END) != BMB_OPTIONS_VERSION) {
             fail("--version", "did not report BMB_OPTIONS_VERSION");
         } else {
             ok("--version");
@@ -435,7 +439,7 @@ int main(void)
         bmb_options_t opts;
         char got[64];
 
-        if (parse_args(&opts, "-t", "1,2,4", NULL) == BMB_OPTIONS_OK) {
+        if (parse_args(&opts, "-t", "1,2,4", ARGS_END) == BMB_OPTIONS_OK) {
             format_range(&opts.thread_count, got, sizeof(got));
             if (strcmp(got, "1,2,4") != 0 || !opts.thread_count_set) {
                 fail("-t 1,2,4", "did not expand to 1,2,4");

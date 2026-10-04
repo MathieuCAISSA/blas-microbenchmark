@@ -308,6 +308,9 @@ static int bmb_option_count(const char *str, const char *option, unsigned int mi
 
     if (bmb_parse_uint(str, (unsigned long long) UINT_MAX, &value) != BMB_PARSE_OK
         || value < (unsigned long long) min_allowed) {
+        /* UINT_MAX is an unsigned int; cppcheck's own limits.h makes it a
+         * long. GCC's -Wformat checks the real one. */
+        /* cppcheck-suppress invalidPrintfArgType_uint */
         snprintf(msg, sizeof(msg), "Invalid value for %s (expected an integer between %u and %u).",
                  option, min_allowed, UINT_MAX);
         bmb_log_error(msg);

@@ -105,12 +105,13 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     size_t n = (size_t) ctx->n, i;
     double *ux = malloc(3 * n * sizeof(double));
-    double *uxabs = ux + n, *scale = ux + 2 * n;
     int ok;
 
     if (ux == NULL) {
         return -1;
     }
+    double *uxabs = ux + n, *scale = ux + 2 * n;
+
     call(ctx);
     bmb_verify_perturb(&ctx->x[0]);
     bmb_verify_matvec(BMB_VERIFY_UPPER, n, n, ctx->a, n, ctx->x, NULL, ux, uxabs);

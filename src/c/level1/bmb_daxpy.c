@@ -87,12 +87,13 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     size_t n = (size_t) ctx->n, i;
     double *y0 = malloc(3 * n * sizeof(double));
-    double *want = y0 + n, *scale = y0 + 2 * n;
     int ok;
 
     if (y0 == NULL) {
         return -1;
     }
+    double *want = y0 + n, *scale = y0 + 2 * n;
+
     memcpy(y0, ctx->y, n * sizeof(double));
     call(ctx);
     bmb_verify_perturb(&ctx->y[0]);

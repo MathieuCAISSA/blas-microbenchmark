@@ -73,12 +73,13 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     size_t n = (size_t) ctx->n;
     double *x0 = malloc(2 * n * sizeof(double));
-    double *y0 = x0 + n;
     int ok;
 
     if (x0 == NULL) {
         return -1;
     }
+    double *y0 = x0 + n;
+
     memcpy(x0, ctx->x, n * sizeof(double));
     memcpy(y0, ctx->y, n * sizeof(double));
     call(ctx);
