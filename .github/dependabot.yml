@@ -1,0 +1,13 @@
+# Keeps the GitHub Actions the workflows use up to date: one grouped pull
+# request a week at most, which CI then checks like any other.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: CI

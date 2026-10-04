@@ -1,0 +1,16 @@
+name: Feature request
+description: Something it should measure, report or show.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The question you want the benchmarks or the report to answer, and why the current ones do not.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help
+      description: An option, a column, a chart... Rough is fine.

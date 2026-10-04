@@ -60,17 +60,25 @@ jobs:
           ./_install/bin/bmb_report r.json > r.html
           grep -qi '^<!doctype html>' r.html
 
+      # So that a download can be checked: sha256sum -c SHA256SUMS.
+      - name: Checksums
+        run: |
+          cd build
+          sha256sum blas-microbenchmark-*.tar.gz > SHA256SUMS
+          cat SHA256SUMS
+          sha256sum -c SHA256SUMS
+
       - name: Upload the tarball to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           # Pushing a tag is enough on its own: create the release if it
-          # doesn't exist yet, otherwise just replace the asset.
+          # doesn't exist yet, otherwise just replace the assets.
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$TAG" build/blas-microbenchmark-*.tar.gz \
+            gh release upload "$TAG" build/blas-microbenchmark-*.tar.gz build/SHA256SUMS \
               --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create "$TAG" build/blas-microbenchmark-*.tar.gz \
+            gh release create "$TAG" build/blas-microbenchmark-*.tar.gz build/SHA256SUMS \
               --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
           fi

@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use blas-microbenchmark in published work, please cite it as below."
+type: software
+title: blas-microbenchmark
+abstract: >-
+  Command-line microbenchmarks for BLAS routines: one executable per
+  routine, the same options for all of them, results that record the
+  library and the machine they come from, and a self-contained HTML report
+  to compare BLAS libraries.
+authors:
+  - given-names: Mathieu
+    family-names: Caissa
+version: 1.1.2
+date-released: 2026-10-04
+license: Apache-2.0
+repository-code: "https://github.com/MathieuCAISSA/blas-microbenchmark"
+url: "https://mathieucaissa.github.io/blas-microbenchmark/"
+keywords:
+  - BLAS
+  - benchmark
+  - microbenchmark
+  - linear algebra
+  - HPC
+  - performance
+  - OpenBLAS
+  - BLIS

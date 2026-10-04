@@ -1,0 +1,33 @@
+name: Bug report
+description: Something does not work, or a number looks wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: The command
+      description: The exact command line, and its output or error if it is short.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: version
+    attributes:
+      label: "Output of `bmb_<routine> --version`"
+      description: It names the version, the BLAS library and the machine. For a problem with `bmb_report`, give `bmb_report --version` and the version of a benchmark too.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: build
+    attributes:
+      label: How it was built
+      description: "The `configure` line (backend, `--with-blas-*` options), and the compiler if not GCC."
+      render: shell

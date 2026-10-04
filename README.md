@@ -138,8 +138,15 @@ The manual pages, also online at
 - Before installing, from the build directory: `man -l man/blas-microbenchmark.1`.
 - [Development](https://mathieucaissa.github.io/blas-microbenchmark/development.html):
   every test and what CI runs.
-- [AGENTS.md](AGENTS.md) — for contributors: building from git, the tests,
-  adding a routine, CI, cutting a release.
+- [CHANGELOG.md](CHANGELOG.md) — what changed in each release.
+- [CONTRIBUTING.md](CONTRIBUTING.md), then [AGENTS.md](AGENTS.md) — for
+  contributors: building from git, the tests, adding a routine, CI,
+  cutting a release.
+
+## Citing
+
+If you use it in published work, please cite it: GitHub's *Cite this
+repository* button gives the reference, from [CITATION.cff](CITATION.cff).
 
 ## License
 

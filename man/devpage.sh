@@ -109,6 +109,13 @@ development_body() {
     done
     echo '</dl>'
 
+    heading 2 tests-project "The release files"
+    echo '<dl class="Bl-tag">'
+    for f in "$top"/test_*.sh; do
+        [ -f "$f" ] && test_entry "$f"
+    done
+    echo '</dl>'
+
     heading 2 tests-man "The manual pages and this site"
     echo '<dl class="Bl-tag">'
     for f in "$top"/man/test_man_*.sh; do

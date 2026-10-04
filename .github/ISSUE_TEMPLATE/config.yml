@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://mathieucaissa.github.io/blas-microbenchmark/
+    about: The manual pages, with examples of every output.
+  - name: Security problem
+    url: https://github.com/MathieuCAISSA/blas-microbenchmark/security/advisories/new
+    about: Report it privately, not in a public issue (see SECURITY.md).

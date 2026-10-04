@@ -66,6 +66,7 @@ make -C src/c/common check TESTS='test_bmb_options test_bmb_machine'
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`) |
+| top | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
 | | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the exit statuses, the commands in the examples |
@@ -774,6 +775,12 @@ weighing what the fix costs.
 
 ## CI
 
+`ci.yml` gives its jobs a read-only token (`permissions: contents:
+read`); only `pages.yml` and `release.yml` ask for more, for what they
+publish. Dependabot (`.github/dependabot.yml`) proposes updates of the
+actions, grouped, once a week. `main` is protected: no force push or
+deletion, and a pull request needs every CI job green to merge.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
 `configure --enable-werror`, `make`, and `make check` on every push/PR,
 once per implemented backend: `openblas`, `blis` and `netlib` on
@@ -834,10 +841,14 @@ those are plain git exports with no `configure` in them.
 
 `.github/workflows/release.yml` handles that: on a pushed `v*` tag it
 builds the tarball, verifies it unpacks and builds with no Autotools
-present, then uploads it — *creating* the release if the tag has none yet.
+present, then uploads it with its `SHA256SUMS` — *creating* the release if
+the tag has none yet.
 
 1. **Version**: set `AC_INIT` in `configure.ac` to `X.Y.Z`, dropping the
-   `-dev`.
+   `-dev`. In `CHANGELOG.md`, turn `[Unreleased]` into
+   `[X.Y.Z] - YYYY-MM-DD` (and its link at the bottom); in `CITATION.cff`,
+   set `version` and `date-released` to the same. `test_release_files.sh`
+   fails until the three agree.
 2. **Man pages**: if one changed since the last release, set the date in
    its `.TH` line (`man/*.1.in`) to today.
 3. **README**: replace the Quick start output with what the new version
@@ -855,11 +866,13 @@ present, then uploads it — *creating* the release if the tag has none yet.
    gh release edit vX.Y.Z --title vX.Y.Z --notes-file notes.md
    ```
 
-6. **Verify the tarball** the release carries: download it, then
+6. **Verify the tarball** the release carries: download it with its
+   `SHA256SUMS` and run `sha256sum -c SHA256SUMS`, then
    `./configure --prefix=...`, `make check`, `make install` — the man
    pages included — on a machine with no Autotools if you can.
 7. **Back to development**: set `AC_INIT` to the next minor version with
-   `-dev` (`X.(Y+1).0-dev`), commit, push.
+   `-dev` (`X.(Y+1).0-dev`), add an empty `[Unreleased]` section to
+   `CHANGELOG.md`, commit, push.
 
 Note the order: **edit the notes, don't create the release**. The workflow
 gets there within about half a minute of the tag push and creates it with
