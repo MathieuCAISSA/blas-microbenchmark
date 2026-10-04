@@ -11,7 +11,10 @@ else. Dependabot (`.github/dependabot.yml`) proposes updates of the
 actions, grouped, once a week, and updates the SHA and the comment
 together; to pin a new action by hand, take the commit of its latest
 release (`gh api repos/OWNER/REPO/commits/vX.Y.Z -q .sha`). `main` is protected: no force push or
-deletion, and a pull request needs every CI job green to merge.
+deletion, and a pull request needs every required check green to merge:
+every job of `ci.yml` except `coverage`, which is there to be read. A
+new job goes into the required checks (the branch protection settings)
+when it merges, or it can fail without stopping anything.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
 `configure --enable-werror`, `make`, and `make check` on every push/PR,
