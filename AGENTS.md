@@ -66,12 +66,17 @@ git switch -c issue-<N>-<short-name> origin/main   # e.g. issue-3-cpu-frequency
 # ... commits, each one building and passing make check ...
 git push -u origin issue-<N>-<short-name>
 gh pr create --fill          # the body says "Closes #<N>"
+# while CI runs: review the diff against REVIEWS.md, post it on the PR
 gh pr checks --watch         # every CI job must pass
 gh pr merge --merge          # a merge commit keeps the detailed commits
 ```
 
 - One issue, one branch: work that turns out to be two things becomes two
   issues.
+- Every pull request is reviewed against [REVIEWS.md](REVIEWS.md), and
+  only against it: each section *ok* or what is wrong, posted on the pull
+  request (`gh pr comment`) while CI runs. Fix what it finds before
+  merging. A bug a review should have caught adds an item to it.
 - `main` is protected: a pull request cannot be merged until all nine CI
   jobs pass, and `main` cannot be force-pushed or deleted. The repository
   deletes a branch once its pull request is merged; the issue closes

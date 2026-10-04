@@ -3,8 +3,8 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = src man
 
 EXTRA_DIST = README.md AGENTS.md LICENSE autogen.sh \
-	CHANGELOG.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md CITATION.cff \
-	.editorconfig \
+	CHANGELOG.md CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md REVIEWS.md \
+	CITATION.cff .editorconfig \
 	doc/dev/benchmarks.md doc/dev/backends.md doc/dev/report.md \
 	doc/dev/documentation.md doc/dev/ci.md doc/dev/release.md \
 	$(TESTS)
