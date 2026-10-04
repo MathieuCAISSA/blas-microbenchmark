@@ -77,8 +77,12 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
   only against it: each section *ok* or what is wrong, posted on the pull
   request (`gh pr comment`) while CI runs. Fix what it finds before
   merging. A bug a review should have caught adds an item to it.
-- `main` is protected: a pull request cannot be merged until all nine CI
-  jobs pass, and `main` cannot be force-pushed or deleted. The repository
+- `main` is protected: a pull request cannot be merged until every
+  required check passes, and `main` cannot be force-pushed or deleted.
+  Every job of `ci.yml` is required except `coverage`, which has no
+  threshold; CodeQL's findings go to the Security tab, not to a check
+  ([CI](doc/dev/ci.md)). A new job is added to the required checks
+  (branch protection settings) when it merges. The repository
   deletes a branch once its pull request is merged; the issue closes
   itself through "Closes #N".
 - Update the branch from `main` (`git merge origin/main`) when `main`
