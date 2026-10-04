@@ -536,7 +536,7 @@ void bmb_options_print_help(const char *prog_name)
         "                                 (default: square matrices, dim2 = dim1 at every point;\n"
         "                                 with -M, every dim1 x dim2 combination is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
-        "  -s, --statistics              add mean/stddev/max and the batch size (default: off)\n"
+        "  -s, --statistics              add mean/stddev/max, the batch size and the median (default: off)\n"
         "  -c, --verify                  check each point's result against a reference before\n"
         "                                 timing it; stop, exit 2, if it is wrong (default: on)\n"
         "  -C, --no-verify               do not check the results\n"

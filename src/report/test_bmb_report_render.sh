@@ -30,11 +30,16 @@ mkdir "$T"
 #    --verify and the other with -C, so the Verified columns show both,
 #    and the other on the fake sysfs of the machine probe's tests, so the
 #    Frequency column shows;
+#  - dgemm four more times under a third label, so that series has
+#    repeated runs: their band, and the noise test in the comparison;
 #  - dgemv as a grid, at one thread only: the heatmap.
 ../c/level1/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
 ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
     ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label b -C -o "$T/dgemm-b.json" >/dev/null
+for i in 1 2 3 4; do
+    ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label r -C -o "$T/dgemm-r$i.json" >/dev/null
+done
 ../c/level2/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
@@ -62,7 +67,7 @@ if grep -q 'could not be read' "$dom"; then
     fail "the page could not read one of the results"
 fi
 
-for title in 'Performance against size' 'Bandwidth against size' 'compared with' \
+for title in 'Performance against size' 'Bandwidth against size' '[Cc]ompared with' \
              'Thread scaling' 'Shapes' 'Where the results came from' 'Raw data'; do
     grep -q "$title" "$dom" || fail "no \"$title\" in the rendered page"
     echo "ok   rendered: $title"
@@ -76,6 +81,12 @@ test "$(grep -o '>Verified<' "$dom" | wc -l)" -ge 2 || fail "no Verified column 
 grep -q '<td>yes</td>' "$dom" || fail "the verified series is not shown as verified"
 grep -q '<td>no</td>' "$dom" || fail "the series run with -C is not shown as unverified"
 echo "ok   rendered: the Verified columns, for the series run with --verify"
+
+grep -q 'band: fastest to slowest run' "$dom" || fail "no run band for the series measured four times"
+grep -q 'Mann-Whitney U' "$dom" || fail "the comparison chart does not say how its points were tested against noise"
+rows=$(cat "$T"/*.json | grep -c '"thread_count"')
+grep -q "Raw data ($rows rows)" "$dom" || fail "the raw data table does not have a row for each of the $rows runs"
+echo "ok   rendered: repeated runs, their band, the noise test, and every run in the raw data"
 
 grep -q '>Frequency<' "$dom" || fail "no Frequency column in the provenance table"
 grep -q '<td>performance, turbo off</td>' "$dom" || fail "the series run on the x86 fixture shows no frequency"

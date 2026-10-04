@@ -18,6 +18,7 @@ typedef struct {
     double mean_s;
     double stddev_s;
     double max_s;
+    double median_s;     /* the samples' median, under -s too */
 } bmb_result_row_t;
 
 typedef struct {

@@ -10,6 +10,15 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Repeated runs in the report: run the same command several times, each
+  into its own file, and every point keeps all its runs. The curve still
+  shows the fastest; a band shows the spread to the slowest, and the
+  comparison with the reference tests each difference against that
+  spread (Mann-Whitney U, two-sided, p < 0.05): a point within the noise
+  is drawn hollow. It takes 4 runs of each, or 3 against 5; with fewer,
+  the page says so. The raw data has a row per run.
+- `-s` adds the median of the samples, as the last column (`median_s`
+  in the JSON), so that a CSV read by position keeps its other columns.
 - The CPU frequency governor and turbo are recorded with every result
   (`# frequency:`, and `governor` and `turbo` in the JSON `machine`
   object) and shown in the report's provenance table. When they let the

@@ -20,9 +20,17 @@
  * of ddot at n=1024 on the development machine gave means of 2949, 396 and
  * 131 ns while their fastest samples were 163, 121 and 127 ns.
  *
- * The mean, the spread and the worst sample are still reported under -s,
- * which is where variability belongs. */
-static void bmb_compute_stats(const double *times, unsigned int n, bmb_result_row_t *row)
+ * The mean, the spread, the worst sample and the median are still reported
+ * under -s, which is where variability belongs. */
+static int bmb_compare_times(const void *a, const void *b)
+{
+    const double x = *(const double *) a, y = *(const double *) b;
+
+    return (x > y) - (x < y);
+}
+
+/* Sorts `times`, for the median: the samples are not used afterwards. */
+static void bmb_compute_stats(double *times, unsigned int n, bmb_result_row_t *row)
 {
     unsigned int i;
     double sum = 0.0;
@@ -49,6 +57,9 @@ static void bmb_compute_stats(const double *times, unsigned int n, bmb_result_ro
      * whole of what was measured, not a sample drawn from it. */
     variance /= (double) n;
     row->stddev_s = sqrt(variance);
+
+    qsort(times, n, sizeof(*times), bmb_compare_times);
+    row->median_s = (n % 2 == 1) ? times[n / 2] : (times[n / 2 - 1] + times[n / 2]) / 2.0;
 }
 
 /* How many calls go into one timed batch.

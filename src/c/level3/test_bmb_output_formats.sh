@@ -57,6 +57,24 @@ fi
 grep -q '^# label: say "hi"$' fmtl.txt || fail "text output carries no label line"
 grep -q '"label": "say \\"hi\\""' fmtl.json || fail "json label is missing or not escaped"
 
+# -s adds the median of the samples, last, so that a CSV read by column
+# position keeps its other columns where they were. One sample: it is
+# that sample. Two: their mean, to the last bit. Three: one of them,
+# between the fastest and the slowest.
+./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -s -C -o stat.csv -f csv >/dev/null || fail "the -s run failed"
+header=$(grep -v '^#' stat.csv | sed -n 1p)
+want="thread_count,matrix_dim1_m_k,matrix_dim2_n,time_s,gflops,mean_s,stddev_s,max_s,calls_per_sample,median_s"
+test "$header" = "$want" || fail "-s csv header is '$header', expected '$want'"
+row=$(grep -v '^#' stat.csv | sed -n 2p)
+test "$(echo "$row" | cut -d, -f4)" = "$(echo "$row" | cut -d, -f10)" || fail "one sample, and the median is not it: $row"
+./bmb_dgemm -x 0 -i 2 -m 8 -M 8 -s -C -o stat.csv -f csv >/dev/null || fail "the -s run failed"
+row=$(grep -v '^#' stat.csv | sed -n 2p)
+test "$(echo "$row" | cut -d, -f6)" = "$(echo "$row" | cut -d, -f10)" || fail "two samples, and the median is not their mean: $row"
+./bmb_dgemm -x 0 -i 3 -m 8 -M 8 -s -C -o stat.json >/dev/null || fail "the -s json run failed"
+awk -F': ' '/"time_s"/ { t = $2 + 0 } /"max_s"/ { x = $2 + 0 } /"median_s"/ { m = $2 + 0 }
+    END { exit !(m >= t && m <= x) }' stat.json || fail "the median is not between the fastest and slowest samples"
+grep -q '^      "median_s": [0-9.]*$' stat.json || fail "json has no median_s, last in its row"
+
 # The CPU frequency (#3), read from the fake sysfs trees of the machine
 # probe's tests: the governor and turbo in every format, and a warning
 # exactly when they can move the frequency during the run.
@@ -85,5 +103,5 @@ if grep -q '^# frequency' freq.txt || grep -q '"governor"\|"turbo"' freq.json; t
 fi
 test ! -s freq.err || fail "a warning without any frequency information: $(cat freq.err)"
 
-rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json
+rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json
 echo "ok   output formats"

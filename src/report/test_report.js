@@ -369,6 +369,75 @@
       eq(R.anyVerified(m.identities), false, "and not before: a report of older results gets no column of \"no\"");
     });
 
+    /* ---- Repeated runs and noise (#4) ---- */
+
+    test("statistics", function () {
+      eq(R.median([3, 1, 2]), 2, "median: odd count");
+      eq(R.median([4, 1, 3, 2]), 2.5, "median: even count, the mean of the middle two");
+      /* p-values checked against an independent count, in Python, of
+       * every way of splitting the pooled ranks. */
+      var t = R.mannWhitney([1, 2, 3, 4], [5, 6, 7, 8]);
+      eq(t.u, 0, "Mann-Whitney: U is 0 when all of a is below all of b");
+      near(t.p, 2 / 70, "Mann-Whitney: exact two-sided p, 4 against 4 fully apart");
+      t = R.mannWhitney([1, 3, 5, 7], [2, 4, 6, 8]);
+      eq(t.u, 6, "Mann-Whitney: U when interleaved");
+      near(t.p, 0.6857142857, "Mann-Whitney: interleaved is far from significant");
+      near(R.mannWhitney([5, 6, 7, 8, 9], [1, 2, 3]).p, 0.0357142857, "Mann-Whitney: unequal sizes");
+      near(R.mannWhitney([1, 1, 2, 3, 3], [3, 4, 4, 5, 6]).p, 0.0238095238, "Mann-Whitney: ties at mid-ranks, exact");
+      var a12 = [], b12 = [], i;
+      for (i = 1; i <= 12; i++) { a12.push(i); b12.push(i + 12); }
+      t = R.mannWhitney(a12, b12);
+      eq(t.exact, false, "Mann-Whitney: past 20000 splits, the normal approximation");
+      eq(Math.abs(t.p - 3.658455e-5) < 1e-6, true, "Mann-Whitney: normal approximation with continuity correction");
+
+      near(R.minP(3, 3), 0.1, "3 runs against 3 can never reach p < 0.05");
+      near(R.minP(4, 4), 2 / 70, "4 against 4 can");
+      eq(R.minP(3, 5) < R.ALPHA, true, "and so can 3 against 5");
+
+      eq(R.noiseVerdict([1, 2, 3, 4], [5, 6, 7, 8]).verdict, "faster", "verdict: lower times beyond noise are faster");
+      eq(R.noiseVerdict([5, 6, 7, 8], [1, 2, 3, 4]).verdict, "slower", "verdict: and higher ones slower");
+      eq(R.noiseVerdict([1, 3, 5, 7], [2, 4, 6, 8]).verdict, "noise", "verdict: interleaved runs are noise");
+      eq(R.noiseVerdict([1, 2, 3], [4, 5, 6]).verdict, "few", "verdict: too few runs is not called noise");
+      eq(R.noiseVerdict([1], [2]).verdict, "few", "verdict: one run each, nothing to test");
+    });
+
+    test("repeated runs", function () {
+      function runs(file, backend, time, rate) {
+        return entry(file, gemm({ backend: backend, blas: backend === "openblas" ? undefined : "",
+                                  rows: [[1, 64, 64, time, rate, null]] }));
+      }
+      var m = R.buildModel([
+        runs("o1.json", "openblas", 1.0, 10), runs("o2.json", "openblas", 1.1, 9), runs("o3.json", "openblas", 1.2, 8),
+        runs("o4.json", "openblas", 1.3, 7),
+        runs("b1.json", "blis", 2.0, 5), runs("b2.json", "blis", 2.1, 4.8), runs("b3.json", "blis", 2.2, 4.5),
+        runs("b4.json", "blis", 2.3, 4.3),
+        runs("n1.json", "netlib", 1.05, 9.5), runs("n2.json", "netlib", 1.15, 8.5), runs("n3.json", "netlib", 1.25, 7.5),
+        runs("n4.json", "netlib", 1.35, 6.5)
+      ]);
+      var rt = routine(m, "dgemm");
+      var o = R.pointsOf(rt.seriesOrder[0])[0];
+      eq(o.runs.length, 4, "every run of a point is kept");
+      eq(o.file, "o1.json", "the point drawn is still the fastest run");
+      eq(R.runSpread(o, "gflops"), { n: 4, median: 8.5, slowest: 7 }, "the spread: how many runs, their median, the slowest");
+
+      var sd = R.sizeData(rt, 1);
+      var rd = R.ratioData(rt, sd.list, sd.slice, 1, byName(m, "openblas"));
+      var blis = rd.series.filter(function (x) { return x.identity.name === "blis"; })[0].points[0];
+      var netlib = rd.series.filter(function (x) { return x.identity.name === "netlib"; })[0].points[0];
+      eq([blis.verdict, blis.hollow], ["slower", false], "a series slower in every run is beyond noise, a full dot");
+      eq([netlib.verdict, netlib.hollow], ["noise", true], "runs that interleave with the reference's are noise, a hollow dot");
+      eq(rd.notes.some(function (n) { return /Mann-Whitney U/.test(n); }), true, "the chart says how the dots were tested");
+
+      m = R.buildModel([runs("o1.json", "openblas", 1, 10), runs("o2.json", "openblas", 1.1, 9),
+                        runs("b1.json", "blis", 2, 5), runs("b2.json", "blis", 2.1, 4.8)]);
+      rt = routine(m, "dgemm");
+      sd = R.sizeData(rt, 1);
+      rd = R.ratioData(rt, sd.list, sd.slice, 1, byName(m, "openblas"));
+      eq([rd.series[0].points[0].verdict, rd.series[0].points[0].hollow], ["few", false],
+         "2 runs against 2: not called noise, and not hollow");
+      eq(rd.notes.some(function (n) { return /too few runs/.test(n); }), true, "and the chart says it takes more runs");
+    });
+
     /* ---- The CPU frequency (#3) ---- */
 
     test("frequency", function () {

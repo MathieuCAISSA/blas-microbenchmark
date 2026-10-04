@@ -176,7 +176,9 @@ weighing what the fix costs.
   factor, and a handful of samples then drags the mean with it. Measured on
   the development machine, three runs of ddot at n=1024 gave means of 2949,
   396 and 131 ns for fastest samples of 163, 121 and 127 ns. Don't "fix"
-  this back to a mean without re-measuring that.
+  this back to a mean without re-measuring that. `-s` adds the mean, the
+  spread, the slowest and the median; variability across whole runs is
+  the report's (#4: repeated runs, a band, a Mann-Whitney U test).
 - **First-touch NUMA.** `setup()` allocates and fills operands from the
   main thread, so every page lands on that thread's node. Thread-scaling
   numbers on a multi-socket machine are therefore pessimistic. Making the

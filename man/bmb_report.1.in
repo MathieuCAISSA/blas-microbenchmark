@@ -29,21 +29,27 @@ Open it with a browser.
 Each part appears only when the results can support it:
 .IP \(bu 2
 a summary: the best figure for each routine, and where each series came
-from (library, CPU, caches, OS, date) \(em and whether each series was
+from (library, CPU, caches, OS, date, and the CPU frequency governor and
+turbo where the machine exposed them) \(em and whether each series was
 checked against a reference before it was timed, once any was (the
 benchmarks do it unless run with
 .BR \-C );
 .IP \(bu
 performance against size, and for levels 1 and 2 bandwidth against size,
 with the points where a sweep leaves L1, L2 and L3 marked.
-For results measured with
+For a series with repeated runs (see
+.BR "Repeated runs and noise" ),
+a band shows the spread from the fastest run to the slowest; otherwise,
+for results measured with
 .BR \-s ,
-a band shows the spread from the fastest sample to the mean;
+from the fastest sample to the mean;
 .IP \(bu
 each library compared with a reference, on a log scale centred on \(mu1,
 so that twice as slow and twice as fast sit at the same distance from it.
 The reference is OpenBLAS when there is one, and can be changed on the
-page;
+page.
+With repeated runs, a hollow point is a difference within run-to-run
+noise;
 .IP \(bu
 thread scaling, at the largest size measured at every thread count,
 against ideal linear scaling;
@@ -53,8 +59,8 @@ a heatmap of every shape, for two-dimension routines measured with both
 and
 .BR \-M ;
 .IP \(bu
-the raw data, every row, sortable, with whether each point was checked
-when any was.
+the raw data, every row of every file, sortable, with whether each point
+was checked when any was.
 .PP
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
@@ -64,10 +70,26 @@ label
 .RB ( \-l ).
 Files that share all four make one curve: a sweep extended the next day, or
 thread counts measured in separate runs, merge on their own.
-A point measured in more than one file keeps the fastest measurement, and
-the page says so with the gap, so that a run which did not reproduce does
-not go unnoticed.
+A point measured in more than one file is drawn at the fastest
+measurement, and the page says so with the gap, so that a run which did
+not reproduce does not go unnoticed; the others are kept as its runs.
 To compare two conditions on one machine, give each run its own label.
+.SS Repeated runs and noise
+Running the same command several times, each into its own file, gives
+each point several runs.
+The figure drawn stays the fastest run, as within a run it is the fastest
+sample.
+The band around a curve then shows how far the runs spread, the tooltip
+gives their number, median and slowest, and the comparison with the
+reference is tested against that spread: a Mann-Whitney U test on the
+times of both series' runs, two-sided, at p < 0.05.
+A point within the noise is drawn hollow, and its tooltip gives the p
+value.
+.PP
+It takes runs to tell a difference from noise: 4 of each series, or 3
+against 5.
+With 3 against 3, no outcome can reach p < 0.05, so the page says there
+are too few runs rather than calling the difference noise.
 .SS What it accepts
 Results of the same major version as
 .B bmb_report
@@ -98,6 +120,16 @@ bmb_dgemm \-m 128:2048 \-t 1:8 \-o results/dgemm\-openblas.json
 bmb_dgemm \-m 128:2048 \-t 1:8 \-o results/dgemm\-blis.json  # BLIS build
 bmb_report results/*.json > report.html
 firefox report.html
+.EE
+.RE
+.PP
+The same, five runs of each, so that the comparison says which
+differences are beyond noise:
+.PP
+.RS
+.EX
+for i in 1 2 3 4 5; do bmb_dgemm \-m 1024 \-o results/openblas\-$i.json; done
+bmb_report results/*.json > report.html
 .EE
 .RE
 .SH SEE ALSO

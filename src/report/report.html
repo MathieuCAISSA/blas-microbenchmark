@@ -117,6 +117,7 @@ svg .crosshair { stroke: var(--muted); stroke-width: 1; shape-rendering: crispEd
 svg .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 svg .band { stroke: none; opacity: 0.10; }
 svg .dot { stroke: var(--surface); stroke-width: 2; }
+svg .dot.hollow { fill: var(--surface) !important; stroke-width: 2; }
 svg .end-label { fill: var(--ink-2); }
 /* The one dashed line on the page, and dashed on purpose: it is a
  * projection (ideal scaling), not data and not a grid. */
@@ -339,7 +340,7 @@ details[open] > summary { margin-bottom: 12px; }
           threads: row.thread_count, d1: row.dim1,
           d2: (row.dim2 === undefined) ? null : row.dim2,
           time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
-          mean: row.mean_s, stddev: row.stddev_s, max: row.max_s,
+          mean: row.mean_s, stddev: row.stddev_s, max: row.max_s, median: row.median_s,
           calls: row.calls_per_sample, file: file, verified: r.verified === true
         };
         var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
@@ -349,8 +350,12 @@ details[open] > summary { margin-bottom: 12px; }
           var slow = (fast === p) ? prev : p;
           routine.duplicates.push({ series: series, point: fast, kept: fast.file,
                                     other: slow.file, gap: (slow.time / fast.time - 1) * 100 });
+          /* Every run is kept on the point drawn, the fastest (#4): the
+           * charts show their spread and the comparison tests it. */
+          fast.runs = prev.runs.concat([p]);
           series.points[pkey] = fast;
         } else {
+          p.runs = [p];
           series.points[pkey] = p;
         }
       }
@@ -478,6 +483,109 @@ details[open] > summary { margin-bottom: 12px; }
   }
 
   function colour(id) { return "var(--s" + id.slot + ")"; }
+
+  /* ------------------------------------------------------------------ *
+   * Repeated runs (#4). Several files can measure the same point of a  *
+   * series: the fastest is the point drawn, as with a single run, and  *
+   * the others say how far it reproduces. Whether two series differ   *
+   * beyond that is a Mann-Whitney U test on their runs' times: it      *
+   * assumes no distribution, which timings, skewed by interruptions,   *
+   * do not follow.                                                     *
+   * ------------------------------------------------------------------ */
+
+  var ALPHA = 0.05;
+  var EXACT_SPLITS = 20000;
+
+  function median(xs) {
+    var s = xs.slice().sort(function (a, b) { return a - b; });
+    var h = Math.floor(s.length / 2);
+    return s.length % 2 ? s[h] : (s[h - 1] + s[h]) / 2;
+  }
+
+  function choose(n, k) {
+    var c = 1, i;
+    for (i = 1; i <= k; i++) { c = c * (n - k + i) / i; }
+    return Math.round(c);
+  }
+
+  /* Ranks from 1, ties sharing the mean of the ranks they span. */
+  function midRanks(xs) {
+    var order = xs.map(function (v, i) { return i; }).sort(function (a, b) { return xs[a] - xs[b]; });
+    var r = new Array(xs.length), i = 0, j, k;
+    while (i < order.length) {
+      j = i;
+      while (j + 1 < order.length && xs[order[j + 1]] === xs[order[i]]) { j++; }
+      for (k = i; k <= j; k++) { r[order[k]] = (i + j) / 2 + 1; }
+      i = j + 1;
+    }
+    return r;
+  }
+
+  /* The standard normal's upper tail (Abramowitz and Stegun 7.1.26, to
+   * about 1e-7, far finer than a 0.05 threshold needs). */
+  function normalTail(z) {
+    var t = 1 / (1 + 0.3275911 * Math.abs(z / Math.SQRT2));
+    var erf = 1 - t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 +
+              t * (-1.453152027 + t * 1.061405429)))) * Math.exp(-z * z / 2);
+    return z >= 0 ? (1 - erf) / 2 : (1 + erf) / 2;
+  }
+
+  /* Two-sided Mann-Whitney U of a against b: u is a's U, and p the chance
+   * of a U at least as far from its mean if both came from one
+   * distribution. Exact -- every way of splitting the pooled ranks,
+   * counted -- up to EXACT_SPLITS splits; past that, the normal
+   * approximation with the tie and continuity corrections. */
+  function mannWhitney(a, b) {
+    var n1 = a.length, n2 = b.length, n = n1 + n2;
+    var r = midRanks(a.concat(b));
+    var u = r.slice(0, n1).reduce(function (s, v) { return s + v; }, 0) - n1 * (n1 + 1) / 2;
+    var mean = n1 * n2 / 2, dev = Math.abs(u - mean) - 1e-9;
+    if (choose(n, n1) <= EXACT_SPLITS) {
+      var hit = 0, total = 0;
+      (function pick(from, left, sum) {
+        if (left === 0) {
+          total++;
+          if (Math.abs(sum - n1 * (n1 + 1) / 2 - mean) >= dev) { hit++; }
+          return;
+        }
+        for (var i = from; i <= n - left; i++) { pick(i + 1, left - 1, sum + r[i]); }
+      })(0, n1, 0);
+      return { u: u, p: hit / total, exact: true };
+    }
+    var ties = {}, t = 0;
+    r.forEach(function (v) { ties[v] = (ties[v] || 0) + 1; });
+    Object.keys(ties).forEach(function (k) { t += ties[k] * ties[k] * ties[k] - ties[k]; });
+    var sd = Math.sqrt(n1 * n2 / 12 * ((n + 1) - t / (n * (n - 1))));
+    if (sd === 0) { return { u: u, p: 1, exact: false }; }
+    var z = Math.max(0, Math.abs(u - mean) - 0.5) / sd;
+    return { u: u, p: Math.min(1, 2 * normalTail(z)), exact: false };
+  }
+
+  /* The smallest p any n1 runs against n2 can give: all of one below all
+   * of the other. 3 against 3 gives 0.1, so no difference could ever be
+   * told from noise with them. */
+  function minP(n1, n2) { return 2 / choose(n1 + n2, n1); }
+
+  /* How a series' runs at a point compare with the reference's: "faster"
+   * or "slower" beyond noise, "noise" when not, "few" when there are too
+   * few runs for any outcome to reach ALPHA. Times, so lower is faster. */
+  function noiseVerdict(times, refTimes) {
+    if (!times.length || !refTimes.length || minP(times.length, refTimes.length) >= ALPHA) {
+      return { verdict: "few", p: null };
+    }
+    var t = mannWhitney(times, refTimes);
+    if (t.p >= ALPHA) { return { verdict: "noise", p: t.p }; }
+    return { verdict: median(times) < median(refTimes) ? "faster" : "slower", p: t.p };
+  }
+
+  /* A point's runs, as the charts show them: how many, the median and the
+   * slowest of `field` (a rate, so the slowest is the lowest). */
+  function runSpread(p, field) {
+    var v = (p.runs || [p]).map(function (q) { return q[field]; }).filter(function (x) { return x !== undefined; });
+    return { n: v.length, median: median(v), slowest: Math.min.apply(null, v) };
+  }
+
+  function runTimes(p) { return (p.runs || [p]).map(function (q) { return q.time; }); }
 
   /* ------------------------------------------------------------------ *
    * The line chart. One y axis, always (a second scale on the same     *
@@ -656,8 +764,8 @@ details[open] > summary { margin-bottom: 12px; }
           svg.appendChild(line);
         }
         pts.forEach(function (p) {
-          var dot = sv("circle", { cx: sx(p.x), cy: sy(p.y), r: 4 }, "dot");
-          dot.style.fill = s.colour;
+          var dot = sv("circle", { cx: sx(p.x), cy: sy(p.y), r: 4 }, p.hollow ? "dot hollow" : "dot");
+          if (p.hollow) { dot.style.stroke = s.colour; } else { dot.style.fill = s.colour; }
           svg.appendChild(dot);
         });
       });
@@ -839,21 +947,36 @@ details[open] > summary { margin-bottom: 12px; }
     var out = [];
 
     function build(field, title, unit) {
+      var runsBand = false, meanBand = false;
       var series = list.map(function (s) {
+        var pts = s.points.filter(function (p) { return p[field] !== undefined; });
+        var repeated = pts.some(function (p) { return runSpread(p, field).n > 1; });
         return {
           name: s.identity.name, colour: colour(s.identity),
-          points: s.points.filter(function (p) { return p[field] !== undefined; }).map(function (p) {
-            /* With -s, the band runs from the fastest sample (the reported
-             * figure) down to the mean: how stable the measurement was. */
+          points: pts.map(function (p) {
             var q = { x: slice.pick(p), y: p[field] };
-            if (p.mean) { q.y2 = p[field] * p.time / p.mean; }
+            if (repeated) {
+              /* Repeated runs (#4): the band runs from the fastest run,
+               * the one drawn, down to the slowest. */
+              var sp = runSpread(p, field);
+              q.y2 = sp.slowest;
+              if (sp.n > 1) { q.extra = sp.n + " runs: median " + fmtRate(sp.median) + ", slowest " + fmtRate(sp.slowest); }
+              runsBand = true;
+            } else if (p.mean) {
+              /* With -s, from the fastest sample (the reported figure)
+               * down to the mean: how stable the measurement was. */
+              q.y2 = p[field] * p.time / p.mean;
+              meanBand = true;
+            }
             return q;
           })
         };
       });
       if (!series.some(function (s) { return s.points.length; })) { return; }
-      out.push(lineChart({ title: title, subtitle: sub, xLabel: slice.label, yLabel: unit, yUnit: unit,
-                           series: series, markers: markers }));
+      var bands = [runsBand ? "band: fastest to slowest run" : "", meanBand ? "band: fastest sample to mean" : ""]
+        .filter(function (b) { return b; });
+      out.push(lineChart({ title: title, subtitle: sub + (bands.length ? " · " + bands.join(" · ") : ""),
+                           xLabel: slice.label, yLabel: unit, yUnit: unit, series: series, markers: markers }));
     }
     build("gflops", "Performance against size", "GFLOP/s");
     build("gbs", "Bandwidth against size", "GB/s");
@@ -976,14 +1099,31 @@ details[open] > summary { margin-bottom: 12px; }
 
     var notes = [];
     var worst = 1;
+    var repeated = false, few = 0;
     var series = list.filter(function (it) { return it !== refItem; }).map(function (it) {
       var pts = [];
       it.points.forEach(function (p) {
         var r = at[p.d1 + "x" + p.d2];
         if (r && p[field] !== undefined) {
           var v = p[field] / r[field];
+          var times = runTimes(p), refTimes = runTimes(r);
+          var q = { x: slice.pick(p), y: v };
           worst = Math.max(worst, v, 1 / v);
-          pts.push({ x: slice.pick(p), y: v });
+          if (times.length > 1 || refTimes.length > 1) {
+            /* Beyond noise or not (#4): a hollow point is not. */
+            var nv = noiseVerdict(times, refTimes);
+            var runs = times.length + " and " + refTimes.length + " runs";
+            repeated = true;
+            q.verdict = nv.verdict;
+            q.hollow = nv.verdict === "noise";
+            if (nv.verdict === "few") {
+              few++;
+              q.extra = "too few runs to tell from noise (" + runs + ")";
+            } else {
+              q.extra = (q.hollow ? "within noise, " : "beyond noise, ") + "p = " + nv.p.toFixed(3) + " (" + runs + ")";
+            }
+          }
+          pts.push(q);
         }
       });
       if (!pts.length) {
@@ -992,6 +1132,14 @@ details[open] > summary { margin-bottom: 12px; }
       }
       return { identity: it.identity, points: pts };
     });
+    if (repeated) {
+      notes.push("Each ratio is tested against run-to-run noise: a Mann-Whitney U test on the runs of both series " +
+                 "(two-sided, p < " + ALPHA + "). A hollow point is within the noise.");
+    }
+    if (few) {
+      notes.push(plural(few, "point") + " had too few runs to tell from noise: it takes 4 runs of each series, " +
+                 "or 3 against 5, before any difference can reach p < " + ALPHA + ".");
+    }
     var xs = uniqSorted([].concat.apply([], series.map(function (x) { return x.points.map(function (p) { return p.x; }); })));
     return { field: field, series: series, notes: notes, worst: worst, xs: xs };
   }
@@ -1216,6 +1364,8 @@ details[open] > summary { margin-bottom: 12px; }
     defaultThreads: defaultThreads, comparable: comparable, referenceFor: referenceFor,
     verificationText: verificationText, anyVerified: anyVerified,
     frequencyText: frequencyText, anyFrequency: anyFrequency,
+    median: median, mannWhitney: mannWhitney, minP: minP, noiseVerdict: noiseVerdict,
+    runSpread: runSpread, ALPHA: ALPHA,
     cpuName: cpuName, plural: plural, fmtRate: fmtRate, fmtSize: fmtSize,
     fmtBytes: fmtBytes, fmtTime: fmtTime, metricField: metricField,
     sliceForSize: sliceForSize, sizeData: sizeData, cacheMarkers: cacheMarkers,
@@ -1487,7 +1637,9 @@ details[open] > summary { margin-bottom: 12px; }
   var rows = [];
   routineOrder.forEach(function (rt) {
     rt.seriesOrder.forEach(function (s) {
-      pointsOf(s).forEach(function (p) { rows.push({ rt: rt, s: s, p: p }); });
+      pointsOf(s).forEach(function (p) {
+        (p.runs || [p]).forEach(function (q) { rows.push({ rt: rt, s: s, p: q }); });
+      });
     });
   });
   det.appendChild(el("summary", null, "Raw data (" + plural(rows.length, "row") + ")"));
@@ -1504,6 +1656,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "Std dev", n: true, v: function (r) { return r.p.stddev; }, f: fmtTime },
     { h: "Max", n: true, v: function (r) { return r.p.max; }, f: fmtTime },
     { h: "Calls/sample", n: true, v: function (r) { return r.p.calls; } },
+    { h: "Median", n: true, v: function (r) { return r.p.median; }, f: fmtTime },
     { h: "Verified", v: function (r) { return verifiedCol ? (r.p.verified ? "yes" : "no") : undefined; } },
     { h: "File", v: function (r) { return r.p.file; } }
   ].filter(function (c) { return rows.some(function (r) { var v = c.v(r); return v !== undefined && v !== null; }); });
