@@ -40,6 +40,34 @@ silently ignore your edits.
 clean VPATH build; run it before anything that touches `configure.ac`,
 `Makefile.am` files, or adds/removes source files.
 
+## Working on an issue
+
+Every change starts from an issue — open one if there is none — and
+reaches `main` through a pull request, never by a direct push:
+
+```bash
+git fetch origin
+git switch -c issue-<N>-<short-name> origin/main   # e.g. issue-3-cpu-frequency
+# ... commits, each one building and passing make check ...
+git push -u origin issue-<N>-<short-name>
+gh pr create --fill          # the body says "Closes #<N>"
+gh pr checks --watch         # every CI job must pass
+gh pr merge --merge          # a merge commit keeps the detailed commits
+```
+
+- One issue, one branch: work that turns out to be two things becomes two
+  issues.
+- `main` is protected: a pull request cannot be merged until all nine CI
+  jobs pass, and `main` cannot be force-pushed or deleted. The repository
+  deletes a branch once its pull request is merged; the issue closes
+  itself through "Closes #N".
+- Update the branch from `main` (`git merge origin/main`) when `main`
+  moved under it, and let CI run again before merging.
+- Dependabot's pull requests (GitHub Actions updates) go the same way:
+  merge them once CI passes.
+- The repository's administrator can still push to `main` directly; that
+  is for emergencies, not for work.
+
 ## Tests
 
 Everything runs under `make check`, through Automake's test driver: a test
@@ -892,6 +920,9 @@ builds the tarball, verifies it unpacks and builds with no Autotools
 present, then uploads it with its `SHA256SUMS` — *creating* the release if
 the tag has none yet.
 
+A release is prepared on a branch like any change (`release-X.Y.Z`,
+with an issue of its own), then tagged on `main` once merged.
+
 1. **Version**: set `AC_INIT` in `configure.ac` to `X.Y.Z`, dropping the
    `-dev`. In `CHANGELOG.md`, turn `[Unreleased]` into
    `[X.Y.Z] - YYYY-MM-DD` (and its link at the bottom); in `CITATION.cff`,
@@ -903,11 +934,12 @@ the tag has none yet.
    really prints (`bmb_dgemm -m 512:2048`). If the report's look changed,
    redo `doc/images` (see [The README's images](#the-readmes-images)).
 4. **Check**: `make distcheck`, and the browser tests in Firefox
-   (`BMB_BROWSER=firefox make check`); commit, push, and wait for every CI
-   job to pass.
-5. **Tag and publish**:
+   (`BMB_BROWSER=firefox make check`); commit, push the branch, open the
+   pull request, and merge it once every CI job passes.
+5. **Tag and publish**, from the merged `main`:
 
    ```bash
+   git switch main && git pull
    git tag -a vX.Y.Z -m "blas-microbenchmark X.Y.Z"
    git push origin vX.Y.Z
    # wait for the workflow (~30s), then write the release notes
@@ -918,9 +950,9 @@ the tag has none yet.
    `SHA256SUMS` and run `sha256sum -c SHA256SUMS`, then
    `./configure --prefix=...`, `make check`, `make install` — the man
    pages included — on a machine with no Autotools if you can.
-7. **Back to development**: set `AC_INIT` to the next minor version with
-   `-dev` (`X.(Y+1).0-dev`), add an empty `[Unreleased]` section to
-   `CHANGELOG.md`, commit, push.
+7. **Back to development**: on another short branch and pull request,
+   set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`)
+   and add an empty `[Unreleased]` section to `CHANGELOG.md`.
 
 Note the order: **edit the notes, don't create the release**. The workflow
 gets there within about half a minute of the tag push and creates it with

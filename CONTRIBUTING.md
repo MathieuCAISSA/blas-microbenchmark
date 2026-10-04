@@ -29,6 +29,14 @@ groff and `man`, the site's tests mandoc. CI runs them all. The
 [Development page](https://mathieucaissa.github.io/blas-microbenchmark/development.html)
 lists every test and every CI job.
 
+## Working on a change
+
+Every change has an issue and a branch of its own, named after it
+(`issue-<N>-<short-name>`), and reaches `main` through a pull request whose
+description says `Closes #<N>`. `main` only accepts a pull request once
+every CI job passes. The details are in
+[AGENTS.md, Working on an issue](AGENTS.md#working-on-an-issue).
+
 ## Before opening a pull request
 
 - `make check` passes; `make distcheck` too if you touched `configure.ac`,
