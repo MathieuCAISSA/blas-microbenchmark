@@ -85,10 +85,10 @@ jobs:
 
       # Signed through Sigstore and stored with this repository: anyone can
       # check a download with gh attestation verify, as README.md says.
-      # Dependabot's pull requests (which update this file every time) get no
-      # OIDC token to sign with, so they test the rest only.
+      # Pull requests from Dependabot (which updates this file every time) or
+      # from a fork get no OIDC token to sign with, so they test the rest.
       - name: Attest where the tarball was built
-        if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+        if: github.event_name != 'pull_request' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: build/blas-microbenchmark-*.tar.gz
@@ -98,7 +98,7 @@ jobs:
       # attested digest has to be the tarball's. And a changed tarball has
       # to be refused, or the check proves nothing.
       - name: Verify the attestation
-        if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
+        if: github.event_name != 'pull_request' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

@@ -19,9 +19,9 @@ commit. It needs the job's `id-token: write` and `attestations: write`.
 
 A pull request that changes the workflow runs it (its `tarball` job):
 it builds, checks the tarball, attests and verifies, and uploads
-nothing. Dependabot's pull requests, which change it every time they
-update an action, have no OIDC token to sign with and skip the two
-attestation steps. To run it by hand on a branch, `publish` off:
+nothing. Pull requests from Dependabot (which changes it every time it
+updates an action) or from a fork have no OIDC token to sign with and
+skip the two attestation steps. To run it by hand on a branch, `publish` off:
 
 ```bash
 gh workflow run release.yml --ref <branch> -f tag=vX.Y.Z -f publish=false
