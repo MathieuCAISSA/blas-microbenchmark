@@ -50,17 +50,17 @@ and `--with-blas-libpath=DIR`.
 
 ```
 $ bmb_dgemm -m 512:2048
-# blas-microbenchmark 1.1.0
+# blas-microbenchmark 1.1.1
 # backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
-# date: 2026-10-04T08:53:04Z
+# date: 2026-10-04T09:06:48Z
 # routine: dgemm
 Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
-1               512                 512                 0.005281787     50.823
-1               1024                1024                0.042991392     49.951
-1               2048                2048                0.439304430     39.107
+1               512                 512                 0.005302121     50.628
+1               1024                1024                0.044663433     48.081
+1               2048                2048                0.388944725     44.170
 ```
 
 There are 20 benchmarks, `bmb_<routine>`, covering levels 1 to 3:
