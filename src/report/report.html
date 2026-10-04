@@ -1120,7 +1120,10 @@ details[open] > summary { margin-bottom: 12px; }
               few++;
               q.extra = "too few runs to tell from noise (" + runs + ")";
             } else {
-              q.extra = (q.hollow ? "within noise, " : "beyond noise, ") + "p = " + nv.p.toFixed(3) + " (" + runs + ")";
+              /* The direction comes from the runs' medians, which can
+               * disagree with the ratio drawn from the fastest runs. */
+              q.extra = (q.hollow ? "within noise" : nv.verdict + " beyond noise (median of the runs)") +
+                        ", p = " + nv.p.toFixed(3) + " (" + runs + ")";
             }
           }
           pts.push(q);
@@ -1604,7 +1607,7 @@ details[open] > summary { margin-bottom: 12px; }
       var dups = rt.duplicates;
       function dupText(d) {
         return d.series.identity.name + ", " + sizeText(d.point.d1, d.point.d2) + " at " +
-               plural(d.point.threads, "thread") + ": kept " + d.kept + ", " + d.other + " was " +
+               plural(d.point.threads, "thread") + ": drawn from " + d.kept + ", " + d.other + " was " +
                d.gap.toFixed(0) + "% slower";
       }
       if (dups.length && dups.length <= 3) {
@@ -1613,7 +1616,7 @@ details[open] > summary { margin-bottom: 12px; }
         var worst = dups.reduce(function (a, b) { return b.gap > a.gap ? b : a; });
         var li = el("li");
         var det = el("details");
-        det.appendChild(el("summary", null, dups.length + " points were measured in more than one file; the fastest was kept each time. Largest gap: " +
+        det.appendChild(el("summary", null, dups.length + " points were measured in more than one file; the fastest is drawn, the others are its runs. Largest gap: " +
                                              worst.gap.toFixed(0) + "% (" + worst.series.identity.name + ", " +
                                              sizeText(worst.point.d1, worst.point.d2) + ")."));
         var inner = el("ul", "notes");

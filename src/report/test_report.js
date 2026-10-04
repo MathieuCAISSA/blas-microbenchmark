@@ -425,6 +425,9 @@
       var blis = rd.series.filter(function (x) { return x.identity.name === "blis"; })[0].points[0];
       var netlib = rd.series.filter(function (x) { return x.identity.name === "netlib"; })[0].points[0];
       eq([blis.verdict, blis.hollow], ["slower", false], "a series slower in every run is beyond noise, a full dot");
+      eq(/^slower beyond noise \(median of the runs\), p = 0\.029 \(4 and 4 runs\)$/.test(blis.extra), true,
+         "its tooltip says which way, from the medians, with p and the runs: " + blis.extra);
+      eq(/^within noise, p = /.test(netlib.extra), true, "a hollow point's tooltip says within noise: " + netlib.extra);
       eq([netlib.verdict, netlib.hollow], ["noise", true], "runs that interleave with the reference's are noise, a hollow dot");
       eq(rd.notes.some(function (n) { return /Mann-Whitney U/.test(n); }), true, "the chart says how the dots were tested");
 
