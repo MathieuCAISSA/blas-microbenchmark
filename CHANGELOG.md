@@ -7,7 +7,7 @@ Versions follow [semantic versioning](https://semver.org/): results from
 releases with the same major version can be compared and read by the same
 `bmb_report`.
 
-## [Unreleased]
+## [1.3.0] - 2026-10-05
 
 ### Added
 - Repeated runs in the report: run the same command several times, each
@@ -42,7 +42,10 @@ releases with the same major version can be compared and read by the same
   off. Every output now says `# verified:` unless `-C` was given.
 - For contributors: the developer guide is split. `AGENTS.md` keeps what
   every change needs and points to one file per part of the project in
-  `doc/dev/`; `make check` checks every link between them.
+  `doc/dev/`; `make check` checks every link between them. The project's
+  own tests moved to `tests/`, and the code of conduct, the security
+  policy and the review checklist to `.github/`, in the repository and
+  in the tarball.
 
 ### Fixed
 - When memory ran out during `--verify`, pointers were computed from the
@@ -180,7 +183,7 @@ releases with the same major version can be compared and read by the same
   with text, CSV and JSON output.
 - OpenBLAS, BLIS, NVPL and ArmPL backends.
 
-[Unreleased]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.2.0...HEAD
+[1.3.0]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.1.0...v1.1.1
