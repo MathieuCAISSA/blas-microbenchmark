@@ -42,7 +42,10 @@ releases with the same major version can be compared and read by the same
   off. Every output now says `# verified:` unless `-C` was given.
 - For contributors: the developer guide is split. `AGENTS.md` keeps what
   every change needs and points to one file per part of the project in
-  `doc/dev/`; `make check` checks every link between them.
+  `doc/dev/`; `make check` checks every link between them. The project's
+  own tests moved to `tests/`, and the code of conduct, the security
+  policy and the review checklist to `.github/`, in the repository and
+  in the tarball.
 
 ### Fixed
 - When memory ran out during `--verify`, pointers were computed from the
