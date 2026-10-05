@@ -3,7 +3,7 @@
 .\" then into the site's blas-microbenchmark.html; edit the .in.
 .\" man/test_man_*.sh check it against the programs: see
 .\" doc/dev/documentation.md.
-.TH BLAS-MICROBENCHMARK 1 2026-10-04 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.TH BLAS-MICROBENCHMARK 1 2026-10-05 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
 .\" No hyphenation, no justification: both hurt in a terminal, and
 .\" hyphenation splits literals such as "# label:".
 .nh
