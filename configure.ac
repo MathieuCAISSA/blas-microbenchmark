@@ -138,14 +138,14 @@ AC_ARG_WITH([blas-libpath],
   [])
 
 AC_ARG_WITH([blas-backend],
-  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl],
+  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl|flexiblas],
     [BLAS backend to build against (default: auto, i.e. search for any CBLAS-compatible library on the default paths)])],
   [bmb_blas_backend="$withval"],
   [bmb_blas_backend=auto])
 
 AS_CASE(["$bmb_blas_backend"],
-  [auto|openblas|blis|netlib|nvpl|armpl], [],
-  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, netlib, nvpl, armpl (got '$bmb_blas_backend')])])
+  [auto|openblas|blis|netlib|nvpl|armpl|flexiblas], [],
+  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, netlib, nvpl, armpl, flexiblas (got '$bmb_blas_backend')])])
 
 dnl Generic hints, applied whatever the backend. Backend-specific ones are
 dnl applied inside each case below, so they take priority over these.
@@ -313,6 +313,36 @@ AS_CASE(["$bmb_blas_backend"],
     AC_SEARCH_LIBS([cblas_dgemm], [armpl armpl_lp64 armpl_lp64_mp], [], [
       AC_MSG_ERROR([ArmPL not found (cblas_dgemm unresolved); install arm-performance-libraries or pass --with-blas-libpath/LDFLAGS/LIBS.])
     ])
+  ],
+
+  [flexiblas], [
+    dnl FlexiBLAS loads the BLAS library at run time (FLEXIBLAS=OPENBLAS,
+    dnl BLIS, NETLIB, ...), so one build measures several libraries. Its
+    dnl headers live in a flexiblas/ subdirectory (Fedora's
+    dnl flexiblas-devel, Spack, EasyBuild); Debian and Ubuntu do not
+    dnl package it. The library it loaded is read at run time, not here:
+    dnl see bmb_build.c and bmb_threads.c.
+    for bmb_dir in /usr/include/flexiblas /usr/local/include/flexiblas; do
+      if test -f "$bmb_dir/cblas.h"; then
+        CPPFLAGS="-isystem $bmb_dir $CPPFLAGS"
+        break
+      fi
+    done
+    BMB_ENV_HINTS([FLEXIBLAS])
+    AS_IF([test -n "$FLEXIBLAS_ROOT"], [BMB_ADD_INCDIR([$FLEXIBLAS_ROOT/include/flexiblas])])
+    AC_CHECK_HEADERS([cblas.h], [], [
+      AC_MSG_ERROR([FlexiBLAS's cblas.h not found. Install flexiblas-devel (Fedora), load your FlexiBLAS module (FLEXIBLAS_ROOT/FLEXIBLAS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
+    ])
+    AC_SEARCH_LIBS([cblas_dgemm], [flexiblas], [], [
+      AC_MSG_ERROR([libflexiblas not found (cblas_dgemm unresolved). Install flexiblas-devel, load your FlexiBLAS module (FLEXIBLAS_ROOT/FLEXIBLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
+    ])
+    dnl The API that names the loaded library and sets its threads; part
+    dnl of libflexiblas, or of libflexiblas_api in some builds.
+    AC_SEARCH_LIBS([flexiblas_current_backend], [flexiblas_api], [], [
+      AC_MSG_ERROR([flexiblas_current_backend not found: this FlexiBLAS has no API library, so the results could not name the BLAS it loaded.])
+    ])
+    AC_DEFINE([HAVE_FLEXIBLAS_API], [1],
+      [Define when building against FlexiBLAS, whose API names the BLAS library loaded at run time.])
   ],
 
   [dnl auto: search the default paths, plus OpenBLAS's module variables

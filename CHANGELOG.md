@@ -10,6 +10,11 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- A FlexiBLAS backend (`--with-blas-backend=flexiblas`): one build
+  measures every library FlexiBLAS can load, chosen at run time with
+  `FLEXIBLAS=...`. The results name the library loaded (backend
+  `flexiblas/openblas-openmp`), so the report shows each as its own
+  series; the thread-count variables are that library's.
 - `-L`/`--layout row|col`: store the matrices column-major and call
   CBLAS that way, as Fortran and LAPACK do, instead of the default
   row-major. A library may take another code path for each. The routines

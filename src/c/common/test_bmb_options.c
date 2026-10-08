@@ -469,6 +469,33 @@ int main(void)
         }
     }
 
+    /* ---- the backend a FlexiBLAS build names, from a name it read ---- */
+    {
+        static const struct {
+            const char *library, *want;
+            size_t size;
+            const char *what;
+        } cases[] = {
+            {"OPENBLAS-OPENMP", "flexiblas/openblas-openmp", 64, "FlexiBLAS: the loaded library, lower-cased"},
+            {"MY\"LIB x/y\n", "flexiblas/my-lib-x-y-", 64,
+             "FlexiBLAS: a quote, a space, a slash, a newline from a config file become -"},
+            {"", "flexiblas/unknown", 64, "FlexiBLAS: no name, unknown"},
+            {"BLIS-OPENMP", "flexiblas/bli", 14, "FlexiBLAS: cut to the buffer, still terminated"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            char buf[64];
+
+            bmb_build_backend_name(cases[i].library, buf, cases[i].size);
+            if (strcmp(buf, cases[i].want) != 0) {
+                fail(cases[i].what, buf);
+            } else {
+                ok(cases[i].what);
+            }
+        }
+    }
+
     /* ---- thread counts share the sweep parser ---- */
     {
         bmb_options_t opts;

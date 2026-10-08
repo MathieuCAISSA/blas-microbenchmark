@@ -9,8 +9,9 @@ routine, the same options for all of them, and results in text, CSV or
 JSON — [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/),
 but for BLAS instead of MPI.
 
-Build it against OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL, run
-the same commands on each, and compare them on one page of charts.
+Build it against OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL —
+or once against FlexiBLAS, which picks the library at run time — run the
+same commands on each, and compare them on one page of charts.
 
 ## Install
 
@@ -136,6 +137,11 @@ Chosen when building, and each one built and tested in CI:
 | Netlib reference | `--with-blas-backend=netlib` |
 | NVPL *(aarch64)* | `--with-blas-backend=nvpl` |
 | ArmPL *(aarch64)* | `--with-blas-backend=armpl` |
+| FlexiBLAS | `--with-blas-backend=flexiblas` |
+
+With FlexiBLAS, one build measures every library it can load:
+`FLEXIBLAS=BLIS-OPENMP bmb_dgemm …`, and each comes out as its own
+series in the report. Fedora packages it; Debian and Ubuntu do not.
 
 ## Documentation
 

@@ -69,6 +69,10 @@ it comes from in brackets.
   and wraps it (4294967294 threads, #24).
 - [ ] Sizes cannot wrap `size_t` or the `int` BLAS takes
   ([test_bmb_size_limits.sh](../AGENTS.md#tests)).
+- [ ] A string from outside (a library, a configuration file, the
+  user) that reaches the output is escaped in the JSON and kept off
+  comment lines' line ends, or reduced to safe characters: FlexiBLAS's
+  backend names come from configuration files (#5).
 - [ ] Anything from a result file reaches the report's DOM through
   `textContent`, never `innerHTML`; the page loads nothing from
   elsewhere ([the page](../doc/dev/report.md#the-page)).

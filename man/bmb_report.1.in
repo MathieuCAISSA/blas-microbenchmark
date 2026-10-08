@@ -126,6 +126,17 @@ firefox report.html
 .EE
 .RE
 .PP
+With one build against FlexiBLAS, the library is chosen when it runs,
+and each comes out as its own series:
+.PP
+.RS
+.EX
+FLEXIBLAS=OPENBLAS\-OPENMP bmb_dgemm \-m 128:2048 \-o results/dgemm\-openblas.json
+FLEXIBLAS=BLIS\-OPENMP bmb_dgemm \-m 128:2048 \-o results/dgemm\-blis.json
+bmb_report results/*.json > report.html
+.EE
+.RE
+.PP
 The same, five runs of each, so that the comparison says which
 differences are beyond noise:
 .PP

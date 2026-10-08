@@ -32,6 +32,14 @@ defined() {
 }
 if defined BMB_NO_THREAD_CONTROL; then
     vars=
+elif defined HAVE_FLEXIBLAS_API; then
+    # The library FlexiBLAS loaded decides, as --version names it.
+    case $("$B" --version | sed -n 's/^BLAS backend: \([^ ]*\).*/\1/p') in
+        flexiblas/openblas*) vars="OPENBLAS_NUM_THREADS GOTO_NUM_THREADS OMP_NUM_THREADS" ;;
+        flexiblas/blis*) vars="BLIS_NUM_THREADS OMP_NUM_THREADS" ;;
+        flexiblas/netlib*) vars= ;;
+        *) vars="OMP_NUM_THREADS" ;;
+    esac
 elif defined HAVE_BLI_THREAD_SET_NUM_THREADS; then
     vars="BLIS_NUM_THREADS OMP_NUM_THREADS"
 elif defined HAVE_OPENBLAS_SET_NUM_THREADS; then

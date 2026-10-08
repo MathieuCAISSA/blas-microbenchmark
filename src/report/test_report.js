@@ -442,6 +442,20 @@
       eq(rd.notes.some(function (n) { return /too few runs/.test(n); }), true, "and the chart says it takes more runs");
     });
 
+    /* ---- FlexiBLAS (#5) ---- */
+
+    test("flexiblas", function () {
+      var m = R.buildModel([
+        entry("o.json", gemm({ backend: "flexiblas/openblas-openmp", blas: "FlexiBLAS 3.5.0, OPENBLAS-OPENMP",
+                               rows: [[1, 64, 64, 1, 10, null]] })),
+        entry("b.json", gemm({ backend: "flexiblas/blis-openmp", blas: "FlexiBLAS 3.5.0, BLIS-OPENMP",
+                               rows: [[1, 64, 64, 1, 8, null]] }))
+      ]);
+      eq(m.identities.map(function (id) { return id.name; }).sort(), ["flexiblas/blis-openmp", "flexiblas/openblas-openmp"],
+         "one FlexiBLAS build, two libraries loaded: two series, each named after its library");
+      eq(routine(m, "dgemm").seriesOrder.length, 2, "and two curves on the same chart");
+    });
+
     /* ---- --layout (#7) ---- */
 
     test("layout", function () {

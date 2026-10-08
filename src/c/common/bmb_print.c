@@ -254,7 +254,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
 
     fprintf(out, "{\n");
     fprintf(out, "  \"version\": \"%s\",\n", bmb_build_version());
-    fprintf(out, "  \"backend\": \"%s\",\n", bmb_build_backend());
+    fprintf(out, "  \"backend\": ");
+    bmb_print_json_string(out, bmb_build_backend());
+    fprintf(out, ",\n");
     if (blas != NULL && blas[0] != '\0') {
         fprintf(out, "  \"blas\": ");
         bmb_print_json_string(out, blas);
