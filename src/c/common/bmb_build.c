@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "bmb_build.h"
 
@@ -33,19 +34,38 @@ const char *bmb_build_version(void)
     return PACKAGE_VERSION;
 }
 
+void bmb_build_backend_name(const char *library, char *buf, size_t size)
+{
+    static const char prefix[] = "flexiblas/";
+    size_t i, n = 0;
+
+    if (size < sizeof(prefix)) {
+        if (size > 0) {
+            buf[0] = '\0';
+        }
+        return;
+    }
+    memcpy(buf, prefix, sizeof(prefix) - 1);
+    n = sizeof(prefix) - 1;
+    for (i = 0; library[i] != '\0' && n + 1 < size; i++) {
+        const char c = (char) tolower((unsigned char) library[i]);
+
+        buf[n++] = (isalnum((unsigned char) c) || strchr("._+-", c) != NULL) ? c : '-';
+    }
+    if (i == 0 && n + 7 < size) {
+        memcpy(buf + n, "unknown", 7);
+        n += 7;
+    }
+    buf[n] = '\0';
+}
+
 const char *bmb_build_backend(void)
 {
 #if defined(HAVE_FLEXIBLAS_API)
     static char name[96];
 
     if (name[0] == '\0') {
-        const char *loaded = bmb_flexiblas_current();
-        size_t i, n = (size_t) snprintf(name, sizeof(name), "flexiblas/");
-
-        for (i = 0; loaded[i] != '\0' && n + 1 < sizeof(name); i++) {
-            name[n++] = (char) tolower((unsigned char) loaded[i]);
-        }
-        name[n] = '\0';
+        bmb_build_backend_name(bmb_flexiblas_current(), name, sizeof(name));
     }
     return name;
 #elif defined(BMB_BLAS_BACKEND)
