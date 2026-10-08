@@ -664,7 +664,7 @@ details[open] > summary { margin-bottom: 12px; }
       var H = 280;
       var xs = uniqSorted([].concat.apply([], drawn.map(function (s) { return s.points.map(function (p) { return p.x; }); })));
       var xmin = xs[0], xmax = xs[xs.length - 1];
-      var xlog = xmax / xmin >= 8;
+      var xlog = !opt.xLinear && xmax / xmin >= 8;
 
       var labels = drawn.length <= 4 && opt.endLabels !== false;
       var longest = labels ? Math.max.apply(null, drawn.map(function (s) { return s.name.length; })) : 0;
@@ -772,6 +772,12 @@ details[open] > summary { margin-bottom: 12px; }
           var dot = sv("circle", { cx: sx(p.x), cy: sy(p.y), r: 4 }, p.hollow ? "dot hollow" : "dot");
           if (p.hollow) { dot.style.stroke = s.colour; } else { dot.style.fill = s.colour; }
           svg.appendChild(dot);
+          /* A word above the point, in ink: "slower" on a history. */
+          if (p.flag) {
+            var fl = sv("text", { x: sx(p.x), y: sy(p.y) - 10, "text-anchor": "middle" }, "marker-label");
+            fl.textContent = p.flag;
+            svg.appendChild(fl);
+          }
         });
       });
 
@@ -1152,6 +1158,142 @@ details[open] > summary { margin-bottom: 12px; }
     return { field: field, series: series, notes: notes, worst: worst, xs: xs };
   }
 
+  /* ------------------------------------------------------------------ *
+   * Chart 4b: the history of one library (#9). Series of the same      *
+   * library, machine, label and storage order that differ only by the  *
+   * library's version, three or more of them: their performance at one *
+   * point, version after version, and where a version is slower than   *
+   * the one before beyond run-to-run noise. Two versions are already   *
+   * the comparison chart's.                                            *
+   * ------------------------------------------------------------------ */
+
+  var HISTORY_MIN = 3;
+
+  /* The library's own version in its version string: the first dotted
+   * number ("OpenBLAS 0.3.26 NO_LAPACKE ..." -> "0.3.26"); "" if none. */
+  function versionOf(blas) {
+    var m = /\d+(?:\.\d+)+/.exec(blas || "");
+    return m ? m[0] : "";
+  }
+
+  /* Dotted numbers compared number by number, so 0.3.9 comes before
+   * 0.3.26; a version comes before none. */
+  function compareVersions(a, b) {
+    if (!a || !b) { return a ? -1 : (b ? 1 : 0); }
+    var x = a.split("."), y = b.split("."), i;
+    for (i = 0; i < Math.max(x.length, y.length); i++) {
+      var d = (parseInt(x[i] || "0", 10)) - (parseInt(y[i] || "0", 10));
+      if (d) { return d; }
+    }
+    return 0;
+  }
+
+  /* Groups of identities that differ only by version, oldest first: by
+   * version, then, where that does not decide, by the earliest date
+   * measured. Only groups of HISTORY_MIN or more. */
+  function historyGroups(identities) {
+    var groups = {}, order = [];
+    identities.forEach(function (id) {
+      var key = [id.backend, id.cpu, id.label, id.layout].join("\u0001");
+      if (!groups[key]) { groups[key] = []; order.push(key); }
+      groups[key].push(id);
+    });
+    function first(id) { return id.dates.slice().sort()[0] || ""; }
+    return order.map(function (k) { return groups[k]; }).filter(function (g) {
+      return g.length >= HISTORY_MIN;
+    }).map(function (g) {
+      return g.slice().sort(function (a, b) {
+        return compareVersions(versionOf(a.blas), versionOf(b.blas)) || (first(a) < first(b) ? -1 : (first(a) > first(b) ? 1 : 0));
+      });
+    });
+  }
+
+  /* The history of one group in one routine at one thread count: the
+   * largest point every version measured there, and each version's value
+   * at it, tested against the version before. null when the routine has
+   * fewer than HISTORY_MIN of the group's versions. */
+  function historyData(rt, group, threads) {
+    var field = metricField(rt);
+    var members = group.map(function (id) {
+      var s = rt.seriesOrder.filter(function (x) { return x.identity === id; })[0];
+      return s ? { identity: id, points: pointsOf(s).filter(function (p) { return p.threads === threads && p[field] !== undefined; }) } : null;
+    }).filter(function (m) { return m; });
+    if (members.length < HISTORY_MIN) { return null; }
+    var name = members[members.length - 1].identity.backend;
+    var notes = [];
+    var absent = members.filter(function (m) { return !m.points.length; });
+    if (absent.length) {
+      notes.push("History of " + name + ": " + absent.map(function (m) { return versionOf(m.identity.blas) || m.identity.name; }).join(", ") +
+                 " not measured at " + plural(threads, "thread") + ".");
+    }
+    members = members.filter(function (m) { return m.points.length; });
+    if (members.length < HISTORY_MIN) { return { notes: notes }; }
+
+    function key(p) { return p.d1 + "x" + p.d2; }
+    var common = members[0].points.filter(function (p) {
+      return members.every(function (m) { return m.points.some(function (q) { return key(q) === key(p); }); });
+    });
+    if (!common.length) {
+      notes.push("History of " + name + ": its versions have no size in common at " + plural(threads, "thread") + ".");
+      return { notes: notes };
+    }
+    var at = common.reduce(function (a, b) {
+      return (b.d1 > a.d1 || (b.d1 === a.d1 && (b.d2 || 0) > (a.d2 || 0))) ? b : a;
+    });
+
+    var repeated = false, prev = null;
+    var points = members.map(function (m, i) {
+      var p = m.points.filter(function (q) { return key(q) === key(at); })[0];
+      var sp = runSpread(p, field);
+      var q = { x: i + 1, y: p[field], label: versionOf(m.identity.blas) || m.identity.name, identity: m.identity };
+      if (sp.n > 1) { repeated = true; }
+      if (prev) {
+        var nv = noiseVerdict(runTimes(p), runTimes(prev));
+        q.verdict = nv.verdict;
+        q.p = nv.p;
+        if (nv.verdict === "slower") { q.flag = "slower"; }
+      }
+      prev = p;
+      return q;
+    });
+    if (repeated) {
+      points.forEach(function (q) {
+        var p = members[q.x - 1].points.filter(function (r) { return key(r) === key(at); })[0];
+        q.y2 = runSpread(p, field).slowest;
+      });
+    }
+    notes.push(repeated
+      ? "History of " + name + ": each version is tested against the one before (Mann-Whitney U on their runs, two-sided, p < " +
+        ALPHA + "); \"slower\" marks a regression beyond noise."
+      : "History of " + name + ": measure each version several times, into separate files, to tell a regression from noise.");
+    return { name: name, field: field, threads: threads, d1: at.d1, d2: at.d2, points: points, notes: notes };
+  }
+
+  function historyChart(data) {
+    var id = data.points[data.points.length - 1].identity;
+    var labels = data.points.map(function (p) { return p.label; });
+    var unit = metricUnit(data.field);
+    return lineChart({
+      title: data.name + " version by version",
+      subtitle: plural(data.threads, "thread") + " · " + sizeText(data.d1, data.d2) + " · oldest to newest",
+      xLabel: "Version", yLabel: unit, yUnit: unit, xLinear: true, endLabels: false,
+      xFormat: function (x) { return labels[x - 1]; },
+      xHead: function (x) { return data.name + " " + labels[x - 1]; },
+      series: [{
+        name: data.name, colour: id.slot ? colour(id) : "var(--ink-2)",
+        points: data.points.map(function (p) {
+          var q = { x: p.x, y: p.y };
+          if (p.y2 !== undefined) { q.y2 = p.y2; }
+          if (p.flag) { q.flag = p.flag; }
+          if (p.verdict && p.verdict !== "few") {
+            q.extra = (p.verdict === "noise" ? "within noise of" : p.verdict + " than") + " the version before, p = " + p.p.toFixed(3);
+          }
+          return q;
+        })
+      }]
+    });
+  }
+
   /* The log axis spans the worst ratio either way, at least x0.8..x1.25. */
   function ratioDomain(worst) {
     var hi = Math.max(1.25, worst * 1.15);
@@ -1374,6 +1516,7 @@ details[open] > summary { margin-bottom: 12px; }
     frequencyText: frequencyText, anyFrequency: anyFrequency,
     median: median, mannWhitney: mannWhitney, minP: minP, noiseVerdict: noiseVerdict,
     runSpread: runSpread, ALPHA: ALPHA,
+    versionOf: versionOf, compareVersions: compareVersions, historyGroups: historyGroups, historyData: historyData,
     cpuName: cpuName, plural: plural, fmtRate: fmtRate, fmtSize: fmtSize,
     fmtBytes: fmtBytes, fmtTime: fmtTime, metricField: metricField,
     sliceForSize: sliceForSize, sizeData: sizeData, cacheMarkers: cacheMarkers,
@@ -1572,6 +1715,12 @@ details[open] > summary { margin-bottom: 12px; }
         if (rc.chart) { made.push(rc.chart); }
         notes = notes.concat(rc.notes);
       }
+      historyGroups(identityOrder).forEach(function (g) {
+        var hd = historyData(rt, g, threads);
+        if (!hd) { return; }
+        if (hd.points) { made.push(historyChart(hd)); }
+        notes = notes.concat(hd.notes);
+      });
       var tc = threadChart(rt);
       if (tc) {
         if (tc.chart) { made.push(tc.chart); }

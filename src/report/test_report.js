@@ -442,6 +442,55 @@
       eq(rd.notes.some(function (n) { return /too few runs/.test(n); }), true, "and the chart says it takes more runs");
     });
 
+    /* ---- History of a library (#9) ---- */
+
+    test("history", function () {
+      eq(R.versionOf("OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH Haswell MAX_THREADS=64"), "0.3.26", "version: the first dotted number");
+      eq(R.versionOf("FlexiBLAS 3.5.0, OPENBLAS-OPENMP"), "3.5.0", "version: FlexiBLAS's own");
+      eq(R.versionOf(""), "", "version: none");
+      eq(R.compareVersions("0.3.9", "0.3.26") < 0, true, "versions compare number by number: 0.3.9 before 0.3.26");
+      eq(R.compareVersions("1.0", "1.0.0"), 0, "a missing number counts as 0");
+      eq(R.compareVersions("", "1.0") > 0, true, "a version comes before none");
+
+      function v(file, version, rows, extra) {
+        var o = gemm({ blas: "OpenBLAS " + version + " Haswell", rows: rows });
+        var k;
+        for (k in (extra || {})) { o[k] = extra[k]; }
+        return entry(file, o);
+      }
+      var base = [[1, 64, 64, 1, 10, null], [1, 128, 128, 1, 10, null]];
+      var m = R.buildModel([
+        v("a.json", "0.3.26", base.concat([[1, 256, 256, 1, 10, null]])),
+        v("b.json", "0.3.9", base),
+        v("c.json", "0.3.28", base),
+        v("l1.json", "0.3.26", base, { label: "turbo" }),
+        v("l2.json", "0.3.28", base, { label: "turbo" })
+      ]);
+      var groups = R.historyGroups(m.identities);
+      eq(groups.length, 1, "a history needs three versions: the two labelled ones are the comparison chart's");
+      eq(groups[0].map(function (id) { return R.versionOf(id.blas); }), ["0.3.9", "0.3.26", "0.3.28"], "oldest to newest");
+      var hd = R.historyData(routine(m, "dgemm"), groups[0], 1);
+      eq([hd.d1, hd.d2], [128, 128], "at the largest point every version measured, not 256");
+      eq(hd.points.map(function (p) { return p.label + ":" + p.y; }), ["0.3.9:10", "0.3.26:10", "0.3.28:10"], "one value per version");
+      eq(hd.points.some(function (p) { return p.flag; }), false, "single runs: nothing called a regression");
+      eq(/several times/.test(hd.notes.join(" ")), true, "and the page says to measure each version several times");
+
+      /* Four runs of each of the last two versions, the newest slower in
+       * every run: a regression beyond noise. */
+      var runs = [];
+      [1.0, 1.01, 1.02, 1.03].forEach(function (t, i) {
+        runs.push(v("o" + i + ".json", "0.3.26", [[1, 128, 128, t, 10 / t, null]]));
+        runs.push(v("n" + i + ".json", "0.3.28", [[1, 128, 128, t * 1.5, 10 / (t * 1.5), null]]));
+      });
+      m = R.buildModel([v("old.json", "0.3.9", [[1, 128, 128, 1, 10, null]])].concat(runs));
+      hd = R.historyData(routine(m, "dgemm"), R.historyGroups(m.identities)[0], 1);
+      eq(hd.points.map(function (p) { return p.flag || ""; }), ["", "", "slower"], "the newest, slower in every run, is flagged");
+      eq(hd.points[2].verdict, "slower", "beyond noise, by Mann-Whitney");
+      eq(hd.points[1].verdict, "few", "one run against four is not enough to tell");
+      eq(R.historyData(routine(m, "dgemm"), R.historyGroups(m.identities)[0], 2).notes.length > 0, true,
+         "at a thread count the versions did not measure: a note, no chart");
+    });
+
     /* ---- FlexiBLAS (#5) ---- */
 
     test("flexiblas", function () {

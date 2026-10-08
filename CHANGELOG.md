@@ -10,6 +10,10 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- The report shows the history of a library measured in three versions
+  or more on the same machine: for each routine, its performance at the
+  largest size all versions measured, oldest to newest, with a version
+  slower than the one before beyond noise marked "slower".
 - `blas-microbenchmark(1)` has a HARDWARE COUNTERS section: how to read
   them with `perf stat` or `likwid-perfctr` around a benchmark, and how
   two runs that differ only in `-i` give what one call costs.
