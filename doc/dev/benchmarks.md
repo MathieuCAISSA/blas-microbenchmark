@@ -65,6 +65,11 @@ there; another follows the same pattern, and needs its
   and 4 additions, so `cgemm`/`zgemm` count `8*M*N*K` where `dgemm`
   counts `2*M*N*K`, and their GFLOP/s are comparable with it.
 - `bytes`: 4 per element in single precision, 8 in double.
+- Sizes: the parser's ceiling keeps a d x d matrix of 8-byte elements
+  within `size_t`, which covers `float`, `double` and single complex.
+  A double complex element takes 16, so `zgemm`'s `setup()` checks its
+  own products and refuses, with a message, sizes from 2^30 up;
+  `test_bmb_zgemm.sh` runs one.
 - `verify()`: the reference stays in double, read from the float
   operands (`bmb_verify_matvec_single()`, `_complex()`,
   `_complex_single()`), and the result is compared in double.

@@ -74,7 +74,9 @@ it comes from in brackets.
   is parsed strictly: digits only, within bounds. `strtoul` takes `-2`
   and wraps it (4294967294 threads, #24).
 - [ ] Sizes cannot wrap `size_t` or the `int` BLAS takes
-  ([test_bmb_size_limits.sh](../AGENTS.md#tests)).
+  ([test_bmb_size_limits.sh](../AGENTS.md#tests)). The parser's ceiling
+  is for elements of 8 bytes: a routine with larger ones checks its own
+  products (zgemm's 16 wrapped at `-m 1073741824`, #6).
 - [ ] A string from outside (a library, a configuration file, the
   user) that reaches the output is escaped in the JSON and kept off
   comment lines' line ends, or reduced to safe characters: FlexiBLAS's
