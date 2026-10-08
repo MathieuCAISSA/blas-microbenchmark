@@ -6,7 +6,9 @@
 #
 # Without it, every benchmark has to pass at several sizes, non-square
 # shapes and two thread counts -- a library can be right at one and wrong
-# at another -- and say in its output that the results were verified.
+# at another -- in both storage orders for the routines with a matrix
+# (--layout row and col), and say in its output that the results were
+# verified, and in which order.
 # Tiny sizes only (see AGENTS.md).
 set -e
 
@@ -36,26 +38,42 @@ for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
             ;;
     esac
 
-    # Right results: verified, and said so.
-    if ! "$b" -x 0 -i 1 -t 1,2 -c $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
-        fail "$name --verify failed on a correct library: $(cat "$T/$r.err")"
-    fi
-    grep -q '^# verified: ' "$T/$r.out" || fail "$name --verify does not say the results were verified"
-    grep -q '^  "verified": true,$' "$T/$r.json" || fail "$name --verify: no \"verified\": true in the JSON"
+    case $b in
+        level1/*) layouts=none ;;
+        *) layouts="row col" ;;
+    esac
+    for layout in $layouts; do
+        if [ "$layout" = none ]; then
+            lo=
+        else
+            lo="--layout $layout"
+        fi
 
-    # A wrong result: stopped, explained, nothing written.
-    set +e
-    BMB_VERIFY_CORRUPT=1 "$b" -x 0 -i 1 -c $sizes -o "$T/$r-bad.json" >"$T/$r-bad.out" 2>"$T/$r-bad.err"
-    rc=$?
-    set -e
-    test "$rc" -eq 2 || fail "$name did not exit 2 on a corrupted result (exit $rc)"
-    grep -q '^Wrong result: ' "$T/$r-bad.err" || fail "$name did not say the result was wrong: $(cat "$T/$r-bad.err")"
-    test -e "$T/$r-bad.json" && fail "$name wrote a results file after a wrong result"
+        # Right results: verified, and said so.
+        if ! "$b" -x 0 -i 1 -t 1,2 -c $lo $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
+            fail "$name $lo --verify failed on a correct library: $(cat "$T/$r.err")"
+        fi
+        grep -q '^# verified: ' "$T/$r.out" || fail "$name --verify does not say the results were verified"
+        grep -q '^  "verified": true,$' "$T/$r.json" || fail "$name --verify: no \"verified\": true in the JSON"
+        case $layout in
+            none) ! grep -q '"layout"' "$T/$r.json" || fail "$name, a vector routine, records a layout" ;;
+            *) grep -q "^  \"layout\": \"$layout\",\$" "$T/$r.json" || fail "$name $lo: no \"layout\": \"$layout\" in the JSON" ;;
+        esac
+
+        # A wrong result: stopped, explained, nothing written.
+        set +e
+        BMB_VERIFY_CORRUPT=1 "$b" -x 0 -i 1 -c $lo $sizes -o "$T/$r-bad.json" >"$T/$r-bad.out" 2>"$T/$r-bad.err"
+        rc=$?
+        set -e
+        test "$rc" -eq 2 || fail "$name $lo did not exit 2 on a corrupted result (exit $rc)"
+        grep -q '^Wrong result: ' "$T/$r-bad.err" || fail "$name did not say the result was wrong: $(cat "$T/$r-bad.err")"
+        test -e "$T/$r-bad.json" && fail "$name wrote a results file after a wrong result"
+    done
 
     n=$((n + 1))
 done
 test "$n" -ge 20 || fail "only $n benchmarks found"
-echo "ok   all $n benchmarks pass --verify, and each one's check catches a corrupted result"
+echo "ok   all $n benchmarks pass --verify, in both layouts where they have a matrix, and each one's check catches a corrupted result"
 
 # On by default: no option, and the results are checked.
 level3/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"

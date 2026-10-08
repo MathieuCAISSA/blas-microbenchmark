@@ -97,4 +97,10 @@ typedef struct {
  * Returns a process exit code (EXIT_SUCCESS / EXIT_FAILURE). */
 int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench);
 
+/* For setup(): 1 when --layout col asked for column-major matrices, as
+ * Fortran stores them, 0 for row-major (the default). A routine with a
+ * matrix stores its operands that way, sets its leading dimensions to
+ * match, and passes the order to CBLAS and to bmb_verify_matvec(). */
+int bmb_bench_column_major(void);
+
 #endif /* BMB_BENCH_H */

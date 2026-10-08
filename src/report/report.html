@@ -296,12 +296,16 @@ details[open] > summary { margin-bottom: 12px; }
 
     function identityOf(r) {
       var machine = r.machine || {};
-      var key = [r.backend, r.blas || "", machine.cpu || "", r.label || ""].join("\u0001");
+      /* --layout (#7): a column-major run is a series of its own. Files
+       * without the field -- vector routines, results from before 1.4 --
+       * were row-major, so they stay in the same series as row ones. */
+      var layout = r.layout === "col" ? "col" : "row";
+      var key = [r.backend, r.blas || "", machine.cpu || "", r.label || "", layout].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
-          cpu: machine.cpu || "", label: r.label || "", machine: machine,
+          cpu: machine.cpu || "", label: r.label || "", layout: layout, machine: machine,
           versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: []
         };
         identityOrder.push(id);
@@ -383,6 +387,7 @@ details[open] > summary { margin-bottom: 12px; }
         if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
         if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
         if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
+        if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
       }
       id.name = parts.join(" · ");
     });

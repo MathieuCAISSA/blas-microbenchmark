@@ -7,6 +7,9 @@
 
 /* dim1 = M, dim2 = N. A (M x N) is updated in place: A += alpha * x * y^T. */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
+    int lda;
     int m;
     int n;
     double alpha;
@@ -32,6 +35,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     /* Small alpha: A accumulates rank-1 updates across iterations, kept bounded
      * regardless of --iterations. */
     ctx->alpha = 1.0e-6;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
+    ctx->lda = ctx->col ? ctx->m : ctx->n;
     ctx->a = malloc(dim1 * dim2 * sizeof(double));
     ctx->x = malloc(dim1 * sizeof(double));
     ctx->y = malloc(dim2 * sizeof(double));
@@ -60,7 +66,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dger(CblasRowMajor, ctx->m, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->n);
+    cblas_dger(ctx->order, ctx->m, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->lda);
 }
 
 static void teardown(void *vctx)
@@ -110,10 +116,10 @@ static int verify(void *vctx, char *msg, size_t size)
         s1 += ctx->y[j] * r[j];
         s1abs += fabs(ctx->y[j] * r[j]);
     }
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p0, p0abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, ctx->lda, r, NULL, p0, p0abs);
     call(ctx);
     bmb_verify_perturb(&ctx->a[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p, pabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, ctx->lda, r, NULL, p, pabs);
     for (i = 0; i < m; i++) {
         want[i] = p0[i] + ctx->alpha * ctx->x[i] * s1;
         scale[i] = pabs[i] + p0abs[i] + fabs(ctx->alpha * ctx->x[i]) * s1abs;

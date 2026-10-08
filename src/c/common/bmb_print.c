@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "bmb_print.h"
 #include "bmb_build.h"
 #include "bmb_machine.h"
@@ -26,6 +28,9 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     }
     if (rs->verified) {
         fprintf(out, "# verified: every point, against a reference, before it was timed\n");
+    }
+    if (rs->layout != NULL) {
+        fprintf(out, "# layout: %s\n", strcmp(rs->layout, "col") == 0 ? "column-major" : "row-major");
     }
 
     bmb_machine_describe_cpu(m, line, sizeof(line));
@@ -262,6 +267,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
     }
     if (rs->verified) {
         fprintf(out, "  \"verified\": true,\n");
+    }
+    if (rs->layout != NULL) {
+        fprintf(out, "  \"layout\": \"%s\",\n", rs->layout);
     }
     bmb_print_json_machine(out, bmb_machine());
     fprintf(out, "  \"routine\": \"%s\",\n", rs->routine_name);

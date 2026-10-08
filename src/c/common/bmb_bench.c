@@ -325,6 +325,13 @@ static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opt
 /* A size option that this particular routine has no use for would
  * otherwise be accepted and quietly dropped, leaving the user reading
  * numbers for a size they never asked for. */
+static int bmb_column_major;
+
+int bmb_bench_column_major(void)
+{
+    return bmb_column_major;
+}
+
 static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_options_t *opts)
 {
     char msg[256];
@@ -338,6 +345,11 @@ static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_opti
     if (opts->matrix_dim1_set && bench->use_vector_range) {
         snprintf(msg, sizeof(msg),
                  "--matrix-dim1 is ignored for %s: it takes its size from --vector-size.",
+                 bench->routine_name);
+        bmb_log_warning(msg);
+    }
+    if (opts->layout_set && bench->use_vector_range) {
+        snprintf(msg, sizeof(msg), "--layout is ignored for %s: it has no matrix.",
                  bench->routine_name);
         bmb_log_warning(msg);
     }
@@ -392,6 +404,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
     rs.label = opts.label;
     rs.verified = opts.verify;
+    if (!bench->use_vector_range) {
+        rs.layout = opts.column_major ? "col" : "row";
+        bmb_column_major = opts.column_major;
+    }
     bmb_print_txt_begin(stdout, &rs);
 
     for (ti = 0; ti < opts.thread_count.count; ti++) {

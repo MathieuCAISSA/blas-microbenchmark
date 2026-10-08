@@ -113,6 +113,20 @@ Default: on.
 .B "\-C, \-\-no\-verify"
 Do not check the results.
 .TP
+.BI "\-L, \-\-layout " order
+How the matrices are stored and passed to CBLAS:
+.B row
+(row-major, as C stores arrays) or
+.B col
+(column-major, as Fortran and LAPACK do).
+A library may handle the two differently: CBLAS row-major calls are
+often turned into column-major ones on the transposed problem, so a
+Fortran program can see other numbers than the default does.
+The problem is the same either way (the same sizes, the upper triangle,
+no transpose); only its storage changes.
+Ignored, with a warning, by the vector routines.
+Default: row.
+.TP
 .BI "\-l, \-\-label " text
 Tag the results, for what no automatic field records: a BIOS setting, a
 NUMA binding, SMT off.
@@ -281,6 +295,7 @@ Every result starts with where it came from:
 # blas\-microbenchmark @PACKAGE_VERSION@
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
 # verified: every point, against a reference, before it was timed
+# layout: row\-major
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # frequency: governor performance, turbo off
@@ -313,7 +328,9 @@ line follows the backend, and unless
 .B \-C
 was given, a
 .B "#\ verified:"
-line comes next.
+line comes next, then, for the routines with a matrix, the
+.B "#\ layout:"
+.RB ( \-L ).
 .PP
 With
 .BR \-o ,
@@ -334,6 +351,9 @@ one object holding the same information as fields:
 .BR blas ,
 .BR label ,
 .BR verified ,
+.B layout
+.RB ( row " or " col ,
+for the routines with a matrix),
 .BR date ;
 .B machine
 with

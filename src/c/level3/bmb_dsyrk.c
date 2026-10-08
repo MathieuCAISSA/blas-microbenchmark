@@ -7,6 +7,9 @@
 
 /* dim1 = N, dim2 = K. C (N x N) = alpha * A * A^T + beta * C, A is N x K. */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
+    int lda;
     int n;
     int k;
     double alpha;
@@ -32,6 +35,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->k = (int) k;
     ctx->alpha = 1.0;
     ctx->beta = 0.0;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
+    ctx->lda = ctx->col ? ctx->n : ctx->k;
     ctx->a = malloc(n * k * sizeof(double));
     ctx->c = malloc(n * n * sizeof(double));
     if (ctx->a == NULL || ctx->c == NULL) {
@@ -55,8 +61,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsyrk(CblasRowMajor, CblasUpper, CblasNoTrans, ctx->n, ctx->k,
-                ctx->alpha, ctx->a, ctx->k, ctx->beta, ctx->c, ctx->n);
+    cblas_dsyrk(ctx->order, CblasUpper, CblasNoTrans, ctx->n, ctx->k,
+                ctx->alpha, ctx->a, ctx->lda, ctx->beta, ctx->c, ctx->n);
 }
 
 static void teardown(void *vctx)
@@ -102,14 +108,14 @@ static int verify(void *vctx, char *msg, size_t size)
         c0[i] = c0abs[i] = 0.0;
     }
     if (ctx->beta != 0.0) {
-        bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, n, n, ctx->c, n, r, NULL, c0, c0abs);
+        bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->c, n, r, NULL, c0, c0abs);
     }
-    bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, n, n, ctx->c, n, r, NULL, l0, labs);
+    bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, n, r, NULL, l0, labs);
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
-    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, n, n, ctx->c, n, r, NULL, y1, y1abs);
-    bmb_verify_matvec(BMB_VERIFY_FULL_T, n, k, ctx->a, k, r, NULL, t, tabs);
-    bmb_verify_matvec(BMB_VERIFY_FULL, n, k, ctx->a, k, t, tabs, y2, y2abs);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->c, n, r, NULL, y1, y1abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL_T, ctx->col, n, k, ctx->a, ctx->lda, r, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, n, k, ctx->a, ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < n; i++) {
         want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
         scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];
@@ -117,7 +123,7 @@ static int verify(void *vctx, char *msg, size_t size)
     ok = bmb_verify_close("C*r, for a random vector r", y1, want, scale, n,
                           bmb_verify_tolerance(k + n), msg, size);
     if (ok) {
-        bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, n, n, ctx->c, n, r, NULL, l, labs);
+        bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, n, r, NULL, l, labs);
         ok = bmb_verify_close("the strictly lower part of C, times r, which the call must not change",
                               l, l0, NULL, n, 0.0, msg, size);
     }

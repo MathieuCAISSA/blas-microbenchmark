@@ -8,6 +8,9 @@
 /* Side = Left: A is M x M symmetric, B and C are M x N.
  * dim1 = M, dim2 = N. */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
+    int ldb;
     int m;
     int n;
     double alpha;
@@ -34,6 +37,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->n = (int) n;
     ctx->alpha = 1.0;
     ctx->beta = 0.0;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
+    ctx->ldb = ctx->col ? ctx->m : ctx->n;
     ctx->a = malloc(m * m * sizeof(double));
     ctx->b = malloc(m * n * sizeof(double));
     ctx->c = malloc(m * n * sizeof(double));
@@ -60,8 +66,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsymm(CblasRowMajor, CblasLeft, CblasUpper, ctx->m, ctx->n,
-                ctx->alpha, ctx->a, ctx->m, ctx->b, ctx->n, ctx->beta, ctx->c, ctx->n);
+    cblas_dsymm(ctx->order, CblasLeft, CblasUpper, ctx->m, ctx->n,
+                ctx->alpha, ctx->a, ctx->m, ctx->b, ctx->ldb, ctx->beta, ctx->c, ctx->ldb);
 }
 
 static void teardown(void *vctx)
@@ -103,13 +109,13 @@ static int verify(void *vctx, char *msg, size_t size)
         c0[i] = c0abs[i] = 0.0;
     }
     if (ctx->beta != 0.0) {
-        bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->c, n, r, NULL, c0, c0abs);
+        bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, c0, c0abs);
     }
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->c, n, r, NULL, y1, y1abs);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->b, n, r, NULL, t, tabs);
-    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, m, m, ctx->a, m, t, tabs, y2, y2abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, y1, y1abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b, ctx->ldb, r, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, m, m, ctx->a, m, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
         scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];

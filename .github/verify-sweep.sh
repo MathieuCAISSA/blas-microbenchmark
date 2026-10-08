@@ -1,6 +1,7 @@
 #!/bin/sh
-# Every benchmark, checked at realistic sizes, non-square shapes and 1, 2
-# and 4 threads, against the library this CI job built with:
+# Every benchmark, checked at realistic sizes, non-square shapes, 1, 2
+# and 4 threads and, for those with a matrix, both storage orders
+# (--layout row and col), against the library this CI job built with:
 #
 #     .github/verify-sweep.sh BUILD_DIR
 #
@@ -30,12 +31,20 @@ for f in "$B"/src/c/level1/bmb_* "$B"/src/c/level2/bmb_* "$B"/src/c/level3/bmb_*
             ;;
         *) sizes="-m 64,256,512 -M 33,512" ;;
     esac
-    if "$f" -x 0 -i 1 -t 1,2,4 -c $sizes >/dev/null 2>"$B/verify-sweep.err"; then
-        echo "ok   $name $sizes, 1 to 4 threads"
-    else
-        echo "FAIL $name $sizes, 1 to 4 threads: $(cat "$B/verify-sweep.err")"
-        failed=$((failed + 1))
-    fi
+    case $f in
+        */level1/*) layouts=- ;;
+        *) layouts="row col" ;;
+    esac
+    for layout in $layouts; do
+        lo=
+        [ "$layout" = - ] || lo="--layout $layout"
+        if "$f" -x 0 -i 1 -t 1,2,4 -c $lo $sizes >/dev/null 2>"$B/verify-sweep.err"; then
+            echo "ok   $name $lo $sizes, 1 to 4 threads"
+        else
+            echo "FAIL $name $lo $sizes, 1 to 4 threads: $(cat "$B/verify-sweep.err")"
+            failed=$((failed + 1))
+        fi
+    done
     n=$((n + 1))
 done
 

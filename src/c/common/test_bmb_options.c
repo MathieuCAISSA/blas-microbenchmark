@@ -182,8 +182,10 @@ static void test_defaults(void)
         fail("defaults", "statistics/output are not off");
     } else if (opts.verify != 1) {
         fail("defaults", "--verify is not on");
+    } else if (opts.column_major != 0) {
+        fail("defaults", "the layout is not row-major");
     } else if (opts.vector_size_set || opts.matrix_dim1_set
-               || opts.matrix_dim2_set || opts.thread_count_set) {
+               || opts.matrix_dim2_set || opts.thread_count_set || opts.layout_set) {
         fail("defaults", "an option is marked as given when none were");
     } else {
         ok("defaults");
@@ -398,6 +400,39 @@ int main(void)
                 bmb_options_free(&opts);
             } else {
                 ok(cases[i].what);
+                bmb_options_free(&opts);
+            }
+        }
+    }
+
+    /* ---- --layout, row by default ---- */
+    {
+        static const struct {
+            const char *a, *b;
+            bmb_options_status_t status;
+            int want;
+            const char *what;
+        } cases[] = {
+            {"-L", "col", BMB_OPTIONS_OK, 1, "-L col: column-major"},
+            {"--layout", "col", BMB_OPTIONS_OK, 1, "--layout col: column-major"},
+            {"--layout", "row", BMB_OPTIONS_OK, 0, "--layout row: row-major"},
+            {"--layout", "column", BMB_OPTIONS_ERROR, 0, "--layout column is refused: row or col only"},
+            {"--layout", "", BMB_OPTIONS_ERROR, 0, "an empty --layout is refused"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+            bmb_options_status_t st = parse_args(&opts, cases[i].a, cases[i].b, ARGS_END);
+
+            if (st != cases[i].status) {
+                fail(cases[i].what, "got the wrong status");
+            } else if (st == BMB_OPTIONS_OK && (opts.column_major != cases[i].want || !opts.layout_set)) {
+                fail(cases[i].what, "left the layout in the wrong state");
+            } else {
+                ok(cases[i].what);
+            }
+            if (st == BMB_OPTIONS_OK) {
                 bmb_options_free(&opts);
             }
         }

@@ -53,7 +53,8 @@ site](documentation.md#the-site)), not by `ci.yml`.
 The six jobs that test a library (`openblas`, `blis`, `netlib`, `nvpl`,
 `armpl`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
 real sizes"): all 20, checked at sizes a user measures — a
-few MB per operand — with non-square shapes and 1, 2 and 4 threads, on
+few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
+storage orders, on
 that job's library. `make check` runs `--verify` on tiny sizes only, and
 a tolerance too tight for a real size, or a library that is only wrong
 once it splits the work between threads, would get through it. It takes

@@ -46,8 +46,12 @@ All of it is in `report.html`: plain JavaScript and SVG, no library, in
 keeping with "nothing fetched". The decisions it implements are #1's, and
 the code points at them; the ones easiest to break by accident:
 
-- **A series is routine + backend + BLAS string + CPU + label.** Files
-  sharing one merge; a duplicate point keeps the fastest and is reported.
+- **A series is routine + backend + BLAS string + CPU + label + storage
+  order.** Files sharing one merge; a duplicate point keeps the fastest
+  and is reported. A file with no `layout` (vector routines, results from
+  before 1.4) counts as row-major, so a library keeps one series, one
+  colour, across its routines; a column-major one is named
+  "column-major".
   The frequency governor and turbo are shown, not part of the key, so
   that older files still merge (see
   [backends.md](backends.md)).
