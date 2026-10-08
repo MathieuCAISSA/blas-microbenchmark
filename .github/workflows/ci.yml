@@ -612,3 +612,82 @@ jobs:
         run: |
           cppcheck --version
           .github/cppcheck.sh build
+
+  # FlexiBLAS loads the BLAS library at run time (FLEXIBLAS=...), so one
+  # build measures several. Debian and Ubuntu do not package it; Fedora
+  # does, as its default BLAS, with OpenBLAS, BLIS and Netlib as backends.
+  # Everything runs once per backend from the same build, and the results
+  # of two of them must name the library each loaded: two series.
+  flexiblas:
+    runs-on: ubuntu-latest
+    container: fedora:latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y gcc make autoconf automake libtool diffutils findutils \
+            flexiblas flexiblas-devel flexiblas-netlib flexiblas-openblas-openmp flexiblas-blis-openmp
+
+      # What this FlexiBLAS can load, and the names FLEXIBLAS= takes.
+      - name: Backends
+        run: flexiblas list
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-blas-backend=flexiblas --enable-werror
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: Provenance
+        run: |
+          for b in OPENBLAS-OPENMP BLIS-OPENMP NETLIB; do
+            FLEXIBLAS=$b build/src/c/level1/bmb_ddot --version
+          done
+
+      - name: make check, once per backend
+        run: |
+          for b in OPENBLAS-OPENMP BLIS-OPENMP NETLIB; do
+            echo "::group::FLEXIBLAS=$b"
+            FLEXIBLAS=$b make -C build check || { cat build/src/c/*.log build/src/c/*/test-suite.log; exit 1; }
+            echo "::endgroup::"
+          done
+
+      # --verify at the sizes and thread counts a user measures, against each
+      # library this one build can load.
+      - name: Verified at real sizes, once per backend
+        run: |
+          for b in OPENBLAS-OPENMP BLIS-OPENMP; do
+            FLEXIBLAS=$b .github/verify-sweep.sh build
+          done
+
+      # The point of FlexiBLAS here: the same binary, two libraries, two
+      # series. Each file must name the library it loaded, and bmb_report
+      # must take both; test_report.js checks they make two series.
+      - name: One build, two libraries
+        run: |
+          D=build/src/c/level3/bmb_dgemm
+          FLEXIBLAS=OPENBLAS-OPENMP $D -x 0 -i 1 -m 64:256 -o openblas.json >/dev/null
+          FLEXIBLAS=BLIS-OPENMP $D -x 0 -i 1 -m 64:256 -o blis.json >/dev/null
+          grep '"backend"\|"blas"' openblas.json blis.json
+          grep -q '"backend": "flexiblas/openblas-openmp",' openblas.json
+          grep -q '"backend": "flexiblas/blis-openmp",' blis.json
+          build/src/report/bmb_report openblas.json blis.json > report.html
+          grep -c 'class="bmb-result"' report.html | grep -qx 2
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-logs-flexiblas
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore

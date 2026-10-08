@@ -4,14 +4,21 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bmb_threads.h"
+#include "bmb_build.h"
 #include "bmb_log.h"
 
 #if defined(BMB_NO_THREAD_CONTROL)
 /* Backend with no runtime thread-count API and no thread-count environment
  * variable of its own (netlib reference BLAS): nothing to set, nothing to
  * reconcile. */
+#elif defined(HAVE_FLEXIBLAS_API)
+/* FlexiBLAS passes the thread count on to the library it loaded, and has
+ * no variable of its own: which ones apply is known only at run time. */
+extern void flexiblas_set_num_threads(int num);
+#define BMB_THREAD_ENV_AT_RUN_TIME
 #elif defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
 #include <stdint.h>
 /* dim_t defaults to a 64-bit type in BLIS regardless of the CBLAS
@@ -32,12 +39,45 @@ extern void openblas_set_num_threads(int num_threads);
 #define BMB_THREAD_ENV_VARS "OMP_NUM_THREADS"
 #endif
 
+#if defined(BMB_THREAD_ENV_AT_RUN_TIME)
+/* The variables of the library FlexiBLAS loaded, in that library's order
+ * (see below); reference BLAS has none. */
+static const char *const *bmb_thread_env_vars(size_t *count)
+{
+    static const char *const openblas[] = {"OPENBLAS_NUM_THREADS", "GOTO_NUM_THREADS", "OMP_NUM_THREADS"};
+    static const char *const blis[] = {"BLIS_NUM_THREADS", "OMP_NUM_THREADS"};
+    static const char *const omp[] = {"OMP_NUM_THREADS"};
+    const char *backend = bmb_build_backend();
+
+    if (strncmp(backend, "flexiblas/openblas", 18) == 0) {
+        *count = sizeof(openblas) / sizeof(openblas[0]);
+        return openblas;
+    }
+    if (strncmp(backend, "flexiblas/blis", 14) == 0) {
+        *count = sizeof(blis) / sizeof(blis[0]);
+        return blis;
+    }
+    *count = (strncmp(backend, "flexiblas/netlib", 16) == 0) ? 0 : 1;
+    return omp;
+}
+#elif defined(BMB_THREAD_ENV_VARS)
+static const char *const *bmb_thread_env_vars(size_t *count)
+{
+    static const char *const vars[] = { BMB_THREAD_ENV_VARS };
+
+    *count = sizeof(vars) / sizeof(vars[0]);
+    return vars;
+}
+#endif
+
 void bmb_threads_set(unsigned int count)
 {
 #if defined(BMB_NO_THREAD_CONTROL)
     if (count > 1) {
         bmb_log_debug("This BLAS backend is single-threaded; --thread-count is ignored.");
     }
+#elif defined(HAVE_FLEXIBLAS_API)
+    flexiblas_set_num_threads((int) count);
 #elif defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
     bli_thread_set_num_threads((int64_t) count);
 #elif defined(HAVE_OPENBLAS_SET_NUM_THREADS)
@@ -54,13 +94,14 @@ void bmb_threads_set(unsigned int count)
 
 void bmb_threads_resolve(bmb_options_t *opts)
 {
-#if defined(BMB_THREAD_ENV_VARS)
-    static const char *const env_vars[] = { BMB_THREAD_ENV_VARS };
+#if defined(BMB_THREAD_ENV_VARS) || defined(BMB_THREAD_ENV_AT_RUN_TIME)
+    size_t n;
+    const char *const *env_vars = bmb_thread_env_vars(&n);
     size_t i;
 
     /* The backend's own precedence order, so the variable reported here is
      * the one it would actually have obeyed. */
-    for (i = 0; i < sizeof(env_vars) / sizeof(env_vars[0]); i++) {
+    for (i = 0; i < n; i++) {
         const char *env_val = getenv(env_vars[i]);
         unsigned long env_count;
         char *endptr;

@@ -10,7 +10,8 @@
 const char *bmb_build_version(void);
 
 /* The backend configure selected, e.g. "openblas". Never "auto": that
- * resolves at configure time to whatever was actually linked. */
+ * resolves at configure time to whatever was actually linked. With
+ * FlexiBLAS, the library it loaded at run time: "flexiblas/blis-openmp". */
 const char *bmb_build_backend(void);
 
 /* The BLAS library's own version string, when it exposes one (OpenBLAS
