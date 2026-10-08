@@ -153,8 +153,8 @@ The manual pages, also online at
   benchmarks.
 - `man bmb_report` — the report.
 - [What they produce](https://mathieucaissa.github.io/blas-microbenchmark/outputs.html):
-  the table, CSV and JSON of a run, and the report's summary, charts and
-  raw data.
+  the table, CSV and JSON of a run, and the report's summary, charts,
+  repeated runs and raw data.
 - Before installing, from the build directory: `man -l man/blas-microbenchmark.1`.
 - [Development](https://mathieucaissa.github.io/blas-microbenchmark/development.html):
   every test and what CI runs.

@@ -2,9 +2,11 @@
 # Captures the charts and tables shown in the README and on the
 # documentation site from a report, in light and dark:
 #
-#     doc/screenshots.sh report.html doc/images
+#     doc/screenshots.sh report.html doc/images [NAME...]
 #
 # writes <name>-light.png and <name>-dark.png for each chart in SHOTS below,
+# or for the NAMEs given only: the repeated runs' images come from a report
+# of their own (doc/dev/report.md),
 # at twice the CSS resolution so they stay sharp on high-density screens.
 # Each image is the chart's own element, not the window, so the page around
 # it never ends up in the README.
@@ -16,12 +18,13 @@
 # step when the images are regenerated.
 set -e
 
-if [ $# -ne 2 ]; then
-    echo "usage: $0 REPORT.html OUTDIR" >&2
+if [ $# -lt 2 ]; then
+    echo "usage: $0 REPORT.html OUTDIR [NAME...]" >&2
     exit 2
 fi
 page="file://$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
 out=$2
+shift 2
 mkdir -p "$out"
 
 # name  window width  what  [routine  text in the chart's title]
@@ -39,7 +42,22 @@ dgemm-ratio 1200 chart dgemm compared with
 dgemm-threads 1200 chart dgemm Thread scaling
 dgemv-shapes 640 chart dgemv Shapes
 summary 1000 summary
-rawdata 1000 rawdata'
+rawdata 1000 rawdata
+noise-band 1200 chart ddot Performance against size
+noise-ratio 1200 chart ddot compared with'
+
+# Without NAMEs, the README's report: every shot but the repeated runs'.
+if [ $# -eq 0 ]; then
+    SHOTS=$(printf '%s\n' "$SHOTS" | grep -v '^noise-')
+else
+    want=$(printf '%s\n' "$@")
+    SHOTS=$(printf '%s\n' "$SHOTS" | while read -r name rest; do
+        if printf '%s\n' "$want" | grep -qx "$name"; then
+            printf '%s %s\n' "$name" "$rest"
+        fi
+    done)
+    [ -n "$SHOTS" ] || { echo "$0: none of $* is in SHOTS" >&2; exit 2; }
+fi
 
 gd=${BMB_GECKODRIVER:-geckodriver}
 port=$((20000 + $$ % 20000))

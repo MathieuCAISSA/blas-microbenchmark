@@ -282,7 +282,8 @@ done
         run "bmb_dgemv -m 512 -M 256:512 -l 'turbo off' -o dgemv.json" dgemv.json
         echo '</section>'
         if have_image summary && have_image rawdata && have_image ddot-size && have_image dgemm-ratio \
-            && have_image dgemm-threads && have_image dgemv-shapes; then
+            && have_image dgemm-threads && have_image dgemv-shapes && have_image noise-band \
+            && have_image noise-ratio; then
             echo '<section class="Sh">'
             heading 1 report "The report"
             echo '<p class="Pp"><code>bmb_report results/*.json &gt; report.html</code> makes one page of all of them. These are from results measured on a laptop (Intel Core Ultra 7 155U, WSL2), with OpenBLAS 0.3.26 and BLIS 0.9.0: they show what the page draws, not which library is faster.</p>'
@@ -296,6 +297,12 @@ done
             picture dgemm-ratio "dgemm, BLIS relative to OpenBLAS at 8 threads, on a log scale around x1" "Each library against the reference."
             picture dgemm-threads "dgemm GFLOP/s at 1, 2, 4 and 8 threads, with ideal scaling dashed" "Thread scaling, against ideal."
             picture dgemv-shapes "dgemv heatmaps of GFLOP/s over M and N, OpenBLAS and BLIS" "Every shape of a two-dimension sweep."
+            echo '</div>'
+            heading 2 noise "Repeated runs"
+            echo '<p class="Pp">The same ddot command run four times with each library, each run into its own file: a band shows how far the runs spread, and the comparison tells a difference within that noise (a hollow point) from one beyond it (see <a href="bmb_report.html#Repeated_runs_and_noise">Repeated runs and noise</a>).</p>'
+            echo '<div class="shots-grid">'
+            picture noise-band "ddot GFLOP/s against vector size, OpenBLAS and BLIS, four runs each, with a band from the fastest run to the slowest" "The spread of four runs."
+            picture noise-ratio "ddot, BLIS relative to OpenBLAS, four runs each: hollow points where the difference is within the noise, filled ones where it is beyond" "Hollow: within the noise."
             echo '</div>'
             heading 2 raw "Raw data"
             echo '<p class="Pp">Every row, sortable by any column.</p>'

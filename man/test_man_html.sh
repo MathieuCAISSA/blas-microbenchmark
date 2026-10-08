@@ -83,10 +83,10 @@ grep -q '^thread_count,' "$o" || fail "outputs.html shows no CSV header"
 # The report's screenshots come with a git checkout (doc/images), not with
 # a release tarball.
 if [ -d "${srcdir:-.}/../doc/images" ]; then
-    for id in report summary charts raw; do
+    for id in report summary charts noise raw; do
         grep -q "id=\"$id\"" "$o" || fail "outputs.html has no $id section, although doc/images is there"
     done
-    test "$(grep -c '<img ' "$o")" -eq 6 || fail "outputs.html does not show the six screenshots of the report"
+    test "$(grep -c '<img ' "$o")" -eq 8 || fail "outputs.html does not show the eight screenshots of the report"
 fi
 ok "outputs.html shows this version's table, CSV and JSON, and the report when doc/images is there"
 
