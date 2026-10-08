@@ -144,6 +144,7 @@ for paths no test takes, then decide whether one should.
 | `tests` | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
 | | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
+| | `test_configure_paths.sh` | `--with-blas-incpath`/`--with-blas-libpath` come first in the search, ahead of a module's variables and of the directories `configure` probes in a distribution's install (#58): `configure` run per backend, its flags read from `config.log` |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
