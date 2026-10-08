@@ -290,6 +290,72 @@ the main thread, so on a machine with several NUMA nodes every page lands
 on that thread's node.
 Both matter as soon as more than one thread runs; see
 .BR EXAMPLES .
+.SH HARDWARE COUNTERS
+GFLOP/s and GB/s say how fast, not why.
+Hardware counters \(em instructions, cycles, cache misses, the
+floating-point operations the CPU actually executed \(em say why, and the
+benchmarks leave reading them to the tools made for it,
+.BR perf (1)
+and
+.BR likwid\-perfctr ,
+run around them.
+Both count the whole process: allocating and filling the operands, the
+.B \-\-verify
+check, the batch calibration and the warm-up, not only the timed calls.
+.PP
+Two runs that differ only in
+.B \-i
+take that away.
+With
+.B \-b 1
+each sample is one call, preceded by the operand restore of the routines
+that need one, so the difference between the two counts, divided by the
+difference in
+.BR \-i ,
+is what one call costs:
+.PP
+.RS
+.EX
+perf stat \-e instructions,cycles \-\- bmb_dgemm \-x 0 \-b 1 \-i 10 \-m 1024
+perf stat \-e instructions,cycles \-\- bmb_dgemm \-x 0 \-b 1 \-i 110 \-m 1024
+.EE
+.RE
+.PP
+Here, one call is a hundredth of the difference.
+Keep to one size and one thread count per pair of runs, and to sizes
+where a call takes long enough that the clock read around it does not
+count.
+.PP
+The floating-point events have CPU-specific names, which
+.B perf list
+gives: for instance
+.B fp_arith_inst_retired.256b_packed_double
+on recent Intel CPUs, or
+.B fp_ret_sse_avx_ops.all
+on AMD Zen.
+.B likwid\-perfctr
+has them grouped and named the same on every CPU it knows
+.RB ( FLOPS_DP ,
+.BR MEM_DP ,
+.BR L3 );
+it also pins the threads to the cores it measures:
+.PP
+.RS
+.EX
+likwid\-perfctr \-C 0\-3 \-g FLOPS_DP bmb_dgemm \-x 0 \-b 1 \-i 10 \-t 4 \-m 4096
+.EE
+.RE
+.PP
+Most virtual machines, containers and WSL expose no hardware counters,
+and
+.B perf
+then reports them as not supported.
+On a real machine, reading them may need
+.I /proc/sys/kernel/perf_event_paranoid
+at 2 or lower for
+.BR perf ,
+or the access daemon or root for
+.BR likwid\-perfctr .
 .SH OUTPUT
 Results go to standard output, one row per point, as they are measured;
 warnings and errors go to standard error.
