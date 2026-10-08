@@ -130,6 +130,7 @@ for paths no test takes, then decide whether one should.
 | | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, in both storage orders where it has a matrix, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
 | | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON |
+| | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm and dtrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |

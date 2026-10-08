@@ -215,7 +215,11 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
         return -1;
     }
 
-    batch = (opts->batch != 0) ? opts->batch : bmb_choose_batch(bench, ctx);
+    /* A routine whose operand must be restored before every call is timed
+     * one call at a time, whatever -b says: N calls in a row would run on
+     * an operand drifting towards infinity or denormals (#48). */
+    batch = (opts->batch != 0 && !bench->reset_every_call) ? opts->batch
+                                                           : bmb_choose_batch(bench, ctx);
 
     /* Each sample is the mean over `batch` calls. reset() runs before the
      * batch, never inside it: restoring an operand is bookkeeping, and for
@@ -336,6 +340,12 @@ static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_opti
 {
     char msg[256];
 
+    if (opts->batch > 1 && bench->reset_every_call) {
+        snprintf(msg, sizeof(msg),
+                 "--batch is ignored for %s: its operand is restored before every call, "
+                 "so it is timed one call at a time.", bench->routine_name);
+        bmb_log_warning(msg);
+    }
     if (opts->vector_size_set && !bench->use_vector_range) {
         snprintf(msg, sizeof(msg),
                  "--vector-size is ignored for %s: it takes its size from --matrix-dim1.",

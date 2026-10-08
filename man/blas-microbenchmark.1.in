@@ -77,6 +77,10 @@ Calls averaged per sample;
 .BR "HOW A NUMBER IS MEASURED" ).
 .B \-\-batch 1
 times every call on its own.
+dtrmv, dtrsv, dtrmm and dtrsm are always timed that way: their operand
+is restored before every call, and a larger
+.B \-b
+is ignored with a warning.
 Default: 0.
 .TP
 .BI "\-v, \-\-vector\-size " sweep

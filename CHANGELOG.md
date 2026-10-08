@@ -25,6 +25,12 @@ releases with the same major version can be compared and read by the same
   their results in either order, and the report keeps the two as two
   series.
 
+### Fixed
+- An explicit `-b` above 1 batched dtrmv, dtrsv, dtrmm and dtrsm, whose
+  operand has to be restored before every call: it drifted inside the
+  batch, and dtrmv came out 1.5× too fast. They now stay at one call per
+  sample, with a warning that `-b` was ignored.
+
 ## [1.3.0] - 2026-10-05
 
 ### Added

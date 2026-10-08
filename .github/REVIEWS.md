@@ -59,6 +59,9 @@ it comes from in brackets.
   status alone (`gh attestation verify` prints nothing outside a
   terminal, #13), and only the part of a page that was rendered
   ([testing the page](../doc/dev/report.md#testing-the-page)).
+- [ ] A test looks for the message it expects, never for an empty
+  stderr from a run on the real machine: one that exposes its CPU
+  frequency adds a warning to every run (a CI runner did, #48).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
 

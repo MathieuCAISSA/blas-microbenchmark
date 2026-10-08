@@ -91,7 +91,8 @@ does over a few thousand calls:
   divide by it, so it reaches infinity or denormals well inside a single
   batch — and denormals are where the hardware slows down and the timing
   stops meaning anything. They set `reset_every_call = 1`, which pins the
-  batch to 1 call.
+  batch to 1 call, even under an explicit `-b` (ignored with a warning;
+  it used to apply, and timed dtrmv 1.5× too fast, #48).
 - `dscal` shrinks its vector by `0.999999` per call, which needs about
   10⁸ calls to matter. It leaves the flag at 0 and gets batched.
 
