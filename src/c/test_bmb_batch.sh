@@ -36,9 +36,15 @@ echo "ok   -b 50: dtrmv, dtrsv, dtrmm and dtrsm stay at one call per sample, and
 level2/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \
     || fail "dgemv -b 50 failed: $(cat "$T/dgemv.err")"
 test "$(calls "$T/dgemv.json")" = 50 || fail "dgemv -b 50: calls_per_sample $(calls "$T/dgemv.json")"
-test ! -s "$T/dgemv.err" || fail "dgemv -b 50 warned: $(cat "$T/dgemv.err")"
+# Only this warning is looked for: on a machine that exposes its CPU
+# frequency, every run may also warn about that.
+if grep -q -- '--batch is ignored' "$T/dgemv.err"; then
+    fail "dgemv -b 50 said -b was ignored: $(cat "$T/dgemv.err")"
+fi
 level2/bmb_dtrsv -C -x 0 -i 2 -b 1 -m 8 >/dev/null 2>"$T/one.err" || fail "dtrsv -b 1 failed"
-test ! -s "$T/one.err" || fail "dtrsv -b 1, which changes nothing, warned: $(cat "$T/one.err")"
+if grep -q -- '--batch is ignored' "$T/one.err"; then
+    fail "dtrsv -b 1, which changes nothing, said -b was ignored: $(cat "$T/one.err")"
+fi
 echo "ok   another routine keeps -b 50, and -b 1 on dtrsv is not warned about"
 
 rm -rf "$T"
