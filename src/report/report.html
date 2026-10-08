@@ -1219,7 +1219,11 @@ details[open] > summary { margin-bottom: 12px; }
       return s ? { identity: id, points: pointsOf(s).filter(function (p) { return p.threads === threads && p[field] !== undefined; }) } : null;
     }).filter(function (m) { return m; });
     if (members.length < HISTORY_MIN) { return null; }
-    var name = members[members.length - 1].identity.backend;
+    /* Groups of one library differ by label, storage order or machine:
+     * the first two name it, the machine goes in the subtitle. */
+    var newest = members[members.length - 1].identity;
+    var name = [newest.backend].concat(newest.label ? [newest.label] : [],
+                                       newest.layout === "col" ? ["column-major"] : []).join(" · ");
     var notes = [];
     var absent = members.filter(function (m) { return !m.points.length; });
     if (absent.length) {
@@ -1266,7 +1270,7 @@ details[open] > summary { margin-bottom: 12px; }
       ? "History of " + name + ": each version is tested against the one before (Mann-Whitney U on their runs, two-sided, p < " +
         ALPHA + "); \"slower\" marks a regression beyond noise."
       : "History of " + name + ": measure each version several times, into separate files, to tell a regression from noise.");
-    return { name: name, field: field, threads: threads, d1: at.d1, d2: at.d2, points: points, notes: notes };
+    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2, points: points, notes: notes };
   }
 
   function historyChart(data) {
@@ -1275,7 +1279,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     return lineChart({
       title: data.name + " version by version",
-      subtitle: plural(data.threads, "thread") + " · " + sizeText(data.d1, data.d2) + " · oldest to newest",
+      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + sizeText(data.d1, data.d2) + " · oldest to newest",
       xLabel: "Version", yLabel: unit, yUnit: unit, xLinear: true, endLabels: false,
       xFormat: function (x) { return labels[x - 1]; },
       xHead: function (x) { return data.name + " " + labels[x - 1]; },

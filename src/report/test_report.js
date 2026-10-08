@@ -489,6 +489,14 @@
       eq(hd.points[1].verdict, "few", "one run against four is not enough to tell");
       eq(R.historyData(routine(m, "dgemm"), R.historyGroups(m.identities)[0], 2).notes.length > 0, true,
          "at a thread count the versions did not measure: a note, no chart");
+
+      m = R.buildModel([
+        v("a.json", "0.3.9", base), v("b.json", "0.3.26", base), v("c.json", "0.3.28", base),
+        v("d.json", "0.3.9", base, { label: "turbo" }), v("e.json", "0.3.26", base, { label: "turbo" }),
+        v("f.json", "0.3.28", base, { label: "turbo" })
+      ]);
+      eq(R.historyGroups(m.identities).map(function (g) { return R.historyData(routine(m, "dgemm"), g, 1).name; }).sort(),
+         ["openblas", "openblas · turbo"], "two histories of one library are told apart by their label");
     });
 
     /* ---- FlexiBLAS (#5) ---- */
