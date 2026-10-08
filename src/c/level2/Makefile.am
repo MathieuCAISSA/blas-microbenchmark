@@ -11,7 +11,8 @@ level2_PROGRAMS = \
 	bmb_dsyr \
 	bmb_dsyr2 \
 	bmb_dtrmv \
-	bmb_dtrsv
+	bmb_dtrsv \
+	bmb_sgemv
 
 bmb_dgemv_SOURCES = bmb_dgemv.c
 bmb_dger_SOURCES = bmb_dger.c
@@ -20,6 +21,7 @@ bmb_dsyr_SOURCES = bmb_dsyr.c
 bmb_dsyr2_SOURCES = bmb_dsyr2.c
 bmb_dtrmv_SOURCES = bmb_dtrmv.c
 bmb_dtrsv_SOURCES = bmb_dtrsv.c
+bmb_sgemv_SOURCES = bmb_sgemv.c
 
 # Minimalistic smoke tests (small matrices, 1 warmup + 2 timed iterations).
 TESTS = \
@@ -29,6 +31,7 @@ TESTS = \
 	test_bmb_dsyr.sh \
 	test_bmb_dsyr2.sh \
 	test_bmb_dtrmv.sh \
-	test_bmb_dtrsv.sh
+	test_bmb_dtrsv.sh \
+	test_bmb_sgemv.sh
 
 EXTRA_DIST = $(TESTS)

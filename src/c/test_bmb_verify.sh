@@ -1,7 +1,8 @@
 #!/bin/sh
 # Runs every benchmark with --verify (on by default), and proves each check
 # can fail: with BMB_VERIFY_CORRUPT set, every benchmark's check sees its
-# result altered by a relative 1e-6, and has to stop with exit status 2,
+# result altered (by a relative 1e-6 in double precision; doubled in
+# single, see bmb_verify.h), and has to stop with exit status 2,
 # say what is wrong, and write no results file.
 #
 # Without it, every benchmark has to pass at several sizes, non-square
@@ -32,7 +33,7 @@ for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
         level1/*) sizes="-v 7,64,1000" ;;
         *)
             case $r in
-                dgemv | dger | dgemm | dsymm | dsyrk | dsyr2k | dtrmm | dtrsm) sizes="-m 7,33,64 -M 5,64" ;;
+                dgemv | dger | sgemv | dgemm | dsymm | dsyrk | dsyr2k | dtrmm | dtrsm | sgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac
             ;;
@@ -72,7 +73,7 @@ for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
 
     n=$((n + 1))
 done
-test "$n" -ge 20 || fail "only $n benchmarks found"
+test "$n" -ge 26 || fail "only $n benchmarks found"
 echo "ok   all $n benchmarks pass --verify, in both layouts where they have a matrix, and each one's check catches a corrupted result"
 
 # On by default: no option, and the results are checked.

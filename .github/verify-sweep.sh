@@ -25,7 +25,7 @@ for f in "$B"/src/c/level1/bmb_* "$B"/src/c/level2/bmb_* "$B"/src/c/level3/bmb_*
         */level1/*) sizes="-v 1000,100000,1000000" ;;
         */level2/*)
             case $name in
-                bmb_dgemv | bmb_dger) sizes="-m 100,1000,2000 -M 37,1000" ;;
+                bmb_dgemv | bmb_dger | bmb_sgemv) sizes="-m 100,1000,2000 -M 37,1000" ;;
                 *) sizes="-m 100,1000,2000" ;;
             esac
             ;;
@@ -49,6 +49,6 @@ for f in "$B"/src/c/level1/bmb_* "$B"/src/c/level2/bmb_* "$B"/src/c/level3/bmb_*
 done
 
 rm -f "$B/verify-sweep.err"
-test "$n" -ge 20 || { echo "only $n benchmarks found in $B"; exit 1; }
+test "$n" -ge 26 || { echo "only $n benchmarks found in $B"; exit 1; }
 test "$failed" -eq 0 || { echo "$failed of $n benchmarks computed a wrong result"; exit 1; }
 echo "all $n benchmarks verified"
