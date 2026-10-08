@@ -202,6 +202,13 @@ weighing what the fix costs.
   distribute its own threads, which differs per implementation — so the
   man page tells users to run under `numactl` instead. Reasoned from the
   code, not measured: no multi-socket machine has been available.
+- **No hardware counters (#8).** Reading them is left to `perf stat`
+  and `likwid-perfctr`, run around a benchmark; the man page's HARDWARE
+  COUNTERS section gives the recipe (two runs differing in `-i`, with
+  `-b 1`, so that their difference is the timed calls alone). A built-in
+  `--counters` was weighed and left out: WSL and CI runners, being
+  virtual, expose no counters, so it could only ever have been tested
+  saying "not available".
 - **No CPU affinity.** Nothing sets it; the man page points at
   `OMP_PROC_BIND`/`OMP_PLACES` and `taskset`. Setting affinity from inside
   the benchmark would fight whatever the BLAS library does with its own

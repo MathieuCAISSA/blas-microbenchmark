@@ -10,6 +10,9 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `blas-microbenchmark(1)` has a HARDWARE COUNTERS section: how to read
+  them with `perf stat` or `likwid-perfctr` around a benchmark, and how
+  two runs that differ only in `-i` give what one call costs.
 - A FlexiBLAS backend (`--with-blas-backend=flexiblas`): one build
   measures every library FlexiBLAS can load, chosen at run time with
   `FLEXIBLAS=...`. The results name the library loaded (backend
