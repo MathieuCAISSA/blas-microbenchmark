@@ -266,9 +266,25 @@ details[open] > summary { margin-bottom: 12px; }
 
   var LEVEL = {
     dasum: 1, daxpy: 1, dcopy: 1, ddot: 1, dnrm2: 1, dscal: 1, dswap: 1,
+    saxpy: 1, sdot: 1,
     dgemv: 2, dger: 2, dsymv: 2, dsyr: 2, dsyr2: 2, dtrmv: 2, dtrsv: 2,
-    dgemm: 3, dsymm: 3, dsyrk: 3, dsyr2k: 3, dtrmm: 3, dtrsm: 3
+    sgemv: 2,
+    dgemm: 3, dsymm: 3, dsyrk: 3, dsyr2k: 3, dtrmm: 3, dtrsm: 3,
+    sgemm: 3, cgemm: 3, zgemm: 3
   };
+
+  /* Routines by level, then by operation, its precisions side by side
+   * in BLAS order (#6): sgemm, dgemm, cgemm, zgemm, then dsymm. */
+  var PRECISION = "sdcz";
+
+  function routineCompare(a, b) {
+    function key(name) {
+      var p = PRECISION.indexOf(name.charAt(0));
+      return p < 0 ? [name, 9] : [name.slice(1), p];
+    }
+    var ka = key(a.name), kb = key(b.name);
+    return (a.level - b.level) || (ka[0] < kb[0] ? -1 : ka[0] > kb[0] ? 1 : ka[1] - kb[1]);
+  }
 
   /* ------------------------------------------------------------------ *
    * The model. Everything from here to the view is pure -- no DOM --   *
@@ -405,9 +421,7 @@ details[open] > summary { margin-bottom: 12px; }
     identityOrder.forEach(function (id, i) { id.slot = (i < 8) ? i + 1 : 0; });
 
     var routineOrder = Object.keys(routines).map(function (k) { return routines[k]; });
-    routineOrder.sort(function (a, b) {
-      return (a.level - b.level) || (a.name < b.name ? -1 : 1);
-    });
+    routineOrder.sort(routineCompare);
     routineOrder.forEach(function (rt) {
       rt.seriesOrder.sort(function (a, b) { return identityOrder.indexOf(a.identity) - identityOrder.indexOf(b.identity); });
     });

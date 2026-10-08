@@ -115,6 +115,16 @@
       ]).identities.length, 5, "decision 1: a different label, BLAS version, CPU or backend is a different series");
     });
 
+    test("routine order", function () {
+      var names = ["zgemm", "dsymm", "sdot", "cgemm", "dgemv", "sgemm", "ddot", "dgemm", "daxpy", "sgemv", "saxpy"];
+      var m = R.buildModel(names.map(function (n) {
+        return entry(n + ".json", { routine: n, rows: [[1, 8, null, 1e-6, 1, 8]] });
+      }));
+      eq(m.routines.map(function (rt) { return rt.name; }),
+         ["saxpy", "daxpy", "sdot", "ddot", "sgemv", "dgemv", "sgemm", "dgemm", "cgemm", "zgemm", "dsymm"],
+         "#6: routines by level, then by operation, its precisions in BLAS order s, d, c, z");
+    });
+
     test("duplicates", function () {
       var m = R.buildModel([
         entry("slow.json", { rows: [[1, 8, null, 2e-6, 1, 8]] }),
