@@ -434,6 +434,137 @@ int main(void)
     cblas_dsymm(CblasRowMajor, CblasRight, CblasUpper, M, N, 0.5, a, N, b, N, 0.25, c, N);
     check("dsymm.RU", c, want, M * N);
 
+    /* ---- single precision: the values are multiples of 0.25, so these
+     * small sums are exact in float too ---- */
+    {
+        float fa[64], fb[64], fc[64], fx[16], fy[16];
+        double got[64];
+
+        for (i = 0; i < 64; i++) {
+            fa[i] = (float) val(i);
+            fb[i] = (float) val(i + 3);
+            fc[i] = (float) val(i + 5);
+        }
+        for (i = 0; i < 16; i++) {
+            fx[i] = (float) val(i);
+            fy[i] = (float) val(i + 3);
+        }
+
+        want[0] = 0.0;
+        for (i = 0; i < 8; i++) {
+            want[0] += (double) fx[i] * fy[i];
+        }
+        got[0] = cblas_sdot(8, fx, 1, fy, 1);
+        check("sdot", got, want, 1);
+
+        for (i = 0; i < 8; i++) {
+            want[i] = 0.75 * fx[i] + fy[i];
+        }
+        cblas_saxpy(8, 0.75f, fx, 1, fy, 1);
+        for (i = 0; i < 8; i++) {
+            got[i] = fy[i];
+        }
+        check("saxpy", got, want, 8);
+
+        /* sgemv, NoTrans, A M x N row-major */
+        for (i = 0; i < M; i++) {
+            double acc = 0.0;
+
+            for (j = 0; j < N; j++) {
+                acc += (double) fa[i * N + j] * fx[j];
+            }
+            want[i] = 0.5 * acc + 0.25 * fc[i];
+        }
+        cblas_sgemv(CblasRowMajor, CblasNoTrans, M, N, 0.5f, fa, N, fx, 1, 0.25f, fc, 1);
+        for (i = 0; i < M; i++) {
+            got[i] = fc[i];
+        }
+        check("sgemv.N", got, want, M);
+
+        /* sgemm, NoTrans/NoTrans */
+        for (i = 0; i < M * N; i++) {
+            fc[i] = (float) val(i + 5);
+        }
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                double acc = 0.0;
+
+                for (l = 0; l < K; l++) {
+                    acc += (double) fa[i * K + l] * fb[l * N + j];
+                }
+                want[i * N + j] = 0.5 * acc + 0.25 * fc[i * N + j];
+            }
+        }
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, M, N, K, 0.5f, fa, K, fb, N, 0.25f, fc, N);
+        for (i = 0; i < M * N; i++) {
+            got[i] = fc[i];
+        }
+        check("sgemm.NN", got, want, M * N);
+    }
+
+    /* ---- zgemm and cgemm, ConjTrans/NoTrans and NoTrans/ConjTrans:
+     * C = alpha*op(A)*op(B) + beta*C, complex alpha and beta. A conjugate
+     * transpose is where a shim that flipped the flags of swapped
+     * operands, as for the triangular routines, would go wrong. ---- */
+    {
+        double za[2 * 32], zb[2 * 32], zc[2 * 32], zw[2 * 32];
+        const double alpha[2] = { 0.5, 0.25 }, beta[2] = { 0.25, -0.5 };
+        float ca[2 * 32], cb[2 * 32], cc[2 * 32];
+        const float falpha[2] = { 0.5f, 0.25f }, fbeta[2] = { 0.25f, -0.5f };
+        double got[2 * 32];
+        int pass;
+
+        for (pass = 0; pass < 2; pass++) {
+            /* pass 0: op(A) = A^H, A is K x M; pass 1: op(B) = B^H, B is N x K */
+            fill(za, 2 * 32);
+            fill_off(zb, 2 * 32, 3);
+            fill_off(zc, 2 * 32, 5);
+            for (i = 0; i < M; i++) {
+                for (j = 0; j < N; j++) {
+                    double sr = 0.0, si = 0.0, cr = zc[2 * (i * N + j)], ci = zc[2 * (i * N + j) + 1];
+
+                    for (l = 0; l < K; l++) {
+                        int ia = pass == 0 ? l * M + i : i * K + l;
+                        int ib = pass == 0 ? l * N + j : j * K + l;
+                        double ar = za[2 * ia], ai = za[2 * ia + 1];
+                        double br = zb[2 * ib], bi = zb[2 * ib + 1];
+
+                        if (pass == 0) {
+                            ai = -ai;
+                        } else {
+                            bi = -bi;
+                        }
+                        sr += ar * br - ai * bi;
+                        si += ar * bi + ai * br;
+                    }
+                    zw[2 * (i * N + j)] = alpha[0] * sr - alpha[1] * si + beta[0] * cr - beta[1] * ci;
+                    zw[2 * (i * N + j) + 1] = alpha[0] * si + alpha[1] * sr + beta[0] * ci + beta[1] * cr;
+                }
+            }
+            for (i = 0; i < 2 * 32; i++) {
+                ca[i] = (float) za[i];
+                cb[i] = (float) zb[i];
+                cc[i] = (float) zc[i];
+            }
+            if (pass == 0) {
+                cblas_zgemm(CblasRowMajor, CblasConjTrans, CblasNoTrans, M, N, K, alpha, za, M, zb, N,
+                            beta, zc, N);
+                cblas_cgemm(CblasRowMajor, CblasConjTrans, CblasNoTrans, M, N, K, falpha, ca, M, cb, N,
+                            fbeta, cc, N);
+            } else {
+                cblas_zgemm(CblasRowMajor, CblasNoTrans, CblasConjTrans, M, N, K, alpha, za, K, zb, K,
+                            beta, zc, N);
+                cblas_cgemm(CblasRowMajor, CblasNoTrans, CblasConjTrans, M, N, K, falpha, ca, K, cb, K,
+                            fbeta, cc, N);
+            }
+            check(pass == 0 ? "zgemm.CN" : "zgemm.NC", zc, zw, 2 * M * N);
+            for (i = 0; i < 2 * M * N; i++) {
+                got[i] = cc[i];
+            }
+            check(pass == 0 ? "cgemm.CN" : "cgemm.NC", got, zw, 2 * M * N);
+        }
+    }
+
     if (failures != 0) {
         printf("%d check(s) failed\n", failures);
         return 1;
