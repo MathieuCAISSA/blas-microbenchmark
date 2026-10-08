@@ -173,15 +173,20 @@ probes, for the selected backend (plus generic `BLAS_*`/`CBLAS_*`):
 
 That lives in the `BMB_ENV_HINTS`/`BMB_ENV_PREFIX_HINT`/`BMB_ADD_INCDIR`/
 `BMB_ADD_LIBDIR` macros at the top of `configure.ac`.
-`--with-blas-incpath`/`--with-blas-libpath` do the same thing explicitly.
+`--with-blas-incpath`/`--with-blas-libpath` do the same thing explicitly,
+and win over both (`BMB_USER_PATHS`, below).
 
 Two things to preserve when touching that code:
 
-- Paths are *prepended*, so whatever is added last wins. Backend-specific
-  hints are applied after the hardcoded distro probes on purpose, so a
-  loaded module beats a system-wide install; and within `BMB_ENV_HINTS`
-  the prefixes are applied least-specific first, so `_ROOT` beats `_DIR`
-  beats `_HOME`.
+- Paths are *prepended*, so whatever is added last wins. In each backend
+  the order is: the hardcoded distro probe, then the module's variables,
+  then `BMB_USER_PATHS` (`--with-blas-incpath`/`--with-blas-libpath`),
+  so a loaded module beats a system-wide install, and the command line
+  beats both. The options used to be applied as they were read, before
+  the probes, and a library named on the command line linked the
+  system's instead (#58); `tests/test_configure_paths.sh` checks the
+  order. Within `BMB_ENV_HINTS` the prefixes are applied least-specific
+  first, so `_ROOT` beats `_DIR` beats `_HOME`.
 - Anything derived from a prefix variable must be guarded on that variable
   being non-empty — which is what `BMB_ENV_PREFIX_HINT` is for.
   `"$FOO_ROOT/lib"` with `FOO_ROOT` unset collapses to `/lib`, which

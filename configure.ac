@@ -125,17 +125,26 @@ AC_DEFUN([BMB_CHECK_BLAS_VERSION_API], [
 dnl -----------------------------------------------------------------------
 dnl BLAS implementation selection
 dnl -----------------------------------------------------------------------
+dnl Kept for later, not applied here: each backend below applies them
+dnl last, after its probe of a distribution's install and its module
+dnl variables (BMB_USER_PATHS), so that the most specific choice, the
+dnl one given on the command line, comes first in the search (#58).
 AC_ARG_WITH([blas-incpath],
   [AS_HELP_STRING([--with-blas-incpath=DIR],
     [directory containing the BLAS headers (cblas.h), if not on the default path])],
-  [BMB_ADD_INCDIR([$withval])],
-  [])
+  [bmb_blas_incpath="$withval"],
+  [bmb_blas_incpath=])
 
 AC_ARG_WITH([blas-libpath],
   [AS_HELP_STRING([--with-blas-libpath=DIR],
     [directory containing the BLAS library to link against])],
-  [BMB_ADD_LIBDIR([$withval])],
-  [])
+  [bmb_blas_libpath="$withval"],
+  [bmb_blas_libpath=])
+
+AC_DEFUN([BMB_USER_PATHS], [
+  BMB_ADD_INCDIR([$bmb_blas_incpath])
+  BMB_ADD_LIBDIR([$bmb_blas_libpath])
+])
 
 AC_ARG_WITH([blas-backend],
   [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl|flexiblas],
@@ -156,6 +165,7 @@ AS_CASE(["$bmb_blas_backend"],
 
   [openblas], [
     BMB_ENV_HINTS([OPENBLAS])
+    BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([cblas.h not found. Install libopenblas-dev, load your OpenBLAS module (OPENBLAS_ROOT/OPENBLAS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
@@ -198,6 +208,7 @@ AS_CASE(["$bmb_blas_backend"],
     dnl Applied after the distro probe so a loaded module wins over a
     dnl system-wide install.
     BMB_ENV_HINTS([BLIS])
+    BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([BLIS's cblas.h not found. Install libblis-openmp-dev (Debian/Ubuntu), load your BLIS module (BLIS_ROOT/BLIS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
@@ -236,6 +247,7 @@ AS_CASE(["$bmb_blas_backend"],
       BMB_ADD_LIBDIR([$bmb_netlib_libdir])
     ])
     BMB_ENV_HINTS([NETLIB])
+    BMB_USER_PATHS
     dnl Only the Fortran ABI is required: the CBLAS side is ours.
     dnl
     dnl A shared libblas.so pulls in its own Fortran runtime, but a static
@@ -272,6 +284,7 @@ AS_CASE(["$bmb_blas_backend"],
     done
     BMB_ENV_HINTS([NVPL])
     AS_IF([test -n "$NVPL_ROOT"], [BMB_ADD_INCDIR([$NVPL_ROOT/include/nvpl_compat])])
+    BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([NVPL's cblas.h not found. Install libnvpl-blas-dev (https://developer.nvidia.com/nvpl), load your NVPL module (NVPL_ROOT/NVPL_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
@@ -307,6 +320,7 @@ AS_CASE(["$bmb_blas_backend"],
       BMB_ADD_INCDIR([$ARMPL_DIR/include])
       BMB_ADD_LIBDIR([$ARMPL_DIR/lib])
     ])
+    BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([ArmPL's cblas.h not found. Install arm-performance-libraries (https://developer.arm.com/tools-and-software/arm-performance-libraries), load your ArmPL module (ARMPL_ROOT/ARMPL_DIR/ARMPL_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
@@ -330,6 +344,7 @@ AS_CASE(["$bmb_blas_backend"],
     done
     BMB_ENV_HINTS([FLEXIBLAS])
     AS_IF([test -n "$FLEXIBLAS_ROOT"], [BMB_ADD_INCDIR([$FLEXIBLAS_ROOT/include/flexiblas])])
+    BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([FlexiBLAS's cblas.h not found. Install flexiblas-devel (Fedora), load your FlexiBLAS module (FLEXIBLAS_ROOT/FLEXIBLAS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
@@ -349,6 +364,7 @@ AS_CASE(["$bmb_blas_backend"],
    dnl (OpenBLAS is what 'auto' prefers; use --with-blas-backend to pick
    dnl another one and get its variables honoured instead).
     BMB_ENV_HINTS([OPENBLAS])
+    BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([cblas.h not found. Install a CBLAS-compatible BLAS (OpenBLAS, BLIS, ...), load its module (OPENBLAS_ROOT/OPENBLAS_INCDIR, BLAS_ROOT/BLAS_INCDIR are picked up automatically), pass --with-blas-backend to pick one explicitly, or point to it with --with-blas-incpath/CPPFLAGS.])
     ])

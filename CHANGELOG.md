@@ -9,6 +9,13 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Fixed
+- `--with-blas-incpath` and `--with-blas-libpath` lost to a
+  distribution's library found by `configure` (BLIS, Netlib, NVPL, ArmPL,
+  FlexiBLAS): with both installed, the system's library was linked, with
+  the headers asked for. The options now come first in the search, ahead
+  of a module's variables too.
+
 ## [1.4.0] - 2026-10-08
 
 ### Added
