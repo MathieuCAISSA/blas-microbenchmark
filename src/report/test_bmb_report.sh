@@ -98,5 +98,24 @@ test "$opened" -eq "$closed" \
 grep -qF 'x<\/script><b>y' "$T/report.html" || fail "the label was not escaped"
 pass "a </script> inside a label stays inside its data block"
 
+# ---- the page knows every routine's level ----
+# Its LEVEL table orders the sections and names each routine's level; a
+# routine missing from it would sort first, with no level, and no other
+# test would notice (#52). Against the benchmarks built, both ways.
+sed -n '/^  var LEVEL = {$/,/^  };$/p' "${srcdir:-.}/report.html" \
+    | grep -o '[a-z0-9]*: [123]' | sort >"$T/levels"
+test -s "$T/levels" || fail "no LEVEL table found in report.html"
+for f in ../c/level1/bmb_* ../c/level2/bmb_* ../c/level3/bmb_*; do
+    n=$(basename "$f")
+    case $n in *.*) continue ;; esac
+    [ -f "$f" ] && [ -x "$f" ] || continue
+    l=${f#../c/level}
+    printf '%s: %s\n' "${n#bmb_}" "${l%%/*}"
+done | sort >"$T/built"
+test -s "$T/built" || fail "no benchmark found in ../c/level*"
+cmp -s "$T/levels" "$T/built" || fail "report.html's LEVEL table is not the benchmarks built:
+$(diff "$T/built" "$T/levels")"
+pass "the page's LEVEL table lists every benchmark built, in its level ($(wc -l <"$T/built"))"
+
 rm -rf "$T"
 echo "all checks passed"

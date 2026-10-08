@@ -101,7 +101,8 @@ Two things that backend gets wrong easily:
 - The shim declares the hidden `CHARACTER` length arguments the *GNU*
   Fortran ABI appends. A netlib built with ifort/ifx uses a different
   convention, so that combination is untested — if someone reports it, this
-  is where to look.
+  is where to look. The same goes for a `REAL` function such as `sdot_`:
+  gfortran returns a float, a library translated by f2c a double.
 - A shared `libblas.so` carries its own Fortran runtime; a static
   `libblas.a` does not, and leaves `xerbla`'s `_gfortran_*` symbols
   dangling. `configure` tries the plain link first and retries with

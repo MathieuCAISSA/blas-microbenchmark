@@ -146,7 +146,10 @@ beating the rest.
 Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
 `<prog>_SOURCES`), add the routine to `ROUTINES` in `man/Makefile.am` and
 to the NAME line and the routine tables of `man/blas-microbenchmark.1.in`
-(`test_man_content.sh` fails until all three are done), and add a
+(`test_man_content.sh` fails until all three are done), add it to the
+`LEVEL` table of `src/report/report.html`, which orders the report's
+sections and names each routine's level (`test_bmb_report.sh` fails until
+it is there), and add a
 `test_bmb_<routine>.sh` smoke test — copy one
 from the same directory, it is a single `bmb_check_run` call naming the
 binary, the routine and how many data rows the sweep should produce. Add it

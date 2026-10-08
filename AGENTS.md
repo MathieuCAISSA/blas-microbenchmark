@@ -124,19 +124,21 @@ for paths no test takes, then decide whether one should.
 
 | Where | Test | What it pins down |
 |---|---|---|
-| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C`, `--layout` |
+| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C`, `--layout`; and the backend name FlexiBLAS's library is given, kept to safe characters |
 | | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, real and complex, double and single, the comparison and its message, the two tolerances, the probe vector, the two corruption hooks |
 | | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, and the frequency governor and turbo with the advice they get |
 | | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, in both storage orders where it has a matrix, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
 | | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON |
 | | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm and dtrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
-| `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`) |
+| | `test_bmb_ignored_options.sh` | an option a routine has no use for (`--layout` on a vector routine, `-v`, `-m`, `-M` where they do not apply) is ignored with a warning naming it, and none where it applies |
+| | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, or on stdout |
+| `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); `test_bmb_zgemm.sh` also has a size whose complex matrices would wrap `size_t` refused |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
 | | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
 | `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |
-| | `test_bmb_report.sh` | `bmb_report`: what it refuses, and that the page is self-contained |
+| | `test_bmb_report.sh` | `bmb_report`: what it refuses, that the page is self-contained, and that its `LEVEL` table lists every benchmark built, in its level |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws; a series run four times gets its band, the noise test and a raw row per run; three versions of a library get a history |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`), including the Mann-Whitney p-values against an independent count |
 | `tests` | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |

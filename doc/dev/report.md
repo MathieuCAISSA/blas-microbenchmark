@@ -173,17 +173,30 @@ right, not that they are readable.
 ## The README's images
 
 `doc/images/` holds the screenshots of a report shown by the README (the
-four charts) and by the site (those, the summary and the raw data
-table), each in light and dark (`<picture>` picks one by the reader's
-theme). They are real results, made by the commands in the README's
-report section, and `doc/screenshots.sh` captures them from the report
-those produce. Run `bmb_report` from the directory holding `results/`,
-so the file names the summary and the raw data show are
-`results/...`, not the paths of your machine:
+four charts) and by the site (those, the summary, the raw data table,
+and two charts of repeated runs), each in light and dark (`<picture>`
+picks one by the reader's theme). They are real results, made by the
+commands in the README's report section, and `doc/screenshots.sh`
+captures them from the report those produce. Run `bmb_report` from the
+directory holding `results/`, so the file names the summary and the raw
+data show are `results/...`, not the paths of your machine:
 
 ```bash
 cd somewhere && bmb_report results/*.json > report.html
 doc/screenshots.sh report.html path/to/doc/images
+```
+
+The repeated runs' two (`noise-band`, `noise-ratio`) come from a report
+of their own, so that the README's charts stay those of one run: the
+README's ddot command, four times with each library, each run into its
+own file. Name them on the command line to capture only them:
+
+```bash
+for i in 1 2 3 4; do
+    bmb_ddot -v 1024:16777216 -o results/ddot-openblas-$i.json   # and the same under BLIS
+done
+bmb_report results/*.json > report.html
+doc/screenshots.sh report.html path/to/doc/images noise-band noise-ratio
 ```
 
 It drives Firefox over WebDriver and screenshots each element on its own
