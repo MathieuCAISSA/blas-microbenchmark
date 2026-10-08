@@ -61,6 +61,16 @@ the code points at them; the ones easiest to break by accident:
   a series with repeated runs goes from the fastest run to the slowest,
   and takes the place of the `-s` band (fastest sample to mean). The raw
   data has a row per run.
+- **History (#9)**, decided with the user over a separate comparison
+  command: series of one library that differ only by version (backend,
+  CPU, label and storage order alike; `historyGroups`), three or more
+  of them, two being the comparison chart's. Ordered by the first dotted
+  number of the version string (`versionOf`, compared number by number,
+  so 0.3.9 before 0.3.26), then by the date first measured. At the
+  page's thread count, the largest size every version measured. Each
+  version is tested against the one before with `noiseVerdict`;
+  "slower" is written above a regression, in ink, not in the series'
+  colour. The line wears the newest version's colour.
 - **Beyond noise is a Mann-Whitney U test**, two-sided, at p < 0.05, on
   the runs' times of the series and of the reference at that point
   (`noiseVerdict`); the user chose it over a range overlap and a fixed

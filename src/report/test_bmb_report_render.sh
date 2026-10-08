@@ -32,6 +32,9 @@ mkdir "$T"
 #    Frequency column shows;
 #  - dgemm four more times under a third label, so that series has
 #    repeated runs: their band, and the noise test in the comparison;
+#  - dgemm under a fourth label, as three versions of the library (one
+#    run, its version string rewritten, since one version is installed):
+#    the history;
 #  - dgemv as a grid, at one thread only: the heatmap.
 ../c/level1/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
 ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c -o "$T/dgemm-a.json" >/dev/null
@@ -40,6 +43,13 @@ BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
 for i in 1 2 3 4; do
     ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label r -C -o "$T/dgemm-r$i.json" >/dev/null
 done
+../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label h -o "$T/hist.json" >/dev/null
+for v in 0.3.9 0.3.26 0.3.28; do
+    # Netlib, NVPL and ArmPL record no version string: add one.
+    sed -e '/^  "blas": /d' -e '/^  "backend": /a\
+  "blas": "OpenBLAS '"$v"' Haswell",' "$T/hist.json" >"$T/hist-$v.json"
+done
+rm "$T/hist.json"
 ../c/level2/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
@@ -81,6 +91,10 @@ test "$(grep -o '>Verified<' "$dom" | wc -l)" -ge 2 || fail "no Verified column 
 grep -q '<td>yes</td>' "$dom" || fail "the verified series is not shown as verified"
 grep -q '<td>no</td>' "$dom" || fail "the series run with -C is not shown as unverified"
 echo "ok   rendered: the Verified columns, for the series run with --verify"
+
+grep -q 'version by version' "$dom" || fail "no history for the library measured as three versions"
+grep -q '>0.3.9<' "$dom" && grep -q '>0.3.28<' "$dom" || fail "the history's axis does not name the versions"
+echo "ok   rendered: the history of a library measured as three versions"
 
 grep -q 'band: fastest to slowest run' "$dom" || fail "no run band for the series measured four times"
 grep -q 'Mann-Whitney U' "$dom" || fail "the comparison chart does not say how its points were tested against noise"

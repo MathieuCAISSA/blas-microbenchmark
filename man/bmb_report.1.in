@@ -51,6 +51,9 @@ page.
 With repeated runs, a hollow point is a difference within run-to-run
 noise;
 .IP \(bu
+the history of a library measured in three versions or more (see
+.BR "History of a library" );
+.IP \(bu
 thread scaling, at the largest size measured at every thread count,
 against ideal linear scaling;
 .IP \(bu
@@ -77,6 +80,18 @@ A point measured in more than one file is drawn at the fastest
 measurement, and the page says so with the gap, so that a run which did
 not reproduce does not go unnoticed; the others are kept as its runs.
 To compare two conditions on one machine, give each run its own label.
+.SS History of a library
+Series that differ only by the library's version \(em the same backend,
+CPU, label and storage order \(em make a history once there are three of
+them; two are the comparison chart's.
+For each routine, at the thread count chosen on the page, it shows the
+largest size every version measured, version after version, ordered by
+the version number in the library's version string, oldest first.
+With repeated runs, each version is tested against the one before (see
+below), and one slower beyond the noise is marked
+.BR slower .
+Measure every version on the same machine: a history across machines
+measures the machines.
 .SS Repeated runs and noise
 Running the same command several times, each into its own file, gives
 each point several runs.
@@ -133,6 +148,16 @@ and each comes out as its own series:
 .EX
 FLEXIBLAS=OPENBLAS\-OPENMP bmb_dgemm \-m 128:2048 \-o results/dgemm\-openblas.json
 FLEXIBLAS=BLIS\-OPENMP bmb_dgemm \-m 128:2048 \-o results/dgemm\-blis.json
+bmb_report results/*.json > report.html
+.EE
+.RE
+.PP
+Three versions of OpenBLAS, each installed in turn, five runs each,
+make a history (the version comes from the library itself):
+.PP
+.RS
+.EX
+for i in 1 2 3 4 5; do bmb_dgemm \-m 1024 \-o results/openblas\-0.3.28\-$i.json; done
 bmb_report results/*.json > report.html
 .EE
 .RE
