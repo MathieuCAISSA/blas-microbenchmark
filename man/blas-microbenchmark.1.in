@@ -334,11 +334,12 @@ on recent Intel CPUs, or
 .B fp_ret_sse_avx_ops.all
 on AMD Zen.
 .B likwid\-perfctr
-has them grouped and named the same on every CPU it knows
+groups them per CPU, under names most CPUs share
 .RB ( FLOPS_DP ,
-.BR MEM_DP ,
-.BR L3 );
-it also pins the threads to the cores it measures:
+.BR L3 ;
+.B likwid\-perfctr \-a
+lists the groups of the one at hand), and pins the threads to the cores
+it measures:
 .PP
 .RS
 .EX
