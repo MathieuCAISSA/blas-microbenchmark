@@ -97,9 +97,8 @@ void bmb_verify_perturb(double *value);
 
 /* The same for a single-precision result, which it doubles, plus one:
  * 1e-6 is a few units in the last place of a float, and the tolerance of
- * a float projection, as sgemm's and cgemm's, does not see even 1e-1 in
- * one element of a 64 x 64 C. A library that is wrong is usually wrong
- * everywhere, and by more. */
+ * cgemm's projection does not see even 1e-1 in one element of a 64 x 64
+ * C. A library that is wrong is usually wrong everywhere, and by more. */
 void bmb_verify_perturb_single(float *value);
 
 #endif /* BMB_VERIFY_H */
