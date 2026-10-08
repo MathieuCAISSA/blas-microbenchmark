@@ -48,8 +48,26 @@ where that order puts it. A triangular or symmetric matrix must not be
 symmetric in its values off the diagonal, or the upper triangle read one
 way equals the other, and `--verify` cannot tell a library that ignored
 the order (the triangular routines' `bmb_off_diagonal()`). Each of the
-13 routines was seen to fail `--verify` with its call forced to
+17 routines was seen to fail `--verify` with its call forced to
 row-major under `--layout col`.
+
+**Other precisions (#6).** `saxpy`, `sdot`, `sgemv`, `sgemm`, `cgemm`
+and `zgemm` are the double-precision file of the same routine with
+another element type: `float` for s, pairs of `float` (c) or `double`
+(z), real part first, for complex. A complex scalar or matrix is passed
+as `(const void *)`, which converts to whatever pointer type a library's
+`cblas.h` declares. Their dimensions and options are the double ones'.
+Only the routines where the precision changes the picture most are
+there; another follows the same pattern, and needs its
+`src/c/netlib/` entry point too.
+
+- `flops`: real operations. A complex multiply-add is 4 multiplications
+  and 4 additions, so `cgemm`/`zgemm` count `8*M*N*K` where `dgemm`
+  counts `2*M*N*K`, and their GFLOP/s are comparable with it.
+- `bytes`: 4 per element in single precision, 8 in double.
+- `verify()`: the reference stays in double, read from the float
+  operands (`bmb_verify_matvec_single()`, `_complex()`,
+  `_complex_single()`), and the result is compared in double.
 
 Dimension conventions (only two `--matrix-dim*` options exist, so routines
 with 3 mathematical dimensions reuse one):
@@ -166,14 +184,35 @@ the tolerance is a rounding-error bound relative to that:
 widen it to make a failure go away: a check that fails on a correct
 library is a wrong reference, to be fixed.
 
+A complex element's size is `|re| + |im|`, which bounds both real
+products in each part of a complex product; a complex multiply-add
+counts as two terms. A single-precision result uses
+`bmb_verify_tolerance_single(terms)`, the same bound with the float
+epsilon, 2^29 times wider, counting only the library's terms (the
+reference, in double, adds nothing that matters). It is still a bound,
+not a guess: a library summing a million floats one after the other,
+as Netlib's `sdot` does, drifts by a relative 1e-3 on our data, and a
+tighter tolerance would fail it. The price is that a single-precision
+check catches a library computing the wrong thing, not one that is
+slightly off: `sdot` leaving out one element of a million passes. For
+`sgemm` and `cgemm`, the scale of the projection leaves out `|C||r|`
+(`dgemm`'s has it): the library's error on `C` is bounded by the
+tolerance times `|A||B|`, so on `C*r` by the tolerance times
+`|A|(|B||r|)`.
+
 **`BMB_VERIFY_CORRUPT=1`** makes every `verify()` alter one element of the
 library's result by a relative 1e-6 (`bmb_verify_perturb()`) before
-comparing. It exists so that `src/c/test_bmb_verify.sh` can prove each of
-the 20 checks fails when it should. A new routine's `verify()` must call
-`bmb_verify_perturb()` on its result, or that test fails for it. Beyond
+comparing; in single precision it doubles it, plus one
+(`bmb_verify_perturb_single()`), since the projection of a float `cgemm`
+does not see even 1e-1 in one element of a 64 x 64 `C`. It exists so
+that `src/c/test_bmb_verify.sh` can prove each of
+the 26 checks fails when it should. A new routine's `verify()` must call
+`bmb_verify_perturb()` or `bmb_verify_perturb_single()` on its result,
+or that test fails for it. Beyond
 the hook, each check was also seen to catch a real wrong computation — a
-transposed `dgemm`, a `dsyrk` or `dsyr2` on the wrong triangle, a `dtrsv`
-solving with the transpose.
+transposed `dgemm` or `sgemm`, a `cgemm` or `zgemm` conjugating an
+operand, a `dsyrk` or `dsyr2` on the wrong triangle, a `dtrsv` solving
+with the transpose, a `saxpy` with twice its alpha.
 
 ## Known measurement limitations
 
