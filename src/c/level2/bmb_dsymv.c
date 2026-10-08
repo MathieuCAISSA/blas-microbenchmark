@@ -8,10 +8,12 @@
 
 /* Square routine: only dim1 (= N) is used, swept via --matrix-dim1. */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
     int n;
     double alpha;
     double beta;
-    double *a; /* N x N, row-major, upper triangle used */
+    double *a; /* N x N, in the order of --layout, upper triangle used */
     double *x; /* N */
     double *y; /* N */
 } bmb_ctx_t;
@@ -33,6 +35,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->n = (int) n;
     ctx->alpha = 1.0;
     ctx->beta = 0.0;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
     ctx->a = malloc(n * n * sizeof(double));
     ctx->x = malloc(n * sizeof(double));
     ctx->y = malloc(n * sizeof(double));
@@ -59,7 +63,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsymv(CblasRowMajor, CblasUpper, ctx->n, ctx->alpha,
+    cblas_dsymv(ctx->order, CblasUpper, ctx->n, ctx->alpha,
                 ctx->a, ctx->n, ctx->x, 1, ctx->beta, ctx->y, 1);
 }
 
@@ -107,7 +111,7 @@ static int verify(void *vctx, char *msg, size_t size)
     memcpy(y0, ctx->y, m * sizeof(double));
     call(ctx);
     bmb_verify_perturb(&ctx->y[0]);
-    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, m, n, ctx->a, n, ctx->x, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, m, n, ctx->a, n, ctx->x, NULL, t, tabs);
     for (i = 0; i < m; i++) {
         want[i] = ctx->alpha * t[i] + ctx->beta * y0[i];
         scale[i] = fabs(ctx->alpha) * tabs[i] + fabs(ctx->beta * y0[i]);

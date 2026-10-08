@@ -8,6 +8,11 @@
 /* dim1 = M = K, dim2 = N (K is tied to M so the two --matrix-dim options
  * remain sufficient to describe the three GEMM dimensions; see README.md). */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
+    int lda;
+    int ldb;
+    int ldc;
     int m;
     int n;
     int k;
@@ -36,6 +41,11 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->k = (int) k;
     ctx->alpha = 1.0;
     ctx->beta = 0.0;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
+    ctx->lda = ctx->col ? ctx->m : ctx->k;
+    ctx->ldb = ctx->col ? ctx->k : ctx->n;
+    ctx->ldc = ctx->col ? ctx->m : ctx->n;
     ctx->a = malloc(m * k * sizeof(double));
     ctx->b = malloc(k * n * sizeof(double));
     ctx->c = malloc(m * n * sizeof(double));
@@ -64,8 +74,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, ctx->m, ctx->n, ctx->k,
-                ctx->alpha, ctx->a, ctx->k, ctx->b, ctx->n, ctx->beta, ctx->c, ctx->n);
+    cblas_dgemm(ctx->order, CblasNoTrans, CblasNoTrans, ctx->m, ctx->n, ctx->k,
+                ctx->alpha, ctx->a, ctx->lda, ctx->b, ctx->ldb, ctx->beta, ctx->c, ctx->ldc);
 }
 
 static void teardown(void *vctx)
@@ -107,13 +117,13 @@ static int verify(void *vctx, char *msg, size_t size)
         c0[i] = c0abs[i] = 0.0;
     }
     if (ctx->beta != 0.0) {
-        bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->c, n, r, NULL, c0, c0abs);
+        bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldc, r, NULL, c0, c0abs);
     }
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->c, n, r, NULL, y1, y1abs);
-    bmb_verify_matvec(BMB_VERIFY_FULL, inner, n, ctx->b, n, r, NULL, t, tabs);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, inner, ctx->a, inner, t, tabs, y2, y2abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldc, r, NULL, y1, y1abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, inner, n, ctx->b, ctx->ldb, r, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, inner, ctx->a, ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
         scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];

@@ -10,11 +10,22 @@
  * X is overwritten in place by cblas_dtrsv(); it is restored from x0
  * before every call so the benchmark is stable across --iterations. */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
     int n;
-    double *a;  /* N x N, row-major, upper triangle used */
+    double *a;  /* N x N, in the order of --layout, upper triangle used */
     double *x0; /* template */
     double *x;  /* working buffer, restored by reset() before each call */
 } bmb_ctx_t;
+
+/* Off the diagonal, small enough to keep the matrix diagonally dominant
+ * (at most 0.5 / n), and not symmetric: with a constant there, the upper
+ * triangle read row-major equals the one read column-major, and --verify
+ * could not tell a library that ignored --layout. */
+static double bmb_off_diagonal(size_t i, size_t j, size_t n)
+{
+    return (double) ((i * 7 + j * 3) % 11 + 1) / (24.0 * (double) n);
+}
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
@@ -31,6 +42,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     }
 
     ctx->n = (int) n;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
     ctx->a = malloc(n * n * sizeof(double));
     ctx->x0 = malloc(n * sizeof(double));
     ctx->x = malloc(n * sizeof(double));
@@ -47,7 +60,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
         for (j = 0; j < n; j++) {
             /* Diagonally dominant so the triangular solve is well-conditioned. */
-            ctx->a[i * n + j] = (i == j) ? (double) (n + 1) : (0.5 / (double) n);
+            ctx->a[i * n + j] = (i == j) ? (double) (n + 1) : bmb_off_diagonal(i, j, n);
         }
         ctx->x0[i] = (double) (i % 100) * 0.01 + 1.0;
     }
@@ -60,7 +73,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dtrsv(CblasRowMajor, CblasUpper, CblasNoTrans, CblasNonUnit, ctx->n, ctx->a, ctx->n, ctx->x, 1);
+    cblas_dtrsv(ctx->order, CblasUpper, CblasNoTrans, CblasNonUnit, ctx->n, ctx->a, ctx->n, ctx->x, 1);
 }
 
 static void reset(void *vctx)
@@ -114,7 +127,7 @@ static int verify(void *vctx, char *msg, size_t size)
 
     call(ctx);
     bmb_verify_perturb(&ctx->x[0]);
-    bmb_verify_matvec(BMB_VERIFY_UPPER, n, n, ctx->a, n, ctx->x, NULL, ux, uxabs);
+    bmb_verify_matvec(BMB_VERIFY_UPPER, ctx->col, n, n, ctx->a, n, ctx->x, NULL, ux, uxabs);
     for (i = 0; i < n; i++) {
         scale[i] = uxabs[i] + fabs(ctx->x0[i]);
     }

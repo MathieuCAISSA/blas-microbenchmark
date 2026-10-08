@@ -54,26 +54,75 @@ static void test_matvec(void)
     const double x3[3] = {1, -1, 2}, x2[2] = {1, -1}, ones[3] = {1, 1, 1};
     double y[3], yabs[3];
 
-    bmb_verify_matvec(BMB_VERIFY_FULL, 2, 3, wide, 4, x3, NULL, y, yabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, 0, 2, 3, wide, 4, x3, NULL, y, yabs);
     check(same(y, (double[]) {5, 11}, 2), "FULL: A*x on a 2x3 matrix with lda 4");
     check(same(yabs, (double[]) {9, 21}, 2), "FULL: |A|*|x|");
 
-    bmb_verify_matvec(BMB_VERIFY_FULL_T, 2, 3, wide, 4, x2, NULL, y, yabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL_T, 0, 2, 3, wide, 4, x2, NULL, y, yabs);
     check(same(y, (double[]) {-3, -3, -3}, 3), "FULL_T: A'*x");
     check(same(yabs, (double[]) {5, 7, 9}, 3), "FULL_T: |A'|*|x|");
 
-    bmb_verify_matvec(BMB_VERIFY_UPPER, 0, 3, square, 4, ones, NULL, y, yabs);
+    bmb_verify_matvec(BMB_VERIFY_UPPER, 0, 0, 3, square, 4, ones, NULL, y, yabs);
     check(same(y, (double[]) {6, 9, 6}, 3), "UPPER: the strictly lower part is not read");
 
-    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, 0, 3, square, 4, ones, NULL, y, yabs);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, 0, 0, 3, square, 4, ones, NULL, y, yabs);
     check(same(y, (double[]) {6, 11, 14}, 3), "SYM_UPPER: the lower half mirrored from the upper");
 
-    bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, 0, 3, square, 4, ones, NULL, y, yabs);
+    bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, 0, 0, 3, square, 4, ones, NULL, y, yabs);
     check(same(y, (double[]) {0, 9, 18}, 3), "LOWER_STRICT: only below the diagonal");
 
     /* The size of the terms carries through a product of products. */
-    bmb_verify_matvec(BMB_VERIFY_FULL, 2, 3, wide, 4, x3, (double[]) {10, 10, 10}, y, yabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, 0, 2, 3, wide, 4, x3, (double[]) {10, 10, 10}, y, yabs);
     check(same(yabs, (double[]) {60, 150}, 2), "xabs, when given, replaces |x|");
+}
+
+/* --layout col: the same matrices stored column-major, with a leading
+ * dimension larger than the column, give the same products, shape by
+ * shape. A shape is of the matrix, so the upper triangle stays i <= j. */
+static void test_matvec_column_major(void)
+{
+    static const double wide[8] = {
+        1, 2, 3, -100,
+        4, 5, 6, -100,
+    };
+    double square_c[12], wide_c[9];
+    const double x3[3] = {1, -1, 2}, x2[2] = {1, -1};
+    double y[3], yabs[3], want[3], wabs[3];
+    const bmb_verify_shape_t shapes[] = {
+        BMB_VERIFY_UPPER, BMB_VERIFY_SYM_UPPER, BMB_VERIFY_LOWER_STRICT
+    };
+    size_t i, j, s;
+    int same_all = 1;
+
+    for (i = 0; i < 12; i++) {
+        square_c[i] = -200;
+    }
+    for (i = 0; i < 9; i++) {
+        wide_c[i] = -200;
+    }
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            square_c[i + j * 4] = square[i * 4 + j];
+        }
+    }
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 3; j++) {
+            wide_c[i + j * 3] = wide[i * 4 + j];
+        }
+    }
+
+    bmb_verify_matvec(BMB_VERIFY_FULL, 1, 2, 3, wide_c, 3, x3, NULL, y, yabs);
+    check(same(y, (double[]) {5, 11}, 2) && same(yabs, (double[]) {9, 21}, 2),
+          "column-major FULL: A*x on the same 2x3 matrix, lda 3");
+    bmb_verify_matvec(BMB_VERIFY_FULL_T, 1, 2, 3, wide_c, 3, x2, NULL, y, yabs);
+    check(same(y, (double[]) {-3, -3, -3}, 3), "column-major FULL_T: A'*x");
+
+    for (s = 0; s < sizeof(shapes) / sizeof(shapes[0]); s++) {
+        bmb_verify_matvec(shapes[s], 0, 0, 3, square, 4, x3, NULL, want, wabs);
+        bmb_verify_matvec(shapes[s], 1, 0, 3, square_c, 4, x3, NULL, y, yabs);
+        same_all = same_all && same(y, want, 3) && same(yabs, wabs, 3);
+    }
+    check(same_all, "column-major UPPER, SYM_UPPER, LOWER_STRICT: the same triangles as row-major");
 }
 
 static void test_close(void)
@@ -164,6 +213,7 @@ static void test_perturb(void)
 int main(void)
 {
     test_matvec();
+    test_matvec_column_major();
     test_close();
     test_tolerance();
     test_probe();

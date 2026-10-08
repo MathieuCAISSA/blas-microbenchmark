@@ -65,10 +65,13 @@ was checked when any was.
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
 .SS Series
-Results are grouped into series by backend, library version, CPU and
-label
-.RB ( \-l ).
-Files that share all four make one curve: a sweep extended the next day, or
+Results are grouped into series by backend, library version, CPU, label
+.RB ( \-l )
+and storage order
+.RB ( \-L ;
+a series measured column-major is named so, and results without one,
+from vector routines or from before 1.4, count as row-major).
+Files that share all five make one curve: a sweep extended the next day, or
 thread counts measured in separate runs, merge on their own.
 A point measured in more than one file is drawn at the fastest
 measurement, and the page says so with the gap, so that a run which did

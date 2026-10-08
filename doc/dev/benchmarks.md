@@ -35,6 +35,22 @@ command line is parsed (`bmb_range_t` is a list, not a min/max pair), so
 linear step, explicit list — cost the loop nothing. Anything new in that
 area belongs in `bmb_parse_range()`, not in the benchmark loop.
 
+**Storage order (`--layout`, #7).** A routine with a matrix takes its
+order from `bmb_bench_column_major()` in `setup()`: it stores the order
+to pass CBLAS (`CblasRowMajor` or `CblasColMajor`, kept in an `int`,
+since the enum's name differs between libraries) and its leading
+dimensions — the number of columns of a matrix row-major, of rows
+column-major (`dgemm`: `lda` is K or M, `ldb` N or K, `ldc` N or M). The
+problem stays the same: same sizes, same triangle, no transpose; only
+its storage changes, and the fills are the same either way. `verify()`
+passes the order to `bmb_verify_matvec()`, which reads element (i, j)
+where that order puts it. A triangular or symmetric matrix must not be
+symmetric in its values off the diagonal, or the upper triangle read one
+way equals the other, and `--verify` cannot tell a library that ignored
+the order (the triangular routines' `bmb_off_diagonal()`). Each of the
+13 routines was seen to fail `--verify` with its call forced to
+row-major under `--layout col`.
+
 Dimension conventions (only two `--matrix-dim*` options exist, so routines
 with 3 mathematical dimensions reuse one):
 

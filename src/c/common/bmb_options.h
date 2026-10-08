@@ -47,6 +47,9 @@ typedef struct {
 
     int statistics;           /* -s, --statistics */
     int verify;               /* -c, --verify */
+    int column_major;         /* -L, --layout col: matrices stored and
+                               * passed column-major, as Fortran does */
+    int layout_set;           /* whether -L/--layout was given */
 
     char *label;              /* -l, --label; NULL when not given */
 

@@ -9,6 +9,14 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- `-L`/`--layout row|col`: store the matrices column-major and call
+  CBLAS that way, as Fortran and LAPACK do, instead of the default
+  row-major. A library may take another code path for each. The routines
+  with a matrix record it (`# layout:`, `"layout"` in the JSON), check
+  their results in either order, and the report keeps the two as two
+  series.
+
 ## [1.3.0] - 2026-10-05
 
 ### Added

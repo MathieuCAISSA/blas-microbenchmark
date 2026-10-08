@@ -8,6 +8,8 @@
 /* Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
  * A (N x N, upper triangle) is updated in place: A += alpha*(x*y^T + y*x^T). */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
     int n;
     double alpha;
     double *a;
@@ -31,6 +33,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->alpha = 1.0e-6;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
     ctx->a = malloc(n * n * sizeof(double));
     ctx->x = malloc(n * sizeof(double));
     ctx->y = malloc(n * sizeof(double));
@@ -57,7 +61,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsyr2(CblasRowMajor, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->n);
+    cblas_dsyr2(ctx->order, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->n);
 }
 
 static void teardown(void *vctx)
@@ -107,10 +111,10 @@ static int verify(void *vctx, char *msg, size_t size)
 
     bmb_verify_probe(r, n);
 
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p0, p0abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, n, r, NULL, p0, p0abs);
     call(ctx);
     bmb_verify_perturb(&ctx->a[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, r, NULL, p, pabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, n, r, NULL, p, pabs);
     for (i = m; i-- > 0;) {
         s1 += ctx->y[i] * r[i];
         s1abs += fabs(ctx->y[i] * r[i]);

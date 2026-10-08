@@ -27,6 +27,8 @@ typedef struct {
     const char *dim2_label; /* NULL if the routine has a single size dimension */
     const char *label;      /* --label, or NULL; owned by the options */
     int verified;           /* --verify: every point was checked */
+    const char *layout;     /* "row" or "col" for routines with a matrix;
+                             * NULL for vector routines, which have none */
     int has_stats;
     int has_flops;
     int has_bytes;

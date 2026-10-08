@@ -63,6 +63,7 @@
     if (o.verified) { r.verified = true; }
     if (o.governor) { r.machine.governor = o.governor; }
     if (o.turbo !== undefined) { r.machine.turbo = o.turbo; }
+    if (o.layout) { r.layout = o.layout; }
     return r;
   }
 
@@ -439,6 +440,25 @@
       eq([rd.series[0].points[0].verdict, rd.series[0].points[0].hollow], ["few", false],
          "2 runs against 2: not called noise, and not hollow");
       eq(rd.notes.some(function (n) { return /too few runs/.test(n); }), true, "and the chart says it takes more runs");
+    });
+
+    /* ---- --layout (#7) ---- */
+
+    test("layout", function () {
+      var m = R.buildModel([
+        entry("old.json", gemm({ rows: [[1, 64, 64, 1, 10, null]] })),
+        entry("row.json", gemm({ layout: "row", rows: [[1, 128, 128, 1, 10, null]] })),
+        entry("col.json", gemm({ layout: "col", rows: [[1, 64, 64, 1, 12, null]] })),
+        entry("ddot.json", { rows: [[1, 1024, null, 1e-6, 2, 16]] })
+      ]);
+      eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · column-major"],
+         "a column-major run is its own series, named so; row-major keeps the plain name");
+      var row = byName(m, "openblas");
+      eq(row.files, ["old.json", "row.json", "ddot.json"],
+         "files without a layout (before 1.4, and vector routines) merge with row-major ones");
+      eq(routine(m, "dgemm").seriesOrder.length, 2, "dgemm has the two layouts as two curves");
+      eq(routine(m, "ddot").seriesOrder.map(function (s) { return s.identity.name; }), ["openblas"],
+         "a vector routine stays in the library's one series");
     });
 
     /* ---- The CPU frequency (#3) ---- */

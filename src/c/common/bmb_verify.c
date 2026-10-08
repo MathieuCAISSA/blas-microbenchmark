@@ -5,11 +5,13 @@
 
 #include "bmb_verify.h"
 
-void bmb_verify_matvec(bmb_verify_shape_t shape, size_t m, size_t n,
+void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
                        const double *a, size_t lda,
                        const double *x, const double *xabs,
                        double *y, double *yabs)
 {
+    /* Element (r, c) of A, whichever way it is stored. */
+#define BMB_A(r, c) (column_major ? a[(r) + (c) * lda] : a[(r) * lda + (c)])
     size_t rows = (shape == BMB_VERIFY_FULL) ? m : n;
     size_t i, j;
 
@@ -19,31 +21,31 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, size_t m, size_t n,
         switch (shape) {
         case BMB_VERIFY_FULL:
             for (j = 0; j < n; j++) {
-                s += a[i * lda + j] * x[j];
-                sa += fabs(a[i * lda + j]) * (xabs ? xabs[j] : fabs(x[j]));
+                s += BMB_A(i, j) * x[j];
+                sa += fabs(BMB_A(i, j)) * (xabs ? xabs[j] : fabs(x[j]));
             }
             break;
         case BMB_VERIFY_FULL_T:
             for (j = 0; j < m; j++) {
-                s += a[j * lda + i] * x[j];
-                sa += fabs(a[j * lda + i]) * (xabs ? xabs[j] : fabs(x[j]));
+                s += BMB_A(j, i) * x[j];
+                sa += fabs(BMB_A(j, i)) * (xabs ? xabs[j] : fabs(x[j]));
             }
             break;
         case BMB_VERIFY_UPPER:
             for (j = i; j < n; j++) {
-                s += a[i * lda + j] * x[j];
-                sa += fabs(a[i * lda + j]) * (xabs ? xabs[j] : fabs(x[j]));
+                s += BMB_A(i, j) * x[j];
+                sa += fabs(BMB_A(i, j)) * (xabs ? xabs[j] : fabs(x[j]));
             }
             break;
         case BMB_VERIFY_LOWER_STRICT:
             for (j = 0; j < i; j++) {
-                s += a[i * lda + j] * x[j];
-                sa += fabs(a[i * lda + j]) * (xabs ? xabs[j] : fabs(x[j]));
+                s += BMB_A(i, j) * x[j];
+                sa += fabs(BMB_A(i, j)) * (xabs ? xabs[j] : fabs(x[j]));
             }
             break;
         case BMB_VERIFY_SYM_UPPER:
             for (j = 0; j < n; j++) {
-                double aij = (j >= i) ? a[i * lda + j] : a[j * lda + i];
+                double aij = (j >= i) ? BMB_A(i, j) : BMB_A(j, i);
 
                 s += aij * x[j];
                 sa += fabs(aij) * (xabs ? xabs[j] : fabs(x[j]));
@@ -53,6 +55,7 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, size_t m, size_t n,
         y[i] = s;
         yabs[i] = sa;
     }
+#undef BMB_A
 }
 
 double bmb_verify_tolerance(size_t terms)

@@ -8,11 +8,14 @@
 
 /* dim1 = M (rows of A, length of Y), dim2 = N (columns of A, length of X). */
 typedef struct {
+    int order; /* CblasRowMajor, or CblasColMajor with --layout col */
+    int col;   /* 1 with --layout col */
+    int lda;
     int m;
     int n;
     double alpha;
     double beta;
-    double *a; /* M x N, row-major */
+    double *a; /* M x N, in the order of --layout */
     double *x; /* N */
     double *y; /* M */
 } bmb_ctx_t;
@@ -33,6 +36,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->n = (int) dim2;
     ctx->alpha = 1.0;
     ctx->beta = 0.0;
+    ctx->col = bmb_bench_column_major();
+    ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
+    ctx->lda = ctx->col ? ctx->m : ctx->n;
     ctx->a = malloc(dim1 * dim2 * sizeof(double));
     ctx->x = malloc(dim2 * sizeof(double));
     ctx->y = malloc(dim1 * sizeof(double));
@@ -61,8 +67,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dgemv(CblasRowMajor, CblasNoTrans, ctx->m, ctx->n, ctx->alpha,
-                ctx->a, ctx->n, ctx->x, 1, ctx->beta, ctx->y, 1);
+    cblas_dgemv(ctx->order, CblasNoTrans, ctx->m, ctx->n, ctx->alpha,
+                ctx->a, ctx->lda, ctx->x, 1, ctx->beta, ctx->y, 1);
 }
 
 static void teardown(void *vctx)
@@ -107,7 +113,7 @@ static int verify(void *vctx, char *msg, size_t size)
     memcpy(y0, ctx->y, m * sizeof(double));
     call(ctx);
     bmb_verify_perturb(&ctx->y[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, m, n, ctx->a, n, ctx->x, NULL, t, tabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, ctx->lda, ctx->x, NULL, t, tabs);
     for (i = 0; i < m; i++) {
         want[i] = ctx->alpha * t[i] + ctx->beta * y0[i];
         scale[i] = fabs(ctx->alpha) * tabs[i] + fabs(ctx->beta * y0[i]);

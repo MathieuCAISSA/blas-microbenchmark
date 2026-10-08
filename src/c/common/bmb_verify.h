@@ -18,8 +18,8 @@
  * on that element rather than a guess: a correct library lands well
  * inside it, a wrong one far outside. */
 
-/* The matrix shapes a reference product reads, all row-major with a
- * leading dimension lda. */
+/* The matrix shapes a reference product reads, stored row- or
+ * column-major with a leading dimension lda (see bmb_verify_matvec). */
 typedef enum {
     BMB_VERIFY_FULL,      /* m x n */
     BMB_VERIFY_FULL_T,    /* the transpose of an m x n matrix */
@@ -33,8 +33,11 @@ typedef enum {
 
 /* y = op(A) x, and yabs = |op(A)| xabs, the size of the terms that made
  * each element of y (xabs NULL: |x|). FULL takes x of n elements and gives
- * y of m; FULL_T the other way round; the square shapes ignore m. */
-void bmb_verify_matvec(bmb_verify_shape_t shape, size_t m, size_t n,
+ * y of m; FULL_T the other way round; the square shapes ignore m. A is
+ * read as the benchmark stores it: column_major 0, element (i, j) at
+ * a[i * lda + j]; 1, at a[i + j * lda]. The shapes are of the matrix, not
+ * of the storage, so "upper" means i <= j either way. */
+void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
                        const double *a, size_t lda,
                        const double *x, const double *xabs,
                        double *y, double *yabs);
