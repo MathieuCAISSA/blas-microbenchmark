@@ -45,7 +45,9 @@ for i in 1 2 3 4; do
 done
 ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label h -o "$T/hist.json" >/dev/null
 for v in 0.3.9 0.3.26 0.3.28; do
-    sed 's/^  "blas": ".*",$/  "blas": "OpenBLAS '"$v"' Haswell",/' "$T/hist.json" >"$T/hist-$v.json"
+    # Netlib, NVPL and ArmPL record no version string: add one.
+    sed -e '/^  "blas": /d' -e '/^  "backend": /a\
+  "blas": "OpenBLAS '"$v"' Haswell",' "$T/hist.json" >"$T/hist-$v.json"
 done
 rm "$T/hist.json"
 ../c/level2/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
