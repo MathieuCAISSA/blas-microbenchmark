@@ -65,6 +65,9 @@ and
 the raw data, every row of every file, sortable, with whether each point
 was checked when any was.
 .PP
+The charts come in a section per routine, level 1 first; within a level,
+an operation's precisions sit together, in BLAS order: sgemm, dgemm,
+cgemm, zgemm, then dsymm.
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
 .SS Series
