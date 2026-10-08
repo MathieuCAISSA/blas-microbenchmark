@@ -10,6 +10,13 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Single-precision and complex benchmarks: `bmb_saxpy`, `bmb_sdot`,
+  `bmb_sgemv`, `bmb_sgemm`, `bmb_cgemm` and `bmb_zgemm`, with the same
+  options and checks as the others. A complex multiply-add counts as 8
+  real operations, so cgemm and zgemm compare with dgemm in GFLOP/s.
+  Their results are checked against a reference in double, within a
+  rounding bound for their precision; the report lists each operation's
+  precisions side by side (sgemm, dgemm, cgemm, zgemm).
 - The report shows the history of a library measured in three versions
   or more on the same machine: for each routine, its performance at the
   largest size all versions measured, oldest to newest, with a version

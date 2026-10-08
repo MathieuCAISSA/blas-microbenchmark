@@ -11,9 +11,10 @@
 .ad l
 .SH NAME
 blas-microbenchmark, bmb_dasum, bmb_daxpy, bmb_dcopy, bmb_ddot, bmb_dnrm2,
-bmb_dscal, bmb_dswap, bmb_dgemv, bmb_dger, bmb_dsymv, bmb_dsyr, bmb_dsyr2,
-bmb_dtrmv, bmb_dtrsv, bmb_dgemm, bmb_dsymm, bmb_dsyrk, bmb_dsyr2k, bmb_dtrmm,
-bmb_dtrsm \- microbenchmarks for BLAS routines
+bmb_dscal, bmb_dswap, bmb_saxpy, bmb_sdot, bmb_dgemv, bmb_dger, bmb_dsymv,
+bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemv, bmb_dgemm, bmb_dsymm,
+bmb_dsyrk, bmb_dsyr2k, bmb_dtrmm, bmb_dtrsm, bmb_sgemm, bmb_cgemm,
+bmb_zgemm \- microbenchmarks for BLAS routines
 .SH SYNOPSIS
 .B bmb_\c
 .I routine
@@ -21,7 +22,7 @@ bmb_dtrsm \- microbenchmarks for BLAS routines
 .SH DESCRIPTION
 Each
 .BI bmb_ routine
-times one double-precision BLAS routine, called through CBLAS, over a sweep
+times one BLAS routine, called through CBLAS, over a sweep
 of sizes and thread counts, and prints one row per point: the time of a
 call and the rate it achieved.
 All of them take the same options.
@@ -39,12 +40,30 @@ same command with each build, or build it once against FlexiBLAS and run
 the command under each library; then turn the results into charts with
 .BR bmb_report (1).
 .SS Routines
+Level 1 routines work on vectors, level 2 on a matrix and a vector,
+level 3 on matrices:
+.PP
 .TS
 l l.
-Level 1 (vector)	dasum daxpy dcopy ddot dnrm2 dscal dswap
-Level 2 (matrix\-vector)	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv
-Level 3 (matrix\-matrix)	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm
+Level 1	dasum daxpy dcopy ddot dnrm2 dscal dswap saxpy sdot
+Level 2	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv sgemv
+Level 3	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm sgemm cgemm zgemm
 .TE
+.PP
+The first letter is the precision, as in BLAS:
+.B s
+single,
+.B d
+double,
+.B c
+single complex,
+.B z
+double complex.
+Every routine is measured in double precision; a few, where the
+precision changes the picture most, in the others too: single precision
+moves half the bytes and fits twice as many numbers in a vector
+register, and a complex multiply\-add does four times the arithmetic of
+a real one on twice the data.
 .PP
 Level 1 routines are sized with
 .BR \-v .
@@ -56,8 +75,8 @@ Which dimension is which:
 .PP
 .TS
 l l.
-dgemv dger dsymm dtrmm dtrsm	\-m is M, \-M is N
-dgemm	\-m is M and K, \-M is N
+dgemv sgemv dger dsymm dtrmm dtrsm	\-m is M, \-M is N
+dgemm sgemm cgemm zgemm	\-m is M and K, \-M is N
 dsyrk dsyr2k	\-m is N, \-M is K
 dsymv dsyr dsyr2 dtrmv dtrsv	\-m is N (square; no \-M)
 .TE
@@ -212,10 +231,15 @@ Two rates are derived from that time:
 the conventional operation count of the routine (2\(muM\(muN\(muK for
 dgemm, K\(muN\(mu(N+1) for dsyrk, ...) divided by the time.
 Not shown for dcopy and dswap, which do no arithmetic.
+Complex routines count real operations: a complex multiply\-add is four
+real multiplications and four additions, so cgemm and zgemm count
+8\(muM\(muN\(muK where dgemm counts 2\(muM\(muN\(muK, and their GFLOP/s
+compare with dgemm's.
 .TP
 .B GB/s
 the bytes the routine must move \(em each operand read once, each result
-written once, counted the way STREAM counts them \(em divided by the time.
+written once, counted the way STREAM counts them, 4 bytes an element in
+single precision and 8 in double \(em divided by the time.
 Levels 1 and 2 only: level 3 routines reuse their operands from cache, so
 a rate built from that traffic would not measure bandwidth.
 .SH CHECKING RESULTS
@@ -253,12 +277,17 @@ as it was.
 The tolerance is a bound on rounding error, proportional to the number
 of terms in each element and to their magnitudes: a correct library is
 well inside it, a wrong one far outside.
+In single precision the reference is still computed in double, and the
+bound half a billion times wider: it catches a library that computes
+the wrong thing, but not a small error in a long sum (at a million
+elements, sdot is only checked to within the size of its terms).
 A wrong result is reported with the routine, the size, the thread count
 and the element that differs; nothing more is measured, and no
 .B \-o
 file is written.
 The check needs memory for a few vectors the size of the result, and
-for daxpy, dswap, dgemv and dsymv a copy of the vector they write.
+for daxpy, saxpy, dswap, dgemv, sgemv and dsymv a copy of the vector
+they write.
 .PP
 The check is on by default, as it is in STREAM and HPL: a number from a
 library that computes the wrong thing is worth less than none.
@@ -334,12 +363,16 @@ The floating-point events have CPU-specific names, which
 .B perf list
 gives: for instance
 .B fp_arith_inst_retired.256b_packed_double
+.RB ( _single
+for the s and c routines)
 on recent Intel CPUs, or
 .B fp_ret_sse_avx_ops.all
 on AMD Zen.
 .B likwid\-perfctr
 groups them per CPU, under names most CPUs share
 .RB ( FLOPS_DP ,
+.B FLOPS_SP
+for the s and c routines,
 .BR L3 ;
 .B likwid\-perfctr \-a
 lists the groups of the one at hand), and pins the threads to the cores

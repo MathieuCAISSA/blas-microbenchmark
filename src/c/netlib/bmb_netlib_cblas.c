@@ -28,6 +28,12 @@ extern double ddot_(const int *n, const double *x, const int *incx,
 extern double dnrm2_(const int *n, const double *x, const int *incx);
 extern void dscal_(const int *n, const double *alpha, double *x, const int *incx);
 extern void dswap_(const int *n, double *x, const int *incx, double *y, const int *incy);
+extern void saxpy_(const int *n, const float *alpha, const float *x, const int *incx,
+                   float *y, const int *incy);
+/* A float, as gfortran returns a REAL function's value; a library
+ * translated by f2c would return a double. */
+extern float sdot_(const int *n, const float *x, const int *incx,
+                   const float *y, const int *incy);
 
 extern void dgemv_(const char *trans, const int *m, const int *n, const double *alpha,
                    const double *a, const int *lda, const double *x, const int *incx,
@@ -49,6 +55,9 @@ extern void dtrmv_(const char *uplo, const char *trans, const char *diag, const 
 extern void dtrsv_(const char *uplo, const char *trans, const char *diag, const int *n,
                    const double *a, const int *lda, double *x, const int *incx,
                    size_t uplo_len, size_t trans_len, size_t diag_len);
+extern void sgemv_(const char *trans, const int *m, const int *n, const float *alpha,
+                   const float *a, const int *lda, const float *x, const int *incx,
+                   const float *beta, float *y, const int *incy, size_t trans_len);
 
 extern void dgemm_(const char *transa, const char *transb, const int *m, const int *n,
                    const int *k, const double *alpha, const double *a, const int *lda,
@@ -74,6 +83,21 @@ extern void dtrsm_(const char *side, const char *uplo, const char *transa, const
                    const int *m, const int *n, const double *alpha, const double *a,
                    const int *lda, double *b, const int *ldb,
                    size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
+
+extern void sgemm_(const char *transa, const char *transb, const int *m, const int *n,
+                   const int *k, const float *alpha, const float *a, const int *lda,
+                   const float *b, const int *ldb, const float *beta, float *c,
+                   const int *ldc, size_t transa_len, size_t transb_len);
+/* Complex arguments are pairs of reals, which is how Fortran stores a
+ * COMPLEX or a COMPLEX*16. */
+extern void cgemm_(const char *transa, const char *transb, const int *m, const int *n,
+                   const int *k, const void *alpha, const void *a, const int *lda,
+                   const void *b, const int *ldb, const void *beta, void *c,
+                   const int *ldc, size_t transa_len, size_t transb_len);
+extern void zgemm_(const char *transa, const char *transb, const int *m, const int *n,
+                   const int *k, const void *alpha, const void *a, const int *lda,
+                   const void *b, const int *ldb, const void *beta, void *c,
+                   const int *ldc, size_t transa_len, size_t transb_len);
 
 static char bmb_trans(const CBLAS_TRANSPOSE t)
 {
@@ -148,6 +172,17 @@ void cblas_dswap(const int N, double *X, const int incX, double *Y, const int in
     dswap_(&N, X, &incX, Y, &incY);
 }
 
+void cblas_saxpy(const int N, const float alpha, const float *X, const int incX,
+                 float *Y, const int incY)
+{
+    saxpy_(&N, &alpha, X, &incX, Y, &incY);
+}
+
+float cblas_sdot(const int N, const float *X, const int incX, const float *Y, const int incY)
+{
+    return sdot_(&N, X, &incX, Y, &incY);
+}
+
 /* Level 2 */
 
 void cblas_dgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
@@ -164,6 +199,21 @@ void cblas_dgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
         const char trans = bmb_trans_flipped(TransA);
 
         dgemv_(&trans, &N, &M, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+    }
+}
+
+void cblas_sgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
+                 const int M, const int N, const float alpha, const float *A, const int lda,
+                 const float *X, const int incX, const float beta, float *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char trans = bmb_trans(TransA);
+
+        sgemv_(&trans, &M, &N, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+    } else {
+        const char trans = bmb_trans_flipped(TransA);
+
+        sgemv_(&trans, &N, &M, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
     }
 }
 
@@ -261,6 +311,55 @@ void cblas_dgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CB
         /* C^T = op(B)^T * op(A)^T: swap the operands and the two output
          * dimensions, keeping each operand's own transposition flag. */
         dgemm_(&tb, &ta, &N, &M, &K, &alpha, B, &ldb, A, &lda, &beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_sgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
+                 const int M, const int N, const int K, const float alpha,
+                 const float *A, const int lda, const float *B, const int ldb,
+                 const float beta, float *C, const int ldc)
+{
+    const char ta = bmb_trans(TransA);
+    const char tb = bmb_trans(TransB);
+
+    if (Order == CblasColMajor) {
+        sgemm_(&ta, &tb, &M, &N, &K, &alpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+    } else {
+        sgemm_(&tb, &ta, &N, &M, &K, &alpha, B, &ldb, A, &lda, &beta, C, &ldc, 1, 1);
+    }
+}
+
+/* As dgemm. Swapping the operands keeps each one's flag even for a
+ * conjugate transpose: (op(A) op(B))^T = op(B)^T op(A)^T, and op(B)^T is
+ * B^T, B or conj(B), what the same flag does to the buffer read
+ * column-major, B^T. */
+void cblas_cgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
+                 const int M, const int N, const int K, const void *alpha,
+                 const void *A, const int lda, const void *B, const int ldb,
+                 const void *beta, void *C, const int ldc)
+{
+    const char ta = bmb_trans(TransA);
+    const char tb = bmb_trans(TransB);
+
+    if (Order == CblasColMajor) {
+        cgemm_(&ta, &tb, &M, &N, &K, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    } else {
+        cgemm_(&tb, &ta, &N, &M, &K, alpha, B, &ldb, A, &lda, beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_zgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
+                 const int M, const int N, const int K, const void *alpha,
+                 const void *A, const int lda, const void *B, const int ldb,
+                 const void *beta, void *C, const int ldc)
+{
+    const char ta = bmb_trans(TransA);
+    const char tb = bmb_trans(TransB);
+
+    if (Order == CblasColMajor) {
+        zgemm_(&ta, &tb, &M, &N, &K, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    } else {
+        zgemm_(&tb, &ta, &N, &M, &K, alpha, B, &ldb, A, &lda, beta, C, &ldc, 1, 1);
     }
 }
 

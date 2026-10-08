@@ -125,7 +125,7 @@ for paths no test takes, then decide whether one should.
 | Where | Test | What it pins down |
 |---|---|---|
 | `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C`, `--layout` |
-| | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, the comparison and its message, the tolerance, the probe vector, the corruption hook |
+| | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, real and complex, double and single, the comparison and its message, the two tolerances, the probe vector, the two corruption hooks |
 | | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, and the frequency governor and turbo with the advice they get |
 | | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, in both storage orders where it has a matrix, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
@@ -184,9 +184,10 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # references), bmb_log, bmb_timer; fixtures/machine/, the
                  # fake /proc and /sys trees of test_bmb_machine
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
-src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap
-src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv
-src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm
+src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot
+src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv, sgemv
+src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm, sgemm, cgemm,
+                 # zgemm
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
@@ -216,7 +217,7 @@ installed); each `level{1,2,3}` routine builds to its own installed
 executable named `bmb_<routine>`.
 
 Those go to `$(libexecdir)/blas-microbenchmark/level<N>`, the layout
-osu-micro-benchmarks uses, rather than to `bin` — 20 executables named
+osu-micro-benchmarks uses, rather than to `bin` — 26 executables named
 `bmb_*` have no business sitting in `$PATH`. Each level's `Makefile.am`
 declares it with a custom Automake directory variable:
 
@@ -230,7 +231,7 @@ This is a **deliberate** departure from the GNU standards, which reserve
 users" and would put these in `bindir`. It was weighed against two
 alternatives and kept on purpose, so don't "fix" it:
 
-- *20 binaries flat in `bin`* is what the standards actually call for, and
+- *26 binaries flat in `bin`* is what the standards actually call for, and
   what most projects do. It was rejected because the level grouping was
   asked for explicitly.
 - *A `bmb` launcher in `bin` running the level binaries from `libexec`*,

@@ -28,6 +28,9 @@ double cblas_ddot(const int N, const double *X, const int incX, const double *Y,
 double cblas_dnrm2(const int N, const double *X, const int incX);
 void cblas_dscal(const int N, const double alpha, double *X, const int incX);
 void cblas_dswap(const int N, double *X, const int incX, double *Y, const int incY);
+void cblas_saxpy(const int N, const float alpha, const float *X, const int incX,
+                 float *Y, const int incY);
+float cblas_sdot(const int N, const float *X, const int incX, const float *Y, const int incY);
 
 /* Level 2 */
 void cblas_dgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
@@ -50,6 +53,9 @@ void cblas_dtrmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRA
 void cblas_dtrsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
                  const CBLAS_DIAG Diag, const int N, const double *A, const int lda,
                  double *X, const int incX);
+void cblas_sgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
+                 const int M, const int N, const float alpha, const float *A, const int lda,
+                 const float *X, const int incX, const float beta, float *Y, const int incY);
 
 /* Level 3 */
 void cblas_dgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
@@ -73,5 +79,20 @@ void cblas_dtrmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPL
 void cblas_dtrsm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
                  const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
                  const double alpha, const double *A, const int lda, double *B, const int ldb);
+
+void cblas_sgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
+                 const int M, const int N, const int K, const float alpha,
+                 const float *A, const int lda, const float *B, const int ldb,
+                 const float beta, float *C, const int ldc);
+/* Complex scalars and matrices are (real, imaginary) pairs, passed as
+ * void * as in the reference CBLAS. */
+void cblas_cgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
+                 const int M, const int N, const int K, const void *alpha,
+                 const void *A, const int lda, const void *B, const int ldb,
+                 const void *beta, void *C, const int ldc);
+void cblas_zgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
+                 const int M, const int N, const int K, const void *alpha,
+                 const void *A, const int lda, const void *B, const int ldb,
+                 const void *beta, void *C, const int ldc);
 
 #endif /* BMB_NETLIB_CBLAS_H */

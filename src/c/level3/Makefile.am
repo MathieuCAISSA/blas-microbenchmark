@@ -10,7 +10,10 @@ level3_PROGRAMS = \
 	bmb_dsyrk \
 	bmb_dsyr2k \
 	bmb_dtrmm \
-	bmb_dtrsm
+	bmb_dtrsm \
+	bmb_sgemm \
+	bmb_cgemm \
+	bmb_zgemm
 
 bmb_dgemm_SOURCES = bmb_dgemm.c
 bmb_dsymm_SOURCES = bmb_dsymm.c
@@ -18,6 +21,9 @@ bmb_dsyrk_SOURCES = bmb_dsyrk.c
 bmb_dsyr2k_SOURCES = bmb_dsyr2k.c
 bmb_dtrmm_SOURCES = bmb_dtrmm.c
 bmb_dtrsm_SOURCES = bmb_dtrsm.c
+bmb_sgemm_SOURCES = bmb_sgemm.c
+bmb_cgemm_SOURCES = bmb_cgemm.c
+bmb_zgemm_SOURCES = bmb_zgemm.c
 
 # Minimalistic smoke tests (small matrices, 1 warmup + 2 timed iterations).
 TESTS = \
@@ -27,6 +33,9 @@ TESTS = \
 	test_bmb_dsyr2k.sh \
 	test_bmb_dtrmm.sh \
 	test_bmb_dtrsm.sh \
+	test_bmb_sgemm.sh \
+	test_bmb_cgemm.sh \
+	test_bmb_zgemm.sh \
 	test_bmb_output_formats.sh \
 	test_bmb_square_default.sh
 

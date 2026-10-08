@@ -42,10 +42,40 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, siz
                        const double *x, const double *xabs,
                        double *y, double *yabs);
 
+/* The FULL product of bmb_verify_matvec for the other precisions, still
+ * computed in double. _single reads a float matrix. _complex reads an
+ * m x n complex matrix, each element a (real, imaginary) pair, and takes
+ * x and gives y the same way (n and m pairs); lda counts elements, not
+ * pairs. xabs and yabs stay real, one per element: |re| + |im|, which
+ * bounds the size of the two real products in each part of a complex
+ * product. */
+void bmb_verify_matvec_single(int column_major, size_t m, size_t n,
+                              const float *a, size_t lda,
+                              const double *x, const double *xabs,
+                              double *y, double *yabs);
+void bmb_verify_matvec_complex(int column_major, size_t m, size_t n,
+                               const double *a, size_t lda,
+                               const double *x, const double *xabs,
+                               double *y, double *yabs);
+void bmb_verify_matvec_complex_single(int column_major, size_t m, size_t n,
+                                      const float *a, size_t lda,
+                                      const double *x, const double *xabs,
+                                      double *y, double *yabs);
+
 /* The tolerance, relative to the size of the terms, for a result whose
  * elements each went through `terms` multiply-adds, counting those of the
- * reference: a rounding-error bound with room to spare. */
+ * reference: a rounding-error bound with room to spare. A complex
+ * multiply-add counts as two: each part of it sums two real products. */
 double bmb_verify_tolerance(size_t terms);
+
+/* The same bound for a single-precision result, whose `terms` are the
+ * library's alone: the reference, made in double, adds 2^-29 as much.
+ * It grows with the terms as the double one does, from 4.8e-6 for one
+ * term to 0.95 for a 10^6-element sdot, where it catches only a result
+ * that is grossly wrong: a library summing 10^6 floats one after the
+ * other can be off by a relative 1e-3, and a tighter guess would fail
+ * it (doc/dev/benchmarks.md). */
+double bmb_verify_tolerance_single(size_t terms);
 
 /* 1 when |got[i] - want[i]| <= tol * scale[i] for every i; a NULL scale
  * asks for exact equality. Otherwise 0, and msg says which element of
@@ -64,5 +94,11 @@ void bmb_verify_probe(double *x, size_t n);
  * result by a relative 1e-6 before comparing it, and has to report it.
  * A testing aid; it has no other use. */
 void bmb_verify_perturb(double *value);
+
+/* The same for a single-precision result, which it doubles, plus one:
+ * 1e-6 is a few units in the last place of a float, and the tolerance of
+ * cgemm's projection does not see even 1e-1 in one element of a 64 x 64
+ * C. A library that is wrong is usually wrong everywhere, and by more. */
+void bmb_verify_perturb_single(float *value);
 
 #endif /* BMB_VERIFY_H */

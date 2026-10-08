@@ -1,6 +1,7 @@
 /* Unit tests for the building blocks of --verify: the reference products
- * on small matrices worked out by hand, the comparison and its message,
- * the tolerance, the probe vector, and the corruption hook the benchmark
+ * on small matrices worked out by hand, real and complex, in double and
+ * single precision, the comparison and its message, the tolerances, the
+ * probe vector, and the corruption hooks the benchmark
  * tests use to prove each check can fail.
  *
  * Every benchmark's own check is tested end to end by
@@ -125,6 +126,56 @@ static void test_matvec_column_major(void)
     check(same_all, "column-major UPPER, SYM_UPPER, LOWER_STRICT: the same triangles as row-major");
 }
 
+/* The other precisions (#6): a float matrix, and complex ones, row- and
+ * column-major, each pair (re, im). */
+static void test_matvec_precisions(void)
+{
+    static const float wide_f[8] = {
+        1, 2, 3, -100,
+        4, 5, 6, -100,
+    };
+    /* A = [1+2i  3-i; i  2], row-major with lda 3, then column-major
+     * with lda 2; -100 is padding no product may read. */
+    static const double cz_row[12] = {
+        1, 2, 3, -1, -100, -100,
+        0, 1, 2, 0, -100, -100,
+    };
+    static const double cz_col[8] = {
+        1, 2, 0, 1,
+        3, -1, 2, 0,
+    };
+    const double x3[3] = {1, -1, 2}, cx[4] = {1, 1, 2, -1};
+    /* (1+2i)(1+i) + (3-i)(2-i) = 4-2i; i(1+i) + 2(2-i) = 3-i; and the
+     * sizes (1+2)(1+1) + (3+1)(2+1) = 18, (0+1)(1+1) + (2+0)(2+1) = 8. */
+    const double cwant[4] = {4, -2, 3, -1}, cwabs[2] = {18, 8};
+    float cf_row[12], cf_col[8];
+    double y[4], yabs[2];
+    size_t i;
+
+    bmb_verify_matvec_single(0, 2, 3, wide_f, 4, x3, NULL, y, yabs);
+    check(same(y, (double[]) {5, 11}, 2) && same(yabs, (double[]) {9, 21}, 2),
+          "single: A*x and |A|*|x| on a float 2x3 matrix with lda 4");
+
+    bmb_verify_matvec_complex(0, 2, 2, cz_row, 3, cx, NULL, y, yabs);
+    check(same(y, cwant, 4) && same(yabs, cwabs, 2), "complex: A*x and (|re|+|im|) sizes, row-major, lda 3");
+    bmb_verify_matvec_complex(1, 2, 2, cz_col, 2, cx, NULL, y, yabs);
+    check(same(y, cwant, 4) && same(yabs, cwabs, 2), "complex: the same, column-major");
+
+    for (i = 0; i < 12; i++) {
+        cf_row[i] = (float) cz_row[i];
+    }
+    for (i = 0; i < 8; i++) {
+        cf_col[i] = (float) cz_col[i];
+    }
+    bmb_verify_matvec_complex_single(0, 2, 2, cf_row, 3, cx, NULL, y, yabs);
+    check(same(y, cwant, 4) && same(yabs, cwabs, 2), "single complex: the same, row-major");
+    bmb_verify_matvec_complex_single(1, 2, 2, cf_col, 2, cx, NULL, y, yabs);
+    check(same(y, cwant, 4) && same(yabs, cwabs, 2), "single complex: the same, column-major");
+
+    bmb_verify_matvec_complex(0, 2, 2, cz_row, 3, cx, (double[]) {10, 10}, y, yabs);
+    check(same(yabs, (double[]) {70, 30}, 2), "complex: xabs, when given, replaces |re|+|im| of x");
+}
+
 static void test_close(void)
 {
     const double want[3] = {1.0, -2.0, 3.0}, scale[3] = {1.0, 2.0, 3.0};
@@ -170,6 +221,10 @@ static void test_tolerance(void)
      * the tests corrupt a result by a relative 1e-6. */
     check(bmb_verify_tolerance(1u << 17) < 1e-6 / 1000,
           "2^17 terms (a 65536-wide product) stay 1000 times below a 1e-6 error");
+    check(bmb_verify_tolerance_single(1) > 4.0e-6 && bmb_verify_tolerance_single(1) < 1.0e-5,
+          "single: one term allows a few float roundings, about 5e-6");
+    check(fabs(bmb_verify_tolerance_single(1000) / bmb_verify_tolerance(1000) - 536870912.0) < 1.0,
+          "single: 2^29 times the double tolerance, the ratio of the two epsilons");
 }
 
 static void test_probe(void)
@@ -210,14 +265,30 @@ static void test_perturb(void)
     unsetenv("BMB_VERIFY_CORRUPT");
 }
 
+static void test_perturb_single(void)
+{
+    float v = 2.0f;
+
+    unsetenv("BMB_VERIFY_CORRUPT");
+    bmb_verify_perturb_single(&v);
+    check(v == 2.0f, "perturb single: nothing happens without BMB_VERIFY_CORRUPT");
+
+    setenv("BMB_VERIFY_CORRUPT", "1", 1);
+    bmb_verify_perturb_single(&v);
+    check(v == 5.0f, "perturb single: the value doubled, plus 1, with BMB_VERIFY_CORRUPT=1");
+    unsetenv("BMB_VERIFY_CORRUPT");
+}
+
 int main(void)
 {
     test_matvec();
     test_matvec_column_major();
+    test_matvec_precisions();
     test_close();
     test_tolerance();
     test_probe();
     test_perturb();
+    test_perturb_single();
 
     if (failures != 0) {
         printf("%d check(s) failed\n", failures);

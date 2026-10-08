@@ -58,6 +58,71 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, siz
 #undef BMB_A
 }
 
+/* The FULL product for a matrix of doubles, or of floats when single,
+ * real or complex. */
+static void bmb_verify_matvec_full(int column_major, int complex_, int single, size_t m, size_t n,
+                                   const void *a_, size_t lda,
+                                   const double *x, const double *xabs,
+                                   double *y, double *yabs)
+{
+#define BMB_ELEM(k) (single ? (double) ((const float *) a_)[k] : ((const double *) a_)[k])
+    size_t i, j;
+
+    for (i = 0; i < m; i++) {
+        double re = 0.0, im = 0.0, sa = 0.0;
+
+        for (j = 0; j < n; j++) {
+            size_t k = column_major ? i + j * lda : i * lda + j;
+
+            if (!complex_) {
+                double a = BMB_ELEM(k);
+
+                re += a * x[j];
+                sa += fabs(a) * (xabs ? xabs[j] : fabs(x[j]));
+            } else {
+                double ar = BMB_ELEM(2 * k), ai = BMB_ELEM(2 * k + 1);
+                double xr = x[2 * j], xi = x[2 * j + 1];
+
+                re += ar * xr - ai * xi;
+                im += ar * xi + ai * xr;
+                sa += (fabs(ar) + fabs(ai)) * (xabs ? xabs[j] : fabs(xr) + fabs(xi));
+            }
+        }
+        if (!complex_) {
+            y[i] = re;
+        } else {
+            y[2 * i] = re;
+            y[2 * i + 1] = im;
+        }
+        yabs[i] = sa;
+    }
+#undef BMB_ELEM
+}
+
+void bmb_verify_matvec_single(int column_major, size_t m, size_t n,
+                              const float *a, size_t lda,
+                              const double *x, const double *xabs,
+                              double *y, double *yabs)
+{
+    bmb_verify_matvec_full(column_major, 0, 1, m, n, a, lda, x, xabs, y, yabs);
+}
+
+void bmb_verify_matvec_complex(int column_major, size_t m, size_t n,
+                               const double *a, size_t lda,
+                               const double *x, const double *xabs,
+                               double *y, double *yabs)
+{
+    bmb_verify_matvec_full(column_major, 1, 0, m, n, a, lda, x, xabs, y, yabs);
+}
+
+void bmb_verify_matvec_complex_single(int column_major, size_t m, size_t n,
+                                      const float *a, size_t lda,
+                                      const double *x, const double *xabs,
+                                      double *y, double *yabs)
+{
+    bmb_verify_matvec_full(column_major, 1, 1, m, n, a, lda, x, xabs, y, yabs);
+}
+
 double bmb_verify_tolerance(size_t terms)
 {
     /* A sum of t products has an error of at most about t * eps times the
@@ -67,6 +132,11 @@ double bmb_verify_tolerance(size_t terms)
      * a 65536-wide product, while a wrong result is usually off by a
      * relative 1, and the tests' corruption is 1e-6. */
     return 8.0 * ((double) terms + 4.0) * DBL_EPSILON;
+}
+
+double bmb_verify_tolerance_single(size_t terms)
+{
+    return 8.0 * ((double) terms + 4.0) * FLT_EPSILON;
 }
 
 int bmb_verify_close(const char *what, const double *got, const double *want,
@@ -127,5 +197,14 @@ void bmb_verify_perturb(double *value)
 
     if (env != NULL && env[0] != '\0' && env[0] != '0') {
         *value += 1.0e-6 * (fabs(*value) + 1.0);
+    }
+}
+
+void bmb_verify_perturb_single(float *value)
+{
+    const char *env = getenv("BMB_VERIFY_CORRUPT");
+
+    if (env != NULL && env[0] != '\0' && env[0] != '0') {
+        *value += fabsf(*value) + 1.0f;
     }
 }
