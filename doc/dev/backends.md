@@ -10,6 +10,7 @@ How each BLAS library is found, linked and named. Start at
 | Netlib | `--with-blas-backend=netlib` | CI, `netlib` job |
 | NVPL | `--with-blas-backend=nvpl` | CI, `nvpl` job (`ubuntu-24.04-arm`) |
 | ArmPL | `--with-blas-backend=armpl` | CI, `armpl` job (`ubuntu-24.04-arm`) |
+| FlexiBLAS | `--with-blas-backend=flexiblas` | CI, `flexiblas` job (Fedora container), under OpenBLAS, BLIS and Netlib |
 | cuBLAS / rocBLAS | — | Not implemented, not planned |
 
 Every backend is reached through the CBLAS interface, so the same
@@ -112,6 +113,30 @@ Two things that backend gets wrong easily:
 device-memory API, fundamentally different from the CBLAS interface every
 other backend shares — this project tried it once and backed it out; don't
 re-add it without being asked.
+
+**FlexiBLAS** (#5) is a backend that is not a library: it loads one at
+run time (`FLEXIBLAS=OPENBLAS-OPENMP`, `BLIS-OPENMP`, `NETLIB`; `flexiblas
+list` names them), so one build measures several. Three things follow:
+
+- **The provenance is read at run time.** `bmb_build_backend()` returns
+  `flexiblas/<the loaded library>` in lower case, and
+  `bmb_build_blas_version()` FlexiBLAS's version and that library's name,
+  from `flexiblas_current_backend()` and `flexiblas_get_version()`. The
+  backend is part of the report's series key, so two runs of one binary
+  under two libraries are two series, with no change to the report; a
+  build-time name would have merged them, keeping the fastest of each
+  point across libraries.
+- **Threads** are set with `flexiblas_set_num_threads()`, which passes
+  the count on. FlexiBLAS has no variable of its own, so the ones read
+  without `-t` are those of the loaded library, chosen at run time by its
+  name (`bmb_thread_env_vars()` in `bmb_threads.c`); none for Netlib.
+  `test_bmb_threads_env.sh` reads the name from `--version` the same way.
+- **Where to get it.** Fedora packages it as its default BLAS
+  (`flexiblas-devel` and one package per library); Debian and Ubuntu do
+  not, so its CI job runs in a Fedora container, once per library from
+  the same build. Its headers live in a `flexiblas/` subdirectory;
+  `FLEXIBLAS_ROOT`/`_INCDIR`/`_LIBDIR` work like the other backends'.
+  Building FlexiBLAS itself needs a Fortran compiler and CMake.
 
 **NVPL and ArmPL install from real, public, non-interactive apt repos** —
 neither needs a login or EULA click-through. If either CI job starts

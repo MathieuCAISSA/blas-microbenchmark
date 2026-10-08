@@ -43,9 +43,10 @@ make
 make check       # unit tests + one smoke test per benchmark
 ```
 
-NVPL and ArmPL (aarch64-only) aren't installable here on x86_64; see their
-CI job steps in `.github/workflows/ci.yml` for the exact
-`--with-blas-backend=nvpl`/`=armpl` setup.
+NVPL and ArmPL (aarch64-only) aren't installable here on x86_64, nor
+FlexiBLAS on Debian or Ubuntu; see their CI job steps in
+`.github/workflows/ci.yml` for the exact `--with-blas-backend=nvpl`,
+`=armpl` and `=flexiblas` setup (FlexiBLAS's runs in a Fedora container).
 
 After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise

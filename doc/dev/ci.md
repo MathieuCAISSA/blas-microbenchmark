@@ -50,8 +50,8 @@ it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
-The six jobs that test a library (`openblas`, `blis`, `netlib`, `nvpl`,
-`armpl`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
+The seven jobs that test a library (`openblas`, `blis`, `netlib`, `nvpl`,
+`armpl`, `flexiblas`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
 real sizes"): all 20, checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on

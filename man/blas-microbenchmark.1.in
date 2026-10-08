@@ -26,12 +26,17 @@ of sizes and thread counts, and prints one row per point: the time of a
 call and the rate it achieved.
 All of them take the same options.
 They run against the BLAS library chosen when the package was built
-(OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL);
+(OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL), or, built
+against FlexiBLAS, the one FlexiBLAS loads when they start
+.RB ( FLEXIBLAS ,
+see
+.BR ENVIRONMENT );
 .B \-\-version
 says which.
 .PP
-To compare libraries, build the package once against each and run the same
-command with each build; then turn the results into charts with
+To compare libraries, build the package once against each and run the
+same command with each build, or build it once against FlexiBLAS and run
+the command under each library; then turn the results into charts with
 .BR bmb_report (1).
 .SS Routines
 .TS
@@ -417,6 +422,25 @@ BLIS
 .TP
 NVPL, ArmPL
 .B OMP_NUM_THREADS
+.TP
+FlexiBLAS
+those of the library it loaded, as above; none for Netlib.
+.PP
+.B FLEXIBLAS
+picks the library a build against FlexiBLAS loads, by the name
+.B flexiblas list
+gives it:
+.PP
+.RS
+.EX
+FLEXIBLAS=OPENBLAS\-OPENMP bmb_dgemm \-m 512:2048 \-o openblas.json
+FLEXIBLAS=BLIS\-OPENMP bmb_dgemm \-m 512:2048 \-o blis.json
+.EE
+.RE
+.PP
+The results name the library loaded: backend
+.BR flexiblas/openblas\-openmp ,
+and FlexiBLAS's version with the library's name.
 .PP
 .BR OMP_PROC_BIND " and " OMP_PLACES
 pin the threads of the OpenMP-threaded libraries.
