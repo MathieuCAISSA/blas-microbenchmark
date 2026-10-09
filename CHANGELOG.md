@@ -15,6 +15,9 @@ releases with the same major version can be compared and read by the same
   FlexiBLAS): with both installed, the system's library was linked, with
   the headers asked for. The options now come first in the search, ahead
   of a module's variables too.
+- In a build directory where `configure` was rerun with another version,
+  `bmb_report --version` kept the old one. A release tarball, always
+  built from scratch, was not affected.
 
 ## [1.4.0] - 2026-10-08
 
