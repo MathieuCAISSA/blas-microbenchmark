@@ -77,9 +77,12 @@ builds and tests:
 - **the latest release in the recipe**, as users get it: Spack fetches
   the tarball from GitHub and checks its sha256.
 
-Spack (`SPACK_TAG`) and its package recipes (`SPACK_PACKAGES_TAG`) are
-pinned, and what Spack builds is cached, keyed on both and on
-`packaging/spack`. A new Spack release is taken by moving the two tags.
+Spack (`SPACK_COMMIT`) and its package recipes (`SPACK_PACKAGES_COMMIT`)
+are pinned to commits, with their release tag in a comment, as the
+actions are: a tag can be moved. What Spack builds is cached, keyed on
+both and on `packaging/spack`. A new Spack release is taken by moving the
+two commits to its tags' (`gh api repos/spack/spack/git/ref/tags/vX.Y.Z`,
+and the same for `spack/spack-packages`).
 The BLIS and Netlib legs install the distribution's library as well, so
 that the benchmarks loading it instead of Spack's would fail
 `test_linked_library`.
@@ -89,7 +92,7 @@ To run the same here:
 ```bash
 git clone --depth 1 -b v1.2.2 https://github.com/spack/spack.git ~/spack
 . ~/spack/share/spack/setup-env.sh
-spack repo update builtin --tag v2026.06.0
+spack repo update builtin --tag v2026.06.0   # the commits CI pins
 spack repo add packaging/spack/spack_repo/blas_microbenchmark
 (cd build && make dist && tar xf blas-microbenchmark-*.tar.gz -C /tmp)
 .github/spack-check.sh openblas /tmp/blas-microbenchmark-<version>
