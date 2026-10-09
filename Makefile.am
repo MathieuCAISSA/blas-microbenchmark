@@ -7,7 +7,7 @@ EXTRA_DIST = README.md AGENTS.md LICENSE autogen.sh \
 	.github/CODE_OF_CONDUCT.md .github/SECURITY.md .github/REVIEWS.md \
 	CITATION.cff .editorconfig \
 	doc/dev/benchmarks.md doc/dev/backends.md doc/dev/report.md \
-	doc/dev/documentation.md doc/dev/ci.md doc/dev/release.md \
+	doc/dev/documentation.md doc/dev/ci.md doc/dev/release.md doc/dev/packaging.md \
 	$(TESTS)
 
 TESTS = tests/test_release_files.sh tests/test_editorconfig.sh \

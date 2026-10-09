@@ -7,8 +7,8 @@
 # - this commit, from SRC, the unpacked tarball of `make dist`, through a
 #   Spack environment that develops it: the recipe as it is, on the code
 #   as it is;
-# - the latest release, as users get it: Spack fetches the tarball from
-#   GitHub and checks its sha256 against the recipe.
+# - the latest release in the recipe, as users get it: Spack fetches the
+#   tarball from GitHub and checks its sha256 against the recipe.
 #
 # BLAS is a provider Spack builds (openblas, blis, netlib-lapack,
 # flexiblas). spack must be on PATH, with this repository's package
@@ -23,6 +23,8 @@ src=$(cd "$src" && pwd)
 version=$(basename "$src" | sed 's/^blas-microbenchmark-//')
 env=${TMPDIR:-/tmp}/spack-check-$blas
 jobs=$(nproc 2>/dev/null || echo 2)
+release=$(spack versions --safe blas-microbenchmark | awk '$1 != "main" { print $1; exit }')
+test -n "$release" || { echo "FAIL: no released version in the recipe"; exit 1; }
 
 echo "::group::this commit ($version) ^$blas"
 rm -rf "$env"
@@ -31,15 +33,16 @@ spack -e "$env" add "blas-microbenchmark@=$version ^[virtuals=blas] $blas"
 spack -e "$env" develop --no-clone --path "$src" "blas-microbenchmark@=$version"
 spack -e "$env" install -j "$jobs" --fail-fast
 # spack test run exits non-zero when a test fails; the details are in
-# spack test results.
+# spack test results. An alias left by an earlier run would be refused.
+spack test remove -y "dev-$blas" "release-$blas" >/dev/null 2>&1 || true
 spack -e "$env" test run --alias "dev-$blas" blas-microbenchmark \
     || { spack test results -l "dev-$blas"; exit 1; }
 echo "::endgroup::"
 
-echo "::group::the release ^$blas"
-spack install -j "$jobs" --fail-fast "blas-microbenchmark@1.4.0 ^[virtuals=blas] $blas"
-spack test run --alias "release-$blas" "blas-microbenchmark@1.4.0 ^[virtuals=blas] $blas" \
+echo "::group::the release, $release ^$blas"
+spack install -j "$jobs" --fail-fast "blas-microbenchmark@=$release ^[virtuals=blas] $blas"
+spack test run --alias "release-$blas" "blas-microbenchmark@=$release ^[virtuals=blas] $blas" \
     || { spack test results -l "release-$blas"; exit 1; }
 echo "::endgroup::"
 
-echo "ok   blas-microbenchmark ^$blas: this commit and 1.4.0 build with Spack and pass spack test"
+echo "ok   blas-microbenchmark ^$blas: this commit and $release build with Spack and pass spack test"

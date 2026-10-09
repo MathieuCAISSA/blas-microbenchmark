@@ -9,6 +9,12 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- A Spack package: `spack repo add` this repository's URL, then
+  `spack install blas-microbenchmark ^openblas` (or `^blis`,
+  `^netlib-lapack`, `^flexiblas`, `^nvpl-blas`, `^armpl-gcc`); `spack test
+  run` checks the install, and `spack load` puts the benchmarks on `PATH`.
+
 ### Fixed
 - `--with-blas-incpath` and `--with-blas-libpath` lost to a
   distribution's library found by `configure` (BLIS, Netlib, NVPL, ArmPL,
