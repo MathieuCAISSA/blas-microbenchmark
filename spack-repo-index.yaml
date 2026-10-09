@@ -1,0 +1,6 @@
+# Where Spack finds this repository's package, when it is added by its
+# git URL (spack repo add https://github.com/MathieuCAISSA/blas-microbenchmark.git).
+# Spack looks for this file at the top of the clone; see packaging/spack/.
+repo_index:
+  paths:
+  - packaging/spack/spack_repo/blas_microbenchmark

@@ -691,3 +691,63 @@ jobs:
             build/**/test-suite.log
             build/**/*.sh.log
           if-no-files-found: ignore
+
+  # The Spack package (packaging/spack), as an HPC user installs it: built
+  # by Spack against each BLAS it can build on x86_64, from this commit's
+  # tarball and from the latest release's, then checked by its own tests
+  # (spack test run). The distribution's BLIS or Netlib is installed as
+  # well, so that linking it instead of Spack's would fail
+  # test_linked_library (#58). Spack and its package recipes are pinned;
+  # what Spack builds is cached, keyed on both and on the recipe.
+  spack:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        blas: [openblas, blis, netlib-lapack, flexiblas]
+    env:
+      SPACK_TAG: v1.2.2
+      SPACK_PACKAGES_TAG: v2026.06.0
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libopenblas-dev
+          case "${{ matrix.blas }}" in
+            blis) sudo apt-get install -y libblis-openmp-dev ;;
+            netlib-lapack) sudo apt-get install -y libblas-dev ;;
+          esac
+
+      - name: This commit's tarball
+        run: |
+          ./autogen.sh
+          mkdir -p build
+          (cd build && ../configure && make dist)
+          mkdir -p "$RUNNER_TEMP/src"
+          tar xf build/blas-microbenchmark-*.tar.gz -C "$RUNNER_TEMP/src"
+
+      - name: Spack
+        run: |
+          git clone --depth 1 -b "$SPACK_TAG" https://github.com/spack/spack.git "$HOME/spack"
+          . "$HOME/spack/share/spack/setup-env.sh"
+          spack repo update builtin --tag "$SPACK_PACKAGES_TAG"
+          spack repo add "$PWD/packaging/spack/spack_repo/blas_microbenchmark"
+          # One target whatever CPU the runner has, so the cache matches.
+          spack config add 'packages:all:require:target=x86_64_v3'
+          spack compiler find
+          spack external find cmake perl python gmake
+          spack repo list
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/spack/opt/spack
+          key: spack-${{ env.SPACK_TAG }}-${{ env.SPACK_PACKAGES_TAG }}-${{ matrix.blas }}-${{ hashFiles('packaging/spack/**') }}
+          restore-keys: spack-${{ env.SPACK_TAG }}-${{ env.SPACK_PACKAGES_TAG }}-${{ matrix.blas }}-
+
+      - name: spack install and spack test
+        run: |
+          . "$HOME/spack/share/spack/setup-env.sh"
+          .github/spack-check.sh "${{ matrix.blas }}" "$RUNNER_TEMP"/src/blas-microbenchmark-*
