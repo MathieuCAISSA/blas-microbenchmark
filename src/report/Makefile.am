@@ -7,8 +7,9 @@ CLEANFILES = bmb_report
 
 # Built rather than shipped as is: the HTML template is inserted into the
 # script, so the installed command is one self-contained file with nothing
-# to find at run time.
-bmb_report: $(srcdir)/bmb_report.sh $(srcdir)/report.html $(srcdir)/assemble.awk
+# to find at run time. It depends on Makefile as well, which configure
+# rewrites, so that a new version is not left out (#60).
+bmb_report: $(srcdir)/bmb_report.sh $(srcdir)/report.html $(srcdir)/assemble.awk Makefile
 	$(AM_V_GEN)$(AWK) -v version='$(PACKAGE_VERSION)' -f $(srcdir)/assemble.awk \
 	    $(srcdir)/report.html $(srcdir)/bmb_report.sh >$@.tmp && \
 	chmod +x $@.tmp && mv -f $@.tmp $@
@@ -16,8 +17,10 @@ bmb_report: $(srcdir)/bmb_report.sh $(srcdir)/report.html $(srcdir)/assemble.awk
 TESTS = test_assemble.sh test_bmb_report.sh test_bmb_report_render.sh test_bmb_report_js.sh
 
 # test_assemble.sh must exercise the awk the build uses, not whichever one
-# happens to be first on PATH.
-AM_TESTS_ENVIRONMENT = AWK='$(AWK)'; export AWK;
+# happens to be first on PATH; test_bmb_report.sh checks --version against
+# this build's version.
+AM_TESTS_ENVIRONMENT = AWK='$(AWK)'; export AWK; \
+	PACKAGE_VERSION='$(PACKAGE_VERSION)'; export PACKAGE_VERSION;
 
 FIXTURES = \
 	fixtures/README \
