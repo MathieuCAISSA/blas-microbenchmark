@@ -33,8 +33,12 @@ if [ -s "$T/out" ]; then
 fi
 pass "no argument is a usage error"
 
-$R --version | grep -q '^bmb_report [0-9]' || fail "--version"
-pass "--version"
+# The build's version, not merely a version: a bmb_report not rebuilt
+# after configure changed the version kept the old one (#60).
+v=$($R --version)
+test "$v" = "bmb_report ${PACKAGE_VERSION:?PACKAGE_VERSION is not set}" \
+    || fail "--version says '$v', this build is $PACKAGE_VERSION"
+pass "--version gives this build's version"
 
 # ---- refusals (#1, decision 5) ----
 # Each one names the file and the reason. Each is given next to a valid
