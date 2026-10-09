@@ -169,6 +169,10 @@ The manual pages, also online at
 - [Development](https://mathieucaissa.github.io/blas-microbenchmark/development.html):
   every test and what CI runs.
 - [CHANGELOG.md](CHANGELOG.md) — what changed in each release.
+- The [wiki](https://github.com/MathieuCAISSA/blas-microbenchmark/wiki):
+  results measured on real machines, with their files, and a FAQ.
+- The [roadmap](https://github.com/users/MathieuCAISSA/projects/1): what
+  is planned, in progress and done.
 - [CONTRIBUTING.md](CONTRIBUTING.md), then [AGENTS.md](AGENTS.md) and
   the files in [doc/dev/](doc/dev/) it points to — for contributors:
   building from git, the tests, adding a routine, CI, cutting a release.
