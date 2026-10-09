@@ -54,6 +54,15 @@ the variables the module sets (`OPENBLAS_ROOT`, `BLIS_INCDIR`,
 `ARMPL_LIBDIR`, …); otherwise point at it with `--with-blas-incpath=DIR`
 and `--with-blas-libpath=DIR`.
 
+With Spack, which picks the BLAS (`^openblas`, `^blis`, `^netlib-lapack`,
+`^flexiblas`, `^nvpl-blas`, `^armpl-gcc`):
+
+```bash
+spack repo add https://github.com/MathieuCAISSA/blas-microbenchmark.git
+spack install blas-microbenchmark ^openblas
+spack load blas-microbenchmark
+```
+
 ## Quick start
 
 ```

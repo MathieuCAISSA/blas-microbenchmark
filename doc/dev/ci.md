@@ -47,6 +47,11 @@ builds without `--enable-werror`, since Fedora's newer GCC is not what it
 is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
 it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 
+The `spack` job builds the Spack package with Spack, against OpenBLAS,
+BLIS, Netlib and FlexiBLAS, from this commit's tarball and from the
+latest release, and runs its tests (`spack test run`), through
+`.github/spack-check.sh`; see [packaging](packaging.md#in-ci).
+
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
