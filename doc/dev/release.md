@@ -59,8 +59,11 @@ with an issue of its own), then tagged on `main` once merged.
    `./configure --prefix=...`, `make check`, `make install` — the man
    pages included — on a machine with no Autotools if you can.
 7. **Back to development**: on another short branch and pull request,
-   set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`)
-   and add an empty `[Unreleased]` section to `CHANGELOG.md`.
+   set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`),
+   add an empty `[Unreleased]` section to `CHANGELOG.md`, and add the
+   release to the Spack package with the checksum the release published
+   (see [After a release](packaging.md#after-a-release)); the `spack`
+   job then builds it from GitHub.
 
 Note the order: **edit the notes, don't create the release**. The workflow
 gets there within about half a minute of the tag push and creates it with

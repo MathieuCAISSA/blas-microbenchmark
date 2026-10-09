@@ -24,6 +24,7 @@ changing it:
 | `bmb_report`, `src/report`, `doc/images` | [doc/dev/report.md](doc/dev/report.md) |
 | the README, `--help`, `man/`, the site | [doc/dev/documentation.md](doc/dev/documentation.md) |
 | `.github/` | [doc/dev/ci.md](doc/dev/ci.md) |
+| `packaging/`, `spack-repo-index.yaml` | [doc/dev/packaging.md](doc/dev/packaging.md) |
 | the version, a release | [doc/dev/release.md](doc/dev/release.md) |
 
 ## Build & test
@@ -201,9 +202,12 @@ doc/             # the README's chart images, and screenshots.sh, which
                  # makes them
 doc/dev/         # the rest of this guide, one file per part (see above)
 tests/           # the project's own tests: the release files, the
-                 # editor settings, the documentation's links, the pins
+                 # editor settings, the documentation's links, the pins,
+                 # configure's search order
+packaging/spack/ # the Spack package, as a Spack package repository
 .github/         # the workflows (ci, codeql, pages, release), the scripts
-                 # CI runs (cppcheck.sh, verify-sweep.sh), the issue and
+                 # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh),
+                 # the issue and
                  # pull request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,
                  # SECURITY.md, and REVIEWS.md beside the PR template
@@ -211,7 +215,8 @@ tests/           # the project's own tests: the release files, the
 
 The top of the repository holds only what has to be there: the README,
 the LICENSE, CHANGELOG.md, CONTRIBUTING.md, this file (where coding
-agents look), CITATION.cff (where GitHub looks), the build files
+agents look), CITATION.cff (where GitHub looks), spack-repo-index.yaml
+(where Spack looks, in a clone added by its URL), the build files
 (`configure.ac`, `Makefile.am`, `autogen.sh`) and the dot files. A new
 file goes in one of the directories above.
 

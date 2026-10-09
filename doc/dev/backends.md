@@ -202,7 +202,8 @@ that happens to have multiple BLAS libraries installed will `AC_DEFINE` a
 and the link will fail with an undefined reference.
 
 If you add another backend, do it fully — `configure.ac` detection, the
-thread-count API in `bmb_threads.c` if it has one, and a CI job — rather
+thread-count API in `bmb_threads.c` if it has one, a CI job, and its
+Spack provider in `BACKENDS` ([packaging](packaging.md)) — rather
 than a partial `--with-blas-backend=X` case that fails at compile or link
 time. Leaving a backend entirely unimplemented is fine; leaving it
 half-done is not.
