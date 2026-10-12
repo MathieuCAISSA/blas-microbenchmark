@@ -48,7 +48,8 @@ NVPL and ArmPL (aarch64-only) aren't installable here on x86_64, nor
 FlexiBLAS on Debian or Ubuntu; see their CI job steps in
 `.github/workflows/ci.yml` for the exact `--with-blas-backend=nvpl`,
 `=armpl` and `=flexiblas` setup (FlexiBLAS's runs in a Fedora container).
-MKL (`=mkl`) comes from Intel's apt repository; its job has the commands.
+MKL (`=mkl`) comes from Intel's apt repository: `.github/install-oneapi-mkl.sh`
+installs it (sudo, several GB).
 
 After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
@@ -208,7 +209,8 @@ tests/           # the project's own tests: the release files, the
                  # configure's search order
 packaging/spack/ # the Spack package, as a Spack package repository
 .github/         # the workflows (ci, codeql, pages, release), the scripts
-                 # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh),
+                 # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh,
+                 # install-oneapi-mkl.sh),
                  # the issue and
                  # pull request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,

@@ -709,13 +709,7 @@ jobs:
           sudo apt-get install -y autoconf automake libtool pkg-config
 
       - name: Install oneAPI MKL
-        run: |
-          curl -fsSL https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-            | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg >/dev/null
-          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
-            | sudo tee /etc/apt/sources.list.d/oneAPI.list
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends intel-oneapi-mkl-devel
+        run: .github/install-oneapi-mkl.sh
 
       - name: autoreconf
         run: autoreconf -fi
@@ -780,14 +774,7 @@ jobs:
           case "${{ matrix.blas }}" in
             blis) sudo apt-get install -y libblis-openmp-dev ;;
             netlib-lapack) sudo apt-get install -y libblas-dev ;;
-            intel-oneapi-mkl)
-              curl -fsSL https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
-                | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg >/dev/null
-              echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
-                | sudo tee /etc/apt/sources.list.d/oneAPI.list
-              sudo apt-get update
-              sudo apt-get install -y --no-install-recommends intel-oneapi-mkl-devel
-              ;;
+            intel-oneapi-mkl) .github/install-oneapi-mkl.sh ;;
           esac
 
       - name: This commit's tarball
