@@ -48,6 +48,8 @@ NVPL and ArmPL (aarch64-only) aren't installable here on x86_64, nor
 FlexiBLAS on Debian or Ubuntu; see their CI job steps in
 `.github/workflows/ci.yml` for the exact `--with-blas-backend=nvpl`,
 `=armpl` and `=flexiblas` setup (FlexiBLAS's runs in a Fedora container).
+MKL (`=mkl`) comes from Intel's apt repository: `.github/install-oneapi-mkl.sh`
+installs it (sudo, several GB).
 
 After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
@@ -188,6 +190,7 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # references), bmb_log, bmb_timer; fixtures/machine/, the
                  # fake /proc and /sys trees of test_bmb_machine
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
+src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv, sgemv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm, sgemm, cgemm,
@@ -206,7 +209,8 @@ tests/           # the project's own tests: the release files, the
                  # configure's search order
 packaging/spack/ # the Spack package, as a Spack package repository
 .github/         # the workflows (ci, codeql, pages, release), the scripts
-                 # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh),
+                 # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh,
+                 # install-oneapi-mkl.sh),
                  # the issue and
                  # pull request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,

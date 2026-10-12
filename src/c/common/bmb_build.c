@@ -89,6 +89,18 @@ const char *bmb_build_blas_version(void)
     }
     return version;
 }
+#elif defined(HAVE_MKL_GET_VERSION_STRING)
+#include <mkl_service.h>
+
+const char *bmb_build_blas_version(void)
+{
+    static char version[256];
+
+    if (version[0] == '\0') {
+        mkl_get_version_string(version, (int) sizeof(version));
+    }
+    return version;
+}
 #elif defined(HAVE_OPENBLAS_GET_CONFIG)
 /* Declared here rather than by including a backend header: only OpenBLAS
  * builds resolve this, and cblas.h does not declare it. */

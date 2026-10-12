@@ -19,6 +19,13 @@
  * no variable of its own: which ones apply is known only at run time. */
 extern void flexiblas_set_num_threads(int num);
 #define BMB_THREAD_ENV_AT_RUN_TIME
+#elif defined(HAVE_MKL_DOMAIN_SET_NUM_THREADS)
+#include <mkl_service.h>
+/* The count is set for MKL's BLAS domain, the highest of its controls:
+ * above MKL_DOMAIN_NUM_THREADS, MKL_NUM_THREADS and OMP_NUM_THREADS, so
+ * that the count recorded is the one MKL was given. Without -t, MKL's own
+ * order gives it: MKL_NUM_THREADS, then OMP_NUM_THREADS. */
+#define BMB_THREAD_ENV_VARS "MKL_NUM_THREADS", "OMP_NUM_THREADS"
 #elif defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
 #include <stdint.h>
 /* dim_t defaults to a 64-bit type in BLIS regardless of the CBLAS
@@ -78,6 +85,8 @@ void bmb_threads_set(unsigned int count)
     }
 #elif defined(HAVE_FLEXIBLAS_API)
     flexiblas_set_num_threads((int) count);
+#elif defined(HAVE_MKL_DOMAIN_SET_NUM_THREADS)
+    mkl_domain_set_num_threads((int) count, MKL_DOMAIN_BLAS);
 #elif defined(HAVE_BLI_THREAD_SET_NUM_THREADS)
     bli_thread_set_num_threads((int64_t) count);
 #elif defined(HAVE_OPENBLAS_SET_NUM_THREADS)
@@ -98,6 +107,19 @@ void bmb_threads_resolve(bmb_options_t *opts)
     size_t n;
     const char *const *env_vars = bmb_thread_env_vars(&n);
     size_t i;
+
+#if defined(HAVE_MKL_DOMAIN_SET_NUM_THREADS)
+    /* Its BLAS entry would be overridden by the count set for that domain,
+     * and its syntax (MKL_DOMAIN_BLAS=4, ...) is not a count to record. */
+    {
+        const char *domain = getenv("MKL_DOMAIN_NUM_THREADS");
+
+        if (domain != NULL && domain[0] != '\0') {
+            bmb_log_warning("MKL_DOMAIN_NUM_THREADS is ignored for BLAS: the thread count is "
+                            "set by -t, or else MKL_NUM_THREADS or OMP_NUM_THREADS.");
+        }
+    }
+#endif
 
     /* The backend's own precedence order, so the variable reported here is
      * the one it would actually have obeyed. */

@@ -11,6 +11,7 @@ How each BLAS library is found, linked and named. Start at
 | NVPL | `--with-blas-backend=nvpl` | CI, `nvpl` job (`ubuntu-24.04-arm`) |
 | ArmPL | `--with-blas-backend=armpl` | CI, `armpl` job (`ubuntu-24.04-arm`) |
 | FlexiBLAS | `--with-blas-backend=flexiblas` | CI, `flexiblas` job (Fedora container), under OpenBLAS, BLIS and Netlib |
+| Intel MKL | `--with-blas-backend=mkl` | CI, `mkl` job (oneAPI from Intel's apt repository) |
 | cuBLAS / rocBLAS | — | Not implemented, not planned |
 
 Every backend is reached through the CBLAS interface, so the same
@@ -109,6 +110,25 @@ Two things that backend gets wrong easily:
   `-lgfortran`, so don't "simplify" that into a single unconditional
   `-lgfortran` — that would make a Fortran runtime a hard requirement for
   everyone.
+
+**MKL** (#65) has a CBLAS but no `cblas.h`: it declares it in
+`mkl_cblas.h`. `src/c/mkl/cblas.h` includes that, and goes on the include
+path only for this backend, as `src/c/netlib` does (`BMB_CBLAS_CPPFLAGS`).
+
+- Where it is: `/opt/intel/oneapi/mkl/latest` from Intel's repository,
+  `$MKLROOT` (set by `setvars.sh`, modules and Spack, `lib` or, before
+  2024, `lib/intel64`), `/usr/include/mkl` from Debian and Ubuntu's
+  `libmkl-dev`. Both of the first two installed, Intel's wins.
+- What is linked: `-lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp`,
+  Intel's link line for GCC with the GNU OpenMP layer and 32-bit integers.
+  Not `-lmkl_rt`: by default it loads Intel's OpenMP runtime, a second one
+  next to GCC's.
+- Threads: `mkl_domain_set_num_threads(n, MKL_DOMAIN_BLAS)`, the highest
+  of MKL's controls, so the count recorded is the one it was given;
+  without `-t`, `MKL_NUM_THREADS` then `OMP_NUM_THREADS`, MKL's order. A
+  `MKL_DOMAIN_NUM_THREADS` it overrides gets a warning. `MKL_DYNAMIC`
+  (MKL may use fewer threads on a small problem) is left as MKL has it.
+- The version is `mkl_get_version_string()`'s.
 
 **cuBLAS / rocBLAS**: deliberately out of scope. Handle-based,
 device-memory API, fundamentally different from the CBLAS interface every

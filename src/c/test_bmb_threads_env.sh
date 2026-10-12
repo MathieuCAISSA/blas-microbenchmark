@@ -6,7 +6,8 @@
 # number of threads (0, -2, "3 ", 2,1, ...) is ignored with a warning,
 # where it used to label a run with 4294967294 threads; another backend's
 # variables are not read. The thread count is read back from the table and
-# the JSON, where a wrong one would end up in the report.
+# the JSON, where a wrong one would end up in the report. Under MKL, a
+# count per domain (MKL_DOMAIN_NUM_THREADS) is overridden with a warning.
 set -e
 
 T=threads-env-test.d
@@ -40,6 +41,8 @@ elif defined HAVE_FLEXIBLAS_API; then
         flexiblas/netlib*) vars= ;;
         *) vars="OMP_NUM_THREADS" ;;
     esac
+elif defined HAVE_MKL_DOMAIN_SET_NUM_THREADS; then
+    vars="MKL_NUM_THREADS OMP_NUM_THREADS"
 elif defined HAVE_BLI_THREAD_SET_NUM_THREADS; then
     vars="BLIS_NUM_THREADS OMP_NUM_THREADS"
 elif defined HAVE_OPENBLAS_SET_NUM_THREADS; then
@@ -49,7 +52,8 @@ elif defined HAVE_OMP_SET_NUM_THREADS; then
 else
     vars=
 fi
-all="OPENBLAS_NUM_THREADS GOTO_NUM_THREADS BLIS_NUM_THREADS OMP_NUM_THREADS"
+all="OPENBLAS_NUM_THREADS GOTO_NUM_THREADS BLIS_NUM_THREADS MKL_NUM_THREADS OMP_NUM_THREADS"
+unset MKL_DOMAIN_NUM_THREADS
 # Whatever the calling shell has set must not leak into the cases.
 for v in $all; do
     unset "$v"
@@ -147,6 +151,15 @@ for v in $all; do
     quiet "$v=3"
 done
 ok "another backend's variables are not read"
+
+# MKL also takes a count per domain, MKL_DOMAIN_NUM_THREADS="MKL_DOMAIN_BLAS=4",
+# which the count set for its BLAS domain overrides: said, and not used.
+if defined HAVE_MKL_DOMAIN_SET_NUM_THREADS; then
+    expect 1 "" "MKL_DOMAIN_NUM_THREADS=MKL_DOMAIN_BLAS=4"
+    warned "MKL_DOMAIN_NUM_THREADS is ignored for BLAS"
+    expect 2 "-t 2" "MKL_DOMAIN_NUM_THREADS=MKL_DOMAIN_BLAS=4"
+    ok "MKL_DOMAIN_NUM_THREADS is overridden, with a warning"
+fi
 
 rm -rf "$T"
 echo "all checks passed"

@@ -9,8 +9,8 @@ routine, the same options for all of them, and results in text, CSV or
 JSON — [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/),
 but for BLAS instead of MPI.
 
-Build it against OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL —
-or once against FlexiBLAS, which picks the library at run time — run the
+Build it against OpenBLAS, BLIS, Netlib reference BLAS, NVPL, ArmPL or
+Intel MKL — or once against FlexiBLAS, which picks the library at run time — run the
 same commands on each, and compare them on one page of charts.
 
 ## Install
@@ -55,7 +55,7 @@ the variables the module sets (`OPENBLAS_ROOT`, `BLIS_INCDIR`,
 and `--with-blas-libpath=DIR`.
 
 With Spack, which picks the BLAS (`^openblas`, `^blis`, `^netlib-lapack`,
-`^flexiblas`, `^nvpl-blas`, `^armpl-gcc`):
+`^flexiblas`, `^nvpl-blas`, `^armpl-gcc`, `^intel-oneapi-mkl`):
 
 ```bash
 spack repo add https://github.com/MathieuCAISSA/blas-microbenchmark.git
@@ -149,6 +149,7 @@ Chosen when building, and each one built and tested in CI:
 | NVPL *(aarch64)* | `--with-blas-backend=nvpl` |
 | ArmPL *(aarch64)* | `--with-blas-backend=armpl` |
 | FlexiBLAS | `--with-blas-backend=flexiblas` |
+| Intel MKL | `--with-blas-backend=mkl` |
 
 With FlexiBLAS, one build measures every library it can load:
 `FLEXIBLAS=BLIS-OPENMP bmb_dgemm …`, and each comes out as its own

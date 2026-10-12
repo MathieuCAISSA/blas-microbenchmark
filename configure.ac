@@ -147,14 +147,14 @@ AC_DEFUN([BMB_USER_PATHS], [
 ])
 
 AC_ARG_WITH([blas-backend],
-  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl|flexiblas],
+  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl|flexiblas|mkl],
     [BLAS backend to build against (default: auto, i.e. search for any CBLAS-compatible library on the default paths)])],
   [bmb_blas_backend="$withval"],
   [bmb_blas_backend=auto])
 
 AS_CASE(["$bmb_blas_backend"],
-  [auto|openblas|blis|netlib|nvpl|armpl|flexiblas], [],
-  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, netlib, nvpl, armpl, flexiblas (got '$bmb_blas_backend')])])
+  [auto|openblas|blis|netlib|nvpl|armpl|flexiblas|mkl], [],
+  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, netlib, nvpl, armpl, flexiblas, mkl (got '$bmb_blas_backend')])])
 
 dnl Generic hints, applied whatever the backend. Backend-specific ones are
 dnl applied inside each case below, so they take priority over these.
@@ -360,6 +360,47 @@ AS_CASE(["$bmb_blas_backend"],
       [Define when building against FlexiBLAS, whose API names the BLAS library loaded at run time.])
   ],
 
+  [mkl], [
+    dnl Intel oneAPI MKL: under /opt/intel/oneapi/mkl/latest from Intel's
+    dnl repository, under $MKLROOT where setvars.sh or a module set it, in
+    dnl /usr/include/mkl from Debian and Ubuntu's libmkl-dev. Its CBLAS is
+    dnl in mkl_cblas.h; src/c/mkl/cblas.h includes it for the benchmarks.
+    dnl Both installed, the later probe, Intel's current one, wins.
+    for bmb_dir in /usr/include/mkl /opt/intel/oneapi/mkl/latest/include; do
+      if test -f "$bmb_dir/mkl_cblas.h"; then
+        CPPFLAGS="-I$bmb_dir $CPPFLAGS"
+        bmb_mkl_libdir=`AS_ECHO(["$bmb_dir"]) | sed 's|/include$|/lib|'`
+        AS_IF([test "x$bmb_dir" != x/usr/include/mkl && test -d "$bmb_mkl_libdir"],
+          [LDFLAGS="-L$bmb_mkl_libdir -Wl,-rpath,$bmb_mkl_libdir $LDFLAGS"])
+      fi
+    done
+    BMB_ENV_HINTS([MKL])
+    dnl MKLROOT, without the underscore, is the variable Intel's setvars.sh
+    dnl and most modules set; lib/intel64 is the layout before 2024.
+    AS_IF([test -n "$MKLROOT"], [
+      BMB_ADD_INCDIR([$MKLROOT/include])
+      BMB_ADD_LIBDIR([$MKLROOT/lib/intel64])
+      BMB_ADD_LIBDIR([$MKLROOT/lib])
+    ])
+    BMB_USER_PATHS
+    AC_CHECK_HEADERS([mkl_cblas.h], [], [
+      AC_MSG_ERROR([MKL's mkl_cblas.h not found. Install intel-oneapi-mkl-devel (Intel's apt or yum repository) or libmkl-dev (Debian/Ubuntu), source setvars.sh or load your MKL module (MKLROOT, MKL_ROOT/MKL_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
+    ])
+    dnl The GNU OpenMP threading layer, with the LP64 interface (32-bit
+    dnl integers, as CBLAS takes): what Intel's link line advisor gives for
+    dnl GCC, and the OpenMP runtime GCC's -fopenmp links. mkl_rt would load
+    dnl Intel's own OpenMP runtime by default, a second one in the process.
+    bmb_save_LIBS="$LIBS"
+    LIBS="-lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl $LIBS"
+    AC_MSG_CHECKING([for cblas_dgemm in MKL's GNU threading layer])
+    AC_LINK_IFELSE([AC_LANG_CALL([], [cblas_dgemm])],
+      [AC_MSG_RESULT([yes])],
+      [AC_MSG_RESULT([no])
+       LIBS="$bmb_save_LIBS"
+       AC_MSG_ERROR([MKL not found (cblas_dgemm unresolved with -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core). Source setvars.sh or load your MKL module (MKLROOT, MKL_ROOT/MKL_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])])
+    AC_CHECK_FUNCS([mkl_domain_set_num_threads mkl_get_version_string])
+  ],
+
   [dnl auto: search the default paths, plus OpenBLAS's module variables
    dnl (OpenBLAS is what 'auto' prefers; use --with-blas-backend to pick
    dnl another one and get its variables honoured instead).
@@ -419,14 +460,16 @@ AS_IF([test "x$OPENMP_CFLAGS" != "x"], [
 
 AC_CHECK_LIB([m], [sqrt])
 
-dnl The netlib backend supplies its own cblas_* layer from src/c/netlib;
-dnl that directory must be on the include path ahead of anything else, so
-dnl the benchmarks' #include <cblas.h> resolves to it.
+dnl Netlib and MKL have no cblas.h of their own: src/c/netlib supplies a
+dnl whole cblas_* layer, src/c/mkl a cblas.h over MKL's mkl_cblas.h. The
+dnl backend's directory must be on the include path ahead of anything
+dnl else, so the benchmarks' #include <cblas.h> resolves to it.
 AM_CONDITIONAL([BLAS_BACKEND_NETLIB], [test "x$bmb_blas_backend" = xnetlib])
-AS_IF([test "x$bmb_blas_backend" = xnetlib],
-  [BMB_NETLIB_CPPFLAGS='-I$(top_srcdir)/src/c/netlib'],
-  [BMB_NETLIB_CPPFLAGS=])
-AC_SUBST([BMB_NETLIB_CPPFLAGS])
+AS_CASE(["$bmb_blas_backend"],
+  [netlib], [BMB_CBLAS_CPPFLAGS='-I$(top_srcdir)/src/c/netlib'],
+  [mkl], [BMB_CBLAS_CPPFLAGS='-I$(top_srcdir)/src/c/mkl'],
+  [BMB_CBLAS_CPPFLAGS=])
+AC_SUBST([BMB_CBLAS_CPPFLAGS])
 
 AC_CONFIG_FILES([
   Makefile
