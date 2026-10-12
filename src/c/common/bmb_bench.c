@@ -347,7 +347,7 @@ size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size)
 
 void bmb_bench_too_large(void)
 {
-    bmb_log_error("These complex matrices would take more bytes than size_t can count.");
+    bmb_log_error("These matrices would take more bytes than size_t can count.");
 }
 
 static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_options_t *opts)
