@@ -10,6 +10,12 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Six more benchmarks in single precision and complex: `bmb_strsm`,
+  `bmb_ztrsm`, `bmb_ssyrk`, and the complex-only `bmb_zdotc`, `bmb_zherk`
+  and `bmb_zhemm` (32 in all). A complex routine counts four times its
+  real counterpart's operations; each is checked like the others, the
+  Hermitian ones against a reference that, like BLAS, reads only the
+  upper triangle and the real part of the diagonal.
 - An Intel MKL backend (`--with-blas-backend=mkl`): oneAPI MKL from
   Intel's repository or a module (`MKLROOT`), or Debian and Ubuntu's
   `libmkl-dev`. `-t` sets MKL's BLAS thread count, above

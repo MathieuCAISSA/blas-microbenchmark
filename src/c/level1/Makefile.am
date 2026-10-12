@@ -4,7 +4,7 @@ LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 
 # Installed to $(libexecdir)/blas-microbenchmark/level1, the way
 # osu-micro-benchmarks groups its binaries -- not straight into bin, where
-# 26 bmb_* executables would just clutter $PATH.
+# 32 bmb_* executables would just clutter $PATH.
 level1dir = $(pkglibexecdir)/level1
 
 level1_PROGRAMS = \
@@ -16,7 +16,8 @@ level1_PROGRAMS = \
 	bmb_dscal \
 	bmb_dswap \
 	bmb_saxpy \
-	bmb_sdot
+	bmb_sdot \
+	bmb_zdotc
 
 bmb_dasum_SOURCES = bmb_dasum.c
 bmb_daxpy_SOURCES = bmb_daxpy.c
@@ -27,6 +28,7 @@ bmb_dscal_SOURCES = bmb_dscal.c
 bmb_dswap_SOURCES = bmb_dswap.c
 bmb_saxpy_SOURCES = bmb_saxpy.c
 bmb_sdot_SOURCES = bmb_sdot.c
+bmb_zdotc_SOURCES = bmb_zdotc.c
 
 # Minimalistic smoke tests (small vector, 1 warmup + 2 timed iterations).
 TESTS = \
@@ -39,6 +41,7 @@ TESTS = \
 	test_bmb_dswap.sh \
 	test_bmb_saxpy.sh \
 	test_bmb_sdot.sh \
+	test_bmb_zdotc.sh \
 	test_bmb_size_limits.sh
 
 EXTRA_DIST = $(TESTS)

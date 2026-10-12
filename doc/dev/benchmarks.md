@@ -48,13 +48,17 @@ where that order puts it. A triangular or symmetric matrix must not be
 symmetric in its values off the diagonal, or the upper triangle read one
 way equals the other, and `--verify` cannot tell a library that ignored
 the order (the triangular routines' `bmb_off_diagonal()`). Each of the
-17 routines was seen to fail `--verify` with its call forced to
+22 routines was seen to fail `--verify` with its call forced to
 row-major under `--layout col`.
 
-**Other precisions (#6).** `saxpy`, `sdot`, `sgemv`, `sgemm`, `cgemm`
-and `zgemm` are the double-precision file of the same routine with
-another element type: `float` for s, pairs of `float` (c) or `double`
-(z), real part first, for complex. A complex scalar or matrix is passed
+**Other precisions (#6, #67).** `saxpy`, `sdot`, `sgemv`, `sgemm`,
+`strsm`, `ssyrk`, `cgemm`, `zgemm` and `ztrsm` are the double-precision
+file of the same routine with another element type: `float` for s, pairs
+of `float` (c) or `double` (z), real part first, for complex. `zdotc`,
+`zherk` and `zhemm` have no real counterpart, and follow `ddot`, `dsyrk`
+and `dsymm` with conjugates: `zherk`'s alpha and beta are real, as BLAS
+takes them, and `zhemm`'s A has an imaginary part on its diagonal, which
+a Hermitian matrix cannot have and BLAS does not read. A complex scalar or matrix is passed
 as `(const void *)`, which converts to whatever pointer type a library's
 `cblas.h` declares. Their dimensions and options are the double ones'.
 Only the routines where the precision changes the picture most are
@@ -62,17 +66,23 @@ there; another follows the same pattern, and needs its
 `src/c/netlib/` entry point too.
 
 - `flops`: real operations. A complex multiply-add is 4 multiplications
-  and 4 additions, so `cgemm`/`zgemm` count `8*M*N*K` where `dgemm`
-  counts `2*M*N*K`, and their GFLOP/s are comparable with it.
+  and 4 additions, so a complex routine counts four times its real
+  counterpart (`cgemm`/`zgemm` `8*M*N*K` where `dgemm` counts `2*M*N*K`,
+  `zherk` four times `dsyrk`), and their GFLOP/s are comparable.
 - `bytes`: 4 per element in single precision, 8 in double.
 - Sizes: the parser's ceiling keeps a d x d matrix of 8-byte elements
   within `size_t`, which covers `float`, `double` and single complex.
-  A double complex element takes 16, so `zgemm`'s `setup()` checks its
-  own products and refuses, with a message, sizes from 2^30 up;
+  A double complex element takes 16, so the z routines' `setup()` check
+  their matrices with `bmb_bench_matrix_bytes()` and refuse, with a
+  message (`bmb_bench_too_large()`), sizes from 2^30 up;
   `test_bmb_zgemm.sh` runs one.
 - `verify()`: the reference stays in double, read from the float
   operands (`bmb_verify_matvec_single()`, `_complex()`,
-  `_complex_single()`), and the result is compared in double.
+  `_complex_single()`, every shape), and the result is compared in
+  double. Two shapes are the complex ones' own: `FULL_H`, the conjugate
+  transpose, and `HERM_UPPER`, a Hermitian matrix from its upper
+  triangle, reading neither the lower one nor the diagonal's imaginary
+  part.
 
 Dimension conventions (only two `--matrix-dim*` options exist, so routines
 with 3 mathematical dimensions reuse one):
@@ -111,7 +121,7 @@ so the operand drifts across the calls inside one. Ask what that drift
 does over a few thousand calls:
 
 - `dtrmv`/`dtrmm` multiply the operand by A every time and `dtrsv`/`dtrsm`
-  divide by it, so it reaches infinity or denormals well inside a single
+  (and `strsm`/`ztrsm`) divide by it, so it reaches infinity or denormals well inside a single
   batch — and denormals are where the hardware slows down and the timing
   stops meaning anything. They set `reset_every_call = 1`, which pins the
   batch to 1 call, even under an explicit `-b` (ignored with a warning;
@@ -214,7 +224,7 @@ comparing; in single precision it doubles it, plus one
 (`bmb_verify_perturb_single()`), since the projection of a float `cgemm`
 does not see even 1e-1 in one element of a 64 x 64 `C`. It exists so
 that `src/c/test_bmb_verify.sh` can prove each of
-the 26 checks fails when it should. A new routine's `verify()` must call
+the 32 checks fails when it should. A new routine's `verify()` must call
 `bmb_verify_perturb()` or `bmb_verify_perturb_single()` on its result,
 or that test fails for it. Beyond
 the hook, each check was also seen to catch a real wrong computation — a

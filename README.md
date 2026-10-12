@@ -82,11 +82,12 @@ Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
 1               2048                2048                0.370463460     46.374
 ```
 
-There are 26 benchmarks, `bmb_<routine>`, covering levels 1 to 3:
+There are 32 benchmarks, `bmb_<routine>`, covering levels 1 to 3:
 `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap`, `dgemv` `dger`
 `dsymv` `dsyr` `dsyr2` `dtrmv` `dtrsv`, `dgemm` `dsymm` `dsyrk` `dsyr2k`
-`dtrmm` `dtrsm` in double precision, and `saxpy` `sdot` `sgemv` `sgemm`
-in single precision, `cgemm` `zgemm` in complex. They all take the same options: sizes to sweep
+`dtrmm` `dtrsm` in double precision; `saxpy` `sdot` `sgemv` `sgemm`
+`strsm` `ssyrk` in single; `cgemm` `zgemm` `ztrsm` in complex, and the
+complex-only `zdotc` `zherk` `zhemm`. They all take the same options: sizes to sweep
 (`-v`, `-m`, `-M`), thread counts (`-t`), a file to save to (`-o`). Each
 point is checked against a reference before it is timed, so a library
 that computes the wrong thing stops the run instead of looking fast

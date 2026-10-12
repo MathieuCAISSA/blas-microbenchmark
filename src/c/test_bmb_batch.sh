@@ -1,6 +1,6 @@
 #!/bin/sh
 # Checks that -b cannot batch the routines whose operand is restored before
-# every call (dtrmv, dtrsv, dtrmm, dtrsm): N calls in a row would run on an
+# every call (dtrmv, dtrsv, dtrmm, dtrsm, strsm, ztrsm): N calls in a row would run on an
 # operand drifting towards infinity or denormals, and the timing would stop
 # meaning anything (#48). They stay at one call per sample, which -s shows
 # as calls_per_sample, with a warning; another routine keeps the batch it
@@ -22,7 +22,7 @@ calls() {
     sed -n 's/^ *"calls_per_sample": \([0-9]*\),$/\1/p' "$1"
 }
 
-for b in level2/bmb_dtrmv level2/bmb_dtrsv level3/bmb_dtrmm level3/bmb_dtrsm; do
+for b in level2/bmb_dtrmv level2/bmb_dtrsv level3/bmb_dtrmm level3/bmb_dtrsm level3/bmb_strsm level3/bmb_ztrsm; do
     name=$(basename "$b")
     "$b" -C -x 0 -i 2 -b 50 -s -m 8,16 -o "$T/$name.json" >/dev/null 2>"$T/$name.err" \
         || fail "$name -b 50 failed: $(cat "$T/$name.err")"
@@ -31,7 +31,7 @@ for b in level2/bmb_dtrmv level2/bmb_dtrsv level3/bmb_dtrmm level3/bmb_dtrsm; do
     grep -q -- "--batch is ignored for ${name#bmb_}" "$T/$name.err" \
         || fail "$name -b 50 did not say -b was ignored: $(cat "$T/$name.err")"
 done
-echo "ok   -b 50: dtrmv, dtrsv, dtrmm and dtrsm stay at one call per sample, and say so"
+echo "ok   -b 50: dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm stay at one call per sample, and say so"
 
 level2/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \
     || fail "dgemv -b 50 failed: $(cat "$T/dgemv.err")"

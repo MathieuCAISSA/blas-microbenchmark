@@ -1,3 +1,4 @@
+#include <complex.h>
 #include <stddef.h>
 
 #include "cblas.h"
@@ -34,6 +35,10 @@ extern void saxpy_(const int *n, const float *alpha, const float *x, const int *
  * translated by f2c would return a double. */
 extern float sdot_(const int *n, const float *x, const int *incx,
                    const float *y, const int *incy);
+/* A COMPLEX*16 function: gfortran returns its value as C's double
+ * complex. */
+extern double complex zdotc_(const int *n, const void *x, const int *incx,
+                             const void *y, const int *incy);
 
 extern void dgemv_(const char *trans, const int *m, const int *n, const double *alpha,
                    const double *a, const int *lda, const double *x, const int *incx,
@@ -98,6 +103,27 @@ extern void zgemm_(const char *transa, const char *transb, const int *m, const i
                    const int *k, const void *alpha, const void *a, const int *lda,
                    const void *b, const int *ldb, const void *beta, void *c,
                    const int *ldc, size_t transa_len, size_t transb_len);
+
+extern void strsm_(const char *side, const char *uplo, const char *transa, const char *diag,
+                   const int *m, const int *n, const float *alpha, const float *a,
+                   const int *lda, float *b, const int *ldb,
+                   size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
+extern void ztrsm_(const char *side, const char *uplo, const char *transa, const char *diag,
+                   const int *m, const int *n, const void *alpha, const void *a,
+                   const int *lda, void *b, const int *ldb,
+                   size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
+extern void ssyrk_(const char *uplo, const char *trans, const int *n, const int *k,
+                   const float *alpha, const float *a, const int *lda,
+                   const float *beta, float *c, const int *ldc,
+                   size_t uplo_len, size_t trans_len);
+extern void zherk_(const char *uplo, const char *trans, const int *n, const int *k,
+                   const double *alpha, const void *a, const int *lda,
+                   const double *beta, void *c, const int *ldc,
+                   size_t uplo_len, size_t trans_len);
+extern void zhemm_(const char *side, const char *uplo, const int *m, const int *n,
+                   const void *alpha, const void *a, const int *lda,
+                   const void *b, const int *ldb, const void *beta, void *c,
+                   const int *ldc, size_t side_len, size_t uplo_len);
 
 static char bmb_trans(const CBLAS_TRANSPOSE t)
 {
@@ -181,6 +207,15 @@ void cblas_saxpy(const int N, const float alpha, const float *X, const int incX,
 float cblas_sdot(const int N, const float *X, const int incX, const float *Y, const int incY)
 {
     return sdot_(&N, X, &incX, Y, &incY);
+}
+
+void cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotc)
+{
+    double complex d = zdotc_(&N, X, &incX, Y, &incY);
+
+    ((double *) dotc)[0] = creal(d);
+    ((double *) dotc)[1] = cimag(d);
 }
 
 /* Level 2 */
@@ -460,5 +495,108 @@ void cblas_dtrsm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPL
         const char uplo = bmb_uplo_flipped(Uplo);
 
         dtrsm_(&side, &uplo, &transa, &diag, &N, &M, &alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    }
+}
+
+void cblas_strsm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const float alpha, const float *A, const int lda, float *B, const int ldb)
+{
+    const char transa = bmb_trans(TransA);
+    const char diag = bmb_diag(Diag);
+
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        strsm_(&side, &uplo, &transa, &diag, &M, &N, &alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        strsm_(&side, &uplo, &transa, &diag, &N, &M, &alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    }
+}
+
+/* As dtrsm. A conjugate transpose keeps its flag too: the buffer read
+ * column-major is A^T, and (A^T)^H is the conj(A) the transposed problem
+ * needs. */
+void cblas_ztrsm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb)
+{
+    const char transa = bmb_trans(TransA);
+    const char diag = bmb_diag(Diag);
+
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        ztrsm_(&side, &uplo, &transa, &diag, &M, &N, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        ztrsm_(&side, &uplo, &transa, &diag, &N, &M, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    }
+}
+
+void cblas_ssyrk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const float alpha, const float *A, const int lda,
+                 const float beta, float *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = bmb_trans(Trans);
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = bmb_trans_flipped(Trans);
+    }
+
+    ssyrk_(&uplo, &trans, &N, &K, &alpha, A, &lda, &beta, C, &ldc, 1, 1);
+}
+
+/* Row-major, the buffer read column-major is C^T = conj(C), Hermitian too
+ * and in the other triangle, and A^T: C^T = alpha (A^T)^H A^T + beta C^T,
+ * so the triangle flips and NoTrans becomes ConjTrans, and back; zherk
+ * takes no plain transpose. */
+void cblas_zherk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const double alpha, const void *A, const int lda,
+                 const double beta, void *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = (Trans == CblasNoTrans) ? 'N' : 'C';
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = (Trans == CblasNoTrans) ? 'C' : 'N';
+    }
+
+    zherk_(&uplo, &trans, &N, &K, &alpha, A, &lda, &beta, C, &ldc, 1, 1);
+}
+
+/* As dsymm: A^T = conj(A) for a Hermitian A, Hermitian too, stored in the
+ * other triangle, so side and triangle flip and nothing is conjugated. */
+void cblas_zhemm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const int M, const int N, const void *alpha,
+                 const void *A, const int lda, const void *B, const int ldb,
+                 const void *beta, void *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        zhemm_(&side, &uplo, &M, &N, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        zhemm_(&side, &uplo, &N, &M, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
     }
 }

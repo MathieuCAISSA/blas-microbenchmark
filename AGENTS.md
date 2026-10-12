@@ -133,7 +133,7 @@ for paths no test takes, then decide whether one should.
 | | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, in both storage orders where it has a matrix, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
 | | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON |
-| | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm and dtrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
+| | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
 | | `test_bmb_ignored_options.sh` | an option a routine has no use for (`--layout` on a vector routine, `-v`, `-m`, `-M` where they do not apply) is ignored with a warning naming it, and none where it applies |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, or on stdout |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); `test_bmb_zgemm.sh` also has a size whose complex matrices would wrap `size_t` refused |
@@ -191,10 +191,11 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # fake /proc and /sys trees of test_bmb_machine
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
-src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot
+src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot,
+                 # zdotc
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv, sgemv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm, sgemm, cgemm,
-                 # zgemm
+                 # zgemm, strsm, ztrsm, ssyrk, zherk, zhemm
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
@@ -229,7 +230,7 @@ installed); each `level{1,2,3}` routine builds to its own installed
 executable named `bmb_<routine>`.
 
 Those go to `$(libexecdir)/blas-microbenchmark/level<N>`, the layout
-osu-micro-benchmarks uses, rather than to `bin` — 26 executables named
+osu-micro-benchmarks uses, rather than to `bin` — 32 executables named
 `bmb_*` have no business sitting in `$PATH`. Each level's `Makefile.am`
 declares it with a custom Automake directory variable:
 
@@ -243,7 +244,7 @@ This is a **deliberate** departure from the GNU standards, which reserve
 users" and would put these in `bindir`. It was weighed against two
 alternatives and kept on purpose, so don't "fix" it:
 
-- *26 binaries flat in `bin`* is what the standards actually call for, and
+- *32 binaries flat in `bin`* is what the standards actually call for, and
   what most projects do. It was rejected because the level grouping was
   asked for explicitly.
 - *A `bmb` launcher in `bin` running the level binaries from `libexec`*,
