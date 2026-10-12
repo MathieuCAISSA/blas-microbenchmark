@@ -30,7 +30,9 @@ What `package.py` does:
   runs autoreconf.
 - **The BLAS.** It depends on the `blas` virtual and maps the provider
   Spack chose to `--with-blas-backend` (`BACKENDS`: openblas, blis,
-  netlib-lapack, nvpl-blas, armpl-gcc, flexiblas). Any other provider
+  netlib-lapack, nvpl-blas, armpl-gcc, flexiblas, intel-oneapi-mkl, the
+  last with `+gfortran threads=openmp`, the interface and threading
+  layer `configure` links). Any other provider
   is refused at concretization, with that list: `configure` has no
   backend for it. A backend added to `configure.ac` goes into
   `BACKENDS` too.
@@ -67,9 +69,12 @@ page, another version.
 ### In CI
 
 The `spack` job of `ci.yml` runs `.github/spack-check.sh BLAS SRC` for
-OpenBLAS, BLIS, Netlib and FlexiBLAS (NVPL and ArmPL are aarch64-only,
-and their Spack packages download the vendor's binaries). For each, it
-builds and tests:
+OpenBLAS, BLIS, Netlib, FlexiBLAS and MKL (NVPL and ArmPL are
+aarch64-only, and their Spack packages download the vendor's binaries).
+MKL is Intel's apt package, declared to Spack as an external
+(`/opt/intel/oneapi`): Spack's own package would download Intel's
+installer, gigabytes, on every cache miss. For each, it builds and
+tests:
 
 - **this commit**, from the tarball `make dist` makes, through a Spack
   environment that develops it (`spack develop --path`): the recipe as

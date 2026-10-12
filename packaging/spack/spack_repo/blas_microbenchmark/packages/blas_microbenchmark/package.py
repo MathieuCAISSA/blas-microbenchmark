@@ -19,6 +19,7 @@ BACKENDS = {
     "nvpl-blas": "nvpl",
     "armpl-gcc": "armpl",
     "flexiblas": "flexiblas",
+    "intel-oneapi-mkl": "mkl",
 }
 
 
@@ -54,6 +55,14 @@ class BlasMicrobenchmark(AutotoolsPackage):
     )
     # The benchmarks call BLIS through its CBLAS layer.
     requires("^blis +cblas", when="^[virtuals=blas] blis")
+    # configure links MKL's GNU OpenMP threading layer and its gfortran
+    # interface (libmkl_gf_lp64), which these variants make the spec list.
+    requires(
+        "^intel-oneapi-mkl +gfortran threads=openmp", when="^[virtuals=blas] intel-oneapi-mkl"
+    )
+    conflicts(
+        "^[virtuals=blas] intel-oneapi-mkl", when="@:1.4", msg="the MKL backend is new in 1.5.0"
+    )
 
     def configure_args(self):
         blas = self.spec["blas"]
@@ -69,7 +78,10 @@ class BlasMicrobenchmark(AutotoolsPackage):
 
     def _cblas_dir(self, blas):
         """The directory holding the provider's cblas.h, which several of
-        them install in a subdirectory (include/blis, include/flexiblas)."""
+        them install in a subdirectory (include/blis, include/flexiblas);
+        MKL's, which has mkl_cblas.h instead, is the one its spec gives."""
+        if blas.name == "intel-oneapi-mkl":
+            return blas.headers.directories[0]
         found = find(blas.prefix.include, "cblas.h", recursive=True)
         if not found:
             raise InstallError(f"no cblas.h under {blas.prefix.include}")
@@ -108,7 +120,15 @@ class BlasMicrobenchmark(AutotoolsPackage):
         dgemm = join_path(self.prefix.libexec, "blas-microbenchmark", "level3", "bmb_dgemm")
         out = which("ldd", required=True)(dgemm, output=str, error=str)
         prefix = os.path.realpath(blas.prefix)
-        for name in blas.libs.names:
+        # The provider's own libraries: MKL's list also has the compiler's
+        # OpenMP runtime, which is not under its prefix.
+        names = [
+            os.path.basename(lib).split(".so")[0][3:]
+            for lib in blas.libs
+            if os.path.realpath(lib).startswith(prefix)
+        ]
+        assert names, f"no library of {blas.name} under {blas.prefix}: {blas.libs}"
+        for name in names:
             lines = [l for l in out.splitlines() if re.search(rf"\blib{re.escape(name)}\.so", l)]
             assert lines, f"bmb_dgemm does not load lib{name}: {out}"
             for line in lines:

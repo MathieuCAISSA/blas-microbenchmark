@@ -10,8 +10,8 @@
 # - the latest release in the recipe, as users get it: Spack fetches the
 #   tarball from GitHub and checks its sha256 against the recipe.
 #
-# BLAS is a provider Spack builds (openblas, blis, netlib-lapack,
-# flexiblas). spack must be on PATH, with this repository's package
+# BLAS is a provider (openblas, blis, netlib-lapack, flexiblas,
+# intel-oneapi-mkl). spack must be on PATH, with this repository's package
 # repository added. The CI job installs a distribution's BLAS too where it
 # can: the package's test_linked_library then fails if the benchmarks
 # load that one instead of the one Spack built (#58).
@@ -40,6 +40,16 @@ spack -e "$env" test run --alias "dev-$blas" blas-microbenchmark \
 echo "::endgroup::"
 
 echo "::group::the release, $release ^$blas"
+# A provider newer than the release (MKL, new in 1.5.0) is refused by the
+# recipe's own conflict, which says so; any other failure to concretize is
+# one.
+if ! spack spec -I "blas-microbenchmark@=$release ^[virtuals=blas] $blas" >"$env.spec" 2>&1; then
+    cat "$env.spec"
+    grep -q "is new in" "$env.spec" || exit 1
+    echo "::endgroup::"
+    echo "ok   blas-microbenchmark ^$blas: this commit builds with Spack and passes spack test; $release has no backend for it"
+    exit 0
+fi
 spack install -j "$jobs" --fail-fast "blas-microbenchmark@=$release ^[virtuals=blas] $blas"
 spack test run --alias "release-$blas" "blas-microbenchmark@=$release ^[virtuals=blas] $blas" \
     || { spack test results -l "release-$blas"; exit 1; }
