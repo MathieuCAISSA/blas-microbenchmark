@@ -116,13 +116,15 @@
     });
 
     test("routine order", function () {
-      var names = ["zgemm", "dsymm", "sdot", "cgemm", "dgemv", "sgemm", "ddot", "dgemm", "daxpy", "sgemv", "saxpy"];
+      var names = ["zgemm", "dsymm", "sdot", "cgemm", "dgemv", "sgemm", "ddot", "dgemm", "daxpy", "sgemv", "saxpy",
+                   "zherk", "ztrsm", "zdotc", "zhemm", "strsm", "dtrsm", "ssyrk", "dsyrk"];
       var m = R.buildModel(names.map(function (n) {
         return entry(n + ".json", { routine: n, rows: [[1, 8, null, 1e-6, 1, 8]] });
       }));
       eq(m.routines.map(function (rt) { return rt.name; }),
-         ["saxpy", "daxpy", "sdot", "ddot", "sgemv", "dgemv", "sgemm", "dgemm", "cgemm", "zgemm", "dsymm"],
-         "#6: routines by level, then by operation, its precisions in BLAS order s, d, c, z");
+         ["saxpy", "daxpy", "sdot", "ddot", "zdotc", "sgemv", "dgemv", "sgemm", "dgemm", "cgemm", "zgemm",
+          "zhemm", "zherk", "dsymm", "ssyrk", "dsyrk", "strsm", "dtrsm", "ztrsm"],
+         "#6, #67: routines by level, then by operation, its precisions in BLAS order s, d, c, z");
     });
 
     test("duplicates", function () {
