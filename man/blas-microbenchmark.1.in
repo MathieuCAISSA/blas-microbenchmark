@@ -11,10 +11,11 @@
 .ad l
 .SH NAME
 blas-microbenchmark, bmb_dasum, bmb_daxpy, bmb_dcopy, bmb_ddot, bmb_dnrm2,
-bmb_dscal, bmb_dswap, bmb_saxpy, bmb_sdot, bmb_dgemv, bmb_dger, bmb_dsymv,
-bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemv, bmb_dgemm, bmb_dsymm,
-bmb_dsyrk, bmb_dsyr2k, bmb_dtrmm, bmb_dtrsm, bmb_sgemm, bmb_cgemm,
-bmb_zgemm \- microbenchmarks for BLAS routines
+bmb_dscal, bmb_dswap, bmb_saxpy, bmb_sdot, bmb_zdotc, bmb_dgemv, bmb_dger,
+bmb_dsymv, bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemv, bmb_dgemm,
+bmb_dsymm, bmb_dsyrk, bmb_dsyr2k, bmb_dtrmm, bmb_dtrsm, bmb_sgemm, bmb_cgemm,
+bmb_zgemm, bmb_strsm, bmb_ztrsm, bmb_ssyrk, bmb_zherk,
+bmb_zhemm \- microbenchmarks for BLAS routines
 .SH SYNOPSIS
 .B bmb_\c
 .I routine
@@ -45,9 +46,12 @@ level 3 on matrices:
 .PP
 .TS
 l l.
-Level 1	dasum daxpy dcopy ddot dnrm2 dscal dswap saxpy sdot
-Level 2	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv sgemv
-Level 3	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm sgemm cgemm zgemm
+Level 1	dasum daxpy dcopy ddot dnrm2 dscal dswap
+\&	saxpy sdot zdotc
+Level 2	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv
+\&	sgemv
+Level 3	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm
+\&	sgemm cgemm zgemm strsm ztrsm ssyrk zherk zhemm
 .TE
 .PP
 The first letter is the precision, as in BLAS:
@@ -59,11 +63,13 @@ double,
 single complex,
 .B z
 double complex.
-Every routine is measured in double precision; a few, where the
-precision changes the picture most, in the others too: single precision
-moves half the bytes and fits twice as many numbers in a vector
-register, and a complex multiply\-add does four times the arithmetic of
-a real one on twice the data.
+Every operation is measured in double precision, and the most used ones
+in the others too: single precision moves half the bytes and fits twice
+as many numbers in a vector register, and a complex multiply\-add does
+four times the arithmetic of a real one on twice the data.
+Three exist for complex numbers only: zdotc, the dot product with the
+first vector conjugated, and zherk and zhemm, the Hermitian counterparts
+of dsyrk and dsymm.
 .PP
 Level 1 routines are sized with
 .BR \-v .
@@ -75,9 +81,10 @@ Which dimension is which:
 .PP
 .TS
 l l.
-dgemv sgemv dger dsymm dtrmm dtrsm	\-m is M, \-M is N
+dgemv sgemv dger dsymm zhemm	\-m is M, \-M is N
+dtrmm dtrsm strsm ztrsm	\-m is M, \-M is N
 dgemm sgemm cgemm zgemm	\-m is M and K, \-M is N
-dsyrk dsyr2k	\-m is N, \-M is K
+dsyrk ssyrk zherk dsyr2k	\-m is N, \-M is K
 dsymv dsyr dsyr2 dtrmv dtrsv	\-m is N (square; no \-M)
 .TE
 .SH OPTIONS
@@ -96,8 +103,8 @@ Calls averaged per sample;
 .BR "HOW A NUMBER IS MEASURED" ).
 .B \-\-batch 1
 times every call on its own.
-dtrmv, dtrsv, dtrmm and dtrsm are always timed that way: their operand
-is restored before every call, and a larger
+dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm are always timed that way:
+their operand is restored before every call, and a larger
 .B \-b
 is ignored with a warning.
 Default: 0.
@@ -232,9 +239,10 @@ the conventional operation count of the routine (2\(muM\(muN\(muK for
 dgemm, K\(muN\(mu(N+1) for dsyrk, ...) divided by the time.
 Not shown for dcopy and dswap, which do no arithmetic.
 Complex routines count real operations: a complex multiply\-add is four
-real multiplications and four additions, so cgemm and zgemm count
-8\(muM\(muN\(muK where dgemm counts 2\(muM\(muN\(muK, and their GFLOP/s
-compare with dgemm's.
+real multiplications and four additions, so each counts four times its
+real counterpart's operations (cgemm and zgemm 8\(muM\(muN\(muK where
+dgemm counts 2\(muM\(muN\(muK; zherk four times dsyrk's), and their
+GFLOP/s compare with the real routine's.
 .TP
 .B GB/s
 the bytes the routine must move \(em each operand read once, each result
@@ -259,7 +267,7 @@ Level 3 results are checked by random projection: for a random vector
 .I C*r
 is compared with
 .IR A*(B*r) ,
-and for dtrsm the residual
+and for dtrsm, strsm and ztrsm the residual
 .I U*(X*r)
 with
 .IR B*r .

@@ -121,13 +121,13 @@ static int verify(void *vctx, char *msg, size_t size)
         c0[i] = c0abs[i] = 0.0;
     }
     if (ctx->beta != 0.0f) {
-        bmb_verify_matvec_single(ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
+        bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
     }
     call(ctx);
     bmb_verify_perturb_single(&ctx->c[0]);
-    bmb_verify_matvec_single(ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
-    bmb_verify_matvec_single(ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
-    bmb_verify_matvec_single(ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
+    bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
+    bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
+    bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
         scale[i] = fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];

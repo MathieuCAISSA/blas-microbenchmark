@@ -23,9 +23,14 @@
 typedef enum {
     BMB_VERIFY_FULL,      /* m x n */
     BMB_VERIFY_FULL_T,    /* the transpose of an m x n matrix */
+    BMB_VERIFY_FULL_H,    /* its conjugate transpose: FULL_T for a real one */
     BMB_VERIFY_UPPER,     /* n x n upper triangular, diagonal included; the
                              strictly lower part is not read */
     BMB_VERIFY_SYM_UPPER, /* n x n symmetric, stored in its upper triangle */
+    BMB_VERIFY_HERM_UPPER, /* n x n Hermitian, stored in its upper triangle:
+                              below it, the conjugate of the mirror element;
+                              on the diagonal, the real part only, as BLAS
+                              reads it. SYM_UPPER for a real matrix */
     BMB_VERIFY_LOWER_STRICT /* n x n, its strictly lower part only: where a
                                routine that writes the upper triangle must
                                leave everything as it was */
@@ -42,23 +47,22 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, siz
                        const double *x, const double *xabs,
                        double *y, double *yabs);
 
-/* The FULL product of bmb_verify_matvec for the other precisions, still
- * computed in double. _single reads a float matrix. _complex reads an
- * m x n complex matrix, each element a (real, imaginary) pair, and takes
- * x and gives y the same way (n and m pairs); lda counts elements, not
- * pairs. xabs and yabs stay real, one per element: |re| + |im|, which
- * bounds the size of the two real products in each part of a complex
- * product. */
-void bmb_verify_matvec_single(int column_major, size_t m, size_t n,
+/* The same products for the other precisions, still computed in double.
+ * _single reads a float matrix. _complex reads a complex matrix, each
+ * element a (real, imaginary) pair, and takes x and gives y the same way;
+ * lda counts elements, not pairs. xabs and yabs stay real, one per
+ * element: |re| + |im|, which bounds the size of the two real products in
+ * each part of a complex product. */
+void bmb_verify_matvec_single(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
                               const float *a, size_t lda,
                               const double *x, const double *xabs,
                               double *y, double *yabs);
-void bmb_verify_matvec_complex(int column_major, size_t m, size_t n,
+void bmb_verify_matvec_complex(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
                                const double *a, size_t lda,
                                const double *x, const double *xabs,
                                double *y, double *yabs);
-void bmb_verify_matvec_complex_single(int column_major, size_t m, size_t n,
-                                      const float *a, size_t lda,
+void bmb_verify_matvec_complex_single(bmb_verify_shape_t shape, int column_major,
+                                      size_t m, size_t n, const float *a, size_t lda,
                                       const double *x, const double *xabs,
                                       double *y, double *yabs);
 

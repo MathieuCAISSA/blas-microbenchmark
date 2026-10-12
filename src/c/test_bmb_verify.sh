@@ -33,7 +33,8 @@ for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
         level1/*) sizes="-v 7,64,1000" ;;
         *)
             case $r in
-                dgemv | dger | sgemv | dgemm | dsymm | dsyrk | dsyr2k | dtrmm | dtrsm | sgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64" ;;
+                dgemv | dger | sgemv | dgemm | dsymm | dsyrk | dsyr2k | dtrmm | dtrsm | sgemm | cgemm | zgemm \
+                    | strsm | ztrsm | ssyrk | zherk | zhemm) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac
             ;;
@@ -73,7 +74,7 @@ for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
 
     n=$((n + 1))
 done
-test "$n" -ge 26 || fail "only $n benchmarks found"
+test "$n" -ge 32 || fail "only $n benchmarks found"
 echo "ok   all $n benchmarks pass --verify, in both layouts where they have a matrix, and each one's check catches a corrupted result"
 
 # On by default: no option, and the results are checked.

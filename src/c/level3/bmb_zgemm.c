@@ -1,10 +1,8 @@
 #include <cblas.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <math.h>
 
 #include "bmb_bench.h"
-#include "bmb_log.h"
 #include "bmb_verify.h"
 
 /* dim1 = M = K, dim2 = N, as for dgemm. Every complex number is a pair of
@@ -27,18 +25,9 @@ typedef struct {
     double *c; /* M x N */
 } bmb_ctx_t;
 
-/* The bytes of a rows x cols complex matrix, or 0 where they would wrap
- * size_t: the ceiling the parser puts on a size is for a matrix of real
- * doubles, and a complex one takes twice the bytes. At -m 1073741824,
- * an M x K one would take 2^64, which wraps to 0, a malloc that
- * succeeds and a setup loop that overruns it. */
-static size_t bmb_complex_bytes(size_t rows, size_t cols)
-{
-    if (rows > SIZE_MAX / (2 * sizeof(double)) / cols) {
-        return 0;
-    }
-    return 2 * rows * cols * sizeof(double);
-}
+/* A double complex element is a pair of doubles: 16 bytes, past what the
+ * parser's ceiling covers (bmb_bench_matrix_bytes). */
+#define BMB_Z (2 * sizeof(double))
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
@@ -48,8 +37,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     (void) thread_count;
 
-    if (bmb_complex_bytes(m, k) == 0 || bmb_complex_bytes(k, n) == 0 || bmb_complex_bytes(m, n) == 0) {
-        bmb_log_error("These complex matrices would take more bytes than size_t can count.");
+    if (bmb_bench_matrix_bytes(m, k, BMB_Z) == 0 || bmb_bench_matrix_bytes(k, n, BMB_Z) == 0
+        || bmb_bench_matrix_bytes(m, n, BMB_Z) == 0) {
+        bmb_bench_too_large();
         return NULL;
     }
     ctx = malloc(sizeof(*ctx));
@@ -69,9 +59,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->lda = ctx->col ? ctx->m : ctx->k;
     ctx->ldb = ctx->col ? ctx->k : ctx->n;
     ctx->ldc = ctx->col ? ctx->m : ctx->n;
-    ctx->a = malloc(bmb_complex_bytes(m, k));
-    ctx->b = malloc(bmb_complex_bytes(k, n));
-    ctx->c = malloc(bmb_complex_bytes(m, n));
+    ctx->a = malloc(bmb_bench_matrix_bytes(m, k, BMB_Z));
+    ctx->b = malloc(bmb_bench_matrix_bytes(k, n, BMB_Z));
+    ctx->c = malloc(bmb_bench_matrix_bytes(m, n, BMB_Z));
     if (ctx->a == NULL || ctx->b == NULL || ctx->c == NULL) {
         free(ctx->a);
         free(ctx->b);
@@ -146,13 +136,13 @@ static int verify(void *vctx, char *msg, size_t size)
         c0[2 * i] = c0[2 * i + 1] = c0abs[i] = 0.0;
     }
     if (be[0] != 0.0 || be[1] != 0.0) {
-        bmb_verify_matvec_complex(ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
+        bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
     }
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
-    bmb_verify_matvec_complex(ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
-    bmb_verify_matvec_complex(ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
-    bmb_verify_matvec_complex(ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
+    bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
+    bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
+    bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         double yr = y2[2 * i], yi = y2[2 * i + 1], cr = c0[2 * i], ci = c0[2 * i + 1];
 

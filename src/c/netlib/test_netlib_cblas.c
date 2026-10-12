@@ -78,6 +78,43 @@ static void fill_tri(double *a, int n, int upper)
     }
 }
 
+/* Element (i, j) of a row-major complex matrix with n columns, as the
+ * Hermitian matrix its upper triangle stands for: below, the conjugate of
+ * the mirror element; on the diagonal, the real part only. */
+static void herm(const double *a, int n, int i, int j, double *re, double *im)
+{
+    if (j >= i) {
+        *re = a[2 * (i * n + j)];
+        *im = (j > i) ? a[2 * (i * n + j) + 1] : 0.0;
+    } else {
+        *re = a[2 * (j * n + i)];
+        *im = -a[2 * (j * n + i) + 1];
+    }
+}
+
+/* acc += (ar + i ai)(br + i bi) */
+static void cmac(double *acc, double ar, double ai, double br, double bi)
+{
+    acc[0] += ar * br - ai * bi;
+    acc[1] += ar * bi + ai * br;
+}
+
+/* As check(), within a relative tol: a triangular solve in single
+ * precision is not exact. */
+static void check_tol(const char *name, const double *got, const double *want, int n, double tol)
+{
+    int i;
+
+    for (i = 0; i < n; i++) {
+        if (fabs(got[i] - want[i]) > tol * (1.0 + fabs(want[i]))) {
+            printf("FAIL %-10s [%d]: got %.12g, want %.12g\n", name, i, got[i], want[i]);
+            failures++;
+            return;
+        }
+    }
+    printf("ok   %s\n", name);
+}
+
 int main(void)
 {
     double a[64], b[64], c[64], x[16], y[16], want[64], tmp[64];
@@ -562,6 +599,186 @@ int main(void)
                 got[i] = cc[i];
             }
             check(pass == 0 ? "cgemm.CN" : "cgemm.NC", got, zw, 2 * M * N);
+        }
+    }
+
+    /* ---- #67: zdotc, strsm, ssyrk, ztrsm, zherk, zhemm ---- */
+    {
+        double zx[8], zy[8], dot[2], want2[2] = {0.0, 0.0};
+
+        fill(zx, 8);
+        fill_off(zy, 8, 3);
+        for (i = 0; i < 4; i++) {
+            cmac(want2, zx[2 * i], -zx[2 * i + 1], zy[2 * i], zy[2 * i + 1]);
+        }
+        cblas_zdotc_sub(4, zx, 1, zy, 1, dot);
+        check("zdotc", dot, want2, 2);
+    }
+    {
+        /* strsm, Left/Upper/NoTrans: A*X = alpha*B, checked by substitution */
+        double ad[M * M];
+        float fa[M * M], fb[M * N], fb0[M * N];
+        double got[M * N], want3[M * N];
+
+        fill_tri(ad, M, 1);
+        for (i = 0; i < M * M; i++) {
+            fa[i] = (float) ad[i];
+        }
+        for (i = 0; i < M * N; i++) {
+            fb[i] = fb0[i] = (float) val(i);
+        }
+        cblas_strsm(CblasRowMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit, M, N, 0.5f,
+                    fa, M, fb, N);
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                double acc = 0.0;
+
+                for (l = i; l < M; l++) {
+                    acc += (double) fa[i * M + l] * fb[l * N + j];
+                }
+                got[i * N + j] = acc;
+                want3[i * N + j] = 0.5 * fb0[i * N + j];
+            }
+        }
+        check_tol("strsm.LUN", got, want3, M * N, 1e-5);
+    }
+    {
+        /* ssyrk, Upper/NoTrans: only C's upper triangle is written */
+        float fa[N * K], fc[N * N];
+        double got[N * N], want3[N * N];
+
+        for (i = 0; i < N * K; i++) {
+            fa[i] = (float) val(i);
+        }
+        for (i = 0; i < N * N; i++) {
+            fc[i] = (float) val(i + 5);
+            want3[i] = fc[i];
+        }
+        for (i = 0; i < N; i++) {
+            for (j = i; j < N; j++) {
+                double acc = 0.0;
+
+                for (l = 0; l < K; l++) {
+                    acc += (double) fa[i * K + l] * fa[j * K + l];
+                }
+                want3[i * N + j] = 0.5 * acc + 0.25 * fc[i * N + j];
+            }
+        }
+        cblas_ssyrk(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, 0.5f, fa, K, 0.25f, fc, N);
+        for (i = 0; i < N * N; i++) {
+            got[i] = fc[i];
+        }
+        check("ssyrk.UN", got, want3, N * N);
+    }
+    {
+        /* ztrsm, Left/Upper/ConjTrans: A^H*X = alpha*B, checked by
+         * substitution. The strictly lower part holds values the call must
+         * not read. */
+        double za[2 * M * M], zb[2 * M * N], zb0[2 * M * N], got[2 * M * N], want3[2 * M * N];
+        const double alpha[2] = { 0.5, 0.25 };
+
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < M; j++) {
+                double *e = &za[2 * (i * M + j)];
+
+                e[0] = (i == j) ? 3.0 : (j > i) ? 0.5 : -1.25;
+                e[1] = (i == j) ? 0.5 : (j > i) ? 0.25 : 7.0;
+            }
+        }
+        fill(zb, 2 * M * N);
+        memcpy(zb0, zb, sizeof(zb));
+        cblas_ztrsm(CblasRowMajor, CblasLeft, CblasUpper, CblasConjTrans, CblasNonUnit, M, N, alpha,
+                    za, M, zb, N);
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                double acc[2] = {0.0, 0.0}, w[2] = {0.0, 0.0};
+
+                /* (A^H)(i, l) = conj(A(l, i)), non-zero for l <= i */
+                for (l = 0; l <= i; l++) {
+                    cmac(acc, za[2 * (l * M + i)], -za[2 * (l * M + i) + 1],
+                         zb[2 * (l * N + j)], zb[2 * (l * N + j) + 1]);
+                }
+                cmac(w, alpha[0], alpha[1], zb0[2 * (i * N + j)], zb0[2 * (i * N + j) + 1]);
+                got[2 * (i * N + j)] = acc[0];
+                got[2 * (i * N + j) + 1] = acc[1];
+                want3[2 * (i * N + j)] = w[0];
+                want3[2 * (i * N + j) + 1] = w[1];
+            }
+        }
+        check("ztrsm.LUC", got, want3, 2 * M * N);
+    }
+    {
+        /* zherk, Upper: C = alpha*A*A^H + beta*C (NoTrans, A is N x K) and
+         * C = alpha*A^H*A + beta*C (ConjTrans, A is K x N); alpha and beta
+         * real. The diagonal comes out real, and the lower part as it was. */
+        double za[2 * N * K], zc[2 * N * N], want3[2 * N * N];
+        int pass;
+
+        for (pass = 0; pass < 2; pass++) {
+            fill(za, 2 * N * K);
+            fill_off(zc, 2 * N * N, 5);
+            memcpy(want3, zc, sizeof(zc));
+            for (i = 0; i < N; i++) {
+                for (j = i; j < N; j++) {
+                    double acc[2] = {0.0, 0.0};
+
+                    for (l = 0; l < K; l++) {
+                        /* A(i, l) conj(A(j, l)), or conj(A(l, i)) A(l, j) */
+                        if (pass == 0) {
+                            cmac(acc, za[2 * (i * K + l)], za[2 * (i * K + l) + 1],
+                                 za[2 * (j * K + l)], -za[2 * (j * K + l) + 1]);
+                        } else {
+                            cmac(acc, za[2 * (l * N + i)], -za[2 * (l * N + i) + 1],
+                                 za[2 * (l * N + j)], za[2 * (l * N + j) + 1]);
+                        }
+                    }
+                    want3[2 * (i * N + j)] = 0.5 * acc[0] + 0.25 * zc[2 * (i * N + j)];
+                    want3[2 * (i * N + j) + 1] = (i == j) ? 0.0 : 0.5 * acc[1] + 0.25 * zc[2 * (i * N + j) + 1];
+                }
+            }
+            cblas_zherk(CblasRowMajor, CblasUpper, pass == 0 ? CblasNoTrans : CblasConjTrans, N, K,
+                        0.5, za, pass == 0 ? K : N, 0.25, zc, N);
+            check(pass == 0 ? "zherk.UN" : "zherk.UC", zc, want3, 2 * N * N);
+        }
+    }
+    {
+        /* zhemm, Left and Right, Upper: C = alpha*A*B + beta*C or
+         * alpha*B*A + beta*C, A Hermitian. A's diagonal has an imaginary
+         * part and its lower part other values: neither may be read. */
+        double za[2 * M * M], zb[2 * M * N], zc[2 * M * N], want3[2 * M * N];
+        const double alpha[2] = { 0.5, 0.25 }, beta[2] = { 0.25, -0.5 };
+        int pass;
+
+        for (pass = 0; pass < 2; pass++) {
+            int na = pass == 0 ? M : N; /* A is M x M on the left, N x N on the right */
+
+            fill(za, 2 * na * na);
+            fill(zb, 2 * M * N);
+            fill_off(zc, 2 * M * N, 5);
+            for (i = 0; i < M; i++) {
+                for (j = 0; j < N; j++) {
+                    double acc[2] = {0.0, 0.0}, w[2] = {0.0, 0.0};
+
+                    for (l = 0; l < na; l++) {
+                        double hr, hi;
+
+                        if (pass == 0) {
+                            herm(za, na, i, l, &hr, &hi);
+                            cmac(acc, hr, hi, zb[2 * (l * N + j)], zb[2 * (l * N + j) + 1]);
+                        } else {
+                            herm(za, na, l, j, &hr, &hi);
+                            cmac(acc, zb[2 * (i * N + l)], zb[2 * (i * N + l) + 1], hr, hi);
+                        }
+                    }
+                    cmac(w, alpha[0], alpha[1], acc[0], acc[1]);
+                    cmac(w, beta[0], beta[1], zc[2 * (i * N + j)], zc[2 * (i * N + j) + 1]);
+                    want3[2 * (i * N + j)] = w[0];
+                    want3[2 * (i * N + j) + 1] = w[1];
+                }
+            }
+            cblas_zhemm(CblasRowMajor, pass == 0 ? CblasLeft : CblasRight, CblasUpper, M, N, alpha,
+                        za, na, zb, N, beta, zc, N);
+            check(pass == 0 ? "zhemm.LU" : "zhemm.RU", zc, want3, 2 * M * N);
         }
     }
 

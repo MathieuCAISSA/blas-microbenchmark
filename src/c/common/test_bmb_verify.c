@@ -152,13 +152,13 @@ static void test_matvec_precisions(void)
     double y[4], yabs[2];
     size_t i;
 
-    bmb_verify_matvec_single(0, 2, 3, wide_f, 4, x3, NULL, y, yabs);
+    bmb_verify_matvec_single(BMB_VERIFY_FULL, 0, 2, 3, wide_f, 4, x3, NULL, y, yabs);
     check(same(y, (double[]) {5, 11}, 2) && same(yabs, (double[]) {9, 21}, 2),
           "single: A*x and |A|*|x| on a float 2x3 matrix with lda 4");
 
-    bmb_verify_matvec_complex(0, 2, 2, cz_row, 3, cx, NULL, y, yabs);
+    bmb_verify_matvec_complex(BMB_VERIFY_FULL, 0, 2, 2, cz_row, 3, cx, NULL, y, yabs);
     check(same(y, cwant, 4) && same(yabs, cwabs, 2), "complex: A*x and (|re|+|im|) sizes, row-major, lda 3");
-    bmb_verify_matvec_complex(1, 2, 2, cz_col, 2, cx, NULL, y, yabs);
+    bmb_verify_matvec_complex(BMB_VERIFY_FULL, 1, 2, 2, cz_col, 2, cx, NULL, y, yabs);
     check(same(y, cwant, 4) && same(yabs, cwabs, 2), "complex: the same, column-major");
 
     for (i = 0; i < 12; i++) {
@@ -167,13 +167,82 @@ static void test_matvec_precisions(void)
     for (i = 0; i < 8; i++) {
         cf_col[i] = (float) cz_col[i];
     }
-    bmb_verify_matvec_complex_single(0, 2, 2, cf_row, 3, cx, NULL, y, yabs);
+    bmb_verify_matvec_complex_single(BMB_VERIFY_FULL, 0, 2, 2, cf_row, 3, cx, NULL, y, yabs);
     check(same(y, cwant, 4) && same(yabs, cwabs, 2), "single complex: the same, row-major");
-    bmb_verify_matvec_complex_single(1, 2, 2, cf_col, 2, cx, NULL, y, yabs);
+    bmb_verify_matvec_complex_single(BMB_VERIFY_FULL, 1, 2, 2, cf_col, 2, cx, NULL, y, yabs);
     check(same(y, cwant, 4) && same(yabs, cwabs, 2), "single complex: the same, column-major");
 
-    bmb_verify_matvec_complex(0, 2, 2, cz_row, 3, cx, (double[]) {10, 10}, y, yabs);
+    bmb_verify_matvec_complex(BMB_VERIFY_FULL, 0, 2, 2, cz_row, 3, cx, (double[]) {10, 10}, y, yabs);
     check(same(yabs, (double[]) {70, 30}, 2), "complex: xabs, when given, replaces |re|+|im| of x");
+}
+
+/* The square and transposed shapes of a complex matrix (#67), on the same
+ * A = [1+2i  3-i; i  2] and x = (1+i, 2-i), row- and column-major. A is
+ * neither Hermitian nor real on its diagonal, so HERM_UPPER has to ignore
+ * both the stored lower element and the diagonal's imaginary part. */
+static void test_matvec_complex_shapes(void)
+{
+    static const double cz_row[12] = {
+        1, 2, 3, -1, -100, -100,
+        0, 1, 2, 0, -100, -100,
+    };
+    static const double cz_col[8] = {
+        1, 2, 0, 1,
+        3, -1, 2, 0,
+    };
+    const double cx[4] = {1, 1, 2, -1};
+    struct {
+        bmb_verify_shape_t shape;
+        const char *what;
+        double y[4], yabs[2];
+    } cases[] = {
+        /* (1+2i)(1+i) + (3-i)(2-i) = 4-2i; 2(2-i) = 4-2i */
+        {BMB_VERIFY_UPPER, "UPPER", {4, -2, 4, -2}, {18, 6}},
+        /* nothing; i(1+i) = -1+i */
+        {BMB_VERIFY_LOWER_STRICT, "LOWER_STRICT", {0, 0, -1, 1}, {0, 2}},
+        /* (1-2i)(1+i) + (-i)(2-i) = 2-3i; (3+i)(1+i) + 2(2-i) = 6+2i */
+        {BMB_VERIFY_FULL_H, "FULL_H, the conjugate transpose", {2, -3, 6, 2}, {9, 14}},
+        /* [1  3-i; 3+i  2] times x: 6-4i, 6+2i */
+        {BMB_VERIFY_HERM_UPPER, "HERM_UPPER, ignoring the lower element and the diagonal's imaginary part",
+         {6, -4, 6, 2}, {14, 14}},
+    };
+    double y[4], yabs[2];
+    size_t i;
+
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        char what[160];
+        int ok;
+
+        bmb_verify_matvec_complex(cases[i].shape, 0, 2, 2, cz_row, 3, cx, NULL, y, yabs);
+        ok = same(y, cases[i].y, 4) && same(yabs, cases[i].yabs, 2);
+        bmb_verify_matvec_complex(cases[i].shape, 1, 2, 2, cz_col, 2, cx, NULL, y, yabs);
+        ok = ok && same(y, cases[i].y, 4) && same(yabs, cases[i].yabs, 2);
+        snprintf(what, sizeof(what), "complex %s, row- and column-major", cases[i].what);
+        check(ok, what);
+    }
+}
+
+/* The square shapes in single precision give what they give in double. */
+static void test_matvec_single_shapes(void)
+{
+    const bmb_verify_shape_t shapes[] = {
+        BMB_VERIFY_UPPER, BMB_VERIFY_SYM_UPPER, BMB_VERIFY_LOWER_STRICT, BMB_VERIFY_FULL_T
+    };
+    const double x3[3] = {1, -1, 2};
+    float square_f[12];
+    double y[3], yabs[3], want[3], wabs[3];
+    size_t i, s;
+    int ok = 1;
+
+    for (i = 0; i < 12; i++) {
+        square_f[i] = (float) square[i];
+    }
+    for (s = 0; s < sizeof(shapes) / sizeof(shapes[0]); s++) {
+        bmb_verify_matvec(shapes[s], 0, 3, 3, square, 4, x3, NULL, want, wabs);
+        bmb_verify_matvec_single(shapes[s], 0, 3, 3, square_f, 4, x3, NULL, y, yabs);
+        ok = ok && same(y, want, 3) && same(yabs, wabs, 3);
+    }
+    check(ok, "single UPPER, SYM_UPPER, LOWER_STRICT, FULL_T: the same as in double");
 }
 
 static void test_close(void)
@@ -284,6 +353,8 @@ int main(void)
     test_matvec();
     test_matvec_column_major();
     test_matvec_precisions();
+    test_matvec_complex_shapes();
+    test_matvec_single_shapes();
     test_close();
     test_tolerance();
     test_probe();

@@ -119,6 +119,10 @@ What makes a benchmark wrong without making it fail.
 - [ ] A new option, output field, environment variable or exit status is
   in the man page, with the same default as `--help`
   ([documentation](../doc/dev/documentation.md)).
+- [ ] A man page change passes `BMB_MAN_STRICT=1 make -C man check` with
+  mandoc installed, as the `man` job runs it: mandoc's lint refuses a
+  text line over 80 bytes, which groff renders without a word (#67's
+  first push, checked without mandoc).
 - [ ] The README stays short; the reference is the man page.
 - [ ] `CHANGELOG.md` has an entry under `[Unreleased]` if a user would
   notice the change.

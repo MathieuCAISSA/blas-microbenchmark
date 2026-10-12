@@ -10,12 +10,13 @@ man1_MANS = blas-microbenchmark.1 bmb_report.1
 CLEANFILES = $(man1_MANS)
 
 # One alias page per benchmark, so that "man bmb_dgemm" opens the shared
-# page. Written at install time: 26 one-line files are not worth
+# page. Written at install time: 32 one-line files are not worth
 # keeping in the tree. test_man_content.sh checks this list against the
 # benchmarks actually built.
-ROUTINES = dasum daxpy dcopy ddot dnrm2 dscal dswap saxpy sdot \
+ROUTINES = dasum daxpy dcopy ddot dnrm2 dscal dswap saxpy sdot zdotc \
 	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv sgemv \
-	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm sgemm cgemm zgemm
+	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm sgemm cgemm zgemm \
+	strsm ztrsm ssyrk zherk zhemm
 
 SUBST = v=$$(printf '%s' '$(PACKAGE_VERSION)' | sed 's/-/\\\\-/g') && \
 	d=$$(printf '%s' '$(pkglibexecdir)' | sed -e 's/-/\\\\-/g' -e 's|/|/\\\\:|g') && \

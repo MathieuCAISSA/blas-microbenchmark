@@ -47,7 +47,14 @@ done
 ok "every benchmark built is named in the page and has an alias ($(echo $built | wc -w))"
 
 # The "Routines" table: one row per level, each routine in the right one.
-section $PAGE DESCRIPTION | awk -F'\t' 'NF == 2 && /^Level [123]\t/' >"$T/levels"
+# A level goes on over rows whose first column is empty (\&, the
+# zero-width character, so that the line does not start with a tab), so
+# that the table fits 80 columns: they are joined to it here.
+section $PAGE DESCRIPTION | awk -F'\t' '
+    NF == 2 && /^Level [123]\t/ { if (row != "") print row; row = $0; next }
+    NF == 2 && $1 ~ /^(\\&)?$/ && row != "" { row = row " " $2; next }
+    { if (row != "") print row; row = "" }
+    END { if (row != "") print row }' >"$T/levels"
 test "$(wc -l <"$T/levels")" -eq 3 || fail "the Routines table does not have one row per level"
 in_table=0
 while IFS='	' read -r level routines; do

@@ -49,6 +49,6 @@ for f in "$B"/src/c/level1/bmb_* "$B"/src/c/level2/bmb_* "$B"/src/c/level3/bmb_*
 done
 
 rm -f "$B/verify-sweep.err"
-test "$n" -ge 26 || { echo "only $n benchmarks found in $B"; exit 1; }
+test "$n" -ge 32 || { echo "only $n benchmarks found in $B"; exit 1; }
 test "$failed" -eq 0 || { echo "$failed of $n benchmarks computed a wrong result"; exit 1; }
 echo "all $n benchmarks verified"
