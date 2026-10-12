@@ -27,7 +27,7 @@ of sizes and thread counts, and prints one row per point: the time of a
 call and the rate it achieved.
 All of them take the same options.
 They run against the BLAS library chosen when the package was built
-(OpenBLAS, BLIS, Netlib reference BLAS, NVPL or ArmPL), or, built
+(OpenBLAS, BLIS, Netlib reference BLAS, NVPL, ArmPL or Intel MKL), or, built
 against FlexiBLAS, the one FlexiBLAS loads when they start
 .RB ( FLEXIBLAS ,
 see
@@ -317,6 +317,11 @@ the next variable is read.
 Netlib reference BLAS is single-threaded, and
 .B \-t
 has no effect with it.
+MKL may run a small problem on fewer threads than it is given
+.RB ( MKL_DYNAMIC ,
+on by default);
+.B MKL_DYNAMIC=false
+makes it use them all.
 .PP
 Nothing here sets thread affinity, and operands are allocated and filled by
 the main thread, so on a machine with several NUMA nodes every page lands
@@ -526,6 +531,13 @@ BLIS
 .TP
 NVPL, ArmPL
 .B OMP_NUM_THREADS
+.TP
+MKL
+.BR MKL_NUM_THREADS ,
+.BR OMP_NUM_THREADS .
+The count is set for MKL's BLAS domain, which overrides
+.BR MKL_DOMAIN_NUM_THREADS ;
+a warning says so when it is set.
 .TP
 FlexiBLAS
 those of the library it loaded, as above; none for Netlib.

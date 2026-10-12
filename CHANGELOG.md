@@ -10,6 +10,11 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- An Intel MKL backend (`--with-blas-backend=mkl`): oneAPI MKL from
+  Intel's repository or a module (`MKLROOT`), or Debian and Ubuntu's
+  `libmkl-dev`. `-t` sets MKL's BLAS thread count, above
+  `MKL_DOMAIN_NUM_THREADS`; without it, `MKL_NUM_THREADS` then
+  `OMP_NUM_THREADS`. The Spack package takes `^intel-oneapi-mkl`.
 - A Spack package: `spack repo add` this repository's URL, then
   `spack install blas-microbenchmark ^openblas` (or `^blis`,
   `^netlib-lapack`, `^flexiblas`, `^nvpl-blas`, `^armpl-gcc`); `spack test

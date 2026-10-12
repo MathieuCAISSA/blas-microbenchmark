@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_builddir) $(BMB_NETLIB_CPPFLAGS)
+AM_CPPFLAGS = -I$(top_builddir) $(BMB_CBLAS_CPPFLAGS)
 AM_CFLAGS = $(BMB_WARN_CFLAGS)
 
 noinst_LIBRARIES = libbmbcommon.a
@@ -83,4 +83,4 @@ MACHINE_FIXTURES = \
 	fixtures/machine/amd/sys/devices/system/cpu/cpu2/online \
 	fixtures/machine/amd/sys/devices/system/cpu/cpufreq/boost
 
-EXTRA_DIST = ../netlib/test_netlib_cblas.c $(MACHINE_FIXTURES)
+EXTRA_DIST = ../netlib/test_netlib_cblas.c ../mkl/cblas.h $(MACHINE_FIXTURES)

@@ -48,6 +48,7 @@ NVPL and ArmPL (aarch64-only) aren't installable here on x86_64, nor
 FlexiBLAS on Debian or Ubuntu; see their CI job steps in
 `.github/workflows/ci.yml` for the exact `--with-blas-backend=nvpl`,
 `=armpl` and `=flexiblas` setup (FlexiBLAS's runs in a Fedora container).
+MKL (`=mkl`) comes from Intel's apt repository; its job has the commands.
 
 After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
@@ -188,6 +189,7 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # references), bmb_log, bmb_timer; fixtures/machine/, the
                  # fake /proc and /sys trees of test_bmb_machine
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
+src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot
 src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv, sgemv
 src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm, sgemm, cgemm,
