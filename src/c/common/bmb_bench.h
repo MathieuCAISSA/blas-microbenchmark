@@ -103,4 +103,15 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench);
  * match, and passes the order to CBLAS and to bmb_verify_matvec(). */
 int bmb_bench_column_major(void);
 
+/* For setup(): the bytes of a rows x cols matrix of elements of `size`
+ * bytes, or 0 where that would wrap size_t (rows and cols at least 1).
+ * The ceiling the parser puts on a size keeps a matrix of 8-byte elements
+ * within size_t; a double complex one takes 16, and at -m 1073741824 an
+ * M x M one would take 2^64, which wraps to 0: a malloc that succeeds and
+ * a setup loop that overruns it. A routine with larger elements checks
+ * its matrices with this, and refuses the size with
+ * bmb_bench_too_large(). */
+size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size);
+void bmb_bench_too_large(void);
+
 #endif /* BMB_BENCH_H */

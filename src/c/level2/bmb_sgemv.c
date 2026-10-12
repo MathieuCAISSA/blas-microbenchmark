@@ -118,7 +118,7 @@ static int verify(void *vctx, char *msg, size_t size)
     }
     call(ctx);
     bmb_verify_perturb_single(&ctx->y[0]);
-    bmb_verify_matvec_single(ctx->col, m, n, ctx->a, (size_t) ctx->lda, x, NULL, t, tabs);
+    bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, x, NULL, t, tabs);
     for (i = 0; i < m; i++) {
         got[i] = ctx->y[i];
         want[i] = ctx->alpha * t[i] + ctx->beta * y0[i];

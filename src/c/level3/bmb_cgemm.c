@@ -126,13 +126,13 @@ static int verify(void *vctx, char *msg, size_t size)
         c0[2 * i] = c0[2 * i + 1] = c0abs[i] = 0.0;
     }
     if (be[0] != 0.0f || be[1] != 0.0f) {
-        bmb_verify_matvec_complex_single(ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
+        bmb_verify_matvec_complex_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
     }
     call(ctx);
     bmb_verify_perturb_single(&ctx->c[0]);
-    bmb_verify_matvec_complex_single(ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
-    bmb_verify_matvec_complex_single(ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
-    bmb_verify_matvec_complex_single(ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
+    bmb_verify_matvec_complex_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
+    bmb_verify_matvec_complex_single(BMB_VERIFY_FULL, ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
+    bmb_verify_matvec_complex_single(BMB_VERIFY_FULL, ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         double yr = y2[2 * i], yi = y2[2 * i + 1], cr = c0[2 * i], ci = c0[2 * i + 1];
 
