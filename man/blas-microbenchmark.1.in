@@ -336,6 +336,17 @@ the main thread, so on a machine with several NUMA nodes every page lands
 on that thread's node.
 Both matter as soon as more than one thread runs; see
 .BR EXAMPLES .
+.PP
+Threads beyond the CPUs the process may run on take turns, and the
+timings measure that.
+A warning says so when the largest thread count is more than those CPUs:
+the ones its affinity allows
+.RB ( taskset ,
+a Slurm job, a cpuset), capped by the CPU quota of its cgroup (cgroup v2
+.IR cpu.max ,
+which
+.B docker run \-\-cpus
+sets).
 .SH HARDWARE COUNTERS
 GFLOP/s and GB/s say how fast, not why.
 Hardware counters \(em instructions, cycles, cache misses, the

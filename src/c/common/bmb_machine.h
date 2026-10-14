@@ -30,6 +30,9 @@ typedef struct {
 typedef struct {
     char cpu[256];                 /* model name; "" when unknown */
     long logical_cpus;             /* 0 when unknown */
+    long usable_cpus;              /* the CPUs this process may run on: its
+                                    * affinity, capped by its cgroup's CPU
+                                    * quota; 0 when unknown */
     int numa_nodes;                /* 0 when unknown */
     bmb_cache_t caches[BMB_MACHINE_MAX_CACHES];
     int cache_count;
@@ -51,8 +54,9 @@ const bmb_machine_t *bmb_machine(void);
 /* Probes as though procfs and sysfs were mounted under `root` ("" for the
  * real ones), which is what bmb_machine() does with "". It exists so the
  * paths that only occur elsewhere -- an aarch64 /proc/cpuinfo with no model
- * name, a container without sysfs -- can be tested on any machine. The
- * logical CPU count, the OS and the date still come from the real system. */
+ * name, a container without sysfs, a CPU quota -- can be tested on any
+ * machine. The logical CPU count, the OS and the date still come from the
+ * real system. */
 void bmb_machine_probe_at(const char *root, bmb_machine_t *m);
 
 /* "Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)", or as

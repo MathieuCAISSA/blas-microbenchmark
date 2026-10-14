@@ -1,0 +1,2 @@
+Name:	bmb_dgemm
+Cpus_allowed_list:	0-3

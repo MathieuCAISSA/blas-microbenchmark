@@ -63,6 +63,31 @@ spack install blas-microbenchmark ^openblas
 spack load blas-microbenchmark
 ```
 
+In a container, with Docker: the image is built from a git clone,
+against OpenBLAS, or the library that `BLAS_BACKEND` names (`blis`,
+`netlib` or `mkl`). The benchmarks are on its `PATH`, and it writes to
+`/results`, here the current directory:
+
+```bash
+docker build -f packaging/docker/Dockerfile --build-arg BLAS_BACKEND=openblas -t blas-microbenchmark .
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/results" blas-microbenchmark bmb_dgemm -m 64:1024 -o dgemm.json
+```
+
+HPC sites run containers with Apptainer instead. Save the image where
+Docker is, then convert it where Apptainer is, which writes in the current
+directory as you:
+
+```bash
+docker save -o blas-microbenchmark.tar blas-microbenchmark
+apptainer build blas-microbenchmark.sif docker-archive://blas-microbenchmark.tar
+apptainer exec blas-microbenchmark.sif bmb_dgemm -m 64:1024 -o dgemm.json
+```
+
+A container runs on the host's CPU, which is what the results record. Docker's
+`--cpus` and `--cpuset-cpus` leave the benchmark fewer CPUs than it sees, and
+`-t` beyond those gets a warning. Docker Desktop runs containers in a virtual
+machine, whose own limits the numbers include.
+
 ## Quick start
 
 ```

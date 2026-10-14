@@ -127,9 +127,28 @@ static void test_fixtures(void)
     bmb_machine_frequency_advice(&m, buf, sizeof(buf));
     check_str(buf, "", "aarch64 fixture: nothing known, no advice");
 
+    check(m.usable_cpus == 0, "aarch64 fixture: no affinity or quota, usable CPUs unknown");
+
+    fixture("container", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check(m.usable_cpus == 3, "container: an affinity of 5 CPUs, a quota of 2.5 rounded up to 3");
+
+    fixture("slurm", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check(m.usable_cpus == 2, "slurm: no quota of its own, its parent's 2 apply under an affinity of 8");
+
+    fixture("pinned", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check(m.usable_cpus == 1, "pinned: an affinity of 1 under a quota of 4; the v1 lines skipped");
+
+    fixture("bad-quota", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check(m.usable_cpus == 4, "bad-quota: a period of -100000 is not read; the affinity of 4 stands");
+
     fixture("does-not-exist", root, sizeof(root));
     bmb_machine_probe_at(root, &m);
     check_str(m.cpu, "", "nothing readable: no CPU name");
+    check(m.usable_cpus == 0, "nothing readable: usable CPUs unknown");
     check(m.os[0] != '\0' && m.date[0] != '\0', "nothing readable: os and date still from the real system");
 }
 

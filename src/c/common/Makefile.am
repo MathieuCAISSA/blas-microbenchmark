@@ -81,6 +81,19 @@ MACHINE_FIXTURES = \
 	fixtures/machine/amd/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor \
 	fixtures/machine/amd/sys/devices/system/cpu/cpu1/cpufreq/scaling_governor \
 	fixtures/machine/amd/sys/devices/system/cpu/cpu2/online \
-	fixtures/machine/amd/sys/devices/system/cpu/cpufreq/boost
+	fixtures/machine/amd/sys/devices/system/cpu/cpufreq/boost \
+	fixtures/machine/container/proc/self/status \
+	fixtures/machine/container/proc/self/cgroup \
+	fixtures/machine/container/sys/fs/cgroup/cpu.max \
+	fixtures/machine/slurm/proc/self/status \
+	fixtures/machine/slurm/proc/self/cgroup \
+	fixtures/machine/slurm/sys/fs/cgroup/job/cpu.max \
+	fixtures/machine/slurm/sys/fs/cgroup/job/step/cpu.max \
+	fixtures/machine/pinned/proc/self/status \
+	fixtures/machine/pinned/proc/self/cgroup \
+	fixtures/machine/pinned/sys/fs/cgroup/user.slice/cpu.max \
+	fixtures/machine/bad-quota/proc/self/status \
+	fixtures/machine/bad-quota/proc/self/cgroup \
+	fixtures/machine/bad-quota/sys/fs/cgroup/cpu.max
 
 EXTRA_DIST = ../netlib/test_netlib_cblas.c ../mkl/cblas.h $(MACHINE_FIXTURES)

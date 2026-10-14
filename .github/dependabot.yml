@@ -11,3 +11,10 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: CI
+  # The Docker image's base (packaging/docker/Dockerfile), pinned by digest.
+  - package-ecosystem: docker
+    directory: /packaging/docker
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: Docker

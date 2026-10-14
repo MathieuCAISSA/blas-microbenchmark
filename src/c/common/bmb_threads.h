@@ -12,6 +12,12 @@
  * command-line value wins. Must be called once, after bmb_options_parse(). */
 void bmb_threads_resolve(bmb_options_t *opts);
 
+/* Warns when the run asks the backend for more threads than the
+ * `usable_cpus` this process may run on (bmb_machine_t; 0 is unknown):
+ * they would take turns on the CPUs, and the timings would measure that.
+ * Silent for a backend that takes no thread count. */
+void bmb_threads_check_usable(const bmb_options_t *opts, long usable_cpus);
+
 /* Applies the given thread count to the underlying BLAS backend, when the
  * backend exposes a runtime thread-count API. No-op otherwise. */
 void bmb_threads_set(unsigned int count);

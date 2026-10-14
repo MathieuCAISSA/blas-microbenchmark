@@ -52,6 +52,12 @@ BLIS, Netlib and FlexiBLAS, from this commit's tarball and from the
 latest release, and runs its tests (`spack test run`), through
 `.github/spack-check.sh`; see [packaging](packaging.md#in-ci).
 
+The `docker` job builds the Docker image once per backend it offers
+(OpenBLAS, BLIS, Netlib, MKL) and runs every benchmark from it, then
+what a user of the image relies on: `man`, results in a mounted
+directory, the warning under a CPU quota, and, once, hadolint and
+Apptainer; see [packaging](packaging.md#in-ci-1).
+
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 

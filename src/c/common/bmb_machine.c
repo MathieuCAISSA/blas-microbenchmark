@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <dirent.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -250,6 +251,122 @@ static void bmb_probe_turbo(bmb_machine_t *m, const char *root)
     }
 }
 
+/* "0-3,8,10-11" is 7 CPUs. 0 when it does not parse. */
+static long bmb_count_cpu_list(const char *list)
+{
+    const char *p = list;
+    long count = 0;
+
+    while (*p != '\0') {
+        char *end;
+        unsigned long first = strtoul(p, &end, 10);
+        unsigned long last = first;
+
+        if (end == p || !isdigit((unsigned char) *p)) {
+            return 0;
+        }
+        p = end;
+        if (*p == '-') {
+            p++;
+            last = strtoul(p, &end, 10);
+            if (end == p || !isdigit((unsigned char) *p) || last < first) {
+                return 0;
+            }
+            p = end;
+        }
+        count += (long) (last - first + 1);
+        if (*p == ',') {
+            p++;
+        } else if (*p != '\0') {
+            return 0;
+        }
+    }
+    return count;
+}
+
+/* cpu.max is "max 100000" (no quota) or "<quota> <period>" in microseconds;
+ * a quota of 2.5 periods is 3 CPUs' worth of threads. 0 when there is none. */
+static long bmb_read_cpu_max(const char *path)
+{
+    char line[64];
+    char *end;
+    unsigned long long quota, period;
+
+    if (bmb_read_line(path, line, sizeof(line)) != 0 || !isdigit((unsigned char) line[0])) {
+        return 0;
+    }
+    quota = strtoull(line, &end, 10);
+    if (*end != ' ' || !isdigit((unsigned char) end[1])) {
+        return 0;
+    }
+    period = strtoull(end + 1, &end, 10);
+    if (*end != '\0' || quota == 0 || period == 0 || quota / period >= (unsigned long long) LONG_MAX) {
+        return 0;
+    }
+    return (long) (quota / period + (quota % period != 0));
+}
+
+/* What threads can actually run at once. The affinity (Cpus_allowed_list)
+ * is what taskset, cpusets, Slurm and docker --cpuset-cpus restrict; the
+ * cgroup v2 quota (cpu.max) is what docker --cpus and systemd's CPUQuota
+ * set. A quota anywhere above the process's cgroup applies to it too, so
+ * every level is read, up to the root -- which, in a container with its
+ * own cgroup namespace, is the container's cgroup and has a cpu.max. */
+static void bmb_probe_usable_cpus(bmb_machine_t *m, const char *root)
+{
+    char path[512];
+    char line[512];
+    char cgroup[256] = "";
+    FILE *f;
+    long usable = 0;
+
+    snprintf(path, sizeof(path), "%s/proc/self/status", root);
+    f = fopen(path, "r");
+    if (f != NULL) {
+        while (fgets(line, sizeof(line), f) != NULL) {
+            if (strncmp(line, "Cpus_allowed_list:", 18) == 0) {
+                bmb_trim(line + 18);
+                usable = bmb_count_cpu_list(line + 18);
+                break;
+            }
+        }
+        fclose(f);
+    }
+
+    snprintf(path, sizeof(path), "%s/proc/self/cgroup", root);
+    f = fopen(path, "r");
+    if (f != NULL) {
+        while (fgets(line, sizeof(line), f) != NULL) {
+            if (strncmp(line, "0::/", 4) == 0) {
+                /* A path cut short would lead to another cgroup's quota. */
+                bmb_trim(line);
+                if (strlen(line + 3) < sizeof(cgroup)) {
+                    memcpy(cgroup, line + 3, strlen(line + 3) + 1);
+                }
+                break;
+            }
+        }
+        fclose(f);
+    }
+    while (cgroup[0] == '/') {
+        char *slash;
+        long quota;
+
+        snprintf(path, sizeof(path), "%s/sys/fs/cgroup%s/cpu.max", root,
+                 (strcmp(cgroup, "/") == 0) ? "" : cgroup);
+        quota = bmb_read_cpu_max(path);
+        if (quota > 0 && (usable == 0 || quota < usable)) {
+            usable = quota;
+        }
+        if (strcmp(cgroup, "/") == 0) {
+            break;
+        }
+        slash = strrchr(cgroup, '/');
+        slash[(slash == cgroup) ? 1 : 0] = '\0';
+    }
+    m->usable_cpus = usable;
+}
+
 void bmb_machine_probe_at(const char *root, bmb_machine_t *m)
 {
     struct utsname u;
@@ -268,6 +385,7 @@ void bmb_machine_probe_at(const char *root, bmb_machine_t *m)
     }
 #endif
 
+    bmb_probe_usable_cpus(m, root);
     bmb_probe_numa(m, root);
     bmb_probe_caches(m, root);
     bmb_probe_governor(m, root);

@@ -1,7 +1,8 @@
 # Packaging
 
-The Spack package, how it is tested, and how it follows a release. Start
-at [AGENTS.md](../../AGENTS.md).
+The Spack package and the Docker image: how each is built and tested,
+and how the Spack package follows a release. Start at
+[AGENTS.md](../../AGENTS.md).
 
 ## The Spack package
 
@@ -126,3 +127,78 @@ The goal is the package in Spack's own repository,
 be copied there as is; their CI then runs its own checks on it.
 This copy stays the reference: it is tested here against every change,
 and a version is added here first.
+
+## The Docker image
+
+`packaging/docker/Dockerfile` builds an image from the source tree,
+against the BLAS that `BLAS_BACKEND` names: `openblas` (the default),
+`blis`, `netlib` or `mkl`. The README gives the commands, for Docker and
+Apptainer. It is built from the top of the repository
+(`docker build -f packaging/docker/Dockerfile .`), and
+`Dockerfile.dockerignore` beside it, which Docker reads for that
+Dockerfile instead of a `.dockerignore` at the top, keeps out the
+history, the build directories and what `autoreconf` makes again.
+
+- **Two stages.** The first installs Autotools, a compiler and the
+  `-dev` package, runs `autoreconf -fi`, `configure`, `make` and
+  `make install DESTDIR=/stage`; the second installs only the run-time
+  library and copies `/stage` in. A table in each stage names the
+  packages:
+
+  | `BLAS_BACKEND` | built with | runs with |
+  |---|---|---|
+  | `openblas` | `libopenblas-dev` | `libopenblas0-pthread` |
+  | `blis` | `libblis-openmp-dev` | `libblis4-openmp` |
+  | `netlib` | `libblas-dev` | `libblas3` |
+  | `mkl` | Intel's repository (`.github/install-oneapi-mkl.sh`) | `libgomp1`, and MKL's libraries copied |
+
+  FlexiBLAS is not there: Ubuntu has no package of it.
+- **MKL** is not a package the final stage can install without
+  gigabytes, so its libraries are copied, where the benchmarks'
+  RUNPATH looks (`/opt/intel/oneapi/mkl/latest/lib`): the GNU OpenMP
+  layer, the core, and the per-CPU kernels (`libmkl_def`, `mc3`,
+  `avx*`), which the core opens at run time and `ldd` does not list.
+  Intel's licence files go with them, in
+  `/usr/local/share/doc/intel-oneapi-mkl`. A library missing there
+  fails the image's own check (below) only on a CPU that needs it, so
+  a new MKL that renames its kernels needs the list updated.
+- **A tree configured in place** (`./configure` at the top rather than
+  in `build/`) has a `config.status` and Makefiles that would build into
+  the image instead of the sources; the build refuses it and says to run
+  `make distclean`.
+- **The checks it makes itself.** The final stage runs one tiny,
+  verified benchmark per level (`bmb_zherk` among them): a library the
+  benchmarks load but the stage lacks fails the build, not the user's
+  first run.
+- **Running it.** The benchmarks' three directories are on `PATH`. It
+  runs as `bmb` (uid and gid 1001, numeric in `USER`, as hadolint asks),
+  not root, in `/results`; `--user "$(id -u):$(id -g)"`
+  makes what it writes to a mounted `/results` the host user's. man-db
+  is installed, and Ubuntu's minimized image's stub in place of `man` is
+  removed, so that `man blas-microbenchmark` works.
+- **Pins.** The base image is pinned by digest in both `FROM` lines;
+  Dependabot proposes the new digest (`.github/dependabot.yml`). The
+  distribution's packages are whatever its archive holds, as on the CI
+  runners.
+- **A CPU quota.** In a container, `/proc/cpuinfo` and `sysconf` show
+  the host's CPUs. What the process may use is read from its affinity
+  and from its cgroup's `cpu.max` (`bmb_machine.c`; see
+  [backends](backends.md)), and `-t` beyond it gets a warning.
+
+### In CI
+
+The `docker` job builds the image for each of the four backends, then
+runs, from it: every benchmark with `--verify`, in both storage orders,
+on 1 and 2 threads; `man`; a result written to a mounted directory as
+the runner's user, turned into a page by `bmb_report`; and the warning
+under `--cpus 1` and `--cpuset-cpus 0,1`, and its absence under
+`--cpus 2` with `-t 2`. Once (the `openblas` leg), hadolint checks the
+Dockerfile, and Apptainer converts the saved image to a SIF file and
+runs a benchmark and `bmb_report` from it, as the README says to.
+
+### Publishing
+
+The image is not published. Pushing it to `ghcr.io` from the release
+workflow, with a provenance attestation as the tarball has (#13), is
+the obvious next step; an MKL image would also redistribute Intel's
+libraries, under Intel's licence.

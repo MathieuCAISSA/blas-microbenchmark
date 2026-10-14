@@ -423,6 +423,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     if (advice[0] != '\0') {
         bmb_log_warning(advice);
     }
+    bmb_threads_check_usable(&opts, bmb_machine()->usable_cpus);
 
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);

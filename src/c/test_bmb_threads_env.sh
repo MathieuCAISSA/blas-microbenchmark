@@ -8,6 +8,8 @@
 # variables are not read. The thread count is read back from the table and
 # the JSON, where a wrong one would end up in the report. Under MKL, a
 # count per domain (MKL_DOMAIN_NUM_THREADS) is overridden with a warning.
+# More threads than the CPUs the process may run on (its affinity, its
+# cgroup's quota) are warned about, on a fixture.
 set -e
 
 T=threads-env-test.d
@@ -99,6 +101,29 @@ quiet() {
 expect 1 ""
 quiet "no variable"
 ok "nothing set: 1 thread"
+
+# More threads than the process may run on: the container fixture's
+# affinity of 5 CPUs under a quota of 2.5, so 3. A backend that is given
+# the thread count is warned about it; one that takes none (Netlib, also
+# as FlexiBLAS's) is not, since its threads are not ours.
+root=${srcdir:?srcdir is not set}/common/fixtures/machine/container
+takes=yes
+[ -n "$vars" ] || takes=no
+cpus_warning="may only run on 3 CPUs"
+expect 3 "-t 3" "BMB_MACHINE_ROOT=$root"
+if grep -qF "$cpus_warning" "$T/err"; then
+    fail "-t 3 on 3 usable CPUs was warned about: $(cat "$T/err")"
+fi
+BMB_MACHINE_ROOT=$root "$B" -x 0 -i 1 -v 8 -C -t 1,4 >/dev/null 2>"$T/err" \
+    || fail "-t 1,4 on the container fixture: exit $?: $(cat "$T/err")"
+if [ "$takes" = yes ]; then
+    warned "The run uses up to 4 threads, but this process may only run on 3 CPUs"
+    ok "-t 1,4 on 3 usable CPUs: a warning, naming the most threads"
+elif grep -qF "$cpus_warning" "$T/err"; then
+    fail "a backend that takes no thread count was warned about CPUs: $(cat "$T/err")"
+else
+    ok "a backend that takes no thread count: no warning about CPUs"
+fi
 
 if [ -z "$vars" ]; then
     for v in $all; do
