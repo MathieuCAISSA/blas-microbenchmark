@@ -744,6 +744,99 @@ jobs:
             build/**/*.sh.log
           if-no-files-found: ignore
 
+  # The Docker image (packaging/docker), per backend, as a user builds it;
+  # its last stage already runs one tiny benchmark per level. From the
+  # image: every benchmark verified, the man pages, a result written to a
+  # mounted directory as the host's user and turned into a report, and the
+  # warning that a CPU quota or affinity smaller than -t gets. Once, the
+  # Dockerfile's lint, and the image converted and run by Apptainer.
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [openblas, blis, netlib, mkl]
+    env:
+      BACKEND: ${{ matrix.backend }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: hadolint
+        if: matrix.backend == 'openblas'
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: packaging/docker/Dockerfile
+
+      - name: Build the image
+        run: docker build -f packaging/docker/Dockerfile --build-arg BLAS_BACKEND="$BACKEND" -t bmb .
+
+      - name: Provenance
+        run: |
+          docker run --rm bmb bmb_ddot --version | tee version.txt
+          grep -q "^BLAS backend: $BACKEND\( \|$\)" version.txt
+          test "$(docker run --rm bmb id -un)" = bmb
+
+      - name: Every benchmark, verified in the image
+        run: |
+          docker run --rm bmb sh -ec '
+            n=0
+            for b in /usr/local/libexec/blas-microbenchmark/level*/bmb_*; do
+              case $b in
+                */level1/*) "$b" -x 0 -i 1 -t 1,2 -v 1000 >/dev/null ;;
+                *) "$b" -x 0 -i 1 -t 1,2 -m 48 --layout col >/dev/null
+                   "$b" -x 0 -i 1 -t 1,2 -m 48 >/dev/null ;;
+              esac
+              n=$((n + 1))
+            done
+            test "$n" -ge 32
+            echo "all $n benchmarks verified"'
+
+      - name: Man pages
+        run: |
+          docker run --rm -e MANPAGER=cat bmb man blas-microbenchmark | grep -q 'bmb_dgemm'
+          docker run --rm -e MANPAGER=cat bmb man bmb_report | grep -q 'bmb_report'
+
+      - name: Results to a mounted directory, then the report
+        run: |
+          mkdir out
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/results" bmb \
+            bmb_dgemm -x 0 -i 1 -m 32:64 -o dgemm.json >/dev/null
+          test "$(stat -c %u out/dgemm.json)" = "$(id -u)"
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/results" bmb \
+            bmb_report dgemm.json > report.html
+          grep -qi '^<!doctype html>' report.html
+
+      # Netlib takes no thread count, so there is nothing to warn about.
+      - name: A CPU quota or affinity smaller than -t is warned about
+        if: matrix.backend != 'netlib'
+        run: |
+          docker run --rm --cpus 1 bmb bmb_dgemm -x 0 -i 1 -m 32 -t 2 2>err >/dev/null
+          cat err
+          grep -q 'may only run on 1 CPU (' err
+          docker run --rm --cpuset-cpus 0,1 bmb bmb_dgemm -x 0 -i 1 -m 32 -t 4 2>err >/dev/null
+          cat err
+          grep -q 'up to 4 threads, but this process may only run on 2 CPUs' err
+          docker run --rm --cpus 2 bmb bmb_dgemm -x 0 -i 1 -m 32 -t 2 2>err >/dev/null
+          if grep -q 'may only run on' err; then cat err; exit 1; fi
+
+      # As the README has it: saved where Docker is, converted to a SIF file
+      # where Apptainer is. Apptainer's own package, pinned by its checksum
+      # as the actions are by commit.
+      - name: Apptainer
+        if: matrix.backend == 'openblas'
+        run: |
+          deb=apptainer_1.5.4_amd64.deb
+          curl -fsSLO "https://github.com/apptainer/apptainer/releases/download/v1.5.4/$deb"
+          echo "281cf9bd68f16b6f7c34a3a94d77668bc327b9c09db0412ce7890162734a97f7  $deb" | sha256sum -c
+          sudo apt-get update
+          sudo apt-get install -y "./$deb"
+          docker save -o bmb.tar bmb
+          apptainer build bmb.sif docker-archive://bmb.tar
+          apptainer exec bmb.sif bmb_dgemm -x 0 -i 1 -m 32 -o sif.json >/dev/null
+          apptainer exec bmb.sif bmb_report sif.json > sif.html
+          grep -qi '^<!doctype html>' sif.html
+
   # The Spack package (packaging/spack), as an HPC user installs it: built
   # by Spack against each BLAS it can build on x86_64, from this commit's
   # tarball and from the latest release's, then checked by its own tests
