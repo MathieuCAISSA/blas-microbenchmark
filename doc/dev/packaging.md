@@ -171,7 +171,8 @@ history, the build directories and what `autoreconf` makes again.
   benchmarks load but the stage lacks fails the build, not the user's
   first run.
 - **Running it.** The benchmarks' three directories are on `PATH`. It
-  runs as `bmb`, not root, in `/results`; `--user "$(id -u):$(id -g)"`
+  runs as `bmb` (uid and gid 1001, numeric in `USER`, as hadolint asks),
+  not root, in `/results`; `--user "$(id -u):$(id -g)"`
   makes what it writes to a mounted `/results` the host user's. man-db
   is installed, and Ubuntu's minimized image's stub in place of `man` is
   removed, so that `man blas-microbenchmark` works.

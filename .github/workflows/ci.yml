@@ -794,8 +794,10 @@ jobs:
 
       - name: Man pages
         run: |
-          docker run --rm -e MANPAGER=cat bmb man blas-microbenchmark | grep -q 'bmb_dgemm'
-          docker run --rm -e MANPAGER=cat bmb man bmb_report | grep -q 'bmb_report'
+          docker run --rm -e MANPAGER=cat bmb man blas-microbenchmark > man.txt
+          grep -q 'bmb_dgemm' man.txt
+          docker run --rm -e MANPAGER=cat bmb man bmb_report > man.txt
+          grep -q 'bmb_report' man.txt
 
       - name: Results to a mounted directory, then the report
         run: |

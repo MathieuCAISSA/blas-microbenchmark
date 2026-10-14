@@ -74,7 +74,8 @@ LABEL org.opencontainers.image.title="blas-microbenchmark" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 # The minimized image diverts man to a stub that only says so; man-db's
-# own is put back. The results go to /results, the user's.
+# own is put back. The results go to /results, which belongs to bmb,
+# 1001 (ubuntu is 1000): numeric, so that the host can resolve it.
 # hadolint ignore=DL3008,SC2086
 RUN case "$BLAS_BACKEND" in \
         openblas) blas=libopenblas0-pthread ;; \
@@ -88,9 +89,10 @@ RUN case "$BLAS_BACKEND" in \
     && if [ -e /usr/bin/man.REAL ]; then \
         rm /usr/bin/man && dpkg-divert --quiet --remove --rename /usr/bin/man; \
     fi \
-    && useradd --create-home --shell /bin/bash bmb \
+    && groupadd --gid 1001 bmb \
+    && useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash bmb \
     && mkdir /results \
-    && chown bmb:bmb /results
+    && chown 1001:1001 /results
 
 COPY --from=build /stage/ /
 ENV PATH=/usr/local/libexec/blas-microbenchmark/level1:/usr/local/libexec/blas-microbenchmark/level2:/usr/local/libexec/blas-microbenchmark/level3:$PATH
@@ -103,5 +105,5 @@ RUN bmb_ddot --version \
     && bmb_dgemm -x 0 -i 1 -m 32 >/dev/null \
     && bmb_zherk -x 0 -i 1 -m 32 >/dev/null
 
-USER bmb
+USER 1001:1001
 WORKDIR /results

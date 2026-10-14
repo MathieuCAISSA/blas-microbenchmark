@@ -25,3 +25,6 @@ against what kernels actually write.
   pinned/   taskset -c 2 on a hybrid cgroup v1/v2 system: one CPU of
             affinity under a quota of 4, so the affinity is the limit;
             the v1 lines before the "0::" one are not read.
+  bad-quota/ a cpu.max whose period is not a number (-100000, which
+            strtoull would wrap to a huge one): the quota is not read,
+            and the affinity of 4 CPUs stands.

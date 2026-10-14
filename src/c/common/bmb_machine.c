@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <dirent.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -295,14 +296,14 @@ static long bmb_read_cpu_max(const char *path)
         return 0;
     }
     quota = strtoull(line, &end, 10);
-    if (*end != ' ') {
+    if (*end != ' ' || !isdigit((unsigned char) end[1])) {
         return 0;
     }
     period = strtoull(end + 1, &end, 10);
-    if (*end != '\0' || quota == 0 || period == 0) {
+    if (*end != '\0' || quota == 0 || period == 0 || quota / period >= (unsigned long long) LONG_MAX) {
         return 0;
     }
-    return (long) ((quota + period - 1) / period);
+    return (long) (quota / period + (quota % period != 0));
 }
 
 /* What threads can actually run at once. The affinity (Cpus_allowed_list)

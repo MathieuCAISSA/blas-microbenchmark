@@ -63,7 +63,7 @@ spack install blas-microbenchmark ^openblas
 spack load blas-microbenchmark
 ```
 
-In a container, with Docker: the image is built from the source tree,
+In a container, with Docker: the image is built from a git clone,
 against OpenBLAS, or the library that `BLAS_BACKEND` names (`blis`,
 `netlib` or `mkl`). The benchmarks are on its `PATH`, and it writes to
 `/results`, here the current directory:

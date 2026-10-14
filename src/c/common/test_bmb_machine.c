@@ -141,6 +141,10 @@ static void test_fixtures(void)
     bmb_machine_probe_at(root, &m);
     check(m.usable_cpus == 1, "pinned: an affinity of 1 under a quota of 4; the v1 lines skipped");
 
+    fixture("bad-quota", root, sizeof(root));
+    bmb_machine_probe_at(root, &m);
+    check(m.usable_cpus == 4, "bad-quota: a period of -100000 is not read; the affinity of 4 stands");
+
     fixture("does-not-exist", root, sizeof(root));
     bmb_machine_probe_at(root, &m);
     check_str(m.cpu, "", "nothing readable: no CPU name");

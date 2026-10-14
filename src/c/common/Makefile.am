@@ -91,6 +91,9 @@ MACHINE_FIXTURES = \
 	fixtures/machine/slurm/sys/fs/cgroup/job/step/cpu.max \
 	fixtures/machine/pinned/proc/self/status \
 	fixtures/machine/pinned/proc/self/cgroup \
-	fixtures/machine/pinned/sys/fs/cgroup/user.slice/cpu.max
+	fixtures/machine/pinned/sys/fs/cgroup/user.slice/cpu.max \
+	fixtures/machine/bad-quota/proc/self/status \
+	fixtures/machine/bad-quota/proc/self/cgroup \
+	fixtures/machine/bad-quota/sys/fs/cgroup/cpu.max
 
 EXTRA_DIST = ../netlib/test_netlib_cblas.c ../mkl/cblas.h $(MACHINE_FIXTURES)

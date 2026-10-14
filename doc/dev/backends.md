@@ -75,7 +75,7 @@ container's quota is the root's `cpu.max`. cgroup v1 quotas are not
 read. The count is not recorded in the results, only compared with the
 largest `-t` before the run (`bmb_threads_check_usable()`): more threads
 than that get a warning, except under a backend that takes no thread
-count (Netlib).
+count (Netlib, also when FlexiBLAS loaded it).
 
 **`BMB_MACHINE_ROOT=DIR`** makes `bmb_machine()` probe `DIR/proc` and
 `DIR/sys` instead of the real ones, as `test_bmb_machine` does through

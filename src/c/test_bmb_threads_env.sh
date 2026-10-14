@@ -104,15 +104,11 @@ ok "nothing set: 1 thread"
 
 # More threads than the process may run on: the container fixture's
 # affinity of 5 CPUs under a quota of 2.5, so 3. A backend that is given
-# the thread count is warned about it; one that takes none (Netlib) is
-# not, since its threads are not ours.
+# the thread count is warned about it; one that takes none (Netlib, also
+# as FlexiBLAS's) is not, since its threads are not ours.
 root=${srcdir:?srcdir is not set}/common/fixtures/machine/container
 takes=yes
-if defined BMB_NO_THREAD_CONTROL; then
-    takes=no
-elif [ -z "$vars" ] && ! defined HAVE_FLEXIBLAS_API; then
-    takes=no
-fi
+[ -n "$vars" ] || takes=no
 cpus_warning="may only run on 3 CPUs"
 expect 3 "-t 3" "BMB_MACHINE_ROOT=$root"
 if grep -qF "$cpus_warning" "$T/err"; then
