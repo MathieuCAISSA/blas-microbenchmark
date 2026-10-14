@@ -15,3 +15,13 @@ against what kernels actually write.
   aarch64/  an Arm CPU as GitHub's arm64 runners report it: no "model
             name", only implementer and part codes -- and no sys/ at all,
             which is also what a container without sysfs looks like.
+  container/ what a container started with --cpuset-cpus=0-3,6
+            --cpus=2.5 sees in its own cgroup namespace: an affinity of
+            5 CPUs, and a quota of 2.5 CPUs in its cgroup, which is the
+            root it sees. 3 CPUs' worth of threads can run.
+  slurm/    a process two cgroups down, with no quota of its own ("max")
+            but one of 2 CPUs on its parent, under an affinity of 8:
+            the parent's quota applies.
+  pinned/   taskset -c 2 on a hybrid cgroup v1/v2 system: one CPU of
+            affinity under a quota of 4, so the affinity is the limit;
+            the v1 lines before the "0::" one are not read.

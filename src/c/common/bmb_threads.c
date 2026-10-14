@@ -169,3 +169,30 @@ void bmb_threads_resolve(bmb_options_t *opts)
     (void) opts;
 #endif
 }
+
+void bmb_threads_check_usable(const bmb_options_t *opts, long usable_cpus)
+{
+#if defined(BMB_THREAD_ENV_VARS) || defined(BMB_THREAD_ENV_AT_RUN_TIME)
+    size_t most = 0;
+    size_t i;
+
+    for (i = 0; i < opts->thread_count.count; i++) {
+        if (opts->thread_count.values[i] > most) {
+            most = opts->thread_count.values[i];
+        }
+    }
+    if (usable_cpus > 0 && most > (size_t) usable_cpus) {
+        char msg[256];
+
+        snprintf(msg, sizeof(msg),
+                 "The run uses up to %zu threads, but this process may only run on %ld CPU%s "
+                 "(its CPU affinity or its cgroup's CPU quota): the threads will take turns, "
+                 "and the timings will show it.",
+                 most, usable_cpus, (usable_cpus == 1) ? "" : "s");
+        bmb_log_warning(msg);
+    }
+#else
+    (void) opts;
+    (void) usable_cpus;
+#endif
+}

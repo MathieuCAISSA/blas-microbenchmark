@@ -62,12 +62,28 @@ still merge; the report lists each condition a series' files ran under
 instead. Virtual machines, WSL and most CI runners expose neither, which
 `bmb_<routine> --version` says ("Frequency: not exposed by this system").
 
+**The CPUs the process may use** (#88) are not the logical CPUs: in a
+container, a Slurm job or under `taskset`, `sysconf` still counts the
+host's. The probe reads the affinity (`Cpus_allowed_list` in
+`/proc/self/status`: taskset, cpusets, Slurm, `docker --cpuset-cpus`)
+and caps it by the cgroup v2 CPU quota (`cpu.max`: `docker --cpus`,
+systemd's `CPUQuota`) of the process's cgroup and of every one above it,
+since a parent's quota binds its children; a quota of 2.5 CPUs allows 3
+threads at once. In a container with its own cgroup namespace, which
+Docker gives by default, `/proc/self/cgroup` says `0::/` and the
+container's quota is the root's `cpu.max`. cgroup v1 quotas are not
+read. The count is not recorded in the results, only compared with the
+largest `-t` before the run (`bmb_threads_check_usable()`): more threads
+than that get a warning, except under a backend that takes no thread
+count (Netlib).
+
 **`BMB_MACHINE_ROOT=DIR`** makes `bmb_machine()` probe `DIR/proc` and
 `DIR/sys` instead of the real ones, as `test_bmb_machine` does through
 `bmb_machine_probe_at()`. It is a test hook, so that the output and the
-warning can be checked against the fixtures in
-`src/c/common/fixtures/machine/` (`test_bmb_output_formats.sh`, and the
-report's render test); it is not in the man page. The logical CPU count,
+warnings can be checked against the fixtures in
+`src/c/common/fixtures/machine/` (`test_bmb_output_formats.sh`,
+`test_bmb_threads_env.sh`, and the report's render test); it is not in
+the man page. The logical CPU count,
 the OS and the date still come from the real system.
 
 `--label` is the escape hatch for what no probe can see. It goes on a
