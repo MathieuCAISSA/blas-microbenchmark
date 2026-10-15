@@ -10,6 +10,10 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- The Docker image is published with each release, on
+  `ghcr.io/mathieucaissa/blas-microbenchmark`, for OpenBLAS (`<version>`,
+  `latest`), BLIS (`<version>-blis`) and Netlib (`<version>-netlib`),
+  with an attestation of where it was built; see the README.
 - Each release carries the attestation of where its tarball was built as
   a file, `<tarball>.sigstore.json`, which `cosign` checks without the
   GitHub CLI; see the README.

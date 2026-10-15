@@ -126,7 +126,8 @@ defects to dismiss one by one. The `Branch-Protection` check needs a
 token that can read the branch protection settings, which the job's own
 cannot; without one, Scorecard says so in that check. `Signed-Releases`
 counts the attestation bundle `release.yml` attaches to each release
-from 1.6.0 (`<tarball>.sigstore.json`, #107).
+from 1.6.0 (`<tarball>.sigstore.json`, #107), and `Packaging` its push
+of the Docker images to ghcr.io (#108).
 
 ## Static analysis
 
