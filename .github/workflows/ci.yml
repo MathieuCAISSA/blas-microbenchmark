@@ -115,6 +115,19 @@ jobs:
       - name: make distcheck
         run: make -C build distcheck -j"$(nproc)"
 
+      # As the README has users install it, and as the release workflow
+      # checks it: the tarball configured in place, not in a directory of
+      # its own as everything above. A test that only worked out of tree
+      # stopped the 1.5.0 release there (#98).
+      - name: The tarball, built in place
+        run: |
+          mkdir -p in-place
+          tar xf build/blas-microbenchmark-*.tar.gz -C in-place
+          cd in-place/blas-microbenchmark-*/
+          ./configure
+          make -j"$(nproc)"
+          make check
+
   # BLIS, from Ubuntu's libblis-openmp-dev, whose cblas.h is in a
   # directory of its own (/usr/include/<triplet>/blis-openmp) that configure
   # finds by itself, and whose threads -t sets through

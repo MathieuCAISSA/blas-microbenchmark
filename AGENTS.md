@@ -164,7 +164,8 @@ without a browser (see [Testing the
 page](doc/dev/report.md#testing-the-page)), the man page tests without
 groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
 and `test_doc_links.sh` outside a git checkout, `test_actions_pinned.sh`
-without `.github/`; `test_netlib_cblas` is only built for Netlib. Every
+without `.github/`, `test_configure_paths.sh` in a source tree configured
+in place; `test_netlib_cblas` is only built for Netlib. Every
 other test runs anywhere. The mandoc lint is left out, with a
 note in the log, where mandoc is not installed. `BMB_MAN_STRICT=1` turns
 each of those into a failure — the `man` CI job sets it.

@@ -55,6 +55,9 @@ it comes from in brackets.
 - [ ] Current formats are generated, not kept as fixtures.
 - [ ] A test that SKIPs where its tool is missing is required to pass
   in at least one CI job.
+- [ ] A test works in a tree configured in place (`./configure` at the
+  top, as the README and the release workflow do) as well as in a build
+  directory of its own, as CI does (#98 stopped the 1.5.0 release).
 - [ ] A check reads what it checks: a tool's real output, not its exit
   status alone (`gh attestation verify` prints nothing outside a
   terminal, #13), and only the part of a page that was rendered

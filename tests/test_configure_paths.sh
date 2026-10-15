@@ -9,7 +9,8 @@
 # Runs configure in a directory of its own, per backend, with a module
 # variable and the option both pointing at empty directories, and reads
 # the order of the -I and -L flags from config.log. configure then stops,
-# finding no library there; the flags are logged by then.
+# finding no library there; the flags are logged by then. SKIPs in a
+# source tree configured in place, from which configure will not run.
 set -e
 
 S=${srcdir:-.}
@@ -22,6 +23,14 @@ fail() {
 
 test -x "$S/configure" || fail "no configure in $S"
 src=$(cd "$S" && pwd)
+# configure refuses to run from a source tree that was configured in
+# place ("source directory already configured"), which is what ./configure
+# at the top does; this needs a build directory of its own. CI builds in
+# one (#98).
+if [ -f "$src/config.status" ]; then
+    echo "SKIP: the source tree is configured in place; configure cannot run from it elsewhere"
+    exit 77
+fi
 rm -rf "$T"
 mkdir -p "$T/mod/include" "$T/mod/lib" "$T/cli/include" "$T/cli/lib"
 top=$(cd "$T" && pwd)
