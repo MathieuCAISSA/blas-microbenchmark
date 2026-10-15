@@ -92,7 +92,16 @@ The lcov file also goes to [Codecov](https://codecov.io/gh/MathieuCAISSA/blas-mi
 which draws the README's coverage badge and the history of the figure:
 uploaded with the job's OIDC token, so no secret is stored, and without
 failing the job when Codecov is down. `.github/codecov.yml` keeps its
-statuses informational and its pull request comments off.
+statuses informational and its pull request comments off. Codecov's
+figure is lower than gcovr's for the same report (87% against 92.5% of
+lines, at 1.5.0): it counts a line where only some branches were taken
+as partial, not covered.
+
+The project's answers to the [OpenSSF Best Practices](https://www.bestpractices.dev/projects/15515)
+criteria, which the README's badge shows (passing, at 1.5.0), are kept
+on bestpractices.dev; each points at the file here that meets it, so a
+change that moves one of those files (`CONTRIBUTING.md`,
+`.github/SECURITY.md`, `REVIEWS.md`) updates the answers there.
 
 There is no threshold, on purpose: a number to keep above invites tests
 written for the number. The report is for finding paths no test takes.
