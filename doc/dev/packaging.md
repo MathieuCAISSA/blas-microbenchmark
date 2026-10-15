@@ -1,7 +1,7 @@
 # Packaging
 
-The Spack package and the Docker image: how each is built and tested,
-and how the Spack package follows a release. Start at
+The Spack package, the Docker image and the ReFrame tests: how each is
+built and tested, and how they follow a release. Start at
 [AGENTS.md](../../AGENTS.md).
 
 ## The Spack package
@@ -202,3 +202,54 @@ The image is not published. Pushing it to `ghcr.io` from the release
 workflow, with a provenance attestation as the tarball has (#13), is
 the obvious next step; an MKL image would also redistribute Intel's
 libraries, under Intel's licence.
+
+## The ReFrame tests
+
+`packaging/reframe/blas_microbenchmark.py` is a ReFrame test file;
+[its README](../../packaging/reframe/README.md) is for the sites that run
+it. Neither is in the tarball. What is not obvious in it:
+
+- **The routine list** (`ROUTINES`, with each routine's level) is the
+  test's parameter, so ReFrame needs it before anything is installed. A
+  routine added to the benchmarks goes there too; CI fails until it does.
+- **One size, one point, per test.** A ReFrame performance variable is
+  one number, so a test runs a single size (per level, set with `-S`)
+  and a single thread count, and reads its rates from `result.json`.
+  Which rates there are is read from that file before the performance
+  stage, so dcopy reports no GFLOP/s rather than a missing one.
+- **Sanity is `--verify`**: the line `# verified: every point` in the
+  output, besides the exit status, so a site that adds `-C` to its
+  options sees the test fail rather than pass unchecked.
+- **References come from a JSON file**, not from a subclass, so a site
+  writes no Python. They are read at init: ReFrame resolves them for the
+  partition before the test runs. `reference` is assigned whole, as a
+  dict: ReFrame turns it into a `ScopedDict` on assignment, where
+  `reference['generic:default'] = ...` would take `generic` for a scope.
+- **`prefix` is ReFrame's** (the test file's directory), hence
+  `install_prefix`.
+- **The tarball** is downloaded with the release's `SHA256SUMS` and
+  checked, unpacked into `src/` whatever its directory is called, and
+  built in `src/build`, given as `configuredir` and `builddir`: ReFrame
+  sets `srcdir` itself, from `sourcepath`. A routine newer than the
+  version built is skipped, not failed.
+- **Its default version** is the latest release: step 7 of [the
+  release](release.md) moves it, with the Spack package's.
+
+### In CI
+
+The `reframe` job installs ReFrame (pinned to a release) in a venv,
+builds and installs this commit with OpenBLAS, then runs on ReFrame's
+generic system:
+
+- `-l`'s routines against the benchmarks installed;
+- `bmb_run`, every routine, at small sizes on 2 threads, with a
+  reference file that dgemm and dcopy meet; the report is read for each
+  routine's rates (dcopy GB/s only, dgemm GFLOP/s only, ddot both) and
+  the reference applied;
+- a reference no machine meets, and `-C`, each failing the test, in the
+  performance and the sanity stage respectively;
+- `bmb_build_run` on this commit's tarball (`make dist`);
+- `bmb_report` on every `result.json` they left.
+
+ReFrame skips a test file it cannot load with a warning and exit status
+0, so each step counts the tests that ran, rather than trust the status.

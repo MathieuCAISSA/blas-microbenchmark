@@ -211,6 +211,8 @@ tests/           # the project's own tests: the release files, the
 packaging/spack/ # the Spack package, as a Spack package repository
 packaging/docker/
                  # the Dockerfile, and the ignore file of its build context
+packaging/reframe/
+                 # the ReFrame tests, and how a site runs them
 .github/         # the workflows (ci, codeql, pages, release), the scripts
                  # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh,
                  # install-oneapi-mkl.sh),

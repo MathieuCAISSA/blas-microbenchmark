@@ -29,6 +29,10 @@ releases with the same major version can be compared and read by the same
   against OpenBLAS, BLIS, Netlib or MKL (`--build-arg BLAS_BACKEND=`),
   with the benchmarks on its `PATH`, the man pages and `bmb_report`,
   which Apptainer can convert; see the README.
+- ReFrame tests (`packaging/reframe`): one per routine, on an installed
+  copy or one built from a release tarball, verified, with their rates
+  as performance variables and a site's references read from a JSON
+  file; see `packaging/reframe/README.md`.
 - A warning when `-t` asks for more threads than the CPUs the process may
   run on: its CPU affinity (`taskset`, a Slurm job, `docker --cpuset-cpus`)
   or its cgroup's CPU quota (`docker --cpus`). They would take turns, and
