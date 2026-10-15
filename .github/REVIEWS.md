@@ -126,6 +126,10 @@ What makes a benchmark wrong without making it fail.
 - [ ] The README stays short; the reference is the man page.
 - [ ] `CHANGELOG.md` has an entry under `[Unreleased]` if a user would
   notice the change.
+- [ ] A new backend, routine or CI job is in every list that names
+  them, which [the release's check-up](../doc/dev/release.md#cutting-a-release)
+  enumerates: the README, the man page, AGENTS.md, `doc/dev`, packaging
+  (#66's first push missed a dozen, #94).
 - [ ] A new test's first comment paragraph, and a new CI job's comment,
   say what they check: the site publishes them.
 - [ ] Every file the change adds is in git and, if it belongs in the

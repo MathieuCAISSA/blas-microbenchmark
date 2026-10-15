@@ -13,7 +13,7 @@ How each BLAS library is found, linked and named. Start at
 | ArmPL | `--with-blas-backend=armpl` | CI, `armpl` job (`ubuntu-24.04-arm`) |
 | FlexiBLAS | `--with-blas-backend=flexiblas` | CI, `flexiblas` job (Fedora container), under OpenBLAS, BLIS and Netlib |
 | Intel MKL | `--with-blas-backend=mkl` | CI, `mkl` job (oneAPI from Intel's apt repository) |
-| cuBLAS / rocBLAS | — | Not implemented, not planned |
+| GPU libraries (cuBLAS, rocBLAS, MAGMA, …) | — | Planned for 2.0 (#87) |
 
 Every backend is reached through the CBLAS interface, so the same
 `bmb_<routine>.c` files link against whichever one `configure` picks; only
@@ -176,10 +176,12 @@ differs:
   The job checks that `libblis-mt` is linked and that 4 threads take
   clearly less time than 1.
 
-**cuBLAS / rocBLAS**: deliberately out of scope. Handle-based,
-device-memory API, fundamentally different from the CBLAS interface every
-other backend shares — this project tried it once and backed it out; don't
-re-add it without being asked.
+**GPU libraries** (cuBLAS, rocBLAS, MAGMA, KBLAS, oneMKL's GPU side) are
+planned for 2.0: #87 and its sub-issues. They do not fit the CBLAS layer
+every backend above shares: a handle, operands in device memory, calls
+that return before the work is done. This project once squeezed cuBLAS
+and rocBLAS into it and backed them out; the GPU harness (#73), which
+decides what is timed, comes before any of them.
 
 **FlexiBLAS** (#5) is a backend that is not a library: it loads one at
 run time (`FLEXIBLAS=OPENBLAS-OPENMP`, `BLIS-OPENMP`, `NETLIB`; `flexiblas

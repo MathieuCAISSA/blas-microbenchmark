@@ -30,6 +30,35 @@ gh workflow run release.yml --ref <branch> -f tag=vX.Y.Z -f publish=false
 A release is prepared on a branch like any change (`release-X.Y.Z`,
 with an issue of its own), then tagged on `main` once merged.
 
+0. **Check-up**, before anything is changed for the release. Copy this
+   list into the release's issue and tick it there; what it finds is
+   fixed first, each through an issue and a pull request of its own.
+
+   - [ ] `main` is green: CI, CodeQL and the site
+     (`gh run list --branch main`); no open CodeQL alert
+     (`gh api 'repos/MathieuCAISSA/blas-microbenchmark/code-scanning/alerts?state=open&ref=refs/heads/main'`);
+     every job of `ci.yml` but `coverage` among the required checks.
+   - [ ] No pull request left open, Dependabot's included; the
+     milestone's issues closed, or moved to the next one.
+   - [ ] The `coverage` job's report read, for code no test reaches.
+   - [ ] The lists that follow the code agree with it. Backends:
+     `configure`'s `--with-blas-backend`, the README, the man page
+     (DESCRIPTION, THREADS, ENVIRONMENT), [backends](backends.md),
+     [CI](ci.md). Routines: AGENTS.md's layout, the man page's table,
+     the report's `LEVEL`, ReFrame's `ROUTINES`. CI jobs: [CI](ci.md),
+     each with its comment. Tests: AGENTS.md's table. The layout:
+     AGENTS.md's.
+   - [ ] `CHANGELOG.md`'s `[Unreleased]` says everything a user would
+     notice.
+   - [ ] Packaging ([packaging](packaging.md)), each green in CI: Spack
+     (`BACKENDS`, `requires` and `conflicts` for what is new, its CI
+     legs), Docker (its backends, and why not the others; the base
+     image), ReFrame (`ROUTINES`, its variables and its README).
+   - [ ] A cross-read of the README, AGENTS.md, `doc/dev`, the man pages
+     and the packaging READMEs against the code, by someone (or an agent)
+     who did not write the changes. 1.5.0's found a dozen places that a
+     new backend had missed (#94).
+
 1. **Version**: set `AC_INIT` in `configure.ac` to `X.Y.Z`, dropping the
    `-dev`. In `CHANGELOG.md`, turn `[Unreleased]` into
    `[X.Y.Z] - YYYY-MM-DD` (and its link at the bottom); in `CITATION.cff`,
@@ -63,9 +92,10 @@ with an issue of its own), then tagged on `main` once merged.
    add an empty `[Unreleased]` section to `CHANGELOG.md`, and add the
    release to the Spack package with the checksum the release published
    (see [After a release](packaging.md#after-a-release)); the `spack`
-   job then builds it from GitHub. Make it the version the ReFrame tests
-   build by default (`version` in `packaging/reframe/blas_microbenchmark.py`;
-   see [ReFrame](packaging.md#the-reframe-tests)).
+   job then builds it from GitHub, and move the recipe's `url` to it.
+   Make it the version the ReFrame tests build by default (`version` in
+   `packaging/reframe/blas_microbenchmark.py`, and the default its README
+   gives; see [ReFrame](packaging.md#the-reframe-tests)).
 
 Note the order: **edit the notes, don't create the release**. The workflow
 gets there within about half a minute of the tag push and creates it with

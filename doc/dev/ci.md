@@ -9,7 +9,8 @@ in a comment (`actions/checkout@3d3c42e… # v7.0.1`): a tag can be moved to
 other code, a commit cannot. `test_actions_pinned.sh` refuses anything
 else. Dependabot (`.github/dependabot.yml`) proposes updates of the
 actions, grouped, once a week, and updates the SHA and the comment
-together; to pin a new action by hand, take the commit of its latest
+together; it does the same for the Docker image's base, pinned by digest
+([packaging](packaging.md#the-docker-image)); to pin a new action by hand, take the commit of its latest
 release (`gh api repos/OWNER/REPO/commits/vX.Y.Z -q .sha`). `main` is protected: no force push or
 deletion, and a pull request needs every required check green to merge:
 every job of `ci.yml` except `coverage`, which is there to be read. A
