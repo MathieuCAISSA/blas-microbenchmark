@@ -45,7 +45,7 @@ For `bmb_build_run`, the fixture's own variables, set as
 |---|---|---|
 | `version` | 1.4.0 | the release to download, checked against its `SHA256SUMS` |
 | `tarball` | the release's | a URL or a path to take it from instead, unchecked |
-| `blas_backend` | `auto` | `--with-blas-backend` |
+| `blas_backend` | `auto` | `--with-blas-backend`; `aocl` and `mkl` need a `version` from 1.5.0 on, and the library found (`AOCL_ROOT`, `MKLROOT`, or `configure_options`) |
 | `configure_options` | none | more `configure` options, comma-separated |
 
 A routine the copy does not have (`strsm` before 1.5.0) is skipped when

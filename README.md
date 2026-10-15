@@ -9,8 +9,8 @@ routine, the same options for all of them, and results in text, CSV or
 JSON — [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/),
 but for BLAS instead of MPI.
 
-Build it against OpenBLAS, BLIS, Netlib reference BLAS, NVPL, ArmPL or
-Intel MKL — or once against FlexiBLAS, which picks the library at run time — run the
+Build it against OpenBLAS, BLIS, AMD AOCL-BLAS, Netlib reference BLAS, NVPL,
+ArmPL or Intel MKL — or once against FlexiBLAS, which picks the library at run time — run the
 same commands on each, and compare them on one page of charts.
 
 ## Install
