@@ -28,8 +28,12 @@ if ldd "$probe" 2>/dev/null | grep -q 'libasan\.'; then
     echo "SKIP: built with AddressSanitizer, whose allocator cannot be preloaded over"
     exit 77
 fi
-LD_PRELOAD=$L BMB_ALLOC_COUNT=$T/count "$probe" -x 0 -i 1 -m 8 >/dev/null 2>&1 || true
-if ! [ -s "$T/count" ]; then
+# counted FILE: the count the library put on stderr, or nothing.
+counted() {
+    sed -n 's/^bmb_failalloc: \([0-9][0-9]*\) allocations$/\1/p' "$1"
+}
+LD_PRELOAD=$L BMB_ALLOC_COUNT=1 "$probe" -x 0 -i 1 -m 8 >/dev/null 2>"$T/err" || true
+if [ -z "$(counted "$T/err")" ]; then
     echo "SKIP: $L could not be preloaded (glibc only)"
     exit 77
 fi
@@ -41,9 +45,9 @@ for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
     test -x "$b" || continue
     case $b in level1/*) size="-v 16" ;; *) size="-m 16" ;; esac
     # shellcheck disable=SC2086
-    LD_PRELOAD=$L BMB_ALLOC_COUNT=$T/count "$b" -x 0 -i 1 $size -o "$T/out.json" >/dev/null 2>"$T/err" \
+    LD_PRELOAD=$L BMB_ALLOC_COUNT=1 "$b" -x 0 -i 1 $size -o "$T/out.json" >/dev/null 2>"$T/err" \
         || fail "$b failed with no allocation made to fail: $(cat "$T/err")"
-    count=$(cat "$T/count")
+    count=$(counted "$T/err")
     # The context and at least one operand, in setup().
     test "$count" -ge 2 || fail "$b: only $count allocations counted"
     i=1

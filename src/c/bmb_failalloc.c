@@ -1,9 +1,9 @@
 /* A test helper, never installed: loaded with LD_PRELOAD by
  * test_bmb_alloc_failures.sh, it makes the BMB_FAIL_ALLOC-th allocation
  * the program's own code asks for (malloc, calloc, realloc; counting from
- * 1) return NULL, as an exhausted heap would. Without BMB_FAIL_ALLOC it
- * fails none, and writes how many there were to the file BMB_ALLOC_COUNT
- * names, so that the test knows how many to try.
+ * 1) return NULL, as an exhausted heap would. With BMB_ALLOC_COUNT set,
+ * it says on stderr how many there were ("bmb_failalloc: N allocations"),
+ * so that the test knows how many to try.
  *
  * Only the program's allocations count: those whose caller is in its own
  * executable segment, not the C library's (fopen, strdup) nor the BLAS
@@ -85,7 +85,7 @@ void *realloc(void *ptr, size_t size)
 static int wrapped_main(int argc, char **argv, char **envp)
 {
     const char *at = getenv("BMB_FAIL_ALLOC");
-    const char *report = getenv("BMB_ALLOC_COUNT");
+    int report = getenv("BMB_ALLOC_COUNT") != NULL;
     int status;
 
     fail_at = (at != NULL) ? strtol(at, NULL, 10) : 0;
@@ -93,13 +93,8 @@ static int wrapped_main(int argc, char **argv, char **envp)
     in_main = 1;
     status = real_main(argc, argv, envp);
     in_main = 0;
-    if (report != NULL) {
-        FILE *f = fopen(report, "w");
-
-        if (f != NULL) {
-            fprintf(f, "%ld\n", counted);
-            fclose(f);
-        }
+    if (report) {
+        fprintf(stderr, "bmb_failalloc: %ld allocations\n", counted);
     }
     return status;
 }
