@@ -41,13 +41,14 @@ gh attestation verify blas-microbenchmark-<version>.tar.gz --repo MathieuCAISSA/
 
 or, from 1.6.0, with [cosign](https://docs.sigstore.dev/cosign/) and the
 attestation's bundle, `blas-microbenchmark-<version>.tar.gz.sigstore.json`,
-attached to the release:
+attached to the release. It was signed by the release workflow, run for
+the version's tag, or from `main` when a release's upload is run again:
 
 ```bash
 cosign verify-blob-attestation --type slsaprovenance1 \
   --bundle blas-microbenchmark-<version>.tar.gz.sigstore.json \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-identity-regexp '^https://github\.com/MathieuCAISSA/blas-microbenchmark/\.github/workflows/release\.yml@refs/tags/v' \
+  --certificate-identity-regexp '^https://github\.com/MathieuCAISSA/blas-microbenchmark/\.github/workflows/release\.yml@refs/(tags/v|heads/main$)' \
   blas-microbenchmark-<version>.tar.gz
 ```
 
