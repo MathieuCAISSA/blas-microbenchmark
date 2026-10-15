@@ -9,8 +9,12 @@ those are plain git exports with no `configure` in them.
 `.github/workflows/release.yml` handles that: on a pushed `v*` tag it
 builds the tarball, verifies it unpacks and builds with no Autotools
 present, attests where it was built, checks that attestation as a user
-would (`gh attestation verify`), then uploads it with its `SHA256SUMS` —
-*creating* the release if the tag has none yet.
+would (`gh attestation verify`, and `cosign` with its bundle), then
+uploads it with its `SHA256SUMS` and the attestation's bundle
+(`<tarball>.sigstore.json`) — *creating* the release if the tag has none
+yet. The bundle is what a user without the GitHub CLI checks with
+`cosign` (README.md), and what OpenSSF Scorecard's `Signed-Releases`
+looks for on a release (#107).
 
 The attestation is a Sigstore-signed SLSA provenance statement, stored
 with the repository (not as a release asset): it says the tarball with
@@ -84,7 +88,8 @@ with an issue of its own), then tagged on `main` once merged.
 
 6. **Verify the tarball** the release carries: download it with its
    `SHA256SUMS` and run `sha256sum -c SHA256SUMS` and `gh attestation
-   verify <tarball> --repo MathieuCAISSA/blas-microbenchmark`, then
+   verify <tarball> --repo MathieuCAISSA/blas-microbenchmark`, and the
+   README's `cosign verify-blob-attestation` with its `.sigstore.json`, then
    `./configure --prefix=...`, `make check`, `make install` — the man
    pages included — on a machine with no Autotools if you can.
 7. **Back to development**: on another short branch and pull request,

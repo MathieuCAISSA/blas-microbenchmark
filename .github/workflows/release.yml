@@ -4,7 +4,9 @@ name: Release
 # a pushed tag. GitHub's own auto-generated "Source code" archives are plain
 # git exports with no pre-generated `configure`, so end users need this one.
 # The tarball carries a signed attestation of where it was built: gh
-# attestation verify checks it came from this workflow, in this repository.
+# attestation verify checks it came from this workflow, in this repository,
+# and so does cosign with the attestation's bundle, attached to the release
+# beside the tarball.
 # A pull request that changes this file runs it too, publishing nothing, so
 # that a broken release is found before the tag rather than at it.
 on:
@@ -88,6 +90,7 @@ jobs:
       # Pull requests from Dependabot (which updates this file every time) or
       # from a fork get no OIDC token to sign with, so they test the rest.
       - name: Attest where the tarball was built
+        id: attest
         if: github.event_name != 'pull_request' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
@@ -118,6 +121,36 @@ jobs:
           fi
           echo "a changed tarball is refused"
 
+      # The attestation as a file beside the tarball: whoever checks a
+      # download without the GitHub CLI does it with cosign and this file,
+      # as README.md says, and it is the signature OpenSSF Scorecard looks
+      # for on a release (Signed-Releases). Checked here with cosign, for
+      # this run's identity (the README's pattern matches every release
+      # tag), and a changed tarball refused.
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: github.event_name != 'pull_request' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
+
+      - name: The attestation bundle, checked with cosign
+        if: github.event_name != 'pull_request' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+        run: |
+          f=$(ls build/blas-microbenchmark-*.tar.gz)
+          cp "$BUNDLE" "$f.sigstore.json"
+          verify() {
+            cosign verify-blob-attestation --bundle "$f.sigstore.json" --type slsaprovenance1 \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF" \
+              "$1"
+          }
+          verify "$f"
+          echo "verified with cosign: $(basename "$f") against $(basename "$f").sigstore.json"
+          cp "$f" changed.tar.gz && printf x >> changed.tar.gz
+          if verify changed.tar.gz >/dev/null 2>&1; then
+            echo "a changed tarball verified against the bundle"; exit 1
+          fi
+          echo "a changed tarball is refused"
+
       - name: Upload the tarball to the release
         if: github.event_name == 'push' || inputs.publish
         env:
@@ -128,8 +161,10 @@ jobs:
           # doesn't exist yet, otherwise just replace the assets.
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" build/blas-microbenchmark-*.tar.gz build/SHA256SUMS \
+              build/blas-microbenchmark-*.tar.gz.sigstore.json \
               --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" build/blas-microbenchmark-*.tar.gz build/SHA256SUMS \
+              build/blas-microbenchmark-*.tar.gz.sigstore.json \
               --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
           fi

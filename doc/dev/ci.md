@@ -124,7 +124,9 @@ The SARIF is not uploaded to code scanning, where the CodeQL workflow
 fails on any open alert: Scorecard's findings are a score to read, not
 defects to dismiss one by one. The `Branch-Protection` check needs a
 token that can read the branch protection settings, which the job's own
-cannot; without one, Scorecard says so in that check.
+cannot; without one, Scorecard says so in that check. `Signed-Releases`
+counts the attestation bundle `release.yml` attaches to each release
+from 1.6.0 (`<tarball>.sigstore.json`, #107).
 
 ## Static analysis
 
