@@ -1,5 +1,6 @@
-# Keeps the GitHub Actions the workflows use up to date: one grouped pull
-# request a week at most, which CI then checks like any other.
+# Keeps the GitHub Actions the workflows use up to date, and the Docker
+# image's base (packaging/docker): a pull request a week at most for each,
+# which CI then checks like any other.
 version: 2
 updates:
   - package-ecosystem: github-actions

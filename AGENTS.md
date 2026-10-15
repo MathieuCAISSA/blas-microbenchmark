@@ -20,7 +20,7 @@ changing it:
 | If you touch | Read |
 |---|---|
 | a benchmark, `src/c/common`, timing, rates, `--verify` | [doc/dev/benchmarks.md](doc/dev/benchmarks.md) |
-| `configure.ac`, a BLAS library, `bmb_threads.c`, `bmb_build.c`, `bmb_machine.c`, `src/c/netlib` | [doc/dev/backends.md](doc/dev/backends.md) |
+| `configure.ac`, a BLAS library, `bmb_threads.c`, `bmb_build.c`, `bmb_machine.c`, `src/c/netlib`, `src/c/mkl` | [doc/dev/backends.md](doc/dev/backends.md) |
 | `bmb_report`, `src/report`, `doc/images` | [doc/dev/report.md](doc/dev/report.md) |
 | the README, `--help`, `man/`, the site | [doc/dev/documentation.md](doc/dev/documentation.md) |
 | `.github/` | [doc/dev/ci.md](doc/dev/ci.md) |
@@ -94,8 +94,10 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
   itself through "Closes #N".
 - Update the branch from `main` (`git merge origin/main`) when `main`
   moved under it, and let CI run again before merging.
-- Dependabot's pull requests (GitHub Actions updates) go the same way:
-  merge them once CI passes.
+- Dependabot's pull requests (the actions, the Docker image's base) go
+  the same way: merge them once CI passes. One that moves the image to
+  another Ubuntu release, rather than to a new digest of the same one,
+  is a choice: ask first (#91 moved it to 26.04).
 - The repository's administrator can still push to `main` directly; that
   is for emergencies, not for work.
 
@@ -217,7 +219,8 @@ packaging/reframe/
                  # the ReFrame tests, and how a site runs them
 .github/         # the workflows (ci, codeql, pages, release), the scripts
                  # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh,
-                 # install-oneapi-mkl.sh),
+                 # install-oneapi-mkl.sh), the sanitizers job's leak
+                 # suppressions (lsan-suppressions.txt),
                  # the issue and
                  # pull request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,

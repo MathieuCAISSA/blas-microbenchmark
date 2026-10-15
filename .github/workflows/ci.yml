@@ -12,6 +12,11 @@ permissions:
   contents: read
 
 jobs:
+  # OpenBLAS, the default backend and the BLAS most distributions ship,
+  # from Ubuntu's libopenblas-dev. Besides make check and the verify sweep
+  # every library job runs, this one checks what needs doing once: that
+  # the browser tests did run (the runner has Chrome), the files and their
+  # links, what make install puts where, and make distcheck.
   openblas:
     runs-on: ubuntu-latest
 
@@ -110,6 +115,10 @@ jobs:
       - name: make distcheck
         run: make -C build distcheck -j"$(nproc)"
 
+  # BLIS, from Ubuntu's libblis-openmp-dev, whose cblas.h is in a
+  # directory of its own (/usr/include/<triplet>/blis-openmp) that configure
+  # finds by itself, and whose threads -t sets through
+  # bli_thread_set_num_threads().
   blis:
     runs-on: ubuntu-latest
 
@@ -157,6 +166,10 @@ jobs:
             build/**/*.sh.log
           if-no-files-found: ignore
 
+  # Netlib's reference BLAS, from Ubuntu's libblas-dev: Fortran routines
+  # with no C interface, which the benchmarks reach through their own
+  # CBLAS layer (src/c/netlib); the yardstick every optimised library is
+  # measured against.
   netlib:
     runs-on: ubuntu-latest
 
@@ -397,6 +410,9 @@ jobs:
             build/**/*.sh.log
           if-no-files-found: ignore
 
+  # Arm Performance Libraries, from Arm's own apt repository (the package
+  # that adds it is fetched from developer.arm.com), on the arm64 runner:
+  # see the comment above nvpl.
   armpl:
     runs-on: ubuntu-24.04-arm
 
