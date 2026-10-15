@@ -1,0 +1,13 @@
+# Codecov, which the coverage job of ci.yml uploads gcovr's report to. Its
+# statuses are informational: coverage has no threshold here (doc/dev/ci.md,
+# Coverage), it is read rather than enforced. No pull request comment: the
+# job's summary already gives the figures.
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+comment: false

@@ -3,8 +3,11 @@
 What each CI job is for. Start at [AGENTS.md](../../AGENTS.md).
 
 `ci.yml` gives its jobs a read-only token (`permissions: contents:
-read`); only `pages.yml`, `release.yml` and `codeql.yml` ask for more:
-the first two for what they publish, CodeQL to upload its results. Every action is pinned to a full commit SHA, with its version
+read`), except the `coverage` job's OIDC token (`id-token: write`), which
+authenticates its upload to Codecov; only `pages.yml`, `release.yml`,
+`codeql.yml` and `scorecard.yml` ask for more: the first two for what
+they publish, CodeQL to upload its results, Scorecard to sign the
+results it publishes. Every action is pinned to a full commit SHA, with its version
 in a comment (`actions/checkout@3d3c42e… # v7.0.1`): a tag can be moved to
 other code, a commit cannot. `test_actions_pinned.sh` refuses anything
 else. Dependabot (`.github/dependabot.yml`) proposes updates of the
@@ -85,6 +88,11 @@ and reports with `gcovr` which lines and branches of the C code the tests
 reached, the tests' own files left out. The per-file summary is on the
 run's page; the line-by-line HTML report and an lcov file are in the
 `coverage` artifact. AGENTS.md gives the same commands for a local run.
+The lcov file also goes to [Codecov](https://codecov.io/gh/MathieuCAISSA/blas-microbenchmark),
+which draws the README's coverage badge and the history of the figure:
+uploaded with the job's OIDC token, so no secret is stored, and without
+failing the job when Codecov is down. `.github/codecov.yml` keeps its
+statuses informational and its pull request comments off.
 
 There is no threshold, on purpose: a number to keep above invites tests
 written for the number. The report is for finding paths no test takes.
@@ -94,6 +102,20 @@ parser's error messages, and `bmb_threads.c` at 38%: no test set a
 thread-count environment variable (`OPENBLAS_NUM_THREADS`, ...).
 `test_bmb_threads_env.sh` (#24) brought it to 100%, and found on the way
 that `OMP_NUM_THREADS=-2` labelled a run with 4294967294 threads.
+
+## OpenSSF Scorecard
+
+`scorecard.yml` runs [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/MathieuCAISSA/blas-microbenchmark)
+on every push to `main` and weekly: it scores the project's security
+practices (pinned actions, token permissions, branch protection, code
+review, signed releases, ...) and publishes the result, which the
+README's badge shows. Its job is limited to what publishing allows:
+checkout, the Scorecard action, the upload of its SARIF as an artifact.
+The SARIF is not uploaded to code scanning, where the CodeQL workflow
+fails on any open alert: Scorecard's findings are a score to read, not
+defects to dismiss one by one. The `Branch-Protection` check needs a
+token that can read the branch protection settings, which the job's own
+cannot; without one, Scorecard says so in that check.
 
 ## Static analysis
 
