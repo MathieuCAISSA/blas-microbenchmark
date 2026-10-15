@@ -7,6 +7,8 @@ Versions follow [semantic versioning](https://semver.org/): results from
 releases with the same major version can be compared and read by the same
 `bmb_report`.
 
+## [Unreleased]
+
 ## [1.5.0] - 2026-10-15
 
 ### Added
@@ -263,6 +265,7 @@ releases with the same major version can be compared and read by the same
   with text, CSV and JSON output.
 - OpenBLAS, BLIS, NVPL and ArmPL backends.
 
+[Unreleased]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.5.0...HEAD
 [1.5.0]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/MathieuCAISSA/blas-microbenchmark/compare/v1.2.0...v1.3.0
