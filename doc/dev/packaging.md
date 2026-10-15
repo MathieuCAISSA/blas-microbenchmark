@@ -202,10 +202,28 @@ runs a benchmark and `bmb_report` from it, as the README says to.
 
 ### Publishing
 
-The image is not published. Pushing it to `ghcr.io` from the release
-workflow, with a provenance attestation as the tarball has (#13), is
-the obvious next step; an MKL image would also redistribute Intel's
-libraries, under Intel's licence.
+From 1.6.0 (#108), `release.yml`'s `image` job pushes the image to
+`ghcr.io/mathieucaissa/blas-microbenchmark` on each version tag, for
+OpenBLAS, BLIS and Netlib: `X.Y.Z-<backend>` for each, and `X.Y.Z` and
+`latest` for OpenBLAS (`latest` is the last version tagged, so a patch
+release of an older series would move it back). MKL is not published:
+its image would redistribute Intel's libraries, under Intel's licence.
+
+- **Attested** like the tarball (`actions/attest`), the attestation
+  pushed to the registry beside the image; `gh attestation verify
+  oci://…` checks it, as the README says.
+- **Checked as a user gets it**: every local copy removed, the image
+  pulled back by its digest, run, and its attestation verified, in the
+  same job.
+- **On a pull request** that changes `release.yml`, the job builds and
+  runs each image, and pushes nothing. The `docker` job of `ci.yml`
+  remains the one that tests the Dockerfile on every change.
+- **Visibility**: a package created by a workflow starts private on a
+  personal account. After the first release that pushes it (1.6.0), its
+  settings (Packages, `blas-microbenchmark`, Package settings) must make
+  it public, once; `release.md` says so in step 6.
+- It is the publishing workflow OpenSSF Scorecard's `Packaging` check
+  looks for (`docker … push`).
 
 ## The ReFrame tests
 

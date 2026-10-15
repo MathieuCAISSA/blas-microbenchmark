@@ -79,17 +79,30 @@ spack install blas-microbenchmark ^openblas
 spack load blas-microbenchmark
 ```
 
-In a container, with Docker: the image is built from a git clone,
-against OpenBLAS, or the library that `BLAS_BACKEND` names (`blis`,
-`netlib` or `mkl`). The benchmarks are on its `PATH`, and it writes to
-`/results`, here the current directory:
+In a container: from 1.6.0, each release's image is on GitHub's
+registry, `ghcr.io/mathieucaissa/blas-microbenchmark`, against OpenBLAS
+(tags `<version>` and `latest`), BLIS (`<version>-blis`) or Netlib
+(`<version>-netlib`), with an attestation of where it was built. The
+benchmarks are on its `PATH`, and it writes to `/results`, here the
+current directory:
+
+```bash
+IMAGE=ghcr.io/mathieucaissa/blas-microbenchmark:latest
+gh attestation verify oci://$IMAGE --repo MathieuCAISSA/blas-microbenchmark
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/results" $IMAGE bmb_dgemm -m 64:1024 -o dgemm.json
+apptainer exec docker://$IMAGE bmb_dgemm -m 64:1024 -o dgemm.json
+```
+
+Or build it from a git clone, against OpenBLAS or the library that
+`BLAS_BACKEND` names (`blis`, `netlib`, or `mkl`, which is not
+published since it would redistribute Intel's libraries):
 
 ```bash
 docker build -f packaging/docker/Dockerfile --build-arg BLAS_BACKEND=openblas -t blas-microbenchmark .
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/results" blas-microbenchmark bmb_dgemm -m 64:1024 -o dgemm.json
 ```
 
-HPC sites run containers with Apptainer instead. Save the image where
+Apptainer, which HPC sites run, takes a built image too: save it where
 Docker is, then convert it where Apptainer is, which writes in the current
 directory as you:
 

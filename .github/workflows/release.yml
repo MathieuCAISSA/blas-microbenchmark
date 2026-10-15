@@ -168,3 +168,91 @@ jobs:
               build/blas-microbenchmark-*.tar.gz.sigstore.json \
               --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
           fi
+
+  # The Docker image (packaging/docker) on ghcr.io, for the backends whose
+  # libraries can be redistributed: OpenBLAS, BLIS, Netlib. Not MKL, whose
+  # image would redistribute Intel's libraries (#108). On a version tag,
+  # each image is pushed, attested like the tarball (the attestation
+  # stored in the registry beside it), then pulled back by its digest, run,
+  # and its attestation checked, as the README says; only after the
+  # tarball's job passed. A pull request builds and runs them, pushing
+  # nothing.
+  image:
+    # Only once the tarball's job passed: a version whose tarball failed
+    # its checks is not released, and its images must not be either.
+    needs: tarball
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [openblas, blis, netlib]
+    permissions:
+      contents: read
+      packages: write          # pushing to ghcr.io
+      id-token: write          # the signing certificate for the attestation
+      attestations: write      # storing the attestation
+      artifact-metadata: write
+    env:
+      BACKEND: ${{ matrix.backend }}
+      IMAGE: ghcr.io/mathieucaissa/blas-microbenchmark
+
+    steps:
+      # The token stays out of the workspace: the build runs this ref's
+      # code, and nothing after the checkout needs it there.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Build the image, and run it
+        run: |
+          docker build -f packaging/docker/Dockerfile --build-arg BLAS_BACKEND="$BACKEND" -t bmb .
+          docker run --rm bmb bmb_ddot --version
+          docker run --rm bmb bmb_dgemm -x 0 -i 1 -m 64 >/dev/null
+
+      # X.Y.Z-<backend> for each; X.Y.Z and latest are the OpenBLAS one.
+      - name: Push to ghcr.io
+        id: push
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          v=${TAG#v}
+          tags="$v-$BACKEND"
+          [ "$BACKEND" != openblas ] || tags="$tags $v latest"
+          for t in $tags; do
+            docker tag bmb "$IMAGE:$t"
+            docker push "$IMAGE:$t"
+          done
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$v-$BACKEND" | cut -d@ -f2)
+          case $digest in sha256:*) ;; *) echo "no digest for $IMAGE:$v-$BACKEND"; exit 1 ;; esac
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "pushed $IMAGE:{$(echo "$tags" | tr ' ' ',')} @ $digest"
+
+      - name: Attest where the image was built
+        if: github.event_name == 'push'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      # As a user gets it: pulled by digest from ghcr.io, run, verified.
+      - name: Pull it back, run it, verify its attestation
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          # Every local copy gone, so that this is a real pull.
+          docker image prune -af >/dev/null
+          docker pull "$IMAGE@$DIGEST"
+          docker run --rm "$IMAGE@$DIGEST" bmb_dgemm -x 0 -i 1 -m 64 >/dev/null
+          gh attestation verify "oci://$IMAGE@$DIGEST" --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" --format json > image-attestation.json
+          jq -e --arg d "${DIGEST#sha256:}" \
+            'any(.[].verificationResult.statement.subject[]; .digest.sha256 == $d)' image-attestation.json
+          echo "verified: $IMAGE@$DIGEST"

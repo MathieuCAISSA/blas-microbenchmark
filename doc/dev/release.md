@@ -12,7 +12,8 @@ present, attests where it was built, checks that attestation as a user
 would (`gh attestation verify`, and `cosign` with its bundle), then
 uploads it with its `SHA256SUMS` and the attestation's bundle
 (`<tarball>.sigstore.json`) — *creating* the release if the tag has none
-yet. The bundle is what a user without the GitHub CLI checks with
+yet. Its `image` job pushes the Docker images to ghcr.io, attested, then
+pulls them back and checks them ([packaging](packaging.md#publishing)). The bundle is what a user without the GitHub CLI checks with
 `cosign` (README.md), and what OpenSSF Scorecard's `Signed-Releases`
 looks for on a release (#107).
 
@@ -57,7 +58,8 @@ with an issue of its own), then tagged on `main` once merged.
    - [ ] Packaging ([packaging](packaging.md)), each green in CI: Spack
      (`BACKENDS`, `requires` and `conflicts` for what is new, its CI
      legs), Docker (its backends, and why not the others; the base
-     image), ReFrame (`ROUTINES`, its variables and its README).
+     image; the backends `release.yml` publishes), ReFrame (`ROUTINES`,
+     its variables and its README).
    - [ ] A cross-read of the README, AGENTS.md, `doc/dev`, the man pages
      and the packaging READMEs against the code, by someone (or an agent)
      who did not write the changes. 1.5.0's found a dozen places that a
@@ -91,7 +93,11 @@ with an issue of its own), then tagged on `main` once merged.
    verify <tarball> --repo MathieuCAISSA/blas-microbenchmark`, and the
    README's `cosign verify-blob-attestation` with its `.sigstore.json`, then
    `./configure --prefix=...`, `make check`, `make install` — the man
-   pages included — on a machine with no Autotools if you can.
+   pages included — on a machine with no Autotools if you can. Pull the
+   images as the README says, from a machine not logged in to ghcr.io,
+   and verify one (`gh attestation verify oci://…`). The first time
+   (1.6.0), make the package public first: its Package settings on
+   GitHub, since a workflow creates it private.
 7. **Back to development**: on another short branch and pull request,
    set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`),
    add an empty `[Unreleased]` section to `CHANGELOG.md`, and add the
