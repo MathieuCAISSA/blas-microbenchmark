@@ -63,7 +63,9 @@ with an issue of its own), then tagged on `main` once merged.
    add an empty `[Unreleased]` section to `CHANGELOG.md`, and add the
    release to the Spack package with the checksum the release published
    (see [After a release](packaging.md#after-a-release)); the `spack`
-   job then builds it from GitHub.
+   job then builds it from GitHub. Make it the version the ReFrame tests
+   build by default (`version` in `packaging/reframe/blas_microbenchmark.py`;
+   see [ReFrame](packaging.md#the-reframe-tests)).
 
 Note the order: **edit the notes, don't create the release**. The workflow
 gets there within about half a minute of the tag push and creates it with

@@ -839,6 +839,110 @@ jobs:
           apptainer exec bmb.sif bmb_report sif.json > sif.html
           grep -qi '^<!doctype html>' sif.html
 
+  # The ReFrame tests (packaging/reframe), as a site runs them, on ReFrame's
+  # generic system (this runner, no scheduler) at small sizes: bmb_run on
+  # an install, every routine, with references it meets; one it cannot
+  # meet, and a run that was not verified (-C), each failing it;
+  # bmb_build_run on this commit's tarball; their results read by
+  # bmb_report. ReFrame's list of routines must be the benchmarks the
+  # build installs. ReFrame is pinned to a release.
+  reframe:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config
+
+      - name: Install ReFrame
+        run: |
+          python3 -m venv "$RUNNER_TEMP/rfm"
+          "$RUNNER_TEMP/rfm/bin/pip" install ReFrame-HPC==4.10.4
+          echo "$RUNNER_TEMP/rfm/bin" >> "$GITHUB_PATH"
+
+      - name: Build, install, and make the tarball
+        run: |
+          autoreconf -fi
+          mkdir -p build
+          cd build
+          ../configure --prefix="$PWD/../inst"
+          make -j"$(nproc)"
+          make install
+          make dist
+
+      - name: The routines are the benchmarks installed
+        run: |
+          reframe -c packaging/reframe/blas_microbenchmark.py -n bmb_run -l > list.txt
+          sed -n 's/^- bmb_run %routine=\([a-z0-9]*\) .*/\1/p' list.txt | sort > reframe.txt
+          ls inst/libexec/blas-microbenchmark/level*/ | sed -n 's/^bmb_//p' | sort > installed.txt
+          diff reframe.txt installed.txt
+          test "$(wc -l < reframe.txt)" -ge 32
+
+      - name: bmb_run, every routine, with references it meets
+        run: |
+          echo '{"generic": {"dgemm": {"gflops": [0.001, -0.5, null]}, "dcopy": {"gbytes_per_s": [0.001, -0.5, null]}}}' > lenient.json
+          reframe -c packaging/reframe/blas_microbenchmark.py -n bmb_run \
+            -S install_prefix="$PWD/inst" -S level1_size=100000 -S level2_size=256 \
+            -S level3_size=128 -S num_threads=2 -S reference_file=lenient.json \
+            -r --report-file=run.json
+          python3 - <<'EOF'
+          import json
+          cases = json.load(open('run.json'))['runs'][0]['testcases']
+          assert len(cases) >= 32 and all(c['result'] == 'pass' for c in cases), cases
+          perf = {c['routine']: c['perfvalues'] for c in cases}
+          assert perf['dgemm']['generic:default:gflops'][1] == 0.001, perf['dgemm']
+          assert set(perf['dcopy']) == {'generic:default:gbytes_per_s'}, perf['dcopy']
+          assert set(perf['ddot']) == {'generic:default:gflops', 'generic:default:gbytes_per_s'}
+          assert set(perf['dgemm']) == {'generic:default:gflops'}, perf['dgemm']
+          print(len(cases), 'routines passed, their rates and references as expected')
+          EOF
+
+      - name: A reference it cannot meet, and an unverified run, fail it
+        run: |
+          echo '{"generic": {"dgemm": {"gflops": [1e9, -0.1, null]}}}' > strict.json
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+               -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
+               -S reference_file=strict.json -r --report-file=strict-run.json; then
+            echo "a reference of 1e9 GFLOP/s was met"; exit 1
+          fi
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+               -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
+               -S bmb_options=-C -r --report-file=unverified-run.json; then
+            echo "a run with -C passed"; exit 1
+          fi
+          python3 - <<'EOF'
+          import json
+          for f, phase in (('strict-run.json', 'performance'), ('unverified-run.json', 'sanity')):
+              case = json.load(open(f))['runs'][0]['testcases'][0]
+              assert case['fail_phase'] == phase, (f, case['fail_phase'], case['fail_reason'])
+          print('failed in performance and in sanity, as expected')
+          EOF
+
+      - name: bmb_build_run on this commit's tarball
+        run: |
+          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk)' \
+            -S bmb_tarball.tarball="$(ls build/blas-microbenchmark-*.tar.gz)" \
+            -S level1_size=100000 -S level3_size=128 -S num_threads=2 \
+            -r --report-file=build-run.json
+          python3 - <<'EOF'
+          import json
+          cases = json.load(open('build-run.json'))['runs'][0]['testcases']
+          runs = [c for c in cases if c['name'].startswith('bmb_build_run')]
+          assert len(runs) == 3 and all(c['result'] == 'pass' for c in runs), cases
+          print('built from the tarball, 3 routines passed')
+          EOF
+
+      - name: Their results make a report
+        run: |
+          find output -name result.json > results.txt
+          test "$(wc -l < results.txt)" -ge 32
+          # shellcheck disable=SC2046
+          inst/bin/bmb_report $(cat results.txt) > report.html
+          grep -qi '^<!doctype html>' report.html
+
   # The Spack package (packaging/spack), as an HPC user installs it: built
   # by Spack against each BLAS it can build on x86_64, from this commit's
   # tarball and from the latest release's, then checked by its own tests

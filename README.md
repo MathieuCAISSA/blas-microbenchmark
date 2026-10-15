@@ -88,6 +88,10 @@ A container runs on the host's CPU, which is what the results record. Docker's
 `-t` beyond those gets a warning. Docker Desktop runs containers in a virtual
 machine, whose own limits the numbers include.
 
+Sites that test their systems with [ReFrame](https://reframe-hpc.readthedocs.io/)
+can run every benchmark as a ReFrame test, with their own references:
+see [packaging/reframe](packaging/reframe/README.md).
+
 ## Quick start
 
 ```
