@@ -174,9 +174,13 @@ jobs:
   # image would redistribute Intel's libraries (#108). On a version tag,
   # each image is pushed, attested like the tarball (the attestation
   # stored in the registry beside it), then pulled back by its digest, run,
-  # and its attestation checked, as the README says. A pull request builds
-  # and runs them, pushing nothing.
+  # and its attestation checked, as the README says; only after the
+  # tarball's job passed. A pull request builds and runs them, pushing
+  # nothing.
   image:
+    # Only once the tarball's job passed: a version whose tarball failed
+    # its checks is not released, and its images must not be either.
+    needs: tarball
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -193,9 +197,12 @@ jobs:
       IMAGE: ghcr.io/mathieucaissa/blas-microbenchmark
 
     steps:
+      # The token stays out of the workspace: the build runs this ref's
+      # code, and nothing after the checkout needs it there.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
 
       - name: Build the image, and run it
         run: |
