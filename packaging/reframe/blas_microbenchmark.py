@@ -150,17 +150,32 @@ class bmb_base(rfm.RunOnlyRegressionTest):
 
 @rfm.simple_test
 class bmb_run(bmb_base):
-    '''An installed copy: the benchmarks on PATH (spack load, or a module
-    that puts them there), or under install_prefix.'''
+    '''An installed copy, the first of: the one under install_prefix; the
+    one this file was installed with (make install puts it in
+    <prefix>/share/blas-microbenchmark/reframe, with the default
+    --libexecdir); the benchmarks on PATH (spack load, or a module that
+    puts them there).'''
 
-    #: The --prefix it was installed with; '' looks it up on PATH.
+    #: The --prefix it was installed with; '' is the install this file
+    #: belongs to, if it was installed, and PATH otherwise.
     install_prefix = variable(str, value='')
 
+    def installed_with(self):
+        '''The prefix this file was installed under, or ''. ReFrame's
+        prefix is the directory of the test file.'''
+        top = os.path.normpath(os.path.join(self.prefix, '..', '..', '..'))
+        if (os.path.basename(os.path.dirname(self.prefix)) == 'blas-microbenchmark'
+                and os.path.isdir(os.path.join(top, 'libexec', 'blas-microbenchmark'))):
+            return top
+
+        return ''
+
     def bmb_executable(self, level):
-        if not self.install_prefix:
+        prefix = self.install_prefix or self.installed_with()
+        if not prefix:
             return f'bmb_{self.routine}'
 
-        return os.path.join(self.install_prefix, 'libexec', 'blas-microbenchmark',
+        return os.path.join(prefix, 'libexec', 'blas-microbenchmark',
                             f'level{level}', f'bmb_{self.routine}')
 
 

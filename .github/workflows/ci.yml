@@ -971,8 +971,9 @@ jobs:
   # an install, every routine, with references it meets; one it cannot
   # meet, and a run that was not verified (-C), each failing it;
   # bmb_build_run on this commit's tarball; their results read by
-  # bmb_report. ReFrame's list of routines must be the benchmarks the
-  # build installs. ReFrame is pinned to a release.
+  # bmb_report; and the copy make install puts beside the benchmarks,
+  # running that install with no option. ReFrame's list of routines must
+  # be the benchmarks the build installs. ReFrame is pinned to a release.
   reframe:
     runs-on: ubuntu-latest
 
@@ -1025,6 +1026,25 @@ jobs:
           assert set(perf['ddot']) == {'generic:default:gflops', 'generic:default:gbytes_per_s'}
           assert set(perf['dgemm']) == {'generic:default:gflops'}, perf['dgemm']
           print(len(cases), 'routines passed, their rates and references as expected')
+          EOF
+
+      # make install puts the tests beside the benchmarks; run from there,
+      # bmb_run takes that install with no install_prefix, as the README
+      # and the man page say. No benchmark is on PATH here, so a lookup
+      # there would fail.
+      - name: The installed tests run their own install
+        run: |
+          reframe -c inst/share/blas-microbenchmark/reframe/blas_microbenchmark.py \
+            -n 'bmb_run%routine=(dgemm|ddot)' -S level1_size=100000 -S level3_size=128 \
+            -S num_threads=2 -r --report-file=installed-run.json
+          python3 - <<'EOF'
+          import json, os
+          cases = json.load(open('installed-run.json'))['runs'][0]['testcases']
+          assert len(cases) == 2 and all(c['result'] == 'pass' for c in cases), cases
+          inst = os.path.realpath('inst/libexec/blas-microbenchmark')
+          assert all(os.path.realpath(c['executable']).startswith(inst + '/') for c in cases), \
+              [c['executable'] for c in cases]
+          print('the installed tests ran the benchmarks of', inst)
           EOF
 
       - name: A reference it cannot meet, and an unverified run, fail it

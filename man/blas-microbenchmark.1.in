@@ -604,6 +604,16 @@ BMB=@pkglibexecdir@
 export PATH=\(dq$BMB/level1:$BMB/level2:$BMB/level3:$PATH\(dq
 .EE
 .RE
+.TP
+.I @pkgdatadir@/reframe
+ReFrame tests of the benchmarks, for a site's test suite: one per
+routine, its result checked
+.RB ( \-\-verify ),
+its GFLOP/s and GB/s as performance variables, the site's references
+read from a JSON file.
+The README there says how to set the sizes, the threads and the
+references; see
+.BR EXAMPLES .
 .SH EXAMPLES
 Sweep ddot from 1K to 16M elements, with the statistics, saved as CSV:
 .PP
@@ -669,6 +679,18 @@ labels (turbo is recorded, but a series is not split by it):
 bmb_dgemm \-m 1024:8192 \-l \(dqturbo on\(dq  \-o turbo\-on.json
 bmb_dgemm \-m 1024:8192 \-l \(dqturbo off\(dq \-o turbo\-off.json
 bmb_report turbo\-*.json > report.html
+.EE
+.RE
+.PP
+In a ReFrame test suite: every benchmark of this install, each one
+verified, its rates reported as performance variables, and their results
+made into a report:
+.PP
+.RS
+.EX
+R=@pkgdatadir@/reframe
+reframe \-c $R/blas_microbenchmark.py \-n \(aqbmb_run\(aq \-r
+bmb_report output/*/*/*/*/result.json > report.html
 .EE
 .RE
 .SH SEE ALSO
