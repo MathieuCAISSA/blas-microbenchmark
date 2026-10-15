@@ -36,7 +36,8 @@ it comes from in brackets.
   before pushing rather than leave it to CI (#3 did)
   ([static analysis](../doc/dev/ci.md#static-analysis)).
 - [ ] Every error is checked and reported: a failed allocation, write or
-  `fclose` makes the run fail, never pass short
+  `fclose` makes the run fail, never pass short (a new allocation is
+  failed by `test_bmb_alloc_failures.sh` on its own)
   ([limitations](../doc/dev/benchmarks.md#known-measurement-limitations)).
 - [ ] Shell: POSIX `sh`; every expansion quoted, unless word splitting
   is wanted and a comment or `# shellcheck disable=SC2086` says so; no

@@ -139,6 +139,7 @@ for paths no test takes, then decide whether one should.
 | | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON; more threads than the CPUs the process may use warned about |
 | | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
 | | `test_bmb_ignored_options.sh` | an option a routine has no use for (`--layout` on a vector routine, `-v`, `-m`, `-M` where they do not apply) is ignored with a warning naming it, and none where it applies |
+| | `test_bmb_alloc_failures.sh` | every allocation a benchmark makes (setup, `--verify`'s check, the timing buffer, the results), made to fail in turn by a preloaded library (`bmb_failalloc.c`, built for `make check` only): exit 1 and "out of memory", never a crash; SKIPs under AddressSanitizer and outside glibc |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, or on stdout |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); `test_bmb_zgemm.sh` also has a size whose complex matrices would wrap `size_t` refused |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
@@ -165,7 +166,8 @@ page](doc/dev/report.md#testing-the-page)), the man page tests without
 groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
 and `test_doc_links.sh` outside a git checkout, `test_actions_pinned.sh`
 without `.github/`, `test_configure_paths.sh` in a source tree configured
-in place; `test_netlib_cblas` is only built for Netlib. Every
+in place, `test_bmb_alloc_failures.sh` under AddressSanitizer (the
+`sanitizers` job); `test_netlib_cblas` is only built for Netlib. Every
 other test runs anywhere. The mandoc lint is left out, with a
 note in the log, where mandoc is not installed. `BMB_MAN_STRICT=1` turns
 each of those into a failure — the `man` CI job sets it.

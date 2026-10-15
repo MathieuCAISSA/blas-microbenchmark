@@ -110,7 +110,12 @@ gaps were the out-of-memory paths of every benchmark, the option
 parser's error messages, and `bmb_threads.c` at 38%: no test set a
 thread-count environment variable (`OPENBLAS_NUM_THREADS`, ...).
 `test_bmb_threads_env.sh` (#24) brought it to 100%, and found on the way
-that `OMP_NUM_THREADS=-2` labelled a run with 4294967294 threads.
+that `OMP_NUM_THREADS=-2` labelled a run with 4294967294 threads. The
+out-of-memory paths were the rest: `test_bmb_alloc_failures.sh` (#111)
+makes each of the 200 or so allocations of the 32 benchmarks fail in
+turn, and took lines from 92.5% to 98.3% and branches from 81% to 91%
+(Codecov's figure, which counts partly taken branches against a line,
+moves with the second).
 
 ## OpenSSF Scorecard
 
