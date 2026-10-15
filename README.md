@@ -96,19 +96,19 @@ see [packaging/reframe](packaging/reframe/README.md).
 
 ```
 $ bmb_dgemm -m 512:2048
-# blas-microbenchmark 1.4.0
+# blas-microbenchmark 1.5.0
 # backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
 # verified: every point, against a reference, before it was timed
 # layout: row-major
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
-# date: 2026-10-08T15:11:27Z
+# date: 2026-10-15T08:47:16Z
 # routine: dgemm
 Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
-1               512                 512                 0.005897026     45.520
-1               1024                1024                0.045677359     47.014
-1               2048                2048                0.370463460     46.374
+1               512                 512                 0.005236549     51.262
+1               1024                1024                0.045034862     47.685
+1               2048                2048                0.364057654     47.190
 ```
 
 There are 32 benchmarks, `bmb_<routine>`, covering levels 1 to 3:
