@@ -302,6 +302,11 @@ details[open] > summary { margin-bottom: 12px; }
 
   function shortBlas(blas) { return blas.split(/\s+/).slice(0, 2).join(" "); }
 
+  /* The version string as the series key has it. AOCL-BLAS's ends with
+   * the day the library was built ("AOCL-BLAS 5.3.2 Build 20261015"),
+   * which two builds of one release do not share (#66). */
+  function blasKey(blas) { return (blas || "").replace(/^(AOCL-BLAS \S+) Build \d+$/, "$1"); }
+
   /* entries: [{file, result}], result being one benchmark's JSON. Returns
    * {identities, routines, problems}, identities in colour-slot order and
    * routines by level then name. A malformed entry becomes a problem and
@@ -318,7 +323,7 @@ details[open] > summary { margin-bottom: 12px; }
        * without the field -- vector routines, results from before 1.4 --
        * were row-major, so they stay in the same series as row ones. */
       var layout = r.layout === "col" ? "col" : "row";
-      var key = [r.backend, r.blas || "", machine.cpu || "", r.label || "", layout].join("\u0001");
+      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {

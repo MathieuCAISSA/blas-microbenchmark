@@ -31,7 +31,8 @@ What `package.py` does:
   runs autoreconf.
 - **The BLAS.** It depends on the `blas` virtual and maps the provider
   Spack chose to `--with-blas-backend` (`BACKENDS`: openblas, blis,
-  netlib-lapack, nvpl-blas, armpl-gcc, flexiblas, intel-oneapi-mkl, the
+  amdblis, with `+cblas threads=openmp ~ilp64`, netlib-lapack, nvpl-blas,
+  armpl-gcc, flexiblas, intel-oneapi-mkl, the
   last with `+gfortran threads=openmp`, the interface and threading
   layer `configure` links). Any other provider
   is refused at concretization, with that list: `configure` has no
@@ -70,7 +71,7 @@ page, another version.
 ### In CI
 
 The `spack` job of `ci.yml` runs `.github/spack-check.sh BLAS SRC` for
-OpenBLAS, BLIS, Netlib, FlexiBLAS and MKL (NVPL and ArmPL are
+OpenBLAS, BLIS, AOCL-BLAS, Netlib, FlexiBLAS and MKL (NVPL and ArmPL are
 aarch64-only, and their Spack packages download the vendor's binaries).
 MKL is Intel's apt package, declared to Spack as an external
 (`/opt/intel/oneapi`): Spack's own package would download Intel's
@@ -89,7 +90,8 @@ actions are: a tag can be moved. What Spack builds is cached, keyed on
 both and on `packaging/spack`. A new Spack release is taken by moving the
 two commits to its tags' (`gh api repos/spack/spack/git/ref/tags/vX.Y.Z`,
 and the same for `spack/spack-packages`).
-The BLIS and Netlib legs install the distribution's library as well, so
+The BLIS, AOCL-BLAS and Netlib legs install the distribution's library
+(BLIS's for AOCL-BLAS, its fork) as well, so
 that the benchmarks loading it instead of Spack's would fail
 `test_linked_library`.
 
@@ -152,7 +154,9 @@ history, the build directories and what `autoreconf` makes again.
   | `netlib` | `libblas-dev` | `libblas3` |
   | `mkl` | Intel's repository (`.github/install-oneapi-mkl.sh`) | `libgomp1`, and MKL's libraries copied |
 
-  FlexiBLAS is not there: Ubuntu has no package of it.
+  FlexiBLAS and AOCL-BLAS are not there: Ubuntu packages neither
+  (AOCL-BLAS is built from AMD's sources, as the `aocl` CI job does).
+  NVPL and ArmPL are aarch64-only, and the image is x86_64.
 - **MKL** is not a package the final stage can install without
   gigabytes, so its libraries are copied, where the benchmarks'
   RUNPATH looks (`/opt/intel/oneapi/mkl/latest/lib`): the GNU OpenMP

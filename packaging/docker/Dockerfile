@@ -9,7 +9,8 @@
 #
 # README.md says how to run it, with Docker or Apptainer, and what a
 # container changes in a measurement; doc/dev/packaging.md how it is built
-# and tested. FlexiBLAS is left out: Ubuntu has no package of it.
+# and tested. FlexiBLAS and AOCL-BLAS are left out: Ubuntu packages
+# neither.
 
 # Both stages start from the same base, pinned by digest as the actions
 # are by commit (#13); Dependabot moves both.

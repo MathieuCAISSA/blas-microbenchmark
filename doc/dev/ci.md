@@ -19,8 +19,10 @@ when it merges, or it can fail without stopping anything.
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
 `configure --enable-werror`, `make`, and `make check` on every pull
 request and push to `main`,
-once per implemented backend: `openblas`, `blis` and `netlib` on
-`ubuntu-latest`, `nvpl` and `armpl` on `ubuntu-24.04-arm` (GitHub's free
+once per implemented backend: `openblas`, `blis`, `aocl` (AOCL-BLAS,
+built from AMD's sources), `netlib` and `mkl` on `ubuntu-latest`,
+`flexiblas` in a Fedora container, `nvpl` and `armpl` on
+`ubuntu-24.04-arm` (GitHub's free
 Linux arm64 hosted runner for public repos — both those backends are
 aarch64-only). Keep it green — a routine that only works "on my machine"
 isn't done.
@@ -48,7 +50,7 @@ is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
 it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 
 The `spack` job builds the Spack package with Spack, against OpenBLAS,
-BLIS, Netlib and FlexiBLAS, from this commit's tarball and from the
+BLIS, AOCL-BLAS, Netlib, FlexiBLAS and MKL, from this commit's tarball and from the
 latest release, and runs its tests (`spack test run`), through
 `.github/spack-check.sh`; see [packaging](packaging.md#in-ci).
 
@@ -65,8 +67,8 @@ routines against the benchmarks; see [packaging](packaging.md#in-ci-2).
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
-The seven jobs that test a library (`openblas`, `blis`, `netlib`, `nvpl`,
-`armpl`, `flexiblas`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
+The nine jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
+`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
 real sizes"): all 32, checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on

@@ -21,8 +21,12 @@ releases with the same major version can be compared and read by the same
   `libmkl-dev`. `-t` sets MKL's BLAS thread count, above
   `MKL_DOMAIN_NUM_THREADS`; without it, `MKL_NUM_THREADS` then
   `OMP_NUM_THREADS`. The Spack package takes `^intel-oneapi-mkl`.
+- An AMD AOCL-BLAS backend (`--with-blas-backend=aocl`): AMD's fork of
+  BLIS, from AOCL or a module (`AOCL_ROOT`), linked through its threaded
+  `libblis-mt`; its results say `aocl` and AOCL-BLAS's version. The
+  Spack package takes `^amdblis`.
 - A Spack package: `spack repo add` this repository's URL, then
-  `spack install blas-microbenchmark ^openblas` (or `^blis`,
+  `spack install blas-microbenchmark ^openblas` (or `^blis`, `^amdblis`,
   `^netlib-lapack`, `^flexiblas`, `^nvpl-blas`, `^armpl-gcc`); `spack test
   run` checks the install, and `spack load` puts the benchmarks on `PATH`.
 - A Dockerfile (`packaging/docker`): an image built from the source tree

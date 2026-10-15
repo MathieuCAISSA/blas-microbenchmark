@@ -10,7 +10,7 @@
 # - the latest release in the recipe, as users get it: Spack fetches the
 #   tarball from GitHub and checks its sha256 against the recipe.
 #
-# BLAS is a provider (openblas, blis, netlib-lapack, flexiblas,
+# BLAS is a provider (openblas, blis, amdblis, netlib-lapack, flexiblas,
 # intel-oneapi-mkl). spack must be on PATH, with this repository's package
 # repository added. The CI job installs a distribution's BLAS too where it
 # can: the package's test_linked_library then fails if the benchmarks
@@ -40,9 +40,9 @@ spack -e "$env" test run --alias "dev-$blas" blas-microbenchmark \
 echo "::endgroup::"
 
 echo "::group::the release, $release ^$blas"
-# A provider newer than the release (MKL, new in 1.5.0) is refused by the
-# recipe's own conflict, which says so; any other failure to concretize is
-# one.
+# A provider newer than the release (MKL and AOCL-BLAS, new in 1.5.0) is
+# refused by the recipe's own conflict, which says so; any other failure
+# to concretize is one.
 if ! spack spec -I "blas-microbenchmark@=$release ^[virtuals=blas] $blas" >"$env.spec" 2>&1; then
     cat "$env.spec"
     grep -q "is new in" "$env.spec" || exit 1

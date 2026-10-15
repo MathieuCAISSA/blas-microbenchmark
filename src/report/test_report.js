@@ -105,6 +105,16 @@
       eq(m.identities[0].files, ["a.json", "b.json"], "decision 1: the series remembers both files");
     });
 
+    test("merge, AOCL-BLAS builds", function () {
+      function aocl(file, blas) { return entry(file, { backend: "aocl", blas: blas, rows: [[1, 8, null, 1e-6, 1, 8]] }); }
+      eq(R.buildModel([aocl("a.json", "AOCL-BLAS 5.3.2 Build 20261015"),
+                       aocl("b.json", "AOCL-BLAS 5.3.2 Build 20261102")]).identities.length, 1,
+         "#66: two builds of one AOCL-BLAS release, on different days, are one series");
+      eq(R.buildModel([aocl("a.json", "AOCL-BLAS 5.3.2 Build 20261015"),
+                       aocl("b.json", "AOCL-BLAS 5.3 Build 20261015")]).identities.length, 2,
+         "#66: two AOCL-BLAS releases are two series");
+    });
+
     test("identity", function () {
       eq(R.buildModel([
         entry("a.json", { label: "a", rows: [[1, 8, null, 1e-6, 1, 8]] }),
