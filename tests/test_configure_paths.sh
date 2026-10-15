@@ -32,7 +32,7 @@ position() {
     printf '%s\n' "$1" | awk -v d="$2" '{ i = index($0, d); if (i) print i }'
 }
 
-for backend in openblas blis netlib; do
+for backend in openblas blis aocl netlib; do
     var=$(printf '%s' "$backend" | tr 'a-z' 'A-Z')
     mkdir -p "$T/$backend"
     (
@@ -61,7 +61,7 @@ for backend in openblas blis netlib; do
         done
     done
 done
-echo "ok   --with-blas-incpath and --with-blas-libpath come first, for openblas, blis and netlib"
+echo "ok   --with-blas-incpath and --with-blas-libpath come first, for openblas, blis, aocl and netlib"
 
 rm -rf "$T"
 echo "all checks passed"

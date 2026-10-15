@@ -692,6 +692,91 @@ jobs:
             build/**/*.sh.log
           if-no-files-found: ignore
 
+  # AOCL-BLAS, AMD's fork of BLIS and what AMD EPYC clusters measure
+  # against. No distribution packages it, so it is built from AMD's
+  # sources, a release pinned by commit, as AMD builds it (the amdzen
+  # configuration, OpenMP, CBLAS), and cached; configure finds it through
+  # AOCL_ROOT, as a module would set it. The benchmarks must link its
+  # threaded libblis-mt, and -t must change the time.
+  aocl:
+    runs-on: ubuntu-latest
+    env:
+      AOCL_COMMIT: 25cad99a6840855ade0a49871197f48ee0e1d317 # 5.3.2
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: aocl-cache
+        with:
+          path: ~/aocl
+          key: aocl-${{ env.AOCL_COMMIT }}-${{ runner.os }}
+
+      - name: Build AOCL-BLAS
+        if: steps.aocl-cache.outputs.cache-hit != 'true'
+        run: |
+          git init -q "$RUNNER_TEMP/aocl-src"
+          cd "$RUNNER_TEMP/aocl-src"
+          git fetch -q --depth 1 https://github.com/amd/blis.git "$AOCL_COMMIT"
+          git checkout -q FETCH_HEAD
+          ./configure --enable-cblas --enable-threading=openmp --prefix="$HOME/aocl" amdzen
+          make -j"$(nproc)"
+          make install
+
+      - name: autoreconf
+        run: autoreconf -fi
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          AOCL_ROOT="$HOME/aocl" ../configure --with-blas-backend=aocl --enable-werror
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: Provenance
+        run: |
+          build/src/c/level1/bmb_ddot --version | tee version.txt
+          grep -q '^BLAS backend: aocl (AOCL-BLAS ' version.txt
+          ldd build/src/c/level3/bmb_dgemm > ldd.txt
+          grep -q 'libblis-mt\.so' ldd.txt
+
+      - name: make check
+        run: make -C build check
+
+      # --verify at the sizes and thread counts a user measures, against this
+      # job's library: make check only uses tiny ones.
+      - name: Verified at real sizes
+        run: .github/verify-sweep.sh build
+
+      # libblis (single-threaded) would ignore -t and still pass everything
+      # above: on 4 threads dgemm must take clearly less time than on 1.
+      - name: Threads are used
+        run: |
+          d=build/src/c/level3/bmb_dgemm
+          $d -x 1 -i 3 -m 1024 -t 1 -C -o t1.csv >/dev/null
+          $d -x 1 -i 3 -m 1024 -t 4 -C -o t4.csv >/dev/null
+          t1=$(sed -n 's/^1,1024,1024,\([0-9.]*\),.*/\1/p' t1.csv)
+          t4=$(sed -n 's/^4,1024,1024,\([0-9.]*\),.*/\1/p' t4.csv)
+          echo "1 thread: $t1 s, 4 threads: $t4 s"
+          awk -v a="$t1" -v b="$t4" 'BEGIN { exit !(a > 0 && b > 0 && b < 0.75 * a) }'
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-logs-aocl
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore
+
   # Intel oneAPI MKL, the BLAS most x86 clusters measure against, from
   # Intel's apt repository: its current release, as sites install it. The
   # benchmarks link its GNU OpenMP threading layer and set its BLAS
@@ -946,9 +1031,9 @@ jobs:
   # The Spack package (packaging/spack), as an HPC user installs it: built
   # by Spack against each BLAS it can build on x86_64, from this commit's
   # tarball and from the latest release's, then checked by its own tests
-  # (spack test run). The distribution's BLIS or Netlib is installed as
-  # well, so that linking it instead of Spack's would fail
-  # test_linked_library (#58). MKL is Intel's apt package, declared to
+  # (spack test run). The distribution's BLIS (for BLIS and for
+  # AOCL-BLAS, its fork) or Netlib is installed as well, so that linking
+  # it instead of Spack's would fail test_linked_library (#58). MKL is Intel's apt package, declared to
   # Spack as an external: Spack's own would download Intel's installer,
   # gigabytes, on every cache miss. Spack and its package recipes are pinned
   # to commits, as the actions are; what Spack builds is cached, keyed on
@@ -958,7 +1043,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        blas: [openblas, blis, netlib-lapack, flexiblas, intel-oneapi-mkl]
+        blas: [openblas, blis, amdblis, netlib-lapack, flexiblas, intel-oneapi-mkl]
     env:
       SPACK_COMMIT: 3e19345b6e12f5ff1b874f4059622fc6a1fd804a # v1.2.2
       SPACK_PACKAGES_COMMIT: d4f7c711a6a42f1c4d551c8fd10fce9a11340a81 # v2026.06.0
@@ -971,7 +1056,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y autoconf automake libopenblas-dev
           case "${{ matrix.blas }}" in
-            blis) sudo apt-get install -y libblis-openmp-dev ;;
+            blis|amdblis) sudo apt-get install -y libblis-openmp-dev ;;
             netlib-lapack) sudo apt-get install -y libblas-dev ;;
             intel-oneapi-mkl) .github/install-oneapi-mkl.sh ;;
           esac

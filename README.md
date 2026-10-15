@@ -55,7 +55,7 @@ the variables the module sets (`OPENBLAS_ROOT`, `BLIS_INCDIR`,
 and `--with-blas-libpath=DIR`.
 
 With Spack, which picks the BLAS (`^openblas`, `^blis`, `^netlib-lapack`,
-`^flexiblas`, `^nvpl-blas`, `^armpl-gcc`, `^intel-oneapi-mkl`):
+`^flexiblas`, `^nvpl-blas`, `^armpl-gcc`, `^intel-oneapi-mkl`, `^amdblis`):
 
 ```bash
 spack repo add https://github.com/MathieuCAISSA/blas-microbenchmark.git
@@ -175,6 +175,7 @@ Chosen when building, and each one built and tested in CI:
 | --- | --- |
 | OpenBLAS *(default)* | *(none)* |
 | BLIS | `--with-blas-backend=blis` |
+| AMD AOCL-BLAS | `--with-blas-backend=aocl` |
 | Netlib reference | `--with-blas-backend=netlib` |
 | NVPL *(aarch64)* | `--with-blas-backend=nvpl` |
 | ArmPL *(aarch64)* | `--with-blas-backend=armpl` |

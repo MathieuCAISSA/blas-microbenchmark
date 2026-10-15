@@ -147,14 +147,14 @@ AC_DEFUN([BMB_USER_PATHS], [
 ])
 
 AC_ARG_WITH([blas-backend],
-  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|netlib|nvpl|armpl|flexiblas|mkl],
+  [AS_HELP_STRING([--with-blas-backend=auto|openblas|blis|aocl|netlib|nvpl|armpl|flexiblas|mkl],
     [BLAS backend to build against (default: auto, i.e. search for any CBLAS-compatible library on the default paths)])],
   [bmb_blas_backend="$withval"],
   [bmb_blas_backend=auto])
 
 AS_CASE(["$bmb_blas_backend"],
-  [auto|openblas|blis|netlib|nvpl|armpl|flexiblas|mkl], [],
-  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, netlib, nvpl, armpl, flexiblas, mkl (got '$bmb_blas_backend')])])
+  [auto|openblas|blis|aocl|netlib|nvpl|armpl|flexiblas|mkl], [],
+  [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, aocl, netlib, nvpl, armpl, flexiblas, mkl (got '$bmb_blas_backend')])])
 
 dnl Generic hints, applied whatever the backend. Backend-specific ones are
 dnl applied inside each case below, so they take priority over these.
@@ -221,6 +221,39 @@ AS_CASE(["$bmb_blas_backend"],
         [Define if bli_thread_set_num_threads() is available.])],
       [AC_MSG_WARN([bli_thread_set_num_threads not found in libblis; --thread-count/BLIS_NUM_THREADS will have no effect.])])
     BMB_CHECK_BLAS_VERSION_API([blis])
+  ],
+
+  [aocl], [
+    dnl AMD's fork of BLIS (AOCL-BLAS), with BLIS's interface: cblas.h,
+    dnl bli_thread_set_num_threads(), bli_info_get_version_str(). Its
+    dnl threaded library is libblis-mt; its libblis is the single-threaded
+    dnl build, which would ignore -t, so it is only taken when there is no
+    dnl other, with a warning. No distribution packages it: it comes from
+    dnl AMD's installer, a module (AOCL_ROOT, or AMDBLIS_ROOT from Spack's
+    dnl amdblis) or the command line. A source build installs its headers
+    dnl in include/blis, AMD's packages in include. -isystem, as for BLIS:
+    dnl its cblas.h has BLIS's unused static helpers.
+    for bmb_var in AMDBLIS AOCL; do
+      eval "bmb_root=\$${bmb_var}_ROOT"
+      AS_IF([test -n "$bmb_root" && test -f "$bmb_root/include/blis/cblas.h"], [
+        AC_MSG_NOTICE([using include directory $bmb_root/include/blis])
+        CPPFLAGS="-isystem $bmb_root/include/blis $CPPFLAGS"
+      ])
+    done
+    BMB_ENV_HINTS([AMDBLIS])
+    BMB_ENV_HINTS([AOCL])
+    BMB_USER_PATHS
+    AC_CHECK_HEADERS([cblas.h], [], [
+      AC_MSG_ERROR([AOCL-BLAS's cblas.h not found. Load your AOCL module (AOCL_ROOT/AOCL_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
+    ])
+    AC_SEARCH_LIBS([cblas_dgemm], [blis-mt blis], [], [
+      AC_MSG_ERROR([AOCL-BLAS not found (cblas_dgemm unresolved with -lblis-mt or -lblis). Load your AOCL module (AOCL_ROOT/AOCL_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
+    ])
+    AS_CASE(["$ac_cv_search_cblas_dgemm"],
+      [*-lblis-mt*], [],
+      [AC_MSG_WARN([only AOCL-BLAS's single-threaded libblis was found, not libblis-mt: -t will have no effect.])])
+    dnl Against the library just linked, whichever it was.
+    AC_CHECK_FUNCS([bli_thread_set_num_threads bli_info_get_version_str])
   ],
 
   [netlib], [

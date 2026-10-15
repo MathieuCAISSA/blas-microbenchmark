@@ -31,7 +31,8 @@ What `package.py` does:
   runs autoreconf.
 - **The BLAS.** It depends on the `blas` virtual and maps the provider
   Spack chose to `--with-blas-backend` (`BACKENDS`: openblas, blis,
-  netlib-lapack, nvpl-blas, armpl-gcc, flexiblas, intel-oneapi-mkl, the
+  amdblis, with `+cblas threads=openmp ~ilp64`, netlib-lapack, nvpl-blas,
+  armpl-gcc, flexiblas, intel-oneapi-mkl, the
   last with `+gfortran threads=openmp`, the interface and threading
   layer `configure` links). Any other provider
   is refused at concretization, with that list: `configure` has no

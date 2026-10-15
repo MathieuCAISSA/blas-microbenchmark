@@ -7,6 +7,7 @@ How each BLAS library is found, linked and named. Start at
 | --- | --- | --- |
 | OpenBLAS | `--with-blas-backend=openblas` (default via `auto`) | CI, `openblas` job |
 | BLIS | `--with-blas-backend=blis` | CI, `blis` job |
+| AOCL-BLAS | `--with-blas-backend=aocl` | CI, `aocl` job (built from AMD's sources) |
 | Netlib | `--with-blas-backend=netlib` | CI, `netlib` job |
 | NVPL | `--with-blas-backend=nvpl` | CI, `nvpl` job (`ubuntu-24.04-arm`) |
 | ArmPL | `--with-blas-backend=armpl` | CI, `armpl` job (`ubuntu-24.04-arm`) |
@@ -145,6 +146,35 @@ path only for this backend, as `src/c/netlib` does (`BMB_CBLAS_CPPFLAGS`).
   `MKL_DOMAIN_NUM_THREADS` it overrides gets a warning. `MKL_DYNAMIC`
   (MKL may use fewer threads on a small problem) is left as MKL has it.
 - The version is `mkl_get_version_string()`'s.
+
+**AOCL-BLAS** (#66) is AMD's fork of BLIS, with BLIS's interface:
+`cblas.h`, `bli_thread_set_num_threads()`, `bli_info_get_version_str()`
+(which says `AOCL-BLAS 5.3.2 Build …`). It is a backend of its own
+rather than BLIS found elsewhere, so that its results say `aocl` and
+never merge with BLIS's in the report, and because what it links
+differs:
+
+- What is linked: `-lblis-mt`, its OpenMP build. Its `libblis` is the
+  single-threaded one, which would ignore `-t`; it is taken only when
+  there is no `libblis-mt`, with a warning. The checks for the thread
+  and version calls run against whichever was linked
+  (`AC_CHECK_FUNCS`), and define the same macros as BLIS, so
+  `bmb_threads.c` and `bmb_build.c` need nothing of their own.
+- Where it is: no distribution packages it. AMD's installer puts the
+  headers in `include`, a build from source in `include/blis`;
+  `configure` reads `AOCL_ROOT` (and `AOCL_INCDIR`, …) and Spack's
+  `AMDBLIS_ROOT`, and adds `include/blis` under either when its
+  `cblas.h` is there, with `-isystem`: its `cblas.h` has BLIS's unused
+  static helpers.
+- Threads: `BLIS_NUM_THREADS`, then `OMP_NUM_THREADS`, as BLIS.
+  **AOCL Dynamic**, built in by default, may run a small problem on fewer
+  threads than it is given, as `MKL_DYNAMIC` does; only a library built
+  with `--disable-aocl-dynamic` turns it off.
+- CI builds it from AMD's sources (`amd/blis`, a release pinned by
+  commit) as AMD does: the `amdzen` configuration (every Zen generation,
+  chosen at run time, and a generic path for other CPUs), OpenMP, CBLAS.
+  The job checks that `libblis-mt` is linked and that 4 threads take
+  clearly less time than 1.
 
 **cuBLAS / rocBLAS**: deliberately out of scope. Handle-based,
 device-memory API, fundamentally different from the CBLAS interface every

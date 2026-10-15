@@ -15,6 +15,7 @@ from spack.package import *
 BACKENDS = {
     "openblas": "openblas",
     "blis": "blis",
+    "amdblis": "aocl",
     "netlib-lapack": "netlib",
     "nvpl-blas": "nvpl",
     "armpl-gcc": "armpl",
@@ -62,6 +63,12 @@ class BlasMicrobenchmark(AutotoolsPackage):
     )
     conflicts(
         "^[virtuals=blas] intel-oneapi-mkl", when="@:1.4", msg="the MKL backend is new in 1.5.0"
+    )
+    # AOCL-BLAS's threaded library (libblis-mt), its CBLAS layer, and the
+    # 32-bit integers CBLAS takes; without threads it would ignore -t.
+    requires("^amdblis +cblas threads=openmp ~ilp64", when="^[virtuals=blas] amdblis")
+    conflicts(
+        "^[virtuals=blas] amdblis", when="@:1.4", msg="the AOCL-BLAS backend is new in 1.5.0"
     )
 
     def configure_args(self):

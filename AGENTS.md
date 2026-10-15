@@ -49,7 +49,9 @@ FlexiBLAS on Debian or Ubuntu; see their CI job steps in
 `.github/workflows/ci.yml` for the exact `--with-blas-backend=nvpl`,
 `=armpl` and `=flexiblas` setup (FlexiBLAS's runs in a Fedora container).
 MKL (`=mkl`) comes from Intel's apt repository: `.github/install-oneapi-mkl.sh`
-installs it (sudo, several GB).
+installs it (sudo, several GB). AOCL-BLAS (`=aocl`) has no package: build
+AMD's sources as the `aocl` job does, then `AOCL_ROOT=<its prefix>
+../configure --with-blas-backend=aocl`.
 
 After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
 before `../configure`/`make` — stale generated `Makefile`s will otherwise
