@@ -1,9 +1,11 @@
 #!/bin/sh
-# Checks the documentation site html.sh builds from the man pages: every
-# page and the index are there, every link on the site leads somewhere --
-# to a file and an anchor that exist, or to https -- nothing is loaded
-# from elsewhere, the pages link to each other, and each page holds what
-# its man page does (every option of --help, the version).
+# Checks the documentation site html.sh builds: every page of its menu is
+# there and in every page's menu, no section of the manual is lost when it
+# is cut into pages, every link on the site leads somewhere -- to a file
+# and an anchor that exist, or to https -- nothing is loaded from
+# elsewhere, the pages link to each other, the site holds what the man
+# pages do (every option of --help, the version), and the guides'
+# commands run programs that exist, with options they take.
 set -e
 . "${srcdir:-.}/man_helper.sh"
 need mandoc "build the site"
@@ -32,10 +34,42 @@ if BENCH_DIR="$T/nowhere" srcdir=${srcdir:-.} "${SHELL:-/bin/sh}" "${srcdir:-.}/
 fi
 ok "html.sh fails when the benchmarks are not built"
 
-for f in index.html site.css blas-microbenchmark.html bmb_report.html outputs.html development.html; do
-    test -s "$site/$f" || fail "the site has no $f"
+# The menu, as html.sh has it: every page in it is built, and every page
+# has it whole.
+pages=$(sed -n "/^MENU='/,/'\$/p" "${srcdir:-.}/html.sh" | sed "s/^MENU='//; s/'\$//" | cut -d'|' -f2)
+test "$(echo $pages | wc -w)" -ge 15 || fail "only $(echo $pages | wc -w) pages read from html.sh's MENU"
+test -s "$site/site.css" || fail "the site has no site.css"
+for p in $pages; do
+    test -s "$site/$p.html" || fail "the site has no $p.html, which its menu lists"
 done
-ok "the site has the index, the stylesheet, both pages, the outputs and the development page"
+for f in "$site"/*.html; do
+    for p in $pages; do
+        grep -q "<li><a href=\"$p.html\"" "$f" || fail "$(basename "$f")'s menu has no $p.html"
+    done
+done
+ok "the site has the $(echo $pages | wc -w) pages of its menu, and every page has the menu"
+
+# Cut into pages, the manual loses no section: every section of
+# blas-microbenchmark(1) is on exactly one of its pages.
+manual=$(sed -n "/^MENU='/,/'\$/p" "${srcdir:-.}/html.sh" | awk -F'|' '$1 == "The benchmarks" { print $2 }')
+mandoc -Thtml -Ofragment blas-microbenchmark.1 | grep -o '<h1 class="Sh" id="[^"]*"' | sed 's/.* id="//; s/"$//' >"$T/sections"
+test "$(wc -l <"$T/sections")" -ge 10 || fail "only $(wc -l <"$T/sections") sections read from blas-microbenchmark.1"
+while read -r id; do
+    [ "$id" = NAME ] && continue
+    # || true: under dash, set -e reaches into $(...), and the first page
+    # without it would end the loop.
+    n=$(for p in $manual; do grep -l "id=\"$id\"" "$site/$p.html" || true; done | wc -l)
+    test "$n" -eq 1 || fail "the manual's section $id is on $n of its pages, not 1"
+done <"$T/sections"
+ok "each of the manual's $(($(wc -l <"$T/sections") - 1)) sections is on one page of the site"
+
+# The guides' commands, as the man pages' examples are checked.
+for g in "${srcdir:-.}"/site/*.html; do
+    awk '/<pre>/ { on = 1; sub(/.*<pre>/, "") } on { line = $0; sub(/<\/pre>.*/, "", line); print line } /<\/pre>/ { on = 0 }' "$g"
+done | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g' >"$T/guide-commands"
+check_commands "$T/guide-commands"
+test "$commands_checked" -ge 15 || fail "only $commands_checked commands found in the guides"
+ok "the $commands_checked commands in the guides run programs that exist, with options they take"
 
 # development.html: every test the Makefiles run is on it -- the
 # per-routine smoke tests as one entry, counted -- and, in a git checkout,
@@ -144,21 +178,23 @@ done
 ok "the site loads nothing but its own stylesheet and $images images of its own"
 
 # Every section of a page is in its table of contents.
-for p in blas-microbenchmark bmb_report; do
-    for id in $(grep -o '<h[12] class="S[hs]" id="[^"]*"' "$site/$p.html" | sed 's/.* id="//; s/"$//'); do
-        sed -n '/<nav class="toc"/,/<\/nav>/p' "$site/$p.html" | grep -q "href=\"#$id\"" \
-            || fail "$p.html: section $id is not in the table of contents"
+for f in "$site"/*.html; do
+    for id in $(grep -o '<h[12] class="S[hs][^"]*" id="[^"]*"' "$f" | sed 's/.* id="//; s/"$//'); do
+        sed -n '/<nav class="toc"/,/<\/nav>/p' "$f" | grep -q "href=\"#$id\"" \
+            || fail "$(basename "$f"): section $id is not in the table of contents"
     done
 done
 ok "every section and subsection is in its page's table of contents"
 
-# The pages link to each other, and the index to both.
+# The pages link to each other, and the index to both manuals.
 grep -q '<a href="bmb_report.html"><b>bmb_report</b>(1)</a>' "$site/blas-microbenchmark.html" \
     || fail "blas-microbenchmark.html does not link bmb_report(1) to bmb_report.html"
 grep -q '<a href="blas-microbenchmark.html"><b>blas-microbenchmark</b>(1)</a>' "$site/bmb_report.html" \
     || fail "bmb_report.html does not link blas-microbenchmark(1) to blas-microbenchmark.html"
-grep -q 'href="https://man7.org/linux/man-pages/man8/numactl.8.html"' "$site/blas-microbenchmark.html" \
+grep -q 'href="https://man7.org/linux/man-pages/man8/numactl.8.html"' "$site"/*.html \
     || fail "numactl(8) is not linked to man7.org"
+grep -q '<a href="measuring.html#HOW_A_NUMBER_IS_MEASURED"><b>HOW A NUMBER IS MEASURED</b></a>' "$site/options.html" \
+    || fail "options.html does not link its reference to HOW A NUMBER IS MEASURED"
 for p in blas-microbenchmark bmb_report; do
     grep -q "<a href=\"$p.html\">" "$site/index.html" || fail "the index does not link to $p.html"
     grep -q '<a href="https://github.com/MathieuCAISSA/blas-microbenchmark">' "$site/$p.html" \
@@ -166,9 +202,11 @@ for p in blas-microbenchmark bmb_report; do
 done
 ok "the pages link to each other, to man7.org for the rest, to the project; the index to both"
 
-# What the man page says, the page on the site says: every option.
+# What the man page says, the site says: every option, in the manual's
+# pages.
+for p in $manual; do cat "$site/$p.html"; done >"$T/manual.html"
 for opt in $("$BENCH" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+' | sed 's/.*, //'); do
-    grep -q -- "$opt" "$site/blas-microbenchmark.html" || fail "blas-microbenchmark.html does not have $opt"
+    grep -q -- "$opt" "$T/manual.html" || fail "the manual's pages do not have $opt"
 done
 for opt in $("$REPORT" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+' | sed 's/.*, //'); do
     grep -q -- "$opt" "$site/bmb_report.html" || fail "bmb_report.html does not have $opt"

@@ -72,32 +72,58 @@ from the build directory.
 
 ## The site
 
-<https://mathieucaissa.github.io/blas-microbenchmark/> is generated, all
-of it: the man pages as HTML, the outputs of real runs, and the tests and
-CI as their own sources describe them. Nothing on it is written twice, so
-it cannot say what the sources do not. `make html` builds it in
-`man/html/` with mandoc (`man/html.sh`), after `make`:
+<https://mathieucaissa.github.io/blas-microbenchmark/> is built by
+`man/html.sh` (`make html`, after `make`, with mandoc, in `man/html/`).
+It is a menu of four kinds of page (`MENU` in `html.sh`, which every page
+shows on its left; each page has its own table of contents on the right,
+and links to the pages before and after it in the menu):
 
-- mandoc converts each page (`-Ofragment`); `html.sh` wraps it in the
-  site's layout: a bar to move between pages, a table of contents built
-  from the page's sections, the page's name and description as its title,
-  a footer. It drops what that layout already says: mandoc's header and
-  footer tables, and the NAME section.
+- **The guides**, `man/site/*.html` (#115): Install, Your first
+  benchmarks, Compare libraries, The BLAS libraries, On an HPC cluster,
+  ReFrame tests. They are written for the site, as fragments of HTML
+  whose first lines give the title and description (`<!-- title: … -->`,
+  `<!-- description: … -->`), with `<h2 id>` and `<h3 id>` headings and
+  `<!-- picture NAME | ALT | CAPTION -->` for a screenshot. Unlike the
+  rest of the site, they say again what the man pages and the README say,
+  in another order, so `test_man_html.sh` holds them to the programs:
+  every command in a `<pre>` runs a program that exists, with options it
+  takes (as `test_man_content.sh` does for the man pages' examples). A
+  word starting with `bmb_` is taken for a benchmark, so a ReFrame test
+  name goes in quotes (`-n 'bmb_run'`). A change to an option, a
+  default, a backend or an install step updates them too; they ship in
+  the tarball (`SITE_GUIDES` in `man/Makefile.am`). A tarball has no
+  `doc/images`, so a guide links to no anchor that only the screenshots
+  bring (`outputs.html#report`): `make distcheck` builds the site
+  without them, and its link check fails.
+- **The man pages**, converted by mandoc (`-Ofragment`), wrapped in the
+  site's layout, without what it already says (mandoc's header and
+  footer tables, the NAME section). blas-microbenchmark(1) is long, so
+  each of its sections goes to a page of its own (`manual_page_of`); a
+  new `.SH` stops the build until it has one, and `test_man_html.sh`
+  checks that every section is on exactly one page. A link into the long
+  page (`blas-microbenchmark.html#ID`), from any page, is pointed at the
+  page that holds `ID`; the manual's own references to a section, in
+  bold capitals ("see **THREADS**"), become links to its page; a page of
+  a single section drops that section's heading, its title already
+  saying it. The manual on the site is the installed one, cut up: it
+  cannot say what the man page does not.
 - `site.css` is the whole stylesheet — mandoc's own is not used. It
-  styles the layout and the few classes mandoc gives man(7) pages (`Sh`,
-  `Ss`, `Pp`, `Bd-indent`, `Bl-tag`, `Bl-bullet`, `tbl`); colours are
-  tokens, set for light and for dark. Section names, capitals in a man
-  page, are shown in sentence case by CSS (`text-transform`), so a section
-  named after an acronym would need an exception.
+  styles the layout, the guides, and the few classes mandoc gives man(7)
+  pages (`Sh`, `Ss`, `Pp`, `Bd-indent`, `Bl-tag`, `Bl-bullet`, `tbl`);
+  colours are tokens, set for light and for dark. Section names,
+  capitals in a man page, are shown in sentence case by CSS
+  (`text-transform`); the site's own headings carry `keep-case`. No
+  script: on a narrow screen, the menu folds under "Menu" in the bar (a
+  `<details>`).
 - `html.sh` adds what mandoc leaves undone for man(7) pages: a reference
   such as `bmb_report(1)` becomes a link — to the site's page, or to
   man7.org for the others — and so does a URL. The pages do not use `.UR`
   for URLs: groff then shows only the link text in a terminal, and the
   URL is lost.
-- `index.html` is the landing page: the description from the first
-  page's NAME line, a card per page, and the README's ddot chart when
-  `IMAGES` points at `doc/images` (`make html` does; a release tarball
-  has no `doc/images`, and the page goes without).
+- `index.html` is the home page: what it is for, the three steps
+  (install, run, compare), the README's ddot chart when `IMAGES` points
+  at `doc/images` (`make html` does; a release tarball has no
+  `doc/images`, and the page goes without), and a card per guide.
 - `outputs.html` shows what the tools produce. The table, CSV and JSON
   are not copies: `html.sh` runs the benchmarks (`BENCH_DIR`, the built
   `src/c`, so `make` comes before `make html`) as it builds the page, and

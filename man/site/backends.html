@@ -1,0 +1,49 @@
+<!-- title: The BLAS libraries -->
+<!-- description: The eight libraries it builds against: how each is chosen, found and threaded, and what its results record. -->
+<p>The benchmarks call BLAS through its C interface, CBLAS, so the same code runs against any library. The library is chosen when building, with <code>./configure --with-blas-backend=…</code>; each is built and checked in CI on every change.</p>
+
+<table class="grid">
+<tr><th>Library</th><th><code>--with-blas-backend</code></th><th>Spack</th><th>Thread variables, in the order read</th></tr>
+<tr><td>OpenBLAS (default)</td><td><code>openblas</code></td><td><code>^openblas</code></td><td><code>OPENBLAS_NUM_THREADS</code>, <code>GOTO_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>BLIS</td><td><code>blis</code></td><td><code>^blis</code></td><td><code>BLIS_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>AMD AOCL-BLAS</td><td><code>aocl</code></td><td><code>^amdblis</code></td><td><code>BLIS_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>Intel MKL</td><td><code>mkl</code></td><td><code>^intel-oneapi-mkl</code></td><td><code>MKL_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>NVIDIA NVPL (aarch64)</td><td><code>nvpl</code></td><td><code>^nvpl-blas</code></td><td><code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>Arm ArmPL (aarch64)</td><td><code>armpl</code></td><td><code>^armpl-gcc</code></td><td><code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>Netlib reference BLAS</td><td><code>netlib</code></td><td><code>^netlib-lapack</code></td><td>none: single-threaded</td></tr>
+<tr><td>FlexiBLAS</td><td><code>flexiblas</code></td><td><code>^flexiblas</code></td><td>those of the library it loaded</td></tr>
+</table>
+<p>Whatever the library, <code>-t</code> sets the thread count through its own interface, and wins over these variables. Each result records the library, and its own version string where it has one (<code>openblas (OpenBLAS 0.3.26 …)</code>, <code>aocl (AOCL-BLAS 5.3.2 Build …)</code>).</p>
+
+<h2 id="finding">Where configure looks</h2>
+<p>For each library, in this order, the last found winning:</p>
+<ol>
+<li>where the distribution installs it (Debian and Ubuntu's <code>/usr/include/&lt;triplet&gt;/blis-openmp</code>, Intel's <code>/opt/intel/oneapi/mkl/latest</code>, …);</li>
+<li>the variables a module or Spack sets: <code>&lt;NAME&gt;_ROOT</code>, <code>_DIR</code> or <code>_HOME</code> for the prefix, <code>&lt;NAME&gt;_INCDIR</code> and <code>&lt;NAME&gt;_LIBDIR</code> for the directories, with <code>&lt;NAME&gt;</code> the library's (<code>OPENBLAS</code>, <code>BLIS</code>, <code>AOCL</code>, <code>MKL</code>, <code>NVPL</code>, <code>ARMPL</code>, …), and <code>MKLROOT</code>;</li>
+<li><code>--with-blas-incpath=DIR</code> and <code>--with-blas-libpath=DIR</code>, which always win.</li>
+</ol>
+
+<h2 id="openblas">OpenBLAS</h2>
+<p>The default, and what most distributions ship. Its build options (threading, the CPU it was tuned for) are part of its version string, and so of each result.</p>
+
+<h2 id="blis">BLIS</h2>
+<p>From <code>libblis-openmp-dev</code> on Debian and Ubuntu, which keep its <code>cblas.h</code> in a directory of its own that <code>configure</code> finds. Only its OpenMP or pthreads builds use more than one thread.</p>
+
+<h2 id="aocl">AMD AOCL-BLAS</h2>
+<p>AMD's fork of BLIS, for AMD EPYC. It comes from AMD's installer, a module (<code>AOCL_ROOT</code>) or Spack (<code>^amdblis</code>); no distribution packages it. The benchmarks link its threaded <code>libblis-mt</code>: its <code>libblis</code> is single-threaded, and would ignore <code>-t</code>. AOCL-BLAS may run a small problem on fewer threads than it is given (AOCL Dynamic); only a library built with <code>--disable-aocl-dynamic</code> does not.</p>
+
+<h2 id="mkl">Intel MKL</h2>
+<p>oneAPI MKL, from Intel's repository, a module (<code>MKLROOT</code>) or Spack. It is linked with its GNU OpenMP layer and 32-bit integers (<code>-lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core</code>). <code>-t</code> sets the thread count of its BLAS domain, which overrides <code>MKL_DOMAIN_NUM_THREADS</code> (a warning says so). MKL may also use fewer threads on a small problem; <code>MKL_DYNAMIC=false</code> makes it use them all.</p>
+
+<h2 id="arm">NVPL and ArmPL</h2>
+<p>NVIDIA's and Arm's libraries, for aarch64 servers (NVIDIA Grace, Neoverse). Both come from their vendor's apt repository or a module, and take their threads from OpenMP.</p>
+
+<h2 id="netlib">Netlib</h2>
+<p>The reference BLAS: unoptimised, single-threaded, the yardstick the others are measured against. It has no C interface of its own, so the benchmarks bring theirs, over its Fortran routines.</p>
+
+<h2 id="flexiblas">FlexiBLAS</h2>
+<p>Not a library but a switch: one build, and the library chosen when the benchmark starts, with <code>FLEXIBLAS</code>. Each result names the library FlexiBLAS loaded (<code>flexiblas/openblas-openmp</code>), so the report keeps them apart. Fedora packages it, with OpenBLAS, BLIS and Netlib to load; Debian and Ubuntu do not.</p>
+<pre>FLEXIBLAS=OPENBLAS-OPENMP bmb_dgemm -m 512:2048 -o openblas.json
+FLEXIBLAS=BLIS-OPENMP bmb_dgemm -m 512:2048 -o blis.json</pre>
+
+<div class="callout"><p>GPU libraries (cuBLAS, rocBLAS, MAGMA, …) are planned for 2.0: see the <a href="https://github.com/users/MathieuCAISSA/projects/2">project</a>.</p></div>

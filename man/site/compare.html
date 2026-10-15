@@ -1,0 +1,54 @@
+<!-- title: Compare libraries -->
+<!-- description: Measure several BLAS libraries, or several runs, and see them side by side on one page. -->
+<p>The question blas-microbenchmark answers is a comparison: this library against that one, this machine against another, this setting against the default. The benchmarks measure; <code>bmb_report</code> lays the results side by side.</p>
+
+<h2 id="measure">Measure each library</h2>
+<p>There are two ways to run the same benchmarks against several libraries:</p>
+<ul>
+<li><b>A build per library</b>, each in its own directory (see <a href="install.html#library">Install</a>). The same commands, run with each build, into separate files:
+<pre>build-openblas/src/c/level3/bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-openblas.json
+build-blis/src/c/level3/bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-blis.json</pre></li>
+<li><b>One build against FlexiBLAS</b>, which loads the library <code>FLEXIBLAS</code> names when the benchmark starts (<code>flexiblas list</code> gives the names):
+<pre>FLEXIBLAS=OPENBLAS-OPENMP bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-openblas.json
+FLEXIBLAS=BLIS-OPENMP bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-blis.json</pre></li>
+</ul>
+<p>Every file records the library it ran against, its version, the CPU and the date: the report keeps them apart without you naming them.</p>
+
+<h2 id="report">Make the report</h2>
+<pre>bmb_report results/*.json &gt; report.html
+firefox report.html</pre>
+<p>The page is a single file, with nothing to fetch: it opens offline, and can be sent as is. For each routine, it shows what the results can support:</p>
+<ul>
+<li>performance, and bandwidth for levels 1 and 2, against size, with the points where the data leaves the L1, L2 and L3 caches marked;</li>
+<li>each library against a reference (OpenBLAS, or one you choose on the page), on a log scale where twice as slow and twice as fast sit at the same distance;</li>
+<li>thread scaling against ideal;</li>
+<li>a heatmap of every shape, for sweeps over two dimensions (<code>-m</code> and <code>-M</code>);</li>
+<li>a summary, and every row of every file, sortable.</li>
+</ul>
+<!-- picture dgemm-ratio | dgemm, BLIS relative to OpenBLAS at 8 threads, on a log scale around x1 | Each library against the reference. -->
+<p>The <a href="outputs.html">Outputs</a> page shows each part.</p>
+
+<h2 id="noise">Is the difference real?</h2>
+<p>Two runs of the same command never give quite the same numbers. Run each command several times, each into its own file:</p>
+<pre>for run in 1 2 3 4; do
+    bmb_ddot -v 1024:16777216 -o results/ddot-openblas-$run.json
+done</pre>
+<p>The report then draws a band showing how far the runs spread, and tests each difference between libraries against that spread (a Mann-Whitney U test): a point within the noise is drawn hollow. A comparison from single runs shows the differences, but not which ones to believe.</p>
+<!-- picture noise-ratio | ddot, BLIS relative to OpenBLAS over four runs each, hollow points within the noise | Hollow: within the noise. -->
+
+<h2 id="history">One library, several versions</h2>
+<p>Measure three versions or more of the same library on the same machine, and the report adds a history: each routine's performance, version after version, with a version slower than the one before beyond the noise marked <b>slower</b>. The version comes from the library itself, so nothing needs naming.</p>
+
+<h2 id="conditions">Two conditions on one machine</h2>
+<p>To compare a setting rather than a library (turbo, a thread placement, a compiler flag of the library), give each run a label; the report makes a series of each:</p>
+<pre>bmb_dgemm -m 1024:8192 -l "turbo on" -o results/turbo-on.json
+bmb_dgemm -m 1024:8192 -l "turbo off" -o results/turbo-off.json</pre>
+
+<h2 id="fair">A fair comparison</h2>
+<ul>
+<li><b>Same machine, same conditions.</b> A comparison across machines measures the machines.</li>
+<li><b>A steady frequency.</b> The <code>performance</code> governor and turbo off, if you can; the benchmark warns when they are not, and the report says under what conditions each series ran.</li>
+<li><b>The same threads, pinned.</b> See <a href="hpc.html#pinning">pinning threads</a>, and <a href="threads.html">Threads</a>.</li>
+<li><b>The library's own choices.</b> MKL and AOCL-BLAS may use fewer threads than asked on small problems; see <a href="backends.html">The BLAS libraries</a>.</li>
+</ul>
+<p>Everything the report draws, and how: <a href="bmb_report.html"><code>bmb_report</code>'s manual</a>.</p>

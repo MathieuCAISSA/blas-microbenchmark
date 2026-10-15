@@ -1,0 +1,46 @@
+<!-- title: ReFrame tests -->
+<!-- description: Every benchmark as a ReFrame test, checked, with its rates as performance variables and your site's references. -->
+<p>Sites that check their systems with <a href="https://reframe-hpc.readthedocs.io/">ReFrame</a> get every benchmark as a ReFrame test. They are installed with the benchmarks, in <code>&lt;prefix&gt;/share/blas-microbenchmark/reframe</code>, and written for ReFrame 4.</p>
+<ul>
+<li><b>One test per routine</b>, at one size per level, on all of a node's cores.</li>
+<li><b>Sanity</b> is the benchmark's own check: it exits 0, and every point was verified against a reference before it was timed.</li>
+<li><b>The performance variables</b> are the rates measured: <code>gflops</code>, and <code>gbytes_per_s</code> at levels 1 and 2.</li>
+<li><b>Tags</b>: <code>blas</code>, and <code>level1</code>, <code>level2</code> or <code>level3</code>.</li>
+</ul>
+
+<h2 id="run">Running them</h2>
+<p>Run from where they were installed, the tests run that install's benchmarks, with nothing to set:</p>
+<pre>R=/usr/local/share/blas-microbenchmark/reframe
+reframe -C site-config.py -c $R/blas_microbenchmark.py -n 'bmb_run' -r</pre>
+<p>With Spack, <code>R=$(spack location -i blas-microbenchmark)/share/blas-microbenchmark/reframe</code>. <code>-n 'bmb_run%routine=dgemm'</code> runs one routine, <code>-t level3</code> one level.</p>
+
+<h2 id="variables">Sizes, threads and the rest</h2>
+<p><code>-S</code> sets the tests' variables:</p>
+<table class="grid">
+<tr><th>Variable</th><th>Default</th><th></th></tr>
+<tr><td><code>level1_size</code></td><td>4000000</td><td>the vector length at level 1</td></tr>
+<tr><td><code>level2_size</code>, <code>level3_size</code></td><td>4096, 2048</td><td>M = N = K at levels 2 and 3</td></tr>
+<tr><td><code>num_threads</code></td><td>the partition's cores</td><td><code>-t</code></td></tr>
+<tr><td><code>bmb_options</code></td><td>none</td><td>more options, such as <code>-S bmb_options=-i,50</code></td></tr>
+<tr><td><code>install_prefix</code></td><td>this file's install, or <code>PATH</code></td><td>where the benchmarks were installed</td></tr>
+<tr><td><code>reference_file</code></td><td>none</td><td>your references, below</td></tr>
+</table>
+
+<h2 id="references">Your references</h2>
+<p>Every site's numbers are its own, so none ship with the tests. Give them in a JSON file, by system (or <code>system:partition</code>, or <code>*</code>), routine and performance variable: the value, then the lower and upper thresholds as fractions of it, <code>null</code> for none.</p>
+<pre>{
+  "mycluster:cpu": {
+    "dgemm": {"gflops": [2900, -0.05, null]},
+    "daxpy": {"gflops": [10, -0.1, null], "gbytes_per_s": [120, -0.1, null]}
+  }
+}</pre>
+<pre>reframe -c $R/blas_microbenchmark.py -n 'bmb_run' -S reference_file=references.json -r</pre>
+<p>A test below its reference fails in ReFrame's performance stage; one without a reference reports its rates, and passes.</p>
+
+<h2 id="build">Building a release in each environment</h2>
+<p><code>bmb_build_run</code> builds a release first, once per programming environment, then runs the same tests on it: the release is downloaded and checked against its <code>SHA256SUMS</code>, and <code>-S bmb_tarball.blas_backend=…</code> picks the library.</p>
+
+<h2 id="report">A report of the runs</h2>
+<p>Each test keeps the benchmark's <code>result.json</code> in ReFrame's output directory:</p>
+<pre>bmb_report output/*/*/*/*/result.json &gt; report.html</pre>
+<p>Everything else, including <code>bmb_build_run</code>'s variables: the <a href="https://github.com/MathieuCAISSA/blas-microbenchmark/blob/main/packaging/reframe/README.md">ReFrame README</a>.</p>
