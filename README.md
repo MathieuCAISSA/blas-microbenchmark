@@ -33,10 +33,22 @@ make install
 ```
 
 To check the download came from this repository's release workflow,
-untouched (needs the [GitHub CLI](https://cli.github.com/)):
+untouched, with the [GitHub CLI](https://cli.github.com/):
 
 ```bash
 gh attestation verify blas-microbenchmark-<version>.tar.gz --repo MathieuCAISSA/blas-microbenchmark
+```
+
+or, from 1.6.0, with [cosign](https://docs.sigstore.dev/cosign/) and the
+attestation's bundle, `blas-microbenchmark-<version>.tar.gz.sigstore.json`,
+attached to the release:
+
+```bash
+cosign verify-blob-attestation --type slsaprovenance1 \
+  --bundle blas-microbenchmark-<version>.tar.gz.sigstore.json \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github\.com/MathieuCAISSA/blas-microbenchmark/\.github/workflows/release\.yml@refs/tags/v' \
+  blas-microbenchmark-<version>.tar.gz
 ```
 
 From a git clone, run `./autogen.sh` first (it needs autoconf, automake

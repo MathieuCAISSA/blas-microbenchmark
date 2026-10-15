@@ -10,6 +10,9 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Each release carries the attestation of where its tarball was built as
+  a file, `<tarball>.sigstore.json`, which `cosign` checks without the
+  GitHub CLI; see the README.
 - The ReFrame tests are installed with the benchmarks, in
   `<prefix>/share/blas-microbenchmark/reframe`, and run that install with
   no option: `reframe -c <prefix>/share/blas-microbenchmark/reframe/blas_microbenchmark.py -n bmb_run -r`.
