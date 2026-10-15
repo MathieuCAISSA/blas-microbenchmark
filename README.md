@@ -1,6 +1,8 @@
 # blas-microbenchmark
 
-[![CI](https://github.com/MathieuCAISSA/blas-microbenchmark/actions/workflows/ci.yml/badge.svg)](https://github.com/MathieuCAISSA/blas-microbenchmark/actions/workflows/ci.yml)
+[![linux-tests](https://img.shields.io/github/actions/workflow/status/MathieuCAISSA/blas-microbenchmark/ci.yml?branch=main&label=linux-tests&logo=linux&logoColor=white)](https://github.com/MathieuCAISSA/blas-microbenchmark/actions/workflows/ci.yml?query=branch%3Amain)
+[![codecov](https://codecov.io/gh/MathieuCAISSA/blas-microbenchmark/branch/main/graph/badge.svg)](https://codecov.io/gh/MathieuCAISSA/blas-microbenchmark)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/MathieuCAISSA/blas-microbenchmark/badge)](https://scorecard.dev/viewer/?uri=github.com/MathieuCAISSA/blas-microbenchmark)
 [![Documentation](https://img.shields.io/badge/docs-online-2160c4.svg)](https://mathieucaissa.github.io/blas-microbenchmark/)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 

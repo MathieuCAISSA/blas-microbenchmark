@@ -550,9 +550,14 @@ jobs:
   # each test was seen to fail, but that says nothing of the paths no test
   # takes. No threshold -- the report is there to be read. The per-file
   # summary is on the run's page; the line-by-line HTML report and an lcov
-  # file are in the coverage artifact.
+  # file are in the coverage artifact. The lcov file also goes to Codecov,
+  # for the README's badge, authenticated by the job's OIDC token rather
+  # than a stored secret; Codecov being down does not fail the job.
   coverage:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # Codecov's upload, authenticated by OIDC
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -600,6 +605,14 @@ jobs:
         with:
           name: coverage
           path: build/coverage/
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: build/coverage/coverage.lcov
+          disable_search: true
+          use_oidc: true
+          fail_ci_if_error: false
 
       - name: Upload test logs
         if: always()

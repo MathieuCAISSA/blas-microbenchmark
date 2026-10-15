@@ -219,7 +219,8 @@ packaging/docker/
 packaging/reframe/
                  # the ReFrame tests, and how a site runs them; also
                  # distributed, and installed in $(pkgdatadir)/reframe
-.github/         # the workflows (ci, codeql, pages, release), the scripts
+.github/         # the workflows (ci, codeql, scorecard, pages, release),
+                 # Codecov's settings (codecov.yml), the scripts
                  # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh,
                  # install-oneapi-mkl.sh), the sanitizers job's leak
                  # suppressions (lsan-suppressions.txt),
