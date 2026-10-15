@@ -88,10 +88,6 @@ A container runs on the host's CPU, which is what the results record. Docker's
 `-t` beyond those gets a warning. Docker Desktop runs containers in a virtual
 machine, whose own limits the numbers include.
 
-Sites that test their systems with [ReFrame](https://reframe-hpc.readthedocs.io/)
-can run every benchmark as a ReFrame test, with their own references:
-see [packaging/reframe](packaging/reframe/README.md).
-
 ## Quick start
 
 ```
@@ -166,6 +162,25 @@ far the runs spread and tells which differences are beyond that noise;
 *The commands above, run on a laptop (Intel Core Ultra 7 155U, WSL2)
 against OpenBLAS 0.3.26 and BLIS 0.9.0: what the page draws, not a verdict
 on either library.*
+
+## In a test suite: ReFrame
+
+Sites that check their systems with [ReFrame](https://reframe-hpc.readthedocs.io/)
+get every benchmark as a ReFrame test, installed with them in
+`<prefix>/share/blas-microbenchmark/reframe`. One test per routine: its
+result checked (`--verify`) for sanity, its GFLOP/s and GB/s as
+performance variables, compared with the site's references from a JSON
+file. The tests run the install they come with:
+
+```bash
+R=/usr/local/share/blas-microbenchmark/reframe   # with Spack: $(spack location -i blas-microbenchmark)/share/...
+reframe -c $R/blas_microbenchmark.py -n bmb_run -r
+reframe -c $R/blas_microbenchmark.py -n bmb_run -S level3_size=4096 -S reference_file=refs.json -r
+bmb_report output/*/*/*/*/result.json > report.html
+```
+
+Sizes, threads, references, and a variant that builds a release in
+each programming environment: [packaging/reframe](packaging/reframe/README.md).
 
 ## Backends
 

@@ -2,12 +2,17 @@
 
 [ReFrame](https://reframe-hpc.readthedocs.io/) tests for
 blas-microbenchmark, for sites that check their systems with it, written
-for ReFrame 4 and run in CI with 4.10. `blas_microbenchmark.py` holds
-one test per routine, in two families:
+for ReFrame 4 and run in CI with 4.10. `make install` puts this file and
+`blas_microbenchmark.py` in `<prefix>/share/blas-microbenchmark/reframe`,
+beside the benchmarks; it is also in the release tarball and in this
+repository. `blas_microbenchmark.py` holds one test per routine, in two
+families:
 
-- **`bmb_run`** runs an installed copy: the benchmarks on `PATH` (after
-  `spack load blas-microbenchmark`, or a module that puts them there),
-  or under `install_prefix`.
+- **`bmb_run`** runs an installed copy, the first of: the one under
+  `install_prefix`; the one the file was installed with, when it is run
+  from `<prefix>/share/blas-microbenchmark/reframe`; the benchmarks on
+  `PATH` (after `spack load blas-microbenchmark`, or a module that puts
+  them there).
 - **`bmb_build_run`** builds a release tarball first (`bmb_tarball`, once
   per programming environment), against the BLAS that `configure` finds,
   then runs that.
@@ -23,14 +28,15 @@ first. Each test is tagged `blas` and `level1`, `level2` or `level3`.
 ## Running them
 
 ```bash
-reframe -C site-config.py -c packaging/reframe/blas_microbenchmark.py -n bmb_run -r
+R=/usr/local/share/blas-microbenchmark/reframe   # wherever it was installed
+reframe -C site-config.py -c $R/blas_microbenchmark.py -n bmb_run -r
 ```
 
 `-S` sets the tests' variables:
 
 | Variable | Default | |
 |---|---|---|
-| `install_prefix` | on `PATH` | where it was installed (`bmb_run`) |
+| `install_prefix` | this file's install, or `PATH` | where it was installed (`bmb_run`) |
 | `level1_size` | 4000000 | the vector length at level 1 |
 | `level2_size`, `level3_size` | 4096, 2048 | M = N = K at levels 2 and 3 |
 | `num_threads` | the partition's cores | `-t` |

@@ -9,6 +9,13 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- The ReFrame tests are installed with the benchmarks, in
+  `<prefix>/share/blas-microbenchmark/reframe`, and run that install with
+  no option: `reframe -c <prefix>/share/blas-microbenchmark/reframe/blas_microbenchmark.py -n bmb_run -r`.
+  The README has a section on them, and the man page lists them under
+  FILES and EXAMPLES.
+
 ## [1.5.0] - 2026-10-15
 
 ### Added

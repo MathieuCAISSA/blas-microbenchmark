@@ -20,8 +20,10 @@ ROUTINES = dasum daxpy dcopy ddot dnrm2 dscal dswap saxpy sdot zdotc \
 
 SUBST = v=$$(printf '%s' '$(PACKAGE_VERSION)' | sed 's/-/\\\\-/g') && \
 	d=$$(printf '%s' '$(pkglibexecdir)' | sed -e 's/-/\\\\-/g' -e 's|/|/\\\\:|g') && \
+	s=$$(printf '%s' '$(pkgdatadir)' | sed -e 's/-/\\\\-/g' -e 's|/|/\\\\:|g') && \
 	sed -e "s|@PACKAGE_VERSION[@]|$$v|g" \
-	    -e "s|@pkglibexecdir[@]|$$d|g"
+	    -e "s|@pkglibexecdir[@]|$$d|g" \
+	    -e "s|@pkgdatadir[@]|$$s|g"
 
 blas-microbenchmark.1: $(srcdir)/blas-microbenchmark.1.in Makefile
 	$(AM_V_GEN)$(SUBST) $(srcdir)/blas-microbenchmark.1.in >$@.tmp && mv -f $@.tmp $@

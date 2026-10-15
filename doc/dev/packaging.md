@@ -211,7 +211,10 @@ libraries, under Intel's licence.
 
 `packaging/reframe/blas_microbenchmark.py` is a ReFrame test file;
 [its README](../../packaging/reframe/README.md) is for the sites that run
-it. Neither is in the tarball. What is not obvious in it:
+it. Both are in the tarball, and `make install` puts them in
+`$(pkgdatadir)/reframe` (`Makefile.am`), so that a site has them with
+the benchmarks; the man page's FILES and EXAMPLES point there. What is
+not obvious in it:
 
 - **The routine list** (`ROUTINES`, with each routine's level) is the
   test's parameter, so ReFrame needs it before anything is installed. A
@@ -230,7 +233,10 @@ it. Neither is in the tarball. What is not obvious in it:
   dict: ReFrame turns it into a `ScopedDict` on assignment, where
   `reference['generic:default'] = ...` would take `generic` for a scope.
 - **`prefix` is ReFrame's** (the test file's directory), hence
-  `install_prefix`.
+  `install_prefix`. `bmb_run` uses it to find the install it belongs to:
+  run from `<prefix>/share/blas-microbenchmark/reframe`, it takes the
+  benchmarks under `<prefix>/libexec/blas-microbenchmark`, so that the
+  command in the README and the man page needs no option.
 - **The tarball** is downloaded with the release's `SHA256SUMS` and
   checked, unpacked into `src/` whatever its directory is called, and
   built in `src/build`, given as `configuredir` and `builddir`: ReFrame
