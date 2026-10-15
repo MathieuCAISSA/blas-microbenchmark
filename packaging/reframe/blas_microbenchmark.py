@@ -5,6 +5,7 @@
 
 import json
 import os
+import shlex
 
 import reframe as rfm
 import reframe.utility.sanity as sn
@@ -197,10 +198,11 @@ class bmb_tarball(rfm.CompileOnlyRegressionTest):
                      f'&& sha256sum -c {name}.sha256')
         elif '://' in self.tarball:
             name = 'blas-microbenchmark.tar.gz'
-            fetch = f'curl -fsSL -o {name} {self.tarball}'
+            fetch = f'curl -fsSL -o {name} {shlex.quote(self.tarball)}'
         else:
             name = 'blas-microbenchmark.tar.gz'
-            fetch = f'cp {os.path.abspath(self.tarball)} {name}'
+            path = shlex.quote(os.path.abspath(self.tarball))
+            fetch = f'cp {path} {name}'
 
         # Unpacked into src/ whatever the directory in the tarball is
         # called, and built in src/build. ReFrame sets srcdir itself, from
