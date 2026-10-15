@@ -51,7 +51,10 @@ the code points at them; the ones easiest to break by accident:
   and is reported. A file with no `layout` (vector routines, results from
   before 1.4) counts as row-major, so a library keeps one series, one
   colour, across its routines; a column-major one is named
-  "column-major".
+  "column-major". AOCL-BLAS's BLAS string ends with the day the library
+  was built ("AOCL-BLAS 5.3.2 Build 20261015"), which is left out of the
+  key (`blasKey`), so that two builds of one release are one series
+  (#66).
   The frequency governor and turbo are shown, not part of the key, so
   that older files still merge (see
   [backends.md](backends.md)).
