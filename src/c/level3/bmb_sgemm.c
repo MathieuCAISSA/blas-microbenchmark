@@ -39,7 +39,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->n = (int) n;
     ctx->k = (int) k;
     ctx->alpha = 1.0f;
-    ctx->beta = 0.0f;
+    ctx->beta = 0.0f; /* verify() relies on it */
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
     ctx->lda = ctx->col ? ctx->m : ctx->k;
@@ -95,42 +95,36 @@ static double flops(size_t dim1, size_t dim2)
     return 2.0 * d1 * d1 * d2;
 }
 
-/* --verify, by random projection in double: C*r against
- * alpha*A*(B*r) + beta*C0*r. The library rounded each element of C
- * through K float multiply-adds, an error of at most the tolerance times
- * |alpha||A||B| + |beta||C0| there, so at most the tolerance times
- * |alpha||A|(|B||r|) + |beta||C0||r| on C*r: the scale leaves out |C||r|,
- * which dgemm's has. The reference's own rounding, in double, is 2^-29
- * of that. */
+/* --verify, by random projection in double: C*r against alpha*A*(B*r).
+ * beta is 0 (setup), so what C held before the call does not enter. The
+ * library rounded each element of C through K float multiply-adds, an
+ * error of at most the tolerance times |alpha||A||B| there, so at most
+ * the tolerance times |alpha||A|(|B||r|) on C*r: the scale leaves out
+ * |C||r|, which dgemm's has. The reference's own rounding, in double, is
+ * 2^-29 of that. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, inner = (size_t) ctx->k, i;
-    double *r = malloc((n + 2 * inner + 8 * m) * sizeof(double));
+    double *r = malloc((n + 2 * inner + 6 * m) * sizeof(double));
     int ok;
 
     if (r == NULL) {
         return -1;
     }
-    double *t = r + n, *tabs = t + inner, *c0 = tabs + inner, *c0abs = c0 + m;
-    double *y1 = c0abs + m, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
+    double *t = r + n, *tabs = t + inner;
+    double *y1 = tabs + inner, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
     double *want = y2abs + m, *scale = want + m;
 
     bmb_verify_probe(r, n);
-    for (i = 0; i < m; i++) {
-        c0[i] = c0abs[i] = 0.0;
-    }
-    if (ctx->beta != 0.0f) {
-        bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, c0, c0abs);
-    }
     call(ctx);
     bmb_verify_perturb_single(&ctx->c[0]);
     bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
     bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
     bmb_verify_matvec_single(BMB_VERIFY_FULL, ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
-        want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
-        scale[i] = fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];
+        want[i] = ctx->alpha * y2[i];
+        scale[i] = fabs(ctx->alpha) * y2abs[i];
     }
     ok = bmb_verify_close("C*r, for a random vector r", y1, want, scale, m,
                           bmb_verify_tolerance_single(inner), msg, size);

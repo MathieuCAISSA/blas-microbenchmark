@@ -48,7 +48,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->n = (int) n;
     ctx->alpha[0] = 1.0;
     ctx->alpha[1] = 0.0;
-    ctx->beta[0] = 0.0;
+    ctx->beta[0] = 0.0; /* verify() relies on it */
     ctx->beta[1] = 0.0;
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
@@ -108,42 +108,36 @@ static double flops(size_t dim1, size_t dim2)
     return 8.0 * d1 * d1 * d2;
 }
 
-/* --verify, by random projection: C*r against alpha*A*(B*r) + beta*C0*r,
- * A Hermitian, for a complex r. */
+/* --verify, by random projection: C*r against alpha*A*(B*r), A
+ * Hermitian, for a complex r. beta is 0 (setup), so what C held before
+ * the call does not enter. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, i;
-    const double *al = ctx->alpha, *be = ctx->beta;
-    double *r = malloc((2 * n + 16 * m) * sizeof(double));
+    const double *al = ctx->alpha;
+    double *r = malloc((2 * n + 13 * m) * sizeof(double));
     int ok;
 
     if (r == NULL) {
         return -1;
     }
-    double *t = r + 2 * n, *tabs = t + 2 * m, *c0 = tabs + m, *c0abs = c0 + 2 * m;
-    double *y1 = c0abs + m, *y1abs = y1 + 2 * m, *y2 = y1abs + m, *y2abs = y2 + 2 * m;
+    double *t = r + 2 * n, *tabs = t + 2 * m;
+    double *y1 = tabs + m, *y1abs = y1 + 2 * m, *y2 = y1abs + m, *y2abs = y2 + 2 * m;
     double *want = y2abs + m, *scale = want + 2 * m;
 
     bmb_verify_probe(r, 2 * n);
-    for (i = 0; i < m; i++) {
-        c0[2 * i] = c0[2 * i + 1] = c0abs[i] = 0.0;
-    }
-    if (be[0] != 0.0 || be[1] != 0.0) {
-        bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, c0, c0abs);
-    }
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
     bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, y1, y1abs);
     bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b, ctx->ldb, r, NULL, t, tabs);
     bmb_verify_matvec_complex(BMB_VERIFY_HERM_UPPER, ctx->col, m, m, ctx->a, m, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
-        double yr = y2[2 * i], yi = y2[2 * i + 1], cr = c0[2 * i], ci = c0[2 * i + 1];
+        double yr = y2[2 * i], yi = y2[2 * i + 1];
 
-        want[2 * i] = al[0] * yr - al[1] * yi + be[0] * cr - be[1] * ci;
-        want[2 * i + 1] = al[0] * yi + al[1] * yr + be[0] * ci + be[1] * cr;
-        scale[2 * i] = scale[2 * i + 1] = y1abs[i] + (fabs(al[0]) + fabs(al[1])) * y2abs[i]
-                                          + (fabs(be[0]) + fabs(be[1])) * c0abs[i];
+        want[2 * i] = al[0] * yr - al[1] * yi;
+        want[2 * i + 1] = al[0] * yi + al[1] * yr;
+        scale[2 * i] = scale[2 * i + 1] = y1abs[i] + (fabs(al[0]) + fabs(al[1])) * y2abs[i];
     }
     ok = bmb_verify_close("C*r, for a random vector r (real and imaginary parts in turn)",
                           y1, want, scale, 2 * m, bmb_verify_tolerance(2 * (m + n)), msg, size);

@@ -36,7 +36,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->m = (int) m;
     ctx->n = (int) n;
     ctx->alpha = 1.0;
-    ctx->beta = 0.0;
+    ctx->beta = 0.0; /* verify() relies on it */
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
     ctx->ldb = ctx->col ? ctx->m : ctx->n;
@@ -88,37 +88,32 @@ static double flops(size_t dim1, size_t dim2)
     return 2.0 * d1 * d1 * d2;
 }
 
-/* --verify, by random projection: C*r against alpha*A*(B*r) + beta*C0*r, A symmetric. */
+/* --verify, by random projection: C*r against alpha*A*(B*r), A symmetric.
+ * beta is 0 (setup), so what C held before the call does not enter. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, inner = (size_t) ctx->m, i;
-    double *r = malloc((n + 2 * inner + 8 * m) * sizeof(double));
+    double *r = malloc((n + 2 * inner + 6 * m) * sizeof(double));
     int ok;
 
     if (r == NULL) {
         return -1;
     }
-    double *t = r + n, *tabs = t + inner, *c0 = tabs + inner, *c0abs = c0 + m;
-    double *y1 = c0abs + m, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
+    double *t = r + n, *tabs = t + inner;
+    double *y1 = tabs + inner, *y1abs = y1 + m, *y2 = y1abs + m, *y2abs = y2 + m;
     double *want = y2abs + m, *scale = want + m;
 
     (void) inner;
     bmb_verify_probe(r, n);
-    for (i = 0; i < m; i++) {
-        c0[i] = c0abs[i] = 0.0;
-    }
-    if (ctx->beta != 0.0) {
-        bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, c0, c0abs);
-    }
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
     bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, y1, y1abs);
     bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b, ctx->ldb, r, NULL, t, tabs);
     bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, m, m, ctx->a, m, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
-        want[i] = ctx->alpha * y2[i] + ctx->beta * c0[i];
-        scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i] + fabs(ctx->beta) * c0abs[i];
+        want[i] = ctx->alpha * y2[i];
+        scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i];
     }
     ok = bmb_verify_close("C*r, for a random vector r", y1, want, scale, m,
                           bmb_verify_tolerance(inner + n), msg, size);
