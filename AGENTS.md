@@ -131,9 +131,9 @@ for paths no test takes, then decide whether one should.
 
 | Where | Test | What it pins down |
 |---|---|---|
-| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, `--label`, `--verify` on by default and `-C`, `--layout`; and the backend name FlexiBLAS's library is given, kept to safe characters |
+| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, each refused by every sweep option (`-v`, `-m`, `-M`, `-t`), `--label`, `--verify` on by default and `-C`, `--layout`; how a sweep is described in a warning, a point that does not fit left out whole; and the backend name FlexiBLAS's library is given, kept to safe characters, down to buffers too small for it |
 | | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, real and complex, double and single, the comparison and its message, the two tolerances, the probe vector, the two corruption hooks |
-| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, the frequency governor and turbo with the advice they get, and the CPUs the process may use under an affinity and cgroup quotas |
+| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, the frequency governor and turbo with the advice they get, and the CPUs the process may use under an affinity and cgroup quotas — and over trees it generates for what kernels rarely write: cache sizes in bytes, M and G, a missing file, an empty governor, malformed CPU lists and `cpu.max` lines, a cgroup path too long, each read as unknown |
 | | `fuzz_bmb_options` | the parser on inputs nobody wrote: a libFuzzer target (an argv per input, split on NUL bytes) that holds whatever the parser accepts to what the benchmarks rely on — points between 1 and the size ceiling, at most 256, a printable label, the output format a `.json` file implies — and `bmb_range_describe` to its buffer; here it replays its seed corpus (`fuzz/bmb_options/`), and the `fuzz` CI job fuzzes it with ClusterFuzzLite |
 | | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, in both storage orders where it has a matrix, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
@@ -141,10 +141,11 @@ for paths no test takes, then decide whether one should.
 | | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
 | | `test_bmb_ignored_options.sh` | an option a routine has no use for (`--layout` on a vector routine, `-v`, `-m`, `-M` where they do not apply) is ignored with a warning naming it, and none where it applies |
 | | `test_bmb_alloc_failures.sh` | every allocation a benchmark makes (setup, `--verify`'s check, the timing buffer, the results), made to fail in turn by a preloaded library (`bmb_failalloc.c`, built for `make check` only): exit 1 and "out of memory", never a crash; SKIPs under AddressSanitizer and outside glibc |
+| | `test_bmb_colors.sh` | errors in red and warnings in yellow on a terminal (a pseudo-terminal from `script(1)`), plain with `NO_COLOR` set or when stderr is a file; SKIPs without `script` |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, or on stdout |
-| `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); `test_bmb_zgemm.sh` also has a size whose complex matrices would wrap `size_t` refused |
+| `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
-| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
+| | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label, a CPU name with a quote, a backslash and a control character escaped in the JSON; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
 | | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
 | `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, that the page is self-contained, and that its `LEVEL` table lists every benchmark built, in its level |
@@ -168,7 +169,7 @@ groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
 and `test_doc_links.sh` outside a git checkout, `test_actions_pinned.sh`
 without `.github/`, `test_configure_paths.sh` in a source tree configured
 in place, `test_bmb_alloc_failures.sh` under AddressSanitizer (the
-`sanitizers` job); `test_netlib_cblas` is only built for Netlib. Every
+`sanitizers` job), `test_bmb_colors.sh` without `script(1)`; `test_netlib_cblas` is only built for Netlib. Every
 other test runs anywhere. The mandoc lint is left out, with a
 note in the log, where mandoc is not installed. `BMB_MAN_STRICT=1` turns
 each of those into a failure — the `man` CI job sets it.

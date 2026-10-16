@@ -10,12 +10,6 @@ set -e
 
 bmb_check_run ./bmb_zgemm zgemm 4 -x 1 -i 2 -m 8:16 -M 8:16
 
-if ./bmb_zgemm -m 1073741825 -M 1 -x 0 -i 1 -C >/dev/null 2>zgemm-wrap.err; then
-    bmb_fail "zgemm: -m 1073741825 was accepted"
-fi
-# Its own message: a malloc of the 16 GB that K x N takes fails too on a
-# smaller machine, and says only that setup failed.
-grep -q 'more bytes than size_t can count' zgemm-wrap.err \
-    || bmb_fail "zgemm: -m 1073741825 was not refused for its size: $(cat zgemm-wrap.err)"
-rm -f zgemm-wrap.err
-echo "ok   zgemm refuses a size whose complex matrix wraps size_t"
+bmb_check_too_large ./bmb_zgemm zgemm -m 1073741825 -M 1
+# M x K fits, K x N does not: (2^30 - 1) x 1518500249 complex doubles.
+bmb_check_too_large ./bmb_zgemm zgemm -m 1073741823 -M 1518500249

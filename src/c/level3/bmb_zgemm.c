@@ -37,8 +37,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     (void) thread_count;
 
-    if (bmb_bench_matrix_bytes(m, k, BMB_Z) == 0 || bmb_bench_matrix_bytes(k, n, BMB_Z) == 0
-        || bmb_bench_matrix_bytes(m, n, BMB_Z) == 0) {
+    /* K is M, so M x N is the size K x N is: two checks cover the three. */
+    if (bmb_bench_matrix_bytes(m, k, BMB_Z) == 0 || bmb_bench_matrix_bytes(k, n, BMB_Z) == 0) {
         bmb_bench_too_large();
         return NULL;
     }

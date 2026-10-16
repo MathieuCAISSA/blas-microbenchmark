@@ -103,5 +103,17 @@ if grep -q '^# frequency' freq.txt || grep -q '"governor"\|"turbo"' freq.json; t
 fi
 test ! -s freq.err || fail "a warning without any frequency information: $(cat freq.err)"
 
+# What the machine reports is written as it reads it, so a CPU name with a
+# quote, a backslash or a control character in it must come out as JSON
+# that still parses: escaped, \u0001 for the control character.
+rm -rf odd-machine
+mkdir -p odd-machine/proc
+printf 'processor\t: 0\nmodel name\t: Odd\001CPU "x" \\ y\n' >odd-machine/proc/cpuinfo
+BMB_MACHINE_ROOT=$PWD/odd-machine ./bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o odd.json >/dev/null 2>&1 \
+    || fail "the run on a machine with an odd CPU name failed"
+grep -q '^    "cpu": "Odd\\u0001CPU \\"x\\" \\\\ y",$' odd.json \
+    || fail "json cpu not escaped: $(grep '"cpu"' odd.json)"
+rm -rf odd-machine odd.json
+
 rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json
 echo "ok   output formats"

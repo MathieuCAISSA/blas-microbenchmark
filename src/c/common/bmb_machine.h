@@ -63,7 +63,8 @@ void bmb_machine_probe_at(const char *root, bmb_machine_t *m);
  * much of it as is known; "" when nothing is. */
 void bmb_machine_describe_cpu(const bmb_machine_t *m, char *buf, size_t size);
 
-/* "L1d 48K, L1i 64K, L2 2M, L3 12M"; "" when no cache could be read. */
+/* "L1d 48K, L1i 64K, L2 2M, L3 12M"; "" when no cache could be read. A
+ * cache that does not fit in size bytes is left out whole. */
 void bmb_machine_describe_caches(const bmb_machine_t *m, char *buf, size_t size);
 
 /* "governor performance, turbo off", or as much of it as is known; "" when

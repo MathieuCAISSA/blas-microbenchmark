@@ -24,7 +24,8 @@ typedef struct {
 void bmb_range_set_single(bmb_range_t *range, size_t value);
 
 /* Writes a short human-readable form of range into buf ("4", or
- * "1, 2, 4, 8", elided with an ellipsis when there are many points). */
+ * "1, 2, 4, 8", elided with an ellipsis when there are many points). What
+ * does not fit in size bytes is left out whole, never cut. */
 void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size);
 
 typedef struct {
