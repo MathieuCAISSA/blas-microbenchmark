@@ -173,10 +173,10 @@ The BLAS can be `^openblas`, `^blis`, `^amdblis`, `^intel-oneapi-mkl`,
 
 ### In a container
 
-From 1.6.0, each release's image is on `ghcr.io`, against OpenBLAS
-(`latest`, `<version>`), BLIS (`<version>-blis`) or Netlib
-(`<version>-netlib`). It writes to `/results`, here the current
-directory:
+From 1.6.0, each release's image is on `ghcr.io`, for x86_64, against
+OpenBLAS (`latest`, `<version>`, `<version>-openblas`), BLIS
+(`<version>-blis`) or Netlib (`<version>-netlib`). It writes to
+`/results`, here the current directory:
 
 ```bash
 IMAGE=ghcr.io/mathieucaissa/blas-microbenchmark:latest

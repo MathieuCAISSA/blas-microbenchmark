@@ -3,18 +3,23 @@
 The README, the man pages and the site, and how they are tested. Start at
 [AGENTS.md](../../AGENTS.md).
 
-Two places, for two readers:
+Three places, for three readers:
 
 - **README.md** is for the first five minutes: what this is, installing it,
-  one run, the report, the backends. Keep it short; it was cut from 458
-  lines to about 140 once, because nobody found anything in it.
+  one run, the report, the backends. Keep it short, and fold what most
+  readers skip under `<details>` (#113); it was cut from 458 lines to
+  about 140 once, because nobody found anything in it.
 - **The man pages** are the reference: `blas-microbenchmark(1)` for every
   benchmark (options, sweeps, how a number is measured, threads, output,
   exit status, examples) and `bmb_report(1)`. A new option, output field
   or behaviour goes there, not into the README.
+- **The guides** on the site (`man/site/`, #115) are for a task: install,
+  a first run, comparing libraries, the libraries one by one, a cluster,
+  ReFrame. They repeat what the man pages and the README say, in another
+  order, and are tested against the programs (below).
 
-The site (below) publishes the man pages, the outputs, and the tests and
-CI — each generated from its source, not written twice.
+The site (below) publishes the guides, the man pages, the outputs, and
+the tests and CI; all but the guides are generated from their source.
 
 `--help` is the summary and ends by pointing at the man page.
 

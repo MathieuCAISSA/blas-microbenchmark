@@ -77,7 +77,7 @@ thresholds as fractions of it, `null` for none:
 ```
 
 ```bash
-reframe -c packaging/reframe/blas_microbenchmark.py -n bmb_run -S reference_file=references.json -r
+reframe -c $R/blas_microbenchmark.py -n bmb_run -S reference_file=references.json -r
 ```
 
 A test without a reference for a variable still reports it, and passes.
