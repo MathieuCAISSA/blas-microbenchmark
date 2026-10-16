@@ -1199,6 +1199,9 @@ jobs:
             # of a oneAPI prefix since 2024. threads=openmp requires a
             # compiler, so the external names the runner's default gcc.
             v=$(ls /opt/intel/oneapi/mkl | grep '^[0-9]' | sort -V | tail -1)
+            # In the cache's key: installs built against another MKL
+            # external would still be tested, and find it gone (#139).
+            echo "MKL_VERSION=-$v" >> "$GITHUB_ENV"
             g=$(gcc -dumpfullversion)
             printf '%s\n' 'packages:' '  intel-oneapi-mkl:' '    buildable: false' '    externals:' \
               "    - spec: intel-oneapi-mkl@$v +gfortran threads=openmp %gcc@$g" \
@@ -1210,8 +1213,8 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/spack/opt/spack
-          key: spack-${{ env.SPACK_COMMIT }}-${{ env.SPACK_PACKAGES_COMMIT }}-${{ matrix.blas }}-${{ hashFiles('packaging/spack/**') }}
-          restore-keys: spack-${{ env.SPACK_COMMIT }}-${{ env.SPACK_PACKAGES_COMMIT }}-${{ matrix.blas }}-
+          key: spack-${{ env.SPACK_COMMIT }}-${{ env.SPACK_PACKAGES_COMMIT }}-${{ matrix.blas }}${{ env.MKL_VERSION }}-${{ hashFiles('packaging/spack/**') }}
+          restore-keys: spack-${{ env.SPACK_COMMIT }}-${{ env.SPACK_PACKAGES_COMMIT }}-${{ matrix.blas }}${{ env.MKL_VERSION }}-
 
       - name: spack install and spack test
         run: |
