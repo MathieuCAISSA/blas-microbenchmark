@@ -478,7 +478,10 @@ void bmb_machine_describe_caches(const bmb_machine_t *m, char *buf, size_t size)
 
         n = snprintf(buf + used, size - used, "%sL%d%s %s",
                      (i == 0) ? "" : ", ", c->level, suffix, sz);
+        /* A cache that does not fit is left out whole: cut, "L3 32M"
+         * would read as "L3 3". */
         if (n < 0 || (size_t) n >= size - used) {
+            buf[used] = '\0';
             return;
         }
         used += (size_t) n;

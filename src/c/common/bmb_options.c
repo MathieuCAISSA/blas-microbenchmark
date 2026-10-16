@@ -133,14 +133,21 @@ void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size)
         int n = snprintf(buf + used, size - used, "%s%zu",
                          (i == 0) ? "" : ", ", range->values[i]);
 
+        /* A point that does not fit is left out whole: cut, 1000 would
+         * read as 10, a size nobody asked for. */
         if (n < 0 || (size_t) n >= size - used) {
+            buf[used] = '\0';
             return;
         }
         used += (size_t) n;
     }
 
     if (range->count > shown) {
-        snprintf(buf + used, size - used, ", ... (%zu points)", range->count);
+        int n = snprintf(buf + used, size - used, ", ... (%zu points)", range->count);
+
+        if (n < 0 || (size_t) n >= size - used) {
+            buf[used] = '\0';
+        }
     }
 }
 

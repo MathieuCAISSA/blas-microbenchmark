@@ -96,3 +96,23 @@ bmb_check_run() {
 
     echo "ok   $bmb_routine"
 }
+
+# bmb_check_too_large <program> <routine> [options...]
+#
+# Checks that the benchmark refuses the sizes it is given for what they
+# would take in bytes, before allocating anything: a non-zero exit and
+# its own message. A malloc of the wrapped or huge size failing instead
+# would exit too, saying only that setup failed, which is not the check.
+bmb_check_too_large() {
+    bmb_prog=$1
+    bmb_routine=$2
+    shift 2
+
+    if "$bmb_prog" "$@" -x 0 -i 1 -C >/dev/null 2>"$bmb_routine-too-large.err"; then
+        bmb_fail "$bmb_routine: $* was accepted"
+    fi
+    grep -q 'more bytes than size_t can count' "$bmb_routine-too-large.err" \
+        || bmb_fail "$bmb_routine: $* was not refused for its size: $(cat "$bmb_routine-too-large.err")"
+    rm -f "$bmb_routine-too-large.err"
+    echo "ok   $bmb_routine refuses $*"
+}

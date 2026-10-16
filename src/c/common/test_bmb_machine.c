@@ -7,11 +7,20 @@
  * whatever *was* recorded is sane -- a cache of size 0 or level 9 would be
  * a parsing bug. Exact values are checked on fake /proc and /sys trees
  * (fixtures/machine/): the CPU string, NUMA nodes, caches, the frequency
- * governor and turbo, and the advice they get. */
+ * governor and turbo, and the advice they get. Trees the kernel would
+ * rarely or never write -- cache sizes without K, a missing file, a
+ * malformed CPU list or quota -- are generated here, in a temporary
+ * directory, each read as unknown rather than guessed at. */
 
+#define _XOPEN_SOURCE 700
+
+#include <fcntl.h>
+#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "bmb_machine.h"
 
@@ -180,6 +189,12 @@ static void test_describe(void)
     check_str(buf, "4 logical CPUs", "describe: counts without a model");
 
     m.logical_cpus = 0;
+    m.numa_nodes = 2;
+    bmb_machine_describe_cpu(&m, buf, sizeof(buf));
+    check_str(buf, "2 NUMA nodes", "describe: NUMA nodes without a CPU count");
+    m.numa_nodes = 0;
+
+    m.logical_cpus = 0;
     bmb_machine_describe_cpu(&m, buf, sizeof(buf));
     check_str(buf, "", "describe: nothing known, nothing said");
 
@@ -207,6 +222,155 @@ static void test_describe(void)
     check_str(buf, "", "advice: turbo off and no governor known, none");
 }
 
+/* A tree of small files in a temporary directory of the build directory
+ * (where make check runs), removed once probed. */
+static char tree_root[64];
+
+static void tree_file(const char *rel, const char *content)
+{
+    char path[512];
+    char *p;
+    FILE *f;
+    int fd;
+
+    snprintf(path, sizeof(path), "%s/%s", tree_root, rel);
+    for (p = strchr(path + strlen(tree_root) + 1, '/'); p != NULL; p = strchr(p + 1, '/')) {
+        *p = '\0';
+        mkdir(path, 0755);
+        *p = '/';
+    }
+    /* Only its owner writes it, whatever the umask. */
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    f = (fd >= 0) ? fdopen(fd, "w") : NULL;
+    if (f == NULL) {
+        check(0, path);
+        if (fd >= 0) {
+            close(fd);
+        }
+        return;
+    }
+    fputs(content, f);
+    fclose(f);
+}
+
+static int tree_remove_one(const char *path, const struct stat *st, int flag, struct FTW *ftw)
+{
+    (void) st;
+    (void) flag;
+    (void) ftw;
+    return remove(path);
+}
+
+static void tree_begin(void)
+{
+    snprintf(tree_root, sizeof(tree_root), "bmb_machine_XXXXXX");
+    if (mkdtemp(tree_root) == NULL) {
+        check(0, "a temporary directory for the generated trees");
+        exit(1);
+    }
+}
+
+static void tree_end(void)
+{
+    nftw(tree_root, tree_remove_one, 16, FTW_DEPTH | FTW_PHYS);
+}
+
+#define CACHE "sys/devices/system/cpu/cpu0/cache/"
+
+/* The affinity and quota a status line and a cpu.max give, with the
+ * process in the root cgroup. */
+static long usable_cpus(const char *allowed, const char *cpu_max)
+{
+    bmb_machine_t m;
+    char line[128];
+
+    tree_begin();
+    snprintf(line, sizeof(line), "Name:\tbmb_dgemm\nCpus_allowed_list:\t%s\n", allowed);
+    tree_file("proc/self/status", line);
+    tree_file("proc/self/cgroup", "0::/\n");
+    if (cpu_max != NULL) {
+        tree_file("sys/fs/cgroup/cpu.max", cpu_max);
+    }
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    return m.usable_cpus;
+}
+
+static void test_generated(void)
+{
+    bmb_machine_t m;
+    char buf[512];
+    char long_cgroup[400];
+
+    /* Sizes in bytes, M and G; the fourth cache has no type, and stops
+     * the list there. */
+    tree_begin();
+    tree_file(CACHE "index0/level", "1\n");
+    tree_file(CACHE "index0/type", "Data\n");
+    tree_file(CACHE "index0/size", "64\n");
+    tree_file(CACHE "index1/level", "2\n");
+    tree_file(CACHE "index1/type", "Unified\n");
+    tree_file(CACHE "index1/size", "2M\n");
+    tree_file(CACHE "index2/level", "3\n");
+    tree_file(CACHE "index2/type", "Unified\n");
+    tree_file(CACHE "index2/size", "1G\n");
+    tree_file(CACHE "index3/level", "4\n");
+    /* Leading and trailing blanks are not part of a governor; an empty
+     * file is no governor at all. */
+    tree_file("sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", "  performance \n");
+    tree_file("sys/devices/system/cpu/cpu1/cpufreq/scaling_governor", "");
+    tree_file("sys/devices/system/cpu/cpu2/cpufreq/scaling_governor", "performance\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(m.cache_count == 3, "generated: three caches, the one without a type not read");
+    bmb_machine_describe_caches(&m, buf, sizeof(buf));
+    check_str(buf, "L1d 64B, L2 2M, L3 1G", "generated: sizes in bytes, M and G");
+    bmb_machine_describe_caches(&m, buf, 13);
+    check_str(buf, "L1d 64B", "generated: a cache that does not fit is left out whole");
+    check_str(m.governor, "performance", "generated: a governor trimmed, an empty one skipped");
+
+    tree_begin();
+    tree_file(CACHE "index0/level", "1\n");
+    tree_file(CACHE "index0/type", "InstructionAndDataAndMore\n");
+    tree_file(CACHE "index0/size", "32K\n");
+    tree_file(CACHE "index1/level", "2\n");
+    tree_file(CACHE "index1/type", "Unified\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(m.cache_count == 1 && strlen(m.caches[0].type) == sizeof(m.caches[0].type) - 1,
+          "generated: a type too long for its field cut, still terminated; a cache without a size not read");
+
+    /* What the affinity and the quota say when they do not parse: unknown,
+     * never a guess. */
+    check(usable_cpus("0-3", NULL) == 4, "generated: an affinity of 0-3 is 4 CPUs");
+    check(usable_cpus("x", NULL) == 0, "generated: an affinity that is not a list, unknown");
+    check(usable_cpus("3-1", NULL) == 0, "generated: a range that runs backwards, unknown");
+    check(usable_cpus("0-", NULL) == 0, "generated: a range with no end, unknown");
+    check(usable_cpus("0;1", NULL) == 0, "generated: a list with another separator, unknown");
+    check(usable_cpus("0-3", "max 100000\n") == 4, "generated: cpu.max without a quota, the affinity stands");
+    check(usable_cpus("0-3", "100000\n") == 4, "generated: cpu.max without a period, ignored");
+    check(usable_cpus("0-3", "0 100000\n") == 4, "generated: a quota of 0, ignored");
+    check(usable_cpus("0-3", "100000 0\n") == 4, "generated: a period of 0, ignored");
+    check(usable_cpus("0-3", "100000 100000x\n") == 4, "generated: a period followed by junk, ignored");
+    check(usable_cpus("0-3", "18446744073709551615 1\n") == 4,
+          "generated: a quota too large for a long, ignored");
+    check(usable_cpus("0-3", "100000 100000\n") == 1, "generated: a quota of one period is 1 CPU");
+
+    /* A cgroup path too long to hold is not read at all: cut short, it
+     * would lead to another cgroup's quota. */
+    tree_begin();
+    memset(long_cgroup, 'a', sizeof(long_cgroup));
+    memcpy(long_cgroup, "0::/", 4);
+    long_cgroup[sizeof(long_cgroup) - 2] = '\n';
+    long_cgroup[sizeof(long_cgroup) - 1] = '\0';
+    tree_file("proc/self/status", "Cpus_allowed_list:\t0-7\n");
+    tree_file("proc/self/cgroup", long_cgroup);
+    tree_file("sys/fs/cgroup/cpu.max", "100000 100000\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(m.usable_cpus == 8, "generated: a cgroup path too long to hold, no quota read from a guess");
+}
+
 int main(void)
 {
     const bmb_machine_t *m = bmb_machine();
@@ -214,6 +378,7 @@ int main(void)
     int i;
 
     test_fixtures();
+    test_generated();
     test_describe();
 
     printf("     cpu=\"%s\" logical_cpus=%ld numa_nodes=%d caches=%d\n",

@@ -481,8 +481,11 @@ int main(void)
              "FlexiBLAS: a quote, a space, a slash, a newline from a config file become -"},
             {"", "flexiblas/unknown", 64, "FlexiBLAS: no name, unknown"},
             {"BLIS-OPENMP", "flexiblas/bli", 14, "FlexiBLAS: cut to the buffer, still terminated"},
+            {"", "flexiblas/", 12, "FlexiBLAS: no name and no room for unknown, the prefix alone"},
+            {"BLIS-OPENMP", "", 5, "FlexiBLAS: no room for the prefix, an empty name"},
         };
         size_t i;
+        char untouched[] = "x";
 
         for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
             char buf[64];
@@ -493,6 +496,13 @@ int main(void)
             } else {
                 ok(cases[i].what);
             }
+        }
+
+        bmb_build_backend_name("BLIS-OPENMP", untouched, 0);
+        if (strcmp(untouched, "x") != 0) {
+            fail("FlexiBLAS: a buffer of 0 bytes", "was written to");
+        } else {
+            ok("FlexiBLAS: a buffer of 0 bytes is left alone");
         }
     }
 
@@ -511,6 +521,78 @@ int main(void)
             bmb_options_free(&opts);
         } else {
             fail("-t 1,2,4", "rejected");
+        }
+    }
+
+    /* ---- every sweep option refuses what -v refuses ---- */
+    {
+        static const char *const flags[] = {"-v", "-m", "-M", "-t"};
+        static const char *const bad[] = {"0", "1518500250", "1:257:1", "64,1518500250"};
+        size_t f, b;
+
+        for (f = 0; f < sizeof(flags) / sizeof(flags[0]); f++) {
+            for (b = 0; b < sizeof(bad) / sizeof(bad[0]); b++) {
+                bmb_options_t opts;
+                char what[64];
+
+                snprintf(what, sizeof(what), "%s %s is refused", flags[f], bad[b]);
+                if (parse_args(&opts, flags[f], bad[b], ARGS_END) == BMB_OPTIONS_OK) {
+                    fail(what, "was accepted");
+                    bmb_options_free(&opts);
+                } else {
+                    ok(what);
+                }
+            }
+        }
+    }
+
+    /* ---- how a sweep is described in a warning ---- */
+    {
+        static const struct {
+            const char *spec;
+            size_t size;
+            const char *want;
+            const char *what;
+        } cases[] = {
+            {"4", 64, "4", "describe: one point"},
+            {"1,2,4,8", 64, "1, 2, 4, 8", "describe: four points, all shown"},
+            {"1:256", 64, "1, 2, 4, 8, ... (9 points)", "describe: more than four, elided with the count"},
+            {"1000,2000", 8, "1000", "describe: a point that does not fit is left out, still terminated"},
+            {"1000,2000", 5, "1000", "describe: an exact fit"},
+            {"1000", 3, "", "describe: not even the first point fits, empty"},
+            {"1:256", 20, "1, 2, 4, 8", "describe: no room for the count, the points alone"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+            char buf[64];
+
+            if (parse_args(&opts, "-v", cases[i].spec, ARGS_END) != BMB_OPTIONS_OK) {
+                fail(cases[i].what, "the sweep was rejected");
+                continue;
+            }
+            memset(buf, 'z', sizeof(buf));
+            bmb_range_describe(&opts.vector_size, buf, cases[i].size);
+            if (memchr(buf, '\0', cases[i].size) == NULL || strcmp(buf, cases[i].want) != 0) {
+                fail(cases[i].what, buf);
+            } else {
+                ok(cases[i].what);
+            }
+            bmb_options_free(&opts);
+        }
+
+        {
+            bmb_range_t one;
+            char untouched[] = "x";
+
+            bmb_range_set_single(&one, 7);
+            bmb_range_describe(&one, untouched, 0);
+            if (strcmp(untouched, "x") != 0) {
+                fail("describe: a buffer of 0 bytes", "was written to");
+            } else {
+                ok("describe: a buffer of 0 bytes is left alone");
+            }
         }
     }
 
