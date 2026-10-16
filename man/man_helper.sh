@@ -51,6 +51,57 @@ section() {
                       on' "$1"
 }
 
+# Where the binary of a routine is, or nothing.
+bin_of() {
+    for l in 1 2 3; do
+        if [ -x "../src/c/level$l/bmb_$1" ]; then
+            echo "../src/c/level$l/bmb_$1"
+            return
+        fi
+    done
+}
+
+# A program's options, from its --help: "-x --long" and, for one that
+# takes a value, "<" after them.
+options_of() {
+    "$1" --help | sed -n 's/^  \(-[a-zA-Z]\), \(--[a-z0-9-]*\)\( <\)\{0,1\}.*/\1 \2 \3/p'
+}
+
+# check_commands FILE: every command in FILE, one per line, that runs a
+# benchmark or bmb_report runs one that exists, with options it takes;
+# commands_checked is set to how many it checked. Not in a $(...): there, a fail
+# would only end the subshell.
+check_commands() {
+    commands_checked=0
+    while read -r line; do
+        # shellcheck disable=SC2086
+        set -- $line
+        while [ $# -gt 0 ]; do
+            case $1 in
+                bmb_report) prog=$REPORT ;;
+                bmb_*) prog=$(bin_of "${1#bmb_}") ;;
+                *) shift; continue ;;
+            esac
+            [ -n "$prog" ] || fail "$1, in \"$line\", does not exist"
+            options_of "$prog" >"$T/opts"
+            shift
+            while [ $# -gt 0 ]; do
+                case $1 in
+                    '#' | '>' | '|') break ;;
+                    -*)
+                        known=$(awk -v o="$1" '$1 == o || $2 == o { print ($3 == "<" ? "arg" : "flag") }' "$T/opts")
+                        test -n "$known" || fail "\"$line\" uses $1, which $(basename "$prog") does not take"
+                        [ "$known" = arg ] && shift
+                        ;;
+                esac
+                [ $# -gt 0 ] && shift
+            done
+            commands_checked=$((commands_checked + 1))
+            break
+        done
+    done <"$1"
+}
+
 T=$(basename "$0" .sh).d
 rm -rf "$T"
 mkdir "$T"

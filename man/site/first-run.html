@@ -1,0 +1,58 @@
+<!-- title: Your first benchmarks -->
+<!-- description: Run a routine, read what it prints, sweep sizes and threads, save the results. -->
+<p>Each BLAS routine has its own benchmark, <code>bmb_&lt;routine&gt;</code>: <code>bmb_dgemm</code> for the matrix product, <code>bmb_ddot</code> for the dot product, and so on, <a href="blas-microbenchmark.html#Routines">32 in all</a>. They all take the same options.</p>
+
+<h2 id="run">Run one</h2>
+<pre>bmb_dgemm -m 512:2048</pre>
+<p>This multiplies square matrices of 512, 1024 and 2048 rows, each size timed ten times, and prints one row per size as it goes:</p>
+<pre># blas-microbenchmark 1.5.0
+# backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
+# verified: every point, against a reference, before it was timed
+# layout: row-major
+# cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
+# caches: L1d 48K, L1i 64K, L2 2M, L3 12M
+# os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
+# date: 2026-10-15T08:47:16Z
+# routine: dgemm
+Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
+1               512                 512                 0.005236549     51.262
+1               1024                1024                0.045034862     47.685
+1               2048                2048                0.364057654     47.190</pre>
+<ul>
+<li><b>The lines in <code>#</code></b> say where the numbers come from: the library and its exact build, the CPU and its caches, the system, the date. They go with the results into every file, so that a result is never mistaken for another machine's.</li>
+<li><b><code>verified</code></b>: each point was computed once and checked against a reference before it was timed. A library that gets it wrong stops the run, with exit status 2, instead of looking fast (<a href="checking.html">Checking results</a>).</li>
+<li><b><code>time [s]</code></b> is the time of one call, from the fastest of the ten samples (each one a batch of calls, averaged); <b><code>GFLOP/s</code></b> the rate it makes, from the routine's operation count. Level 1 and 2 routines, limited by memory, also give <b><code>GB/s</code></b> (<a href="measuring.html">How a number is measured</a>).</li>
+</ul>
+<p>The <a href="outputs.html">Outputs</a> page shows real runs of this version, in each format.</p>
+
+<h2 id="sizes">Sizes</h2>
+<p>Level 1 routines work on vectors, sized with <code>-v</code>; level 2 and 3 on matrices, sized with <code>-m</code>, and <code>-M</code> for a second dimension. Each takes a sweep:</p>
+<table class="grid">
+<tr><th>Sweep</th><th>Measures</th></tr>
+<tr><td><code>4096</code></td><td>that one size</td></tr>
+<tr><td><code>256:4096</code></td><td>doubling: 256 512 1024 2048 4096</td></tr>
+<tr><td><code>1000:4000:1000</code></td><td>a step: 1000 2000 3000 4000</td></tr>
+<tr><td><code>64,1000,4096</code></td><td>exactly those</td></tr>
+</table>
+<pre>bmb_ddot -v 1024:16777216
+bmb_dgemv -m 256:4096 -M 256:4096</pre>
+<p>Without <code>-M</code>, matrices are square; with it, every combination of the two is measured, which <code>bmb_report</code> draws as a heatmap. <a href="blas-microbenchmark.html#Routines">The overview</a> says which dimension is which for each routine.</p>
+
+<h2 id="threads">Threads</h2>
+<p><code>-t</code> sets the number of threads the library uses, and sweeps like a size:</p>
+<pre>bmb_dgemm -m 2048 -t 1:8</pre>
+<p>It wins over the library's own variables (<code>OMP_NUM_THREADS</code>, <code>OPENBLAS_NUM_THREADS</code>, …), with a warning when they disagree; without <code>-t</code>, those apply. Where threads run, and on which memory, matters as soon as there are several: <a href="threads.html">Threads</a> and <a href="hpc.html#pinning">pinning them</a>.</p>
+
+<h2 id="save">Save the results</h2>
+<p><code>-o</code> saves to a file as well, JSON or CSV by its extension. JSON is what <code>bmb_report</code> reads:</p>
+<pre>bmb_dgemm -m 512:4096 -t 1:8 -o results/dgemm.json</pre>
+<p><code>-l</code> labels a run, to tell two conditions apart on the same machine, and <code>-s</code> adds the mean, the spread and the median of the samples:</p>
+<pre>bmb_dgemm -m 512:4096 -s -l "turbo off" -o results/dgemm-turbo-off.json</pre>
+
+<h2 id="warnings">The warnings you may see</h2>
+<ul>
+<li><b>The CPU frequency can change during the run</b>: the frequency governor is not <code>performance</code>, or turbo is on, so timings vary from run to run. The warning gives the commands that pin the frequency; the run goes on, and the result records it.</li>
+<li><b>The run uses up to N threads, but this process may only run on M CPUs</b>: an affinity (<code>taskset</code>, a Slurm job) or a CPU quota (a container) leaves fewer CPUs than <code>-t</code> asks for, and the threads would take turns.</li>
+<li><b>… is ignored! Set to N but option -t is set to M</b>: a thread variable of the library disagrees with <code>-t</code>, which wins.</li>
+</ul>
+<p>Next: <a href="compare.html">compare libraries</a>, or every option in <a href="options.html">Options</a>.</p>

@@ -58,5 +58,9 @@ AM_TESTS_ENVIRONMENT = \
 	man1dir='$(man1dir)' pkglibexecdir='$(pkglibexecdir)' PACKAGE_VERSION='$(PACKAGE_VERSION)'; \
 	export ROUTINES MAKE mandir man1dir pkglibexecdir PACKAGE_VERSION;
 
+# The guides of the site (html.sh): its pages that are not man pages.
+SITE_GUIDES = site/install.html site/first-run.html site/compare.html \
+	site/backends.html site/hpc.html site/reframe.html
+
 EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in man_helper.sh html.sh devpage.sh site.css \
-	$(TESTS)
+	$(SITE_GUIDES) $(TESTS)

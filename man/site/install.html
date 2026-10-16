@@ -1,0 +1,73 @@
+<!-- title: Install -->
+<!-- description: From a release, with Spack, in a container or from git; against the BLAS library of your choice. -->
+<p>You need a C compiler (GCC 12 or newer, or a recent Clang), <code>make</code>, and a BLAS library with its development files: OpenBLAS is the simplest, <code>libopenblas-dev</code> on Debian and Ubuntu, <code>openblas-devel</code> on Fedora. To compare several libraries, see <a href="backends.html">The BLAS libraries</a>.</p>
+
+<h2 id="release">From a release</h2>
+<p>Take <b><code>blas-microbenchmark-&lt;version&gt;.tar.gz</code></b> from the <a href="https://github.com/MathieuCAISSA/blas-microbenchmark/releases/latest">latest release</a> (not GitHub's "Source code" archives, which have no <code>configure</code>), then:</p>
+<pre>tar xf blas-microbenchmark-&lt;version&gt;.tar.gz
+cd blas-microbenchmark-&lt;version&gt;
+./configure
+make
+make check
+sudo make install</pre>
+<p><code>make check</code> runs the tests, every benchmark among them, against the library you built with: it takes a minute or two. <code>./configure --prefix=$HOME/.local</code> installs elsewhere than <code>/usr/local</code>, without <code>sudo</code>.</p>
+
+<h3 id="check-download">Check the download</h3>
+<p>Each release tarball is attested by the workflow that built it, in this repository. With the <a href="https://cli.github.com/">GitHub CLI</a>:</p>
+<pre>gh attestation verify blas-microbenchmark-&lt;version&gt;.tar.gz --repo MathieuCAISSA/blas-microbenchmark</pre>
+<p>Or, from 1.6.0, without it, with <a href="https://docs.sigstore.dev/cosign/">cosign</a> and the <code>.sigstore.json</code> bundle attached to the release:</p>
+<pre>cosign verify-blob-attestation --type slsaprovenance1 \
+  --bundle blas-microbenchmark-&lt;version&gt;.tar.gz.sigstore.json \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github\.com/MathieuCAISSA/blas-microbenchmark/\.github/workflows/release\.yml@refs/(tags/v|heads/main$)' \
+  blas-microbenchmark-&lt;version&gt;.tar.gz</pre>
+<p><code>sha256sum -c SHA256SUMS</code> checks it against the release's checksums.</p>
+
+<h2 id="library">Choosing the BLAS library</h2>
+<p>Without an option, <code>configure</code> looks for a library with a CBLAS interface, OpenBLAS first. <code>--with-blas-backend</code> names one:</p>
+<pre>./configure --with-blas-backend=blis</pre>
+<p>The choices are <code>openblas</code>, <code>blis</code>, <code>aocl</code>, <code>mkl</code>, <code>nvpl</code>, <code>armpl</code>, <code>netlib</code> and <code>flexiblas</code>; <a href="backends.html">The BLAS libraries</a> says where each is looked for, and how its threads are set. To measure several, build once per library, each in its own directory:</p>
+<pre>mkdir build-blis &amp;&amp; cd build-blis
+../configure --with-blas-backend=blis
+make</pre>
+<p>A library outside the usual places is found through the variables a module sets (<code>OPENBLAS_ROOT</code>, <code>BLIS_INCDIR</code>, <code>MKLROOT</code>, <code>AOCL_ROOT</code>, …), or named on the command line, which wins over everything else:</p>
+<pre>./configure --with-blas-backend=openblas --with-blas-incpath=/opt/openblas/include --with-blas-libpath=/opt/openblas/lib</pre>
+
+<h2 id="where">Where it goes</h2>
+<table class="grid">
+<tr><th>What</th><th>Where (with the default prefix)</th></tr>
+<tr><td>The benchmarks, by BLAS level</td><td><code>/usr/local/libexec/blas-microbenchmark/level{1,2,3}</code></td></tr>
+<tr><td><code>bmb_report</code></td><td><code>/usr/local/bin</code></td></tr>
+<tr><td>The manual pages</td><td><code>/usr/local/share/man</code></td></tr>
+<tr><td>The ReFrame tests</td><td><code>/usr/local/share/blas-microbenchmark/reframe</code></td></tr>
+</table>
+<p>The 32 benchmarks are not on the <code>PATH</code>, so as not to crowd it. To run them by name:</p>
+<pre>BMB=/usr/local/libexec/blas-microbenchmark
+export PATH="$BMB/level1:$BMB/level2:$BMB/level3:$PATH"</pre>
+<p><code>sudo make uninstall</code>, from the same directory, removes all of it.</p>
+
+<h2 id="spack">With Spack</h2>
+<p>The repository is a Spack package repository; Spack builds the BLAS library you name, or uses yours:</p>
+<pre>spack repo add https://github.com/MathieuCAISSA/blas-microbenchmark.git
+spack install blas-microbenchmark ^openblas
+spack load blas-microbenchmark</pre>
+<p><code>spack load</code> puts the benchmarks on the <code>PATH</code>. The library can be <code>^openblas</code>, <code>^blis</code>, <code>^amdblis</code>, <code>^intel-oneapi-mkl</code>, <code>^nvpl-blas</code>, <code>^armpl-gcc</code>, <code>^netlib-lapack</code> or <code>^flexiblas</code>; <code>spack test run blas-microbenchmark</code> checks the install.</p>
+
+<h2 id="container">In a container</h2>
+<p>From 1.6.0, each release's image is on GitHub's registry, built against OpenBLAS (tags <code>latest</code> and <code>&lt;version&gt;</code>), BLIS (<code>&lt;version&gt;-blis</code>) or Netlib (<code>&lt;version&gt;-netlib</code>), and attested like the tarball. The benchmarks are on its <code>PATH</code>; it writes to <code>/results</code>, here the current directory:</p>
+<pre>IMAGE=ghcr.io/mathieucaissa/blas-microbenchmark:latest
+gh attestation verify oci://$IMAGE --repo MathieuCAISSA/blas-microbenchmark
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/results" $IMAGE bmb_dgemm -m 64:1024 -o dgemm.json</pre>
+<p>Apptainer, which most HPC sites run, takes the same image, and writes where you are, as you:</p>
+<pre>apptainer exec docker://ghcr.io/mathieucaissa/blas-microbenchmark:latest bmb_dgemm -m 64:1024 -o dgemm.json</pre>
+<p>To build an image yourself, from a git clone, against OpenBLAS, BLIS, Netlib or Intel MKL (which is not published, since the image would redistribute Intel's libraries):</p>
+<pre>docker build -f packaging/docker/Dockerfile --build-arg BLAS_BACKEND=mkl -t blas-microbenchmark:mkl .</pre>
+<div class="callout"><p>A container runs on the host's CPU, which is what the results record. <code>docker run --cpus</code> and <code>--cpuset-cpus</code> leave the benchmark fewer CPUs than it sees: <code>-t</code> beyond those gets a warning, since the threads would take turns. Docker Desktop runs containers in a virtual machine, whose own limits the numbers include.</p></div>
+
+<h2 id="git">From git</h2>
+<p>A clone has no <code>configure</code> yet: <code>./autogen.sh</code> makes it, with autoconf, automake and libtool. Then as from a release:</p>
+<pre>git clone https://github.com/MathieuCAISSA/blas-microbenchmark.git
+cd blas-microbenchmark
+./autogen.sh
+./configure &amp;&amp; make &amp;&amp; make check</pre>
+<p>Next: <a href="first-run.html">your first benchmarks</a>.</p>

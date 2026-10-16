@@ -12,16 +12,6 @@ set -e
 S=${srcdir:-.}
 PAGE=blas-microbenchmark.1
 
-# Where the binary of a routine is, or nothing.
-bin_of() {
-    for l in 1 2 3; do
-        if [ -x "../src/c/level$l/bmb_$1" ]; then
-            echo "../src/c/level$l/bmb_$1"
-            return
-        fi
-    done
-}
-
 # The text inside the parentheses of a JSON dimension label:
 # "Matrix dim1 (M=K)" gives M=K; no label gives nothing.
 label_of() {
@@ -184,39 +174,12 @@ ok "bmb_report exits 0, 1 or 2 when bmb_report(1) says, and writes nothing when 
 # Every command in an example (.EX) block: the program exists, and every
 # option it is given is one of the program's. An option taking a value
 # skips the next word; a quoted value is two words, and the second is not
-# an option either, so that holds.
-options_of() {
-    "$1" --help | sed -n 's/^  \(-[a-zA-Z]\), \(--[a-z0-9-]*\)\( <\)\{0,1\}.*/\1 \2 \3/p'
-}
+# an option either, so that holds (check_commands, in man_helper.sh).
 commands=0
 for page in $PAGES; do
     unescape "$page" | awk '/^\.EX/ { on = 1; next } /^\.EE/ { on = 0 } on' >"$T/examples"
-    while read -r line; do
-        set -- $line
-        while [ $# -gt 0 ]; do
-            case $1 in
-                bmb_report) prog=$REPORT ;;
-                bmb_*) prog=$(bin_of "${1#bmb_}") ;;
-                *) shift; continue ;;
-            esac
-            [ -n "$prog" ] || fail "$page: the example \"$line\" runs $1, which does not exist"
-            options_of "$prog" >"$T/opts"
-            shift
-            while [ $# -gt 0 ]; do
-                case $1 in
-                    '#' | '>' | '|') break ;;
-                    -*)
-                        known=$(awk -v o="$1" '$1 == o || $2 == o { print ($3 == "<" ? "arg" : "flag") }' "$T/opts")
-                        test -n "$known" || fail "$page: the example \"$line\" uses $1, which $(basename "$prog") does not take"
-                        [ "$known" = arg ] && shift
-                        ;;
-                esac
-                [ $# -gt 0 ] && shift
-            done
-            commands=$((commands + 1))
-            break
-        done
-    done <"$T/examples"
+    check_commands "$T/examples"
+    commands=$((commands + commands_checked))
 done
 test "$commands" -ge 10 || fail "only $commands commands found in the examples"
 ok "the $commands commands in the examples run programs that exist, with options they take"

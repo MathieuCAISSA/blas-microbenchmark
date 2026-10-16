@@ -60,7 +60,7 @@ a:hover { text-decoration-color: currentColor; }
   border-bottom: 1px solid var(--border);
 }
 .topbar-inner, .layout, .site-footer-inner, .landing {
-  max-width: 72rem; margin: 0 auto; padding: 0 1.25rem;
+  max-width: 84rem; margin: 0 auto; padding: 0 1.25rem;
 }
 .topbar-inner { height: 100%; display: flex; align-items: center; gap: 1.5rem; }
 .brand { font-weight: 650; color: var(--fg); text-decoration: none; white-space: nowrap; }
@@ -73,7 +73,32 @@ a:hover { text-decoration-color: currentColor; }
 .topnav a:hover { color: var(--fg); background: var(--surface); }
 .topnav a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); }
 
-.layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 3rem; }
+.layout { display: grid; grid-template-columns: 14rem minmax(0, 1fr) 12rem; gap: 2.5rem; max-width: 84rem; }
+
+/* The site's menu: beside the page on a wide screen, in the bar's "Menu"
+ * on a narrow one. */
+.menu { font-size: 0.9rem; }
+.menu.sidebar {
+  position: sticky; top: var(--bar); align-self: start;
+  max-height: calc(100vh - var(--bar)); overflow-y: auto; padding: 1.75rem 0 2rem;
+}
+.menu-group { margin: 1.1rem 0 0.35rem; color: var(--muted); font-size: 0.75rem;
+              font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.menu-group:first-child { margin-top: 0; }
+.menu ul { list-style: none; margin: 0; padding: 0; }
+.menu a { display: block; padding: 0.22rem 0.6rem; margin-left: -0.6rem; border-radius: 6px;
+          color: var(--fg); text-decoration: none; }
+.menu a:hover { background: var(--surface); }
+.menu a[aria-current="page"] { color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.menu-mobile { display: none; }
+
+.neighbours { display: flex; gap: 1rem; margin-top: 3rem; padding-top: 1.25rem;
+              border-top: 1px solid var(--border); }
+.neighbours a { flex: 1; display: block; padding: 0.75rem 1rem; border: 1px solid var(--border);
+                border-radius: 10px; text-decoration: none; color: var(--accent); font-weight: 600; }
+.neighbours a:hover { border-color: var(--accent); }
+.neighbours a span { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 500; }
+.neighbours .next { text-align: right; margin-left: auto; }
 
 .toc {
   position: sticky; top: var(--bar); align-self: start;
@@ -92,8 +117,7 @@ a:hover { text-decoration-color: currentColor; }
 .toc .toc-sh:not(.keep-case) > a { text-transform: lowercase; }
 .toc .toc-sh:not(.keep-case) > a::first-letter { text-transform: uppercase; }
 
-.page { padding: 2.25rem 0 4rem; max-width: 46rem; }
-.page.wide { max-width: 60rem; }
+.page { padding: 2.25rem 0 4rem; min-width: 0; max-width: 48rem; }
 .page-title { font-size: 2rem; line-height: 1.2; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
 .page-title .mansect { color: var(--muted); font-weight: 500; }
 .page-desc { margin: 0.4rem 0 0; color: var(--muted); font-size: 1.125rem; }
@@ -101,6 +125,11 @@ a:hover { text-decoration-color: currentColor; }
 
 .site-footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 0.85rem; }
 .site-footer-inner { padding-top: 1.25rem; padding-bottom: 2rem; }
+
+@media (max-width: 75rem) {
+  .layout { grid-template-columns: 14rem minmax(0, 1fr); }
+  .toc { display: none; }
+}
 
 @media (max-width: 56rem) {
   /* The bar wraps, the links below the name, and scrolls away with the
@@ -110,7 +139,10 @@ a:hover { text-decoration-color: currentColor; }
   .topbar-inner { flex-wrap: wrap; gap: 0.25rem 0.75rem; padding-top: 0.6rem; padding-bottom: 0.6rem; }
   .topnav { flex-wrap: wrap; margin-left: -0.65rem; width: calc(100% + 0.65rem); overflow: visible; }
   .layout { display: block; }
-  .toc { display: none; }
+  .toc, .menu.sidebar { display: none; }
+  .menu-mobile { display: block; width: 100%; }
+  .menu-mobile summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: 0.35rem 0; }
+  .menu-mobile .menu { padding: 0.5rem 0 0.75rem; }
   .page { padding-top: 1.5rem; }
   .page-title { font-size: 1.6rem; }
   table.tbl td:first-child { white-space: normal; }
@@ -178,7 +210,6 @@ table.tbl td:first-child { color: var(--muted); white-space: nowrap; }
 .hero { max-width: 44rem; }
 .hero h1 { font-size: 2.6rem; line-height: 1.1; margin: 0; letter-spacing: -0.02em; }
 .hero .tagline { font-size: 1.25rem; color: var(--muted); margin: 0.75rem 0 0; }
-.hero .tagline::first-letter { text-transform: uppercase; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
 .button {
   display: inline-block; padding: 0.55rem 1rem; border-radius: 8px; font-weight: 600;
@@ -208,3 +239,37 @@ table.tbl td:first-child { color: var(--muted); white-space: nowrap; }
 .shots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
               gap: 0 1.25rem; align-items: start; }
 .note { margin-top: 2.5rem; color: var(--muted); font-size: 0.9rem; }
+
+/* ---- The guides ------------------------------------------------------- */
+
+.manual-text > p, .manual-text li { margin: 0.7rem 0; }
+.manual-text ul, .manual-text ol { padding-left: 1.25rem; }
+.manual-text pre { margin: 0.9rem 0; }
+.manual-text code { font: 0.875em var(--mono); background: var(--surface);
+                    padding: 0.1em 0.35em; border-radius: 4px; }
+.manual-text pre code { background: none; padding: 0; }
+table.grid { border-collapse: collapse; margin: 1rem 0; font-size: 0.925rem; display: block;
+             overflow-x: auto; }
+table.grid th, table.grid td { text-align: left; padding: 0.45rem 1rem 0.45rem 0;
+                               border-bottom: 1px solid var(--border); vertical-align: top; }
+table.grid th { color: var(--muted); font-weight: 600; font-size: 0.85rem; }
+.callout { margin: 1.25rem 0; padding: 0.85rem 1.1rem; border-radius: 10px;
+           background: var(--accent-soft); border-left: 3px solid var(--accent); }
+.callout > :first-child { margin-top: 0; }
+.callout > :last-child { margin-bottom: 0; }
+
+/* ---- The home page ---------------------------------------------------- */
+
+.hero h1 { font-size: 2.3rem; }
+.steps-row { list-style: none; padding: 0; margin: 2.75rem 0 0; display: grid; gap: 1rem;
+             grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.steps-row li { padding: 1.1rem 1.25rem; border: 1px solid var(--border); border-radius: 12px;
+                background: var(--surface); }
+.steps-row pre { margin-top: 0.75rem; background: var(--bg); font-size: 0.8rem; }
+.step-n { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; margin-right: 0.5rem;
+          border-radius: 50%; background: var(--accent); color: var(--bg); font-weight: 700; font-size: 0.85rem; }
+.features { margin: 2.5rem 0 0; padding-left: 1.25rem; max-width: 46rem; }
+.features li { margin: 0.5rem 0; }
+.landing-h { margin: 3rem 0 0; font-size: 1.35rem; }
+.landing .cards { margin-top: 1rem; }
+.card-title { font-family: var(--sans); }
