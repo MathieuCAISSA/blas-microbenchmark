@@ -177,4 +177,9 @@ bmb_report results/*.json > report.html
 .SH SEE ALSO
 .BR blas\-microbenchmark (1)
 .PP
+The guides \(em installing, comparing libraries, on an HPC cluster,
+ReFrame \(em and this manual online:
+https://mathieucaissa.github.io/blas\-microbenchmark/
+.PP
+The source:
 https://github.com/MathieuCAISSA/blas\-microbenchmark
