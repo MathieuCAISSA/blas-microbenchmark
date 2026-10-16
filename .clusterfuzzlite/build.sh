@@ -13,9 +13,12 @@ libs=$(sed -n 's/^LIBS = //p' Makefile)
 # shellcheck disable=SC2086 # $CFLAGS, $LIB_FUZZING_ENGINE and $libs are lists of flags
 $CC $CFLAGS -DBMB_LIBFUZZER -Isrc/c/common \
     -c src/c/common/fuzz_bmb_options.c -o fuzz_bmb_options.o
+# The libraries go in $OUT/lib (below). An RPATH rather than a RUNPATH
+# (--disable-new-dtags): a RUNPATH only serves the target's own
+# dependencies, and libopenblas would not find its libgfortran there.
 # shellcheck disable=SC2086,SC2016 # $ORIGIN is for the dynamic linker, not the shell
 $CXX $CXXFLAGS $LIB_FUZZING_ENGINE fuzz_bmb_options.o src/c/common/libbmbcommon.a \
-    $libs -Wl,-rpath,'$ORIGIN/lib' -o "$OUT/fuzz_bmb_options"
+    $libs -Wl,--disable-new-dtags,-rpath,'$ORIGIN/lib' -o "$OUT/fuzz_bmb_options"
 
 # The fuzzers run in another image, which has no BLAS: the shared
 # libraries the target needs beyond the C and C++ runtimes go with it.
