@@ -14,11 +14,13 @@
 
 #define _XOPEN_SOURCE 700
 
+#include <fcntl.h>
 #include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "bmb_machine.h"
 
@@ -229,6 +231,7 @@ static void tree_file(const char *rel, const char *content)
     char path[512];
     char *p;
     FILE *f;
+    int fd;
 
     snprintf(path, sizeof(path), "%s/%s", tree_root, rel);
     for (p = strchr(path + strlen(tree_root) + 1, '/'); p != NULL; p = strchr(p + 1, '/')) {
@@ -236,9 +239,14 @@ static void tree_file(const char *rel, const char *content)
         mkdir(path, 0755);
         *p = '/';
     }
-    f = fopen(path, "w");
+    /* Only its owner writes it, whatever the umask. */
+    fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    f = (fd >= 0) ? fdopen(fd, "w") : NULL;
     if (f == NULL) {
         check(0, path);
+        if (fd >= 0) {
+            close(fd);
+        }
         return;
     }
     fputs(content, f);
