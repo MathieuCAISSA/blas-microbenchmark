@@ -35,6 +35,13 @@ test_bmb_verify_LDADD = libbmbcommon.a -lm
 test_bmb_machine_SOURCES = test_bmb_machine.c
 test_bmb_machine_LDADD = libbmbcommon.a
 
+# The parser again, on inputs nobody wrote: a libFuzzer target that
+# ClusterFuzzLite runs (.clusterfuzzlite/), built here with a main of its
+# own that replays its seed corpus, so it keeps compiling and passing.
+check_PROGRAMS += fuzz_bmb_options
+fuzz_bmb_options_SOURCES = fuzz_bmb_options.c
+fuzz_bmb_options_LDADD = libbmbcommon.a
+
 # Netlib reference BLAS is Fortran-only in the general case, so this
 # backend brings its own cblas_* layer forwarding to the Fortran symbols.
 if BLAS_BACKEND_NETLIB
@@ -96,4 +103,24 @@ MACHINE_FIXTURES = \
 	fixtures/machine/bad-quota/proc/self/cgroup \
 	fixtures/machine/bad-quota/sys/fs/cgroup/cpu.max
 
-EXTRA_DIST = ../netlib/test_netlib_cblas.c ../mkl/cblas.h $(MACHINE_FIXTURES)
+FUZZ_CORPUS = \
+	fuzz/bmb_options.dict \
+	fuzz/bmb_options/above-ceiling \
+	fuzz/bmb_options/ceiling \
+	fuzz/bmb_options/counts \
+	fuzz/bmb_options/grid \
+	fuzz/bmb_options/help \
+	fuzz/bmb_options/label \
+	fuzz/bmb_options/label-newline \
+	fuzz/bmb_options/linear-sweep \
+	fuzz/bmb_options/quick-start \
+	fuzz/bmb_options/refused \
+	fuzz/bmb_options/thread-list \
+	fuzz/bmb_options/threads \
+	fuzz/bmb_options/too-many \
+	fuzz/bmb_options/unknown \
+	fuzz/bmb_options/vector-sweep \
+	fuzz/bmb_options/verify \
+	fuzz/bmb_options/version
+
+EXTRA_DIST = ../netlib/test_netlib_cblas.c ../mkl/cblas.h $(MACHINE_FIXTURES) $(FUZZ_CORPUS)

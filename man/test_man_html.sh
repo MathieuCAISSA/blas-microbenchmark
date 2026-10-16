@@ -71,13 +71,13 @@ check_commands "$T/guide-commands"
 test "$commands_checked" -ge 15 || fail "only $commands_checked commands found in the guides"
 ok "the $commands_checked commands in the guides run programs that exist, with options they take"
 
-# development.html: every test the Makefiles run is on it -- the
-# per-routine smoke tests as one entry, counted -- and, in a git checkout,
-# every job of the CI workflow.
+# development.html: every test the Makefiles run is on it (test_*, and
+# the fuzz targets' replays, fuzz_*) -- the per-routine smoke tests as one
+# entry, counted -- and, in a git checkout, every job of the CI workflow.
 top=${srcdir:-.}/..
 d=$site/development.html
 n=0
-for t in $(grep -ho 'test_[a-z0-9_]*\(\.sh\|\.js\)\{0,1\}' "$top"/src/c/Makefile.am "$top"/src/c/*/Makefile.am \
+for t in $(grep -ho '\(test\|fuzz\)_[a-z0-9_]*\(\.sh\|\.js\)\{0,1\}' "$top"/src/c/Makefile.am "$top"/src/c/*/Makefile.am \
            "$top"/src/report/Makefile.am "$top"/Makefile.am \
            | sed 's/_$//' | grep -v '^test_helper' | sort -u); do
     case $t in

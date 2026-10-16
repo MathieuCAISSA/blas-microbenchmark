@@ -181,7 +181,8 @@ test takes:
 
   Dismissed so far, each with its reason in the alert: the path
   injections from the `BMB_MACHINE_ROOT` test hook (used in tests: it
-  reads, for the user running it, files that user can read already); the
+  reads, for the user running it, files that user can read already), and
+  the same for the seed files `fuzz_bmb_options` replays; the
   `-o` file created under the user's umask (won't fix); the exact
   comparison of exactly representable values in `test_bmb_verify.c`;
   the length of `bmb_options_parse()` without comments (the code style
@@ -207,3 +208,27 @@ thing it catches. To reproduce locally:
 ASAN_OPTIONS=detect_leaks=1 \
   LSAN_OPTIONS=suppressions=$PWD/../.github/lsan-suppressions.txt make check
 ```
+
+## Fuzzing
+
+The `fuzz` job runs on pull requests only: [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/)
+builds the fuzz targets with clang and libFuzzer in OSS-Fuzz's builder
+image (`.clusterfuzzlite/Dockerfile`, pinned by digest, which Dependabot
+moves; `build.sh`), then fuzzes each for five minutes, once under ASan and
+once under UBSan. There is one target, `fuzz_bmb_options`
+(`src/c/common`): the command-line parser, where everything a user types
+arrives. Each input is an argv, split on its NUL bytes; whatever the
+parser accepts is held to what the benchmarks rely on (the checks are
+in the target), so a wrong answer fails as surely as a crash. Its seed
+corpus (`fuzz/bmb_options/`) is the man page's examples and the edges the
+unit tests name, its dictionary the options and separators.
+
+A failure in the job names the input that caused it, in the job's
+artifacts: add it to the corpus with the fix, so `make check`, which
+replays the corpus through the same function in every job, keeps it
+fixed. To replay one input locally: `src/c/common/fuzz_bmb_options FILE`
+from a build directory, ideally a sanitizer build (above).
+
+ClusterFuzzLite keeps no corpus between runs here (that needs a storage
+repository): each run starts from the seeds. OpenSSF Scorecard's
+`Fuzzing` check looks for `.clusterfuzzlite/`.
