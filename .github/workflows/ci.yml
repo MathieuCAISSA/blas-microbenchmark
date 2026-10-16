@@ -552,12 +552,29 @@ jobs:
   # summary is on the run's page; the line-by-line HTML report and an lcov
   # file are in the coverage artifact. The lcov file also goes to Codecov,
   # for the README's badge, authenticated by the job's OIDC token rather
-  # than a stored secret; Codecov being down does not fail the job.
+  # than a stored secret; Codecov being down does not fail the job. Once
+  # per backend Ubuntu packages, each uploaded with its own flag: code that
+  # only runs under one (a library with no version string, a
+  # single-threaded one) counts where it runs, and Codecov merges the
+  # reports of a commit.
   coverage:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - backend: openblas
+            package: libopenblas-dev
+          - backend: netlib
+            package: libblas-dev
+          - backend: blis
+            package: libblis-openmp-dev
     permissions:
       contents: read
       id-token: write   # Codecov's upload, authenticated by OIDC
+    env:
+      BACKEND: ${{ matrix.backend }}
+      PACKAGE: ${{ matrix.package }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -565,7 +582,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config gcovr
+          sudo apt-get install -y autoconf automake libtool "$PACKAGE" pkg-config gcovr
 
       - name: autoreconf
         run: ./autogen.sh
@@ -575,7 +592,8 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          ../configure --enable-werror CFLAGS="-O0 -g --coverage" LDFLAGS="--coverage"
+          ../configure --with-blas-backend="$BACKEND" --enable-werror \
+            CFLAGS="-O0 -g --coverage" LDFLAGS="--coverage"
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -583,18 +601,19 @@ jobs:
       - name: make check
         run: make -C build check
 
-      # The tests' own code is left out: what matters is what they reach.
+      # The tests' own code is left out (test_*, and the fuzz targets'
+      # fuzz_*): what matters is what they reach.
       - name: Coverage report
         run: |
           cd build
           mkdir -p coverage
-          gcovr --root .. src --exclude '.*/test_[^/]*$' \
+          gcovr --root .. src --exclude '.*/(test|fuzz)_[^/]*$' \
             --txt coverage/summary.txt \
             --html-details coverage/index.html \
             --lcov coverage/coverage.lcov \
             --print-summary
           {
-            echo '### Coverage of the C code by `make check`'
+            echo "### Coverage of the C code by \`make check\`, $BACKEND"
             echo '```'
             cat coverage/summary.txt
             echo '```'
@@ -603,13 +622,14 @@ jobs:
       - name: Upload the coverage report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: coverage
+          name: coverage-${{ matrix.backend }}
           path: build/coverage/
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: build/coverage/coverage.lcov
+          flags: ${{ matrix.backend }}
           disable_search: true
           use_oidc: true
           fail_ci_if_error: false
@@ -618,7 +638,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: test-logs-coverage
+          name: test-logs-coverage-${{ matrix.backend }}
           path: |
             build/**/test-suite.log
             build/**/*.sh.log
