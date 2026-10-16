@@ -22,6 +22,19 @@ releases with the same major version can be compared and read by the same
   no option: `reframe -c <prefix>/share/blas-microbenchmark/reframe/blas_microbenchmark.py -n bmb_run -r`.
   The README has a section on them, and the man page lists them under
   FILES and EXAMPLES.
+- Guides on the documentation site
+  (<https://mathieucaissa.github.io/blas-microbenchmark/>): installing,
+  a first run, comparing libraries, the BLAS libraries one by one, on an
+  HPC cluster, and the ReFrame tests.
+
+### Changed
+- The documentation site is reorganised around a menu: Getting started,
+  the guides, then the manual, a page per part (options, measuring,
+  checking, threads, counters, output, environment, examples), each with
+  its table of contents and its previous and next pages. It reads on a
+  phone too.
+- The man pages, `blas-microbenchmark(1)` and `bmb_report(1)`, give the
+  site's address under SEE ALSO.
 
 ## [1.5.0] - 2026-10-15
 
