@@ -87,7 +87,10 @@ tests:
 Spack (`SPACK_COMMIT`) and its package recipes (`SPACK_PACKAGES_COMMIT`)
 are pinned to commits, with their release tag in a comment, as the
 actions are: a tag can be moved. What Spack builds is cached, keyed on
-both and on `packaging/spack`. A new Spack release is taken by moving the
+both and on `packaging/spack`, and for the MKL leg on the MKL version
+Intel's repository installed: the package is an external there, and
+installs built against an MKL no longer on the runner would still be
+tested, and fail (#139). A new Spack release is taken by moving the
 two commits to its tags' (`gh api repos/spack/spack/git/ref/tags/vX.Y.Z`,
 and the same for `spack/spack-packages`).
 The BLIS, AOCL-BLAS and Netlib legs install the distribution's library
