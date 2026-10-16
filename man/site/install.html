@@ -54,7 +54,7 @@ spack load blas-microbenchmark</pre>
 <p><code>spack load</code> puts the benchmarks on the <code>PATH</code>. The library can be <code>^openblas</code>, <code>^blis</code>, <code>^amdblis</code>, <code>^intel-oneapi-mkl</code>, <code>^nvpl-blas</code>, <code>^armpl-gcc</code>, <code>^netlib-lapack</code> or <code>^flexiblas</code>; <code>spack test run blas-microbenchmark</code> checks the install.</p>
 
 <h2 id="container">In a container</h2>
-<p>From 1.6.0, each release's image is on GitHub's registry, built against OpenBLAS (tags <code>latest</code> and <code>&lt;version&gt;</code>), BLIS (<code>&lt;version&gt;-blis</code>) or Netlib (<code>&lt;version&gt;-netlib</code>), and attested like the tarball. The benchmarks are on its <code>PATH</code>; it writes to <code>/results</code>, here the current directory:</p>
+<p>From 1.6.0, each release's image is on GitHub's registry, for x86_64, built against OpenBLAS (tags <code>latest</code>, <code>&lt;version&gt;</code> and <code>&lt;version&gt;-openblas</code>), BLIS (<code>&lt;version&gt;-blis</code>) or Netlib (<code>&lt;version&gt;-netlib</code>), and attested like the tarball. The benchmarks are on its <code>PATH</code>; it writes to <code>/results</code>, here the current directory:</p>
 <pre>IMAGE=ghcr.io/mathieucaissa/blas-microbenchmark:latest
 gh attestation verify oci://$IMAGE --repo MathieuCAISSA/blas-microbenchmark
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/results" $IMAGE bmb_dgemm -m 64:1024 -o dgemm.json</pre>

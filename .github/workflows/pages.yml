@@ -1,6 +1,7 @@
 name: Pages
 
-# The documentation site: the man pages as HTML (make html, in man/),
+# The documentation site (make html, in man/): the guides, the man pages
+# a page per part, what a run produces, and the development page,
 # published on GitHub Pages from main. It is published only once the man
 # page tests pass on the same commit, so the site never shows a page they
 # would have refused.

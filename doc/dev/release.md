@@ -22,11 +22,13 @@ with the repository (not as a release asset): it says the tarball with
 this digest was built by `release.yml`, in this repository, from this
 commit. It needs the job's `id-token: write` and `attestations: write`.
 
-A pull request that changes the workflow runs it (its `tarball` job):
-it builds, checks the tarball, attests and verifies, and uploads
+A pull request that changes the workflow runs it: the `tarball` job
+builds and checks the tarball, attests and verifies it, and uploads
+nothing; the `image` job builds and runs each image, and pushes
 nothing. Pull requests from Dependabot (which changes it every time it
 updates an action) or from a fork have no OIDC token to sign with and
-skip the two attestation steps. To run it by hand on a branch, `publish` off:
+skip the four attestation steps (attest, verify, install cosign, check
+with cosign). To run it by hand on a branch, `publish` off:
 
 ```bash
 gh workflow run release.yml --ref <branch> -f tag=vX.Y.Z -f publish=false
@@ -49,7 +51,8 @@ with an issue of its own), then tagged on `main` once merged.
    - [ ] The lists that follow the code agree with it. Backends:
      `configure`'s `--with-blas-backend`, the README, the man page
      (DESCRIPTION, THREADS, ENVIRONMENT), [backends](backends.md),
-     [CI](ci.md). Routines: AGENTS.md's layout, the man page's table,
+     [CI](ci.md), the site's `backends.html` and `install.html` (with
+     the Spack providers, the image tags and the cosign identity). Routines: AGENTS.md's layout, the man page's table,
      the report's `LEVEL`, ReFrame's `ROUTINES`. CI jobs: [CI](ci.md),
      each with its comment. Tests: AGENTS.md's table. The layout:
      AGENTS.md's.
@@ -60,8 +63,9 @@ with an issue of its own), then tagged on `main` once merged.
      legs), Docker (its backends, and why not the others; the base
      image; the backends `release.yml` publishes), ReFrame (`ROUTINES`,
      its variables and its README).
-   - [ ] A cross-read of the README, AGENTS.md, `doc/dev`, the man pages
-     and the packaging READMEs against the code, by someone (or an agent)
+   - [ ] A cross-read of the README, AGENTS.md, `doc/dev`, the man pages,
+     the site's guides (`man/site/`), the packaging READMEs,
+     CONTRIBUTING.md and SECURITY.md against the code, by someone (or an agent)
      who did not write the changes. 1.5.0's found a dozen places that a
      new backend had missed (#94).
 
@@ -73,7 +77,8 @@ with an issue of its own), then tagged on `main` once merged.
 2. **Man pages**: if one changed since the last release, set the date in
    its `.TH` line (`man/*.1.in`) to today.
 3. **README**: replace the Quick start output with what the new version
-   really prints (`bmb_dgemm -m 512:2048`). If the report's look changed,
+   really prints (`bmb_dgemm -m 512:2048`), and the same in the site's
+   `man/site/first-run.html`. If the report's look changed,
    redo `doc/images` (see [The README's images](report.md#the-readmes-images)).
 4. **Check**: `make distcheck`, and the browser tests in Firefox
    (`BMB_BROWSER=firefox make check`); commit, push the branch, open the
@@ -84,7 +89,7 @@ with an issue of its own), then tagged on `main` once merged.
    git switch main && git pull
    git tag -a vX.Y.Z -m "blas-microbenchmark X.Y.Z"
    git push origin vX.Y.Z
-   # wait for the workflow (~30s), then write the release notes
+   # wait for the tarball job (a minute or two), then write the notes
    gh release edit vX.Y.Z --title vX.Y.Z --notes-file notes.md
    ```
 
@@ -109,7 +114,7 @@ with an issue of its own), then tagged on `main` once merged.
    gives; see [ReFrame](packaging.md#the-reframe-tests)).
 
 Note the order: **edit the notes, don't create the release**. The workflow
-gets there within about half a minute of the tag push and creates it with
+gets there within a minute or two of the tag push and creates it with
 `--generate-notes`, so a `gh release create` afterwards just fails with
 "Release.tag_name already exists".
 

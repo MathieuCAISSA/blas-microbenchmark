@@ -7,8 +7,8 @@ Guidance for AI coding agents (and humans) working on this repository.
 BLAS microbenchmarks, structured like [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/):
 one small executable per BLAS routine, sharing a common option/timing/output
 layer (`src/c/common`), built with Autotools. The user-facing documentation
-is [README.md](README.md) (install and a first run) and the man pages in
-`man/` (everything else); see
+is [README.md](README.md) (install and a first run), the man pages in
+`man/` (everything else) and the guides of the site, in `man/site/`; see
 [doc/dev/documentation.md](doc/dev/documentation.md). This file covers
 working from a git checkout.
 
@@ -190,6 +190,9 @@ Three rules the existing tests follow, and new ones should too:
 ## Layout
 
 ```
+src/c/           # the tests across every benchmark (test_bmb_*.sh), the
+                 # helper the per-routine tests share (test_helper.sh),
+                 # and bmb_failalloc.c, the allocation-failure library
 src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
                  # (thread-count resolution), bmb_build (what this build is),
@@ -208,9 +211,10 @@ src/report/      # bmb_report: the script, the HTML template, how the two
                  # the browser tests (browser.sh, test_report.js)
 man/             # the man pages, blas-microbenchmark(1) and bmb_report(1),
                  # html.sh and devpage.sh, which make the documentation
-                 # site, and site/, its guides
-doc/             # the README's chart images, and screenshots.sh, which
-                 # makes them
+                 # site, site.css, its stylesheet, and site/, its guides;
+                 # the man page tests and man_helper.sh, what they share
+doc/             # the report's chart images, which the README and the
+                 # site show, and screenshots.sh, which makes them
 doc/dev/         # the rest of this guide, one file per part (see above)
 tests/           # the project's own tests: the release files, the
                  # editor settings, the documentation's links, the pins,

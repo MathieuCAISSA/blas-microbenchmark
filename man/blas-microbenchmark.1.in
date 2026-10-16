@@ -561,6 +561,8 @@ MKL
 The count is set for MKL's BLAS domain, which overrides
 .BR MKL_DOMAIN_NUM_THREADS ;
 a warning says so when it is set.
+.B MKL_DYNAMIC=false
+makes MKL use them all on a small problem too (THREADS).
 .TP
 FlexiBLAS
 those of the library it loaded, as above; none for Netlib.
