@@ -123,7 +123,7 @@ over it; the `coverage` CI job does the same on every pull request (see
 mkdir -p build-cov && cd build-cov
 ../configure CFLAGS="-O0 -g --coverage" LDFLAGS="--coverage"
 make && make check
-gcovr --root .. src --exclude '.*/test_[^/]*$' --html-details cov.html --print-summary
+gcovr --root .. src --exclude '.*/(test|fuzz)_[^/]*$' --html-details cov.html --print-summary
 ```
 
 `cov.html` shows each file line by line. There is no threshold: read it

@@ -85,11 +85,17 @@ seconds; the sanitizers job runs it under ASan and UBSan too.
 
 The `coverage` job builds at `-O0` with `--coverage`, runs `make check`,
 and reports with `gcovr` which lines and branches of the C code the tests
-reached, the tests' own files left out. The per-file summary is on the
-run's page; the line-by-line HTML report and an lcov file are in the
-`coverage` artifact. AGENTS.md gives the same commands for a local run.
+reached, the tests' own files left out (`test_*`, and the fuzz targets'
+`fuzz_*`). It does so once per backend Ubuntu packages, OpenBLAS, Netlib
+and BLIS: code that only runs under one of them (a library with no
+version string, a single-threaded one, Netlib's CBLAS layer) counts
+where it runs, and lines inside another backend's `#if` are not compiled,
+so not counted (#132). The per-file summary is on the run's page; the
+line-by-line HTML report and an lcov file are in the `coverage-<backend>`
+artifact. AGENTS.md gives the same commands for a local run.
 The lcov file also goes to [Codecov](https://codecov.io/gh/MathieuCAISSA/blas-microbenchmark),
-which draws the README's coverage badge and the history of the figure:
+which draws the README's coverage badge and the history of the figure,
+merging the three reports of a commit (each flagged with its backend):
 uploaded with the job's OIDC token, so no secret is stored, and without
 failing the job when Codecov is down. `.github/codecov.yml` keeps its
 statuses informational and its pull request comments off. Codecov's
