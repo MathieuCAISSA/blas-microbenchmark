@@ -129,10 +129,18 @@ The SARIF is not uploaded to code scanning, where the CodeQL workflow
 fails on any open alert: Scorecard's findings are a score to read, not
 defects to dismiss one by one. The `Branch-Protection` check needs a
 token that can read the branch protection settings, which the job's own
-cannot; without one, Scorecard says so in that check. `Signed-Releases`
-counts the attestation bundle `release.yml` attaches to each release
-from 1.6.0 (`<tarball>.sigstore.json`, #107), and `Packaging` its push
-of the Docker images to ghcr.io (#108).
+cannot; without one, Scorecard leaves the check out of the score. It is
+left without one on purpose: the higher tiers need pull requests
+approved by someone other than their author, which a project with one
+maintainer cannot have, so the check would score low and pull the
+score down. `Signed-Releases` averages the last five releases: 8 for
+the attestation bundle `release.yml` attaches (`<tarball>.sigstore.json`,
+#107), 10 for the provenance beside it (`<tarball>.intoto.jsonl`, #127).
+1.3.0 to 1.5.0 were attested when built, and their bundle and provenance
+were attached afterwards, from `gh attestation download`; 1.2.0 and
+older have none. `Packaging` counts the push of the Docker images to
+ghcr.io (#108). `Maintained` is 0 for a repository less than 90 days
+old, until 2026-12-20 here.
 
 ## Static analysis
 

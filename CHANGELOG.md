@@ -9,6 +9,13 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- Each release carries its provenance as an in-toto file too,
+  `<tarball>.intoto.jsonl`: the signed SLSA provenance of the
+  `.sigstore.json` bundle, on its own. 1.3.0, 1.4.0 and 1.5.0, which
+  were attested when they were built, now carry both, so `cosign` checks
+  them as the README says.
+
 ## [1.6.0] - 2026-10-16
 
 ### Added
