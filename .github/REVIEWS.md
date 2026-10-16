@@ -71,6 +71,10 @@ it comes from in brackets.
   render test rewrote a line that was not there).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
+- [ ] A change to what `bmb_options_parse()` accepts keeps the checks of
+  `fuzz_bmb_options` true of everything it accepts, and a new form of
+  option gets a seed in `src/c/common/fuzz/bmb_options/`
+  ([fuzzing](../doc/dev/ci.md#fuzzing)).
 
 ## Security
 

@@ -655,6 +655,37 @@ jobs:
           cppcheck --version
           .github/cppcheck.sh build
 
+  # The command-line parser fuzzed, on inputs no test wrote: ClusterFuzzLite
+  # builds src/c/common/fuzz_bmb_options.c with libFuzzer (.clusterfuzzlite/),
+  # from its seed corpus and dictionary, then runs it for five minutes,
+  # once under AddressSanitizer and once under UndefinedBehaviorSanitizer.
+  # A crash, a sanitizer report or a promise of the parser broken fails
+  # the job, with the input that did it. make check replays the corpus in
+  # every other job.
+  fuzz:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
+
+    steps:
+      - name: Build the fuzz targets
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: c
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sanitizer: ${{ matrix.sanitizer }}
+
+      - name: Fuzz
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: 300
+          mode: code-change
+          sanitizer: ${{ matrix.sanitizer }}
+
   # FlexiBLAS loads the BLAS library at run time (FLEXIBLAS=...), so one
   # build measures several. Debian and Ubuntu do not package it; Fedora
   # does, as its default BLAS, with OpenBLAS, BLIS and Netlib as backends.

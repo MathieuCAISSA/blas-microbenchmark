@@ -19,3 +19,11 @@ updates:
       interval: weekly
     commit-message:
       prefix: Docker
+  # The image ClusterFuzzLite builds the fuzz targets in
+  # (.clusterfuzzlite/Dockerfile), pinned by digest too.
+  - package-ecosystem: docker
+    directory: /.clusterfuzzlite
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: Fuzzing
