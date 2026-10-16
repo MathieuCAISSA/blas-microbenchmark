@@ -181,7 +181,8 @@ test takes:
 
   Dismissed so far, each with its reason in the alert: the path
   injections from the `BMB_MACHINE_ROOT` test hook (used in tests: it
-  reads, for the user running it, files that user can read already); the
+  reads, for the user running it, files that user can read already), and
+  the same for the seed files `fuzz_bmb_options` replays; the
   `-o` file created under the user's umask (won't fix); the exact
   comparison of exactly representable values in `test_bmb_verify.c`;
   the length of `bmb_options_parse()` without comments (the code style
