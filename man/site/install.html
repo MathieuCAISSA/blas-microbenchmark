@@ -15,7 +15,7 @@ sudo make install</pre>
 <h3 id="check-download">Check the download</h3>
 <p>Each release tarball is attested by the workflow that built it, in this repository. With the <a href="https://cli.github.com/">GitHub CLI</a>:</p>
 <pre>gh attestation verify blas-microbenchmark-&lt;version&gt;.tar.gz --repo MathieuCAISSA/blas-microbenchmark</pre>
-<p>Or, from 1.6.0, without it, with <a href="https://docs.sigstore.dev/cosign/">cosign</a> and the <code>.sigstore.json</code> bundle attached to the release:</p>
+<p>Or, from 1.3.0, without it, with <a href="https://docs.sigstore.dev/cosign/">cosign</a> and the <code>.sigstore.json</code> bundle attached to the release:</p>
 <pre>cosign verify-blob-attestation --type slsaprovenance1 \
   --bundle blas-microbenchmark-&lt;version&gt;.tar.gz.sigstore.json \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
