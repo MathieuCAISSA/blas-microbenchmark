@@ -10,12 +10,15 @@ those are plain git exports with no `configure` in them.
 builds the tarball, verifies it unpacks and builds with no Autotools
 present, attests where it was built, checks that attestation as a user
 would (`gh attestation verify`, and `cosign` with its bundle), then
-uploads it with its `SHA256SUMS` and the attestation's bundle
-(`<tarball>.sigstore.json`) — *creating* the release if the tag has none
+uploads it with its `SHA256SUMS`, the attestation's bundle
+(`<tarball>.sigstore.json`) and the provenance it signs
+(`<tarball>.intoto.jsonl`) — *creating* the release if the tag has none
 yet. Its `image` job pushes the Docker images to ghcr.io, attested, then
-pulls them back and checks them ([packaging](packaging.md#publishing)). The bundle is what a user without the GitHub CLI checks with
-`cosign` (README.md), and what OpenSSF Scorecard's `Signed-Releases`
-looks for on a release (#107).
+pulls them back and checks them ([packaging](packaging.md#publishing)).
+The bundle is what a user without the GitHub CLI checks with `cosign`
+(README.md); OpenSSF Scorecard's `Signed-Releases` scores it as a
+signature, and the `.intoto.jsonl`, the same signed provenance alone, as
+provenance (#107, #127).
 
 The attestation is a Sigstore-signed SLSA provenance statement, stored
 with the repository (not as a release asset): it says the tarball with

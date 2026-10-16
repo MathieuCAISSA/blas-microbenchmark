@@ -146,7 +146,7 @@ Each release tarball is attested by the workflow that built it. With the
 gh attestation verify blas-microbenchmark-<version>.tar.gz --repo MathieuCAISSA/blas-microbenchmark
 ```
 
-Or, from 1.6.0, with [cosign](https://docs.sigstore.dev/cosign/) and the
+Or, from 1.3.0, with [cosign](https://docs.sigstore.dev/cosign/) and the
 bundle attached to the release (signed by the release workflow, run for
 the version's tag, or from `main` when a release's upload is run again):
 

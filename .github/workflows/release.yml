@@ -157,6 +157,21 @@ jobs:
           fi
           echo "a changed tarball is refused"
 
+      # The same provenance as an in-toto file, the bundle's signed DSSE
+      # envelope on one line: what Scorecard's Signed-Releases scores as
+      # provenance rather than as a signature. It has to be the bundle's
+      # envelope, about this tarball.
+      - name: The provenance, as an in-toto file
+        if: github.event_name != 'pull_request' || (github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          f=$(ls build/blas-microbenchmark-*.tar.gz)
+          jq -c .dsseEnvelope "$f.sigstore.json" > "$f.intoto.jsonl"
+          digest=$(sha256sum "$f" | cut -d' ' -f1)
+          jq -e --arg d "$digest" '.payloadType == "application/vnd.in-toto+json"
+              and (.payload | @base64d | fromjson | any(.subject[]; .digest.sha256 == $d))' \
+            "$f.intoto.jsonl"
+          echo "provenance: $(basename "$f").intoto.jsonl, for sha256 $digest"
+
       - name: Upload the tarball to the release
         if: github.event_name == 'push' || inputs.publish
         env:
@@ -168,10 +183,12 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" build/blas-microbenchmark-*.tar.gz build/SHA256SUMS \
               build/blas-microbenchmark-*.tar.gz.sigstore.json \
+              build/blas-microbenchmark-*.tar.gz.intoto.jsonl \
               --clobber --repo "$GITHUB_REPOSITORY"
           else
             gh release create "$TAG" build/blas-microbenchmark-*.tar.gz build/SHA256SUMS \
               build/blas-microbenchmark-*.tar.gz.sigstore.json \
+              build/blas-microbenchmark-*.tar.gz.intoto.jsonl \
               --title "$TAG" --generate-notes --repo "$GITHUB_REPOSITORY"
           fi
 
