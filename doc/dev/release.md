@@ -38,7 +38,11 @@ gh workflow run release.yml --ref <branch> -f tag=vX.Y.Z -f publish=false
 ```
 
 A release is prepared on a branch like any change (`release-X.Y.Z`,
-with an issue of its own), then tagged on `main` once merged.
+with an issue of its own), then tagged on `main` once merged. A patch
+release (X.Y.Z, Z > 0) is cut from `main` the same way, when what
+`main` holds since the last release is fixes, or nothing the programs
+do (1.6.1: the release files, a fix, tests, CI); a new option, output or
+routine waits for the next minor.
 
 0. **Check-up**, before anything is changed for the release. Copy this
    list into the release's issue and tick it there; what it finds is
@@ -107,7 +111,8 @@ with an issue of its own), then tagged on `main` once merged.
    (1.6.0), make the package public first: its Package settings on
    GitHub, since a workflow creates it private.
 7. **Back to development**: on another short branch and pull request,
-   set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`),
+   set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`;
+   after a patch release X.Y.Z, the X.(Y+1).0-dev `main` was at before),
    add an empty `[Unreleased]` section to `CHANGELOG.md`, and add the
    release to the Spack package with the checksum the release published
    (see [After a release](packaging.md#after-a-release)); the `spack`

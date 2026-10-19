@@ -46,19 +46,19 @@ bmb_dgemm -m 512:2048
 
 ```
 $ bmb_dgemm -m 512:2048
-# blas-microbenchmark 1.6.0
+# blas-microbenchmark 1.6.1
 # backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
 # verified: every point, against a reference, before it was timed
 # layout: row-major
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
-# date: 2026-10-16T08:50:23Z
+# date: 2026-10-19T16:16:20Z
 # routine: dgemm
 Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
-1               512                 512                 0.005647207     47.534
-1               1024                1024                0.035299474     60.836
-1               2048                2048                0.286089708     60.051
+1               512                 512                 0.005316027     50.496
+1               1024                1024                0.044891602     47.837
+1               2048                2048                0.397041191     43.270
 ```
 
 Every benchmark takes the same options: the sizes to sweep (`-v` for
