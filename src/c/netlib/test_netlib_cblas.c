@@ -3,8 +3,12 @@
  * The shim's risky part is translating row-major CBLAS calls into the
  * column-major Fortran ABI: a wrong flip computes a transposed or
  * mirror-triangle result silently, without crashing, which would quietly
- * benchmark the wrong thing. Everything here is row-major, since that is
- * what the benchmarks use. */
+ * benchmark the wrong thing. Each routine is checked row-major against a
+ * reference. The arguments only column-major calls pass through as they
+ * are (a lower triangle, the right side, a conjugate transpose), and a
+ * unit diagonal, are checked by calling the same routine both ways on
+ * the same memory: a matrix stored row-major is its transpose stored
+ * column-major. */
 
 #include <math.h>
 #include <stdio.h>
@@ -780,6 +784,54 @@ int main(void)
                         za, na, zb, N, beta, zc, N);
             check(pass == 0 ? "zhemm.LU" : "zhemm.RU", zc, want3, 2 * M * N);
         }
+    }
+
+    /* ---- dtrmv, Upper/NoTrans/Unit: the diagonal taken as 1 ---- */
+    fill_tri(a, M, 1);
+    fill(x, M);
+    for (i = 0; i < M; i++) {
+        double acc = x[i];
+
+        for (j = i + 1; j < M; j++) {
+            acc += a[i * M + j] * x[j];
+        }
+        want[i] = acc;
+    }
+    cblas_dtrmv(CblasRowMajor, CblasUpper, CblasNoTrans, CblasUnit, M, a, M, x, 1);
+    check("dtrmv.UNU", x, want, M);
+
+    /* ---- dtrmv column-major, Lower/NoTrans: A stored row-major upper is
+     * its transpose stored column-major lower, so this is A^T*x ---- */
+    fill_tri(a, M, 1);
+    fill(x, M);
+    memcpy(want, x, sizeof(double) * M);
+    cblas_dtrmv(CblasRowMajor, CblasUpper, CblasTrans, CblasNonUnit, M, a, M, want, 1);
+    cblas_dtrmv(CblasColMajor, CblasLower, CblasNoTrans, CblasNonUnit, M, a, M, x, 1);
+    check("dtrmv.col.LN", x, want, M);
+
+    /* ---- dsymm column-major, Right/Upper: C = B*A on M x N column-major
+     * memory is C^T = A*B^T on N x M row-major, A's upper triangle its
+     * lower ---- */
+    fill(a, N * N);
+    fill(b, M * N);
+    fill_off(c, M * N, 7);
+    memcpy(want, c, sizeof(double) * M * N);
+    cblas_dsymm(CblasRowMajor, CblasLeft, CblasLower, N, M, 0.5, a, N, b, M, 0.25, want, M);
+    cblas_dsymm(CblasColMajor, CblasRight, CblasUpper, M, N, 0.5, a, N, b, M, 0.25, c, M);
+    check("dsymm.col.RU", c, want, M * N);
+
+    /* ---- zherk column-major, Upper/ConjTrans: C = A^H*A with A K x N
+     * column-major is A*A^H with A N x K row-major, in the lower
+     * triangle ---- */
+    {
+        double za[2 * N * K], zc[2 * N * N], want3[2 * N * N];
+
+        fill(za, 2 * N * K);
+        fill_off(zc, 2 * N * N, 3);
+        memcpy(want3, zc, sizeof(zc));
+        cblas_zherk(CblasRowMajor, CblasLower, CblasNoTrans, N, K, 0.5, za, K, 0.25, want3, N);
+        cblas_zherk(CblasColMajor, CblasUpper, CblasConjTrans, N, K, 0.5, za, K, 0.25, zc, N);
+        check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
     if (failures != 0) {

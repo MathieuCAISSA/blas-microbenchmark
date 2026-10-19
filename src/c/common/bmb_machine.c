@@ -223,7 +223,9 @@ static void bmb_probe_governor(bmb_machine_t *m, const char *root)
         int n = snprintf(m->governor + used, sizeof(m->governor) - used, "%s%s",
                          (i == 0) ? "" : "/", seen[i]);
 
-        if (n < 0 || (size_t) n >= sizeof(m->governor) - used) {
+        /* A governor that does not fit is left out whole, not cut. */
+        if (n < 0 || (size_t) n >= sizeof(m->governor) - used) { /* GCOVR_EXCL_BR_LINE: snprintf does not fail on these formats, n < 0 never holds */
+            m->governor[used] = '\0';
             break;
         }
         used += (size_t) n;
@@ -391,11 +393,11 @@ void bmb_machine_probe_at(const char *root, bmb_machine_t *m)
     bmb_probe_governor(m, root);
     bmb_probe_turbo(m, root);
 
-    if (uname(&u) == 0) {
+    if (uname(&u) == 0) { /* GCOVR_EXCL_BR_LINE: uname() cannot fail with a valid buffer */
         snprintf(m->os, sizeof(m->os), "%s %s %s", u.sysname, u.release, u.machine);
     }
 
-    if (now != (time_t) -1 && gmtime_r(&now, &tm) != NULL) {
+    if (now != (time_t) -1 && gmtime_r(&now, &tm) != NULL) { /* GCOVR_EXCL_BR_LINE: time() and gmtime_r() of now do not fail */
         strftime(m->date, sizeof(m->date), "%Y-%m-%dT%H:%M:%SZ", &tm);
     }
 }
@@ -480,7 +482,7 @@ void bmb_machine_describe_caches(const bmb_machine_t *m, char *buf, size_t size)
                      (i == 0) ? "" : ", ", c->level, suffix, sz);
         /* A cache that does not fit is left out whole: cut, "L3 32M"
          * would read as "L3 3". */
-        if (n < 0 || (size_t) n >= size - used) {
+        if (n < 0 || (size_t) n >= size - used) { /* GCOVR_EXCL_BR_LINE: snprintf does not fail on these formats, n < 0 never holds */
             buf[used] = '\0';
             return;
         }

@@ -30,6 +30,13 @@ check_PROGRAMS += test_bmb_verify
 test_bmb_verify_SOURCES = test_bmb_verify.c
 test_bmb_verify_LDADD = libbmbcommon.a -lm
 
+# The output layer's corners no benchmark reaches: column names from
+# labels with any character, a routine without an operation count, a
+# stream already in error.
+check_PROGRAMS += test_bmb_print
+test_bmb_print_SOURCES = test_bmb_print.c
+test_bmb_print_LDADD = libbmbcommon.a
+
 # The machine probe reads procfs and sysfs, whose contents vary by kernel,
 # architecture and container, so it is checked on every CI runner.
 test_bmb_machine_SOURCES = test_bmb_machine.c

@@ -69,6 +69,9 @@ it comes from in brackets.
 - [ ] A test that edits or reads a result file does not count on an
   optional field: `blas` is absent under Netlib, NVPL and ArmPL (#9's
   render test rewrote a line that was not there).
+- [ ] A coverage exclusion (`GCOVR_EXCL_*`) is for a line no test can
+  reach on Linux, and its reason says why; one nobody wrote a test for
+  gets the test ([coverage](../doc/dev/ci.md#coverage)).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
 - [ ] A change to what `bmb_options_parse()` accepts keeps the checks of

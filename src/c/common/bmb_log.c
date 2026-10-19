@@ -24,9 +24,9 @@ static int bmb_log_use_color(FILE *stream)
     return isatty(fileno(stream));
 }
 
-void bmb_log_format(FILE *stream, const char *message, const char *color)
+static void bmb_log_format(FILE *stream, const char *message, const char *color)
 {
-    if (color != NULL && bmb_log_use_color(stream)) {
+    if (bmb_log_use_color(stream)) {
         fprintf(stream, "%s%s%s\n", color, message, BMB_COLOR_RESET);
     } else {
         fprintf(stream, "%s\n", message);

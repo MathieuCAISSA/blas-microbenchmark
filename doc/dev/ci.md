@@ -123,6 +123,18 @@ turn, and took lines from 92.5% to 98.3% and branches from 81% to 91%
 (Codecov's figure, which counts partly taken branches against a line,
 moves with the second).
 
+#131 to #134 took Codecov's figure from 95% to 100%: a coverage job per
+backend Ubuntu packages (#132), dead code removed (#133), tests for every
+path a test could take (#131, #134), which found three descriptions cut
+mid-number. What is left cannot run on Linux, and is marked where it is
+with gcovr's `GCOVR_EXCL_LINE`, `GCOVR_EXCL_BR_LINE` or
+`GCOVR_EXCL_START`/`STOP`, and the reason after a colon: `uname()` or
+`clock_gettime(CLOCK_MONOTONIC)` failing, a call shorter than the clock
+resolves, `snprintf` returning a negative count, a branch only FlexiBLAS
+with Netlib loaded takes. An exclusion is for a line no test can reach
+there, never for one nobody wrote a test for: the review checks the
+reason, and `test_coverage_exclusions.sh` that there is one.
+
 ## OpenSSF Scorecard
 
 `scorecard.yml` runs [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/MathieuCAISSA/blas-microbenchmark)

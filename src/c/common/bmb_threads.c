@@ -179,8 +179,8 @@ void bmb_threads_check_usable(const bmb_options_t *opts, long usable_cpus)
     /* None is what a library that takes no thread count reads: Netlib,
      * which FlexiBLAS can load. */
     bmb_thread_env_vars(&i);
-    if (i == 0) {
-        return;
+    if (i == 0) { /* GCOVR_EXCL_BR_LINE: only FlexiBLAS with Netlib loaded has no variable; the flexiblas job runs it, the coverage job does not build FlexiBLAS */
+        return; /* GCOVR_EXCL_LINE: only FlexiBLAS with Netlib loaded has no variable; the flexiblas job runs it, the coverage job does not build FlexiBLAS */
     }
     for (i = 0; i < opts->thread_count.count; i++) {
         if (opts->thread_count.values[i] > most) {
