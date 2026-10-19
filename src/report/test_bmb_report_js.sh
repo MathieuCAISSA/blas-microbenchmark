@@ -30,7 +30,7 @@ fi
 
 # Any result will do: the tests build their own input. This one is only
 # there because bmb_report needs a file.
-../c/level1/bmb_ddot -x 0 -i 1 -v 8 -o "$T/ddot.json" >/dev/null
+../c/level1/double/bmb_ddot -x 0 -i 1 -v 8 -o "$T/ddot.json" >/dev/null
 ./bmb_report "$T/ddot.json" >"$T/report.html"
 
 grep -q '^</body>$' "$T/report.html" || fail "no </body> line to put the tests before"

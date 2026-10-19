@@ -44,7 +44,7 @@ jobs:
       # probe sees it. On the arm64 runners this is also where to look to
       # find out what /proc/cpuinfo actually offers there.
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       - name: make check
         run: make -C build check
@@ -159,7 +159,7 @@ jobs:
       # probe sees it. On the arm64 runners this is also where to look to
       # find out what /proc/cpuinfo actually offers there.
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       - name: make check
         run: make -C build check
@@ -210,7 +210,7 @@ jobs:
       # probe sees it. On the arm64 runners this is also where to look to
       # find out what /proc/cpuinfo actually offers there.
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       # Also covers test_netlib_cblas, which checks the shim's row-major to
       # column-major translation against naive reference implementations.
@@ -403,7 +403,7 @@ jobs:
       # probe sees it. On the arm64 runners this is also where to look to
       # find out what /proc/cpuinfo actually offers there.
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       - name: make check
         run: make -C build check
@@ -460,7 +460,7 @@ jobs:
       # probe sees it. On the arm64 runners this is also where to look to
       # find out what /proc/cpuinfo actually offers there.
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       - name: make check
         run: make -C build check
@@ -515,7 +515,7 @@ jobs:
       # probe sees it. On the arm64 runners this is also where to look to
       # find out what /proc/cpuinfo actually offers there.
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       # Leak detection stays on for our own code; the BLAS library's own
       # per-thread buffers, which it never frees by design, are suppressed
@@ -743,7 +743,7 @@ jobs:
       - name: Provenance
         run: |
           for b in OPENBLAS-OPENMP BLIS-OPENMP NETLIB; do
-            FLEXIBLAS=$b build/src/c/level1/bmb_ddot --version
+            FLEXIBLAS=$b build/src/c/level1/double/bmb_ddot --version
           done
 
       - name: make check, once per backend
@@ -767,7 +767,7 @@ jobs:
       # must take both; test_report.js checks they make two series.
       - name: One build, two libraries
         run: |
-          D=build/src/c/level3/bmb_dgemm
+          D=build/src/c/level3/double/bmb_dgemm
           FLEXIBLAS=OPENBLAS-OPENMP $D -x 0 -i 1 -m 64:256 -o openblas.json >/dev/null
           FLEXIBLAS=BLIS-OPENMP $D -x 0 -i 1 -m 64:256 -o blis.json >/dev/null
           grep '"backend"\|"blas"' openblas.json blis.json
@@ -836,9 +836,9 @@ jobs:
 
       - name: Provenance
         run: |
-          build/src/c/level1/bmb_ddot --version | tee version.txt
+          build/src/c/level1/double/bmb_ddot --version | tee version.txt
           grep -q '^BLAS backend: aocl (AOCL-BLAS ' version.txt
-          ldd build/src/c/level3/bmb_dgemm > ldd.txt
+          ldd build/src/c/level3/double/bmb_dgemm > ldd.txt
           grep -q 'libblis-mt\.so' ldd.txt
 
       - name: make check
@@ -853,7 +853,7 @@ jobs:
       # above: on 4 threads dgemm must take clearly less time than on 1.
       - name: Threads are used
         run: |
-          d=build/src/c/level3/bmb_dgemm
+          d=build/src/c/level3/double/bmb_dgemm
           $d -x 1 -i 3 -m 1024 -t 1 -C -o t1.csv >/dev/null
           $d -x 1 -i 3 -m 1024 -t 4 -C -o t4.csv >/dev/null
           t1=$(sed -n 's/^1,1024,1024,\([0-9.]*\),.*/\1/p' t1.csv)
@@ -903,7 +903,7 @@ jobs:
         run: make -C build -j"$(nproc)"
 
       - name: Provenance
-        run: build/src/c/level1/bmb_ddot --version
+        run: build/src/c/level1/double/bmb_ddot --version
 
       - name: make check
         run: make -C build check

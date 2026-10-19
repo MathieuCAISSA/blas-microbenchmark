@@ -235,8 +235,13 @@ class bmb_tarball(rfm.CompileOnlyRegressionTest):
 
     @sanity_function
     def validate(self):
-        return sn.path_isfile(os.path.join(
-            self.stagedir, 'src', 'build', 'src', 'c', 'level3', 'bmb_dgemm'))
+        # In a directory per precision from 1.7.0, in the level's before
+        # (#148): a version may be either.
+        level3 = os.path.join(self.stagedir, 'src', 'build', 'src', 'c', 'level3')
+        return sn.assert_true(
+            os.path.isfile(os.path.join(level3, 'double', 'bmb_dgemm'))
+            or os.path.isfile(os.path.join(level3, 'bmb_dgemm')),
+            msg='no bmb_dgemm in the build tree')
 
 
 @rfm.simple_test

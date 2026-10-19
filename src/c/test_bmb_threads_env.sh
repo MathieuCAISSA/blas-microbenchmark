@@ -13,7 +13,7 @@
 set -e
 
 T=threads-env-test.d
-B=level1/bmb_ddot
+B=level1/double/bmb_ddot
 config=${top_builddir:?top_builddir is not set}/config.h
 
 fail() {

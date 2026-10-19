@@ -16,7 +16,7 @@ fail() {
 }
 
 refuse() {
-    if ./bmb_ddot -v "$1" -i 1 >/dev/null 2>&1; then
+    if ./double/bmb_ddot -v "$1" -i 1 >/dev/null 2>&1; then
         fail "-v $1 was accepted"
     fi
 }
@@ -26,6 +26,6 @@ refuse 2147483648   # first size past INT_MAX
 refuse 99999999999  # past every ceiling
 
 # An ordinary size must still work.
-./bmb_ddot -v 64 -i 1 >/dev/null || fail "-v 64 stopped working"
+./double/bmb_ddot -v 64 -i 1 >/dev/null || fail "-v 64 stopped working"
 
 echo "ok   size limits"

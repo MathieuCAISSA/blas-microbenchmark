@@ -6,8 +6,8 @@
 <p>There are two ways to run the same benchmarks against several libraries:</p>
 <ul>
 <li><b>A build per library</b>, each in its own directory (see <a href="install.html#library">Install</a>). The same commands, run with each build, into separate files:
-<pre>build-openblas/src/c/level3/bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-openblas.json
-build-blis/src/c/level3/bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-blis.json</pre></li>
+<pre>build-openblas/src/c/level3/double/bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-openblas.json
+build-blis/src/c/level3/double/bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-blis.json</pre></li>
 <li><b>One build against FlexiBLAS</b>, which loads the library <code>FLEXIBLAS</code> names when the benchmark starts (<code>flexiblas list</code> gives the names):
 <pre>FLEXIBLAS=OPENBLAS-OPENMP bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-openblas.json
 FLEXIBLAS=BLIS-OPENMP bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-blis.json</pre></li>

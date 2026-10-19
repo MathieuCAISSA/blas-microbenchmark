@@ -23,7 +23,7 @@ fails() {
     want=$1
     out=$2
     shift 2
-    if level1/bmb_ddot -C -x 0 -i 1 -v 8 "$@" >"$out" 2>"$T/err"; then
+    if level1/double/bmb_ddot -C -x 0 -i 1 -v 8 "$@" >"$out" 2>"$T/err"; then
         fail "ddot $* >$out succeeded"
     fi
     grep -q -- "$want" "$T/err" || fail "ddot $* >$out did not say \"$want\": $(cat "$T/err")"

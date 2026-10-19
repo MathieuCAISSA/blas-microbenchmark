@@ -36,21 +36,21 @@ mkdir "$T"
 #    run, its version string rewritten, since one version is installed):
 #    the history;
 #  - dgemv as a grid, at one thread only: the heatmap.
-../c/level1/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
-../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c -o "$T/dgemm-a.json" >/dev/null
+../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
-    ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label b -C -o "$T/dgemm-b.json" >/dev/null
+    ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label b -C -o "$T/dgemm-b.json" >/dev/null
 for i in 1 2 3 4; do
-    ../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label r -C -o "$T/dgemm-r$i.json" >/dev/null
+    ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label r -C -o "$T/dgemm-r$i.json" >/dev/null
 done
-../c/level3/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label h -o "$T/hist.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label h -o "$T/hist.json" >/dev/null
 for v in 0.3.9 0.3.26 0.3.28; do
     # Netlib, NVPL and ArmPL record no version string: add one.
     sed -e '/^  "blas": /d' -e '/^  "backend": /a\
   "blas": "OpenBLAS '"$v"' Haswell",' "$T/hist.json" >"$T/hist-$v.json"
 done
 rm "$T/hist.json"
-../c/level2/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
+../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 

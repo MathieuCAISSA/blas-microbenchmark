@@ -23,7 +23,7 @@ rm -rf "$T"
 mkdir "$T"
 
 # One that the library sees allocating, or this test checks nothing.
-probe=level3/bmb_dgemm
+probe=level3/double/bmb_dgemm
 if ldd "$probe" 2>/dev/null | grep -q 'libasan\.'; then
     echo "SKIP: built with AddressSanitizer, whose allocator cannot be preloaded over"
     exit 77
@@ -40,7 +40,7 @@ fi
 
 n=0
 runs=0
-for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
+for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $b in *.*) continue ;; esac
     test -x "$b" || continue
     case $b in level1/*) size="-v 16" ;; *) size="-m 16" ;; esac

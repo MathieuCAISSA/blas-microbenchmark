@@ -91,14 +91,14 @@ development_body() {
         [ -f "$f" ] && test_entry "$f"
     done
     smoke=0
-    for f in "$top"/src/c/level*/test_bmb_*.sh; do
+    for f in "$top"/src/c/level*/test_bmb_*.sh "$top"/src/c/level*/*/test_bmb_*.sh; do
         if is_smoke "$f"; then
             smoke=$((smoke + 1))
         else
             test_entry "$f"
         fi
     done
-    echo "  <dt><code>test_bmb_&lt;routine&gt;.sh</code> <span class=\"dt-where\">src/c/level1&ndash;3, $smoke of them</span></dt>"
+    echo "  <dt><code>test_bmb_&lt;routine&gt;.sh</code> <span class=\"dt-where\">src/c/level1&ndash;3/&lt;precision&gt;, $smoke of them</span></dt>"
     echo "  <dd>One per benchmark: each runs its benchmark on tiny sizes, and the assertions of <code>src/c/test_helper.sh</code> check what it printed.</dd>"
     echo '</dl>'
 

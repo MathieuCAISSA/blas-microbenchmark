@@ -72,7 +72,7 @@ ok "bmb_report.1 documents exactly the $(wc -l <"$T/help") options of --help"
 
 # The benchmarks share one parser, so one of them speaks for all; but the
 # page says so, and that is worth checking too.
-for b in ../src/c/level1/bmb_ddot ../src/c/level2/bmb_dgemv; do
+for b in ../src/c/level1/double/bmb_ddot ../src/c/level2/double/bmb_dgemv; do
     "$b" --help | sed 1d >"$T/other"
     "$BENCH" --help | sed 1d >"$T/ref"
     cmp -s "$T/other" "$T/ref" || fail "$b --help differs from $BENCH --help, but the page says they share their options"
