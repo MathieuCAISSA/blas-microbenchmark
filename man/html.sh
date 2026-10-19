@@ -29,7 +29,8 @@
 #   CSV and JSON, run by this script as the page is built -- so they are
 #   always this version's, on the machine that built it -- and screenshots
 #   of a report. BENCH_DIR is the directory holding the built benchmarks
-#   (level1, level2, level3).
+#   (level1, level2, level3, each with a directory per precision in a
+#   build, or the benchmarks themselves where they are installed).
 # - development.html: every test and every CI job, described by their
 #   own sources (devpage.sh, sourced from here); TOP is the top of the
 #   source tree, by default srcdir's parent.
