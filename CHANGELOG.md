@@ -14,7 +14,12 @@ releases with the same major version can be compared and read by the same
   `<tarball>.intoto.jsonl`: the signed SLSA provenance of the
   `.sigstore.json` bundle, on its own. 1.3.0, 1.4.0 and 1.5.0, which
   were attested when they were built, now carry both, so `cosign` checks
-  them as the README says.
+  them as the README says; 1.6.0 carries its provenance too.
+
+### Fixed
+- A machine whose CPUs use more frequency governors than the result's
+  field holds records those that fit, each whole: the last one was cut
+  mid-name, in the text, CSV and JSON results alike.
 
 ## [1.6.0] - 2026-10-16
 

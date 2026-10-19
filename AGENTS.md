@@ -128,7 +128,8 @@ gcovr --root .. src --exclude '.*/(test|fuzz)_[^/]*$' --html-details cov.html --
 
 `cov.html` shows each file line by line. There is no threshold: read it
 for paths no test takes, then decide whether one should. A line no test
-can reach on Linux is excluded where it is, with gcovr's marker and its
+can reach in the coverage jobs' builds (OpenBLAS, Netlib, BLIS, on glibc
+Linux) is excluded where it is, with gcovr's marker and its
 reason (`/* GCOVR_EXCL_BR_LINE: uname() cannot fail ... */`; see
 [doc/dev/ci.md](doc/dev/ci.md#coverage)); one nobody wrote a test for gets
 the test.
@@ -137,6 +138,7 @@ the test.
 |---|---|---|
 | `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, each refused by every sweep option (`-v`, `-m`, `-M`, `-t`), a list past the cap, a sweep longer than any, an option without its value, an unknown one, `--label`, `--verify` on by default and `-C`, `--layout`; how a sweep is described in a warning, a point that does not fit left out whole; and the backend name FlexiBLAS's library is given, kept to safe characters, down to buffers too small for it |
 | | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, real and complex, double and single, the comparison and its message, the two tolerances, the probe vector, the two corruption hooks, off when empty or 0 |
+| | `test_bmb_bench` | the driver refuses a benchmark without a check under `--verify` (on by default), before any call, and runs it with `-C`: a stub, since every real benchmark has its check |
 | | `test_bmb_print` | the output layer's corners no benchmark reaches: a CSV column name from a label with any character around its words, a routine without an operation count, a stream already in error |
 | | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, the frequency governor and turbo with the advice they get, and the CPUs the process may use under an affinity and cgroup quotas — and over trees it generates for what kernels rarely write: cache sizes in bytes, M and G, a missing file, an empty governor, malformed CPU lists and `cpu.max` lines, a cgroup path too long, a turbo switch reading neither 0 nor 1, cgroup v1 lines only, each read as unknown; the first processor's name, eight caches at most, sixteen governors at most, those that do not fit left out whole |
 | | `fuzz_bmb_options` | the parser on inputs nobody wrote: a libFuzzer target (an argv per input, split on NUL bytes) that holds whatever the parser accepts to what the benchmarks rely on — points between 1 and the size ceiling, at most 256, a printable label, the output format a `.json` file implies — and `bmb_range_describe` to its buffer; here it replays its seed corpus (`fuzz/bmb_options/`), and the `fuzz` CI job fuzzes it with ClusterFuzzLite |
@@ -175,7 +177,7 @@ groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
 and `test_doc_links.sh` outside a git checkout, `test_actions_pinned.sh`
 without `.github/`, `test_configure_paths.sh` in a source tree configured
 in place, `test_bmb_alloc_failures.sh` under AddressSanitizer (the
-`sanitizers` job), `test_bmb_colors.sh` without `script(1)`; `test_netlib_cblas` is only built for Netlib. Every
+`sanitizers` job), `test_bmb_colors.sh` without `script(1)` or a terminal it can open; `test_netlib_cblas` is only built for Netlib. Every
 other test runs anywhere. The mandoc lint is left out, with a
 note in the log, where mandoc is not installed. `BMB_MAN_STRICT=1` turns
 each of those into a failure — the `man` CI job sets it.
@@ -206,7 +208,9 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # (thread-count resolution), bmb_build (what this build is),
                  # bmb_machine (what it runs on), bmb_verify (--verify's
                  # references), bmb_log, bmb_timer; fixtures/machine/, the
-                 # fake /proc and /sys trees of test_bmb_machine
+                 # fake /proc and /sys trees of test_bmb_machine;
+                 # fuzz_bmb_options.c, the parser's fuzz target, and fuzz/,
+                 # its seed corpus and dictionary
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
 src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot,
@@ -229,7 +233,8 @@ tests/           # the project's own tests: the release files, the
                  # configure's search order, the coverage exclusions
 .clusterfuzzlite/
                  # how ClusterFuzzLite builds the fuzz targets (its
-                 # Dockerfile and build.sh), for the fuzz CI job
+                 # Dockerfile, build.sh and project.yaml), for the fuzz
+                 # CI job
 packaging/spack/ # the Spack package, as a Spack package repository
 packaging/docker/
                  # the Dockerfile, and the ignore file of its build context

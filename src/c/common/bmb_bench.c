@@ -411,12 +411,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
-    if (opts.verify && bench->verify == NULL) { /* GCOVR_EXCL_BR_LINE: every benchmark has a check; this guards the next one */
-        /* GCOVR_EXCL_START: every benchmark has a check; this guards the next one */
+    if (opts.verify && bench->verify == NULL) {
         bmb_log_error("--verify: this benchmark has no check of its result.");
         bmb_options_free(&opts);
         return EXIT_FAILURE;
-        /* GCOVR_EXCL_STOP */
     }
 
     /* A warning, never a refusal: a laptop still gets its numbers, and the

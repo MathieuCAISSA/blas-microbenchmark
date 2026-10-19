@@ -521,7 +521,7 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
 
         case '?':
         default:
-            snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s", optind <= argc ? argv[optind - 1] : "?"); /* GCOVR_EXCL_BR_LINE: glibc's getopt never leaves optind past argc; the guard is for another libc's */
+            snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s", optind <= argc ? argv[optind - 1] : "?"); /* GCOVR_EXCL_BR_LINE: glibc's getopt, the coverage builds', never leaves optind past argc; the guard is for another libc's */
             bmb_log_error(errbuf);
             bmb_options_print_help(argv[0]);
             return BMB_OPTIONS_ERROR;

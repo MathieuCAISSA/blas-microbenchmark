@@ -3,9 +3,9 @@
 # (GCOVR_EXCL_LINE, _BR_LINE, _START, _BR_START) says on the same line,
 # after a colon, why no test can reach what it excludes, in a few words
 # at least; every START has its STOP. An exclusion is for a line that
-# cannot run on Linux (a call that does not fail, a clock that does not
-# stop), never for one nobody wrote a test for (doc/dev/ci.md,
-# Coverage).
+# cannot run in the coverage jobs' builds (a call that does not fail, a
+# clock that does not stop, a library they do not build), never for one
+# nobody wrote a test for (doc/dev/ci.md, Coverage).
 set -e
 
 S=${srcdir:-.}

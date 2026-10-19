@@ -127,7 +127,7 @@ development_body() {
     [ -d "$top/.github/workflows" ] || return 0
     echo '<section class="Sh">'
     heading 1 ci "Continuous integration"
-    echo '<p class="Pp">GitHub Actions runs five workflows: CI and CodeQL on every pull request and push to <code>main</code> (CodeQL weekly as well), the site and OpenSSF Scorecard on every push to <code>main</code> (Scorecard weekly as well), the release on a version tag and, publishing nothing, on a pull request that changes it. Each job is described by its workflow file: the comment above it, where it runs, how it configures the build, and its steps in order.</p>'
+    echo '<p class="Pp">GitHub Actions runs five workflows: CI and CodeQL on every pull request and push to <code>main</code> (CI'"'"'s <code>fuzz</code> job on pull requests only, CodeQL weekly as well), the site and OpenSSF Scorecard on every push to <code>main</code> (Scorecard weekly as well), the release on a version tag and, publishing nothing, on a pull request that changes it. Each job is described by its workflow file: the comment above it, where it runs, how it configures the build, and its steps in order.</p>'
     for w in ci codeql scorecard pages release; do
         f=$top/.github/workflows/$w.yml
         [ -f "$f" ] || continue

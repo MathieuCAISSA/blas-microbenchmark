@@ -13,7 +13,8 @@ other code, a commit cannot. `test_actions_pinned.sh` refuses anything
 else. Dependabot (`.github/dependabot.yml`) proposes updates of the
 actions, grouped, once a week, and updates the SHA and the comment
 together; it does the same for the Docker image's base, pinned by digest
-([packaging](packaging.md#the-docker-image)); to pin a new action by hand, take the commit of its latest
+([packaging](packaging.md#the-docker-image)), and for the image
+ClusterFuzzLite builds in ([fuzzing](#fuzzing)); to pin a new action by hand, take the commit of its latest
 release (`gh api repos/OWNER/REPO/commits/vX.Y.Z -q .sha`). `main` is protected: no force push or
 deletion, and a pull request needs every required check green to merge:
 every job of `ci.yml` except `coverage`, which is there to be read. A
@@ -99,7 +100,7 @@ merging the three reports of a commit (each flagged with its backend):
 uploaded with the job's OIDC token, so no secret is stored, and without
 failing the job when Codecov is down. `.github/codecov.yml` keeps its
 statuses informational and its pull request comments off. Codecov's
-figure is lower than gcovr's for the same report (87% against 92.5% of
+figure was lower than gcovr's for the same report (87% against 92.5% of
 lines, at 1.5.0): it counts a line where only some branches were taken
 as partial, not covered.
 
@@ -125,14 +126,17 @@ moves with the second).
 
 #131 to #134 took Codecov's figure from 95% to 100%: a coverage job per
 backend Ubuntu packages (#132), dead code removed (#133), tests for every
-path a test could take (#131, #134), which found three descriptions cut
-mid-number. What is left cannot run on Linux, and is marked where it is
-with gcovr's `GCOVR_EXCL_LINE`, `GCOVR_EXCL_BR_LINE` or
-`GCOVR_EXCL_START`/`STOP`, and the reason after a colon: `uname()` or
-`clock_gettime(CLOCK_MONOTONIC)` failing, a call shorter than the clock
-resolves, `snprintf` returning a negative count, a branch only FlexiBLAS
-with Netlib loaded takes. An exclusion is for a line no test can reach
-there, never for one nobody wrote a test for: the review checks the
+path a test could take (#131, #134, #146), which found three
+descriptions cut short. What is left cannot run in the coverage jobs'
+builds (OpenBLAS, Netlib and BLIS, on glibc Linux), and is marked where it
+is with gcovr's `GCOVR_EXCL_LINE`, `GCOVR_EXCL_BR_LINE` or
+`GCOVR_EXCL_START`/`STOP`, and the reason after a colon, such as:
+`uname()` or `clock_gettime(CLOCK_MONOTONIC)` failing, a call shorter
+than the clock resolves, `snprintf` returning a negative count, a sweep
+of 257 points, which is longer than any may be, glibc's `getopt` leaving
+`optind` past `argc`, a branch only FlexiBLAS with Netlib loaded takes
+(the `flexiblas` job runs it). An exclusion is for a line no test can
+reach in those builds, never for one nobody wrote a test for: the review checks the
 reason, and `test_coverage_exclusions.sh` that there is one. Codecov is
 sent gcovr's Cobertura report, not its lcov one, which in gcovr 7.0 (the
 runners') keeps excluded lines as never run.

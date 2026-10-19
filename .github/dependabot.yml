@@ -1,6 +1,7 @@
-# Keeps the GitHub Actions the workflows use up to date, and the Docker
-# image's base (packaging/docker): a pull request a week at most for each,
-# which CI then checks like any other.
+# Keeps the GitHub Actions the workflows use up to date, the Docker
+# image's base (packaging/docker) and ClusterFuzzLite's builder image
+# (.clusterfuzzlite): a pull request a week at most for each, which CI
+# then checks like any other.
 version: 2
 updates:
   - package-ecosystem: github-actions
