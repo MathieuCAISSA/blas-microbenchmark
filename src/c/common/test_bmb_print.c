@@ -2,13 +2,15 @@
  * CSV column name rewritten from a label with every kind of character
  * around its words (punctuation first, braces, brackets, @, ~, digits),
  * the columns of a routine with no operation count, and a stream already
- * in error when its writes are checked. The rest of the output is checked
+ * in error, or whose flush fails, when its writes are checked. The rest of the output is checked
  * end to end by test_bmb_output_formats.sh. */
 
 #define _POSIX_C_SOURCE 200809L
 
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "bmb_print.h"
 #include "bmb_result.h"
@@ -21,6 +23,18 @@ static void check(int ok, const char *what)
     if (!ok) {
         failures++;
     }
+}
+
+/* A device opened for writing, never created. */
+static FILE *open_device(const char *path)
+{
+    int fd = open(path, O_WRONLY);
+    FILE *f = (fd >= 0) ? fdopen(fd, "w") : NULL;
+
+    if (f == NULL && fd >= 0) {
+        close(fd);
+    }
+    return f;
 }
 
 /* The first two lines that are not comments: the header and a row. */
@@ -75,13 +89,23 @@ int main(void)
 
     /* Reading from a write-only stream sets its error indicator, as a
      * failed write would, without anything left to flush. */
-    f = fopen("/dev/null", "w");
+    f = open_device("/dev/null");
     if (f != NULL) {
         /* cppcheck-suppress readWriteOnlyFile */
         (void) fgetc(f);
         check(bmb_print_check_stream(f, "a stream in error") == -1,
               "a stream whose error indicator is set is a failed write, even with nothing to flush");
         fclose(f);
+    }
+
+    /* A write still in the buffer, which the flush cannot complete. */
+    f = open_device("/dev/full");
+    if (f != NULL) {
+        fputs("x\n", f);
+        check(bmb_print_check_stream(f, "a full disk") == -1, "a flush that fails is a failed write");
+        fclose(f);
+    } else {
+        printf("note no /dev/full here: the failed flush is not checked\n");
     }
 
     if (failures != 0) {

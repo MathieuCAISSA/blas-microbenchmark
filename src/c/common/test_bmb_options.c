@@ -549,15 +549,18 @@ int main(void)
     /* ---- the edges of the command line ---- */
     {
         bmb_options_t opts;
-        char list[2048];
+        char list[2 * 257];
         char longspec[600];
-        size_t used = 0;
-        int v;
+        size_t v;
 
-        for (v = 1; v <= 257; v++) {
-            used += (size_t) snprintf(list + used, sizeof(list) - used, "%s%d", (v == 1) ? "" : ",", v);
+        /* 257 points: past the cap, and so past the 511 characters a
+         * sweep may have, whichever is checked first. */
+        for (v = 0; v < 257; v++) {
+            list[2 * v] = '1';
+            list[2 * v + 1] = ',';
         }
-        check_sweep(list, NULL);   /* a list of 257 points: past the cap */
+        list[sizeof(list) - 1] = '\0';
+        check_sweep(list, NULL);
         memset(longspec, '1', sizeof(longspec) - 1);
         longspec[sizeof(longspec) - 1] = '\0';
         check_sweep(longspec, NULL);   /* longer than any sweep can be */

@@ -406,6 +406,18 @@ static void test_generated(void)
     tree_end();
     check_str(m.cpu, "", "generated: an Arm implementer without its part, no CPU named");
 
+    tree_begin();
+    tree_file("proc/cpuinfo", "processor\t: 0\nflags\t\t: fpu\n");
+    tree_file(CACHE "index0/level", "1\n");
+    tree_file(CACHE "index0/type", "Data\n");
+    tree_file(CACHE "index0/size", "0K\n");
+    tree_file("sys/devices/system/cpu/cpufreq/boost", "0\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check_str(m.cpu, "", "generated: neither a model name nor Arm codes, no CPU named");
+    check(m.cache_count == 0, "generated: a cache of size 0 not kept");
+    check(m.turbo == 0 && m.turbo_control == BMB_TURBO_CPUFREQ_BOOST, "generated: boost 0 is turbo off");
+
     /* As many caches as the field holds, the ones of level 0 left out. */
     {
         static const char *const levels[] = {"1", "1", "2", "3", "0", "2", "3", "4", "4"};

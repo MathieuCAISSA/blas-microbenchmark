@@ -1,11 +1,11 @@
 #!/bin/sh
 # Checks the C code's coverage exclusions: each gcovr marker
-# (GCOVR_EXCL_LINE, GCOVR_EXCL_BR_LINE, GCOVR_EXCL_START) says on the same
-# line, after a colon, why no test can reach what it excludes, in a few
-# words at least; every GCOVR_EXCL_START has its GCOVR_EXCL_STOP. An
-# exclusion is for a line that cannot run on Linux (a call that does not
-# fail, a clock that does not stop), never for one nobody wrote a test
-# for (doc/dev/ci.md, Coverage).
+# (GCOVR_EXCL_LINE, _BR_LINE, _START, _BR_START) says on the same line,
+# after a colon, why no test can reach what it excludes, in a few words
+# at least; every START has its STOP. An exclusion is for a line that
+# cannot run on Linux (a call that does not fail, a clock that does not
+# stop), never for one nobody wrote a test for (doc/dev/ci.md,
+# Coverage).
 set -e
 
 S=${srcdir:-.}
@@ -24,18 +24,18 @@ for f in $files; do
     name=${f#"$S"/}
     # Each marker but STOP: a colon, then a reason of four words or more.
     out=$(awk -v name="$name" '
-        /GCOVR_EXCL_(LINE|BR_LINE|START)/ {
+        /GCOVR_EXCL_(LINE|BR_LINE|START|BR_START)/ {
             n++
             s = $0
-            sub(/.*GCOVR_EXCL_(LINE|BR_LINE|START)/, "", s)
+            sub(/.*GCOVR_EXCL_(LINE|BR_LINE|START|BR_START)/, "", s)
             sub(/\*\/.*/, "", s)
             if (s !~ /^: / || split(substr(s, 3), w, /[ \t]+/) < 4) {
                 printf "FAIL: %s:%d: an exclusion without its reason\n", name, NR
                 bad++
             }
         }
-        /GCOVR_EXCL_START/ { if (open) { printf "FAIL: %s:%d: GCOVR_EXCL_START inside another\n", name, NR; bad++ } open = NR }
-        /GCOVR_EXCL_STOP/ { if (!open) { printf "FAIL: %s:%d: GCOVR_EXCL_STOP without a START\n", name, NR; bad++ } open = 0 }
+        /GCOVR_EXCL_(BR_)?START/ { if (open) { printf "FAIL: %s:%d: GCOVR_EXCL_START inside another\n", name, NR; bad++ } open = NR }
+        /GCOVR_EXCL_(BR_)?STOP/ { if (!open) { printf "FAIL: %s:%d: GCOVR_EXCL_STOP without a START\n", name, NR; bad++ } open = 0 }
         END {
             if (open) { printf "FAIL: %s:%d: GCOVR_EXCL_START never stopped\n", name, open; bad++ }
             printf "count %d %d\n", n, bad

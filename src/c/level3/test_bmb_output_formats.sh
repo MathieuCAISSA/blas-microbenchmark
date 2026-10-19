@@ -122,6 +122,9 @@ grep -q '^blas-microbenchmark [0-9]' version.txt || fail "-V printed no version:
 if grep -q '^Caches:' version.txt; then
     fail "-V printed caches it could not read: $(cat version.txt)"
 fi
+BMB_MACHINE_ROOT=$F/x86 ./bmb_dgemm -V >version.txt 2>&1 || fail "-V failed: $(cat version.txt)"
+grep -q '^Frequency: governor performance, turbo off$' version.txt \
+    || fail "-V did not describe the x86 fixture's frequency: $(cat version.txt)"
 rm -f version.txt
 
 rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json

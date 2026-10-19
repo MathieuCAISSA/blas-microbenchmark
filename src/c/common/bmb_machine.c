@@ -76,7 +76,7 @@ static void bmb_probe_cpu(bmb_machine_t *m, const char *root)
         bmb_trim(line);
         bmb_trim(value);
 
-        if (strcmp(line, "model name") == 0 && m->cpu[0] == '\0') {
+        if (strcmp(line, "model name") == 0) {
             snprintf(m->cpu, sizeof(m->cpu), "%s", value);
             break;
         }

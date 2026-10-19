@@ -233,8 +233,8 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
             }
 
             status = bmb_range_append(out, (size_t) value);
-            if (status != BMB_PARSE_OK) {
-                return status;
+            if (status != BMB_PARSE_OK) { /* GCOVR_EXCL_BR_LINE: 257 points take 513 characters, past the 511 a sweep may have */
+                return status; /* GCOVR_EXCL_LINE: 257 points take 513 characters, past the 511 a sweep may have */
             }
 
             p = (comma != NULL) ? comma + 1 : NULL;
@@ -521,8 +521,7 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
 
         case '?':
         default:
-            snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s",
-                     optind <= argc ? argv[optind - 1] : "?");
+            snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s", optind <= argc ? argv[optind - 1] : "?"); /* GCOVR_EXCL_BR_LINE: glibc's getopt never leaves optind past argc; the guard is for another libc's */
             bmb_log_error(errbuf);
             bmb_options_print_help(argv[0]);
             return BMB_OPTIONS_ERROR;
