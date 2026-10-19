@@ -11,6 +11,7 @@
 
 static int failures;
 static int calls;
+static volatile double work;
 
 static void check(int ok, const char *what)
 {
@@ -30,15 +31,16 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     return &ctx;
 }
 
-/* Enough work for the clock to see. */
+/* Enough work for the clock to see, kept by a volatile the compiler
+ * cannot drop (and a newer GCC does not take for unused, as it does a
+ * local only written). */
 static void call(void *ctx)
 {
-    volatile double x = 0.0;
     int i;
 
     (void) ctx;
     for (i = 0; i < 1000; i++) {
-        x += 1.0;
+        work += 1.0;
     }
     calls++;
 }
