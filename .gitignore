@@ -34,6 +34,7 @@ libtool
 # directory per level and precision, no extension
 src/c/level[123]/*/bmb_*
 !src/c/level[123]/*/bmb_*.c
+.dirstamp
 
 # Editor / OS cruft
 *.swp

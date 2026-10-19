@@ -151,7 +151,7 @@ the test.
 | | `test_bmb_colors.sh` | errors in red and warnings in yellow on a terminal (a pseudo-terminal from `script(1)`), plain with `NO_COLOR` set or when stderr is a file; SKIPs without `script` |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, small or larger than the stream's buffer, or on stdout |
 | `src/c/level{1,2,3}/<precision>` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
-| | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
+| `src/c/level1`, `src/c/level3` | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label, a CPU name with a quote, a backslash and a control character escaped in the JSON; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
 | | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
 | `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |

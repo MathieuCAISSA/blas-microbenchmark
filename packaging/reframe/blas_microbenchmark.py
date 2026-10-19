@@ -17,10 +17,6 @@ from reframe.core.builtins import (fixture, parameter, performance_function,
 # Every benchmark and its BLAS level, which picks its size option (-v or
 # -m) and its directory under libexec. CI checks this against the
 # benchmarks a build installs.
-#: The directory each precision's benchmarks are built in, by the first
-#: letter of the routine (#148).
-PRECISION = {'s': 'single', 'd': 'double', 'c': 'complex', 'z': 'complex16'}
-
 ROUTINES = {
     'dasum': 1, 'daxpy': 1, 'dcopy': 1, 'ddot': 1, 'dnrm2': 1, 'dscal': 1,
     'dswap': 1, 'saxpy': 1, 'sdot': 1, 'zdotc': 1,
@@ -30,6 +26,11 @@ ROUTINES = {
     'sgemm': 3, 'cgemm': 3, 'zgemm': 3, 'strsm': 3, 'ztrsm': 3, 'ssyrk': 3,
     'zherk': 3, 'zhemm': 3,
 }
+
+#: The directory each precision's benchmarks are built in (#148), by the
+#: first letter of the routine's name, which is its precision for every
+#: routine here. One named otherwise (idamax, dznrm2) needs its own entry.
+PRECISION = {'s': 'single', 'd': 'double', 'c': 'complex', 'z': 'complex16'}
 
 # The result file's rate fields, as ReFrame performance variables. A
 # benchmark writes only those that apply: no GFLOP/s for dcopy and dswap,
