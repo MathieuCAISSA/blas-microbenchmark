@@ -73,6 +73,10 @@ it comes from in brackets.
   reach in the coverage jobs' builds (OpenBLAS, Netlib, BLIS, on glibc
   Linux), and its reason says why; one nobody wrote a test for
   gets the test ([coverage](../doc/dev/ci.md#coverage)).
+- [ ] A moved file is looked for under every form of its path, including
+  one assembled from pieces (`os.path.join(..., f'level{level}', ...)`,
+  `level$l`): a grep of the whole path missed ReFrame's, which the
+  `reframe` job then skipped (#148).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
 - [ ] A change to what `bmb_options_parse()` accepts keeps the checks of
