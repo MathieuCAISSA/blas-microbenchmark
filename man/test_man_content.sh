@@ -19,7 +19,7 @@ label_of() {
 }
 
 # ---- routines ---------------------------------------------------------
-built=$(for f in ../src/c/level1/bmb_* ../src/c/level2/bmb_* ../src/c/level3/bmb_*; do
+built=$(for f in ../src/c/level1/*/bmb_* ../src/c/level2/*/bmb_* ../src/c/level3/*/bmb_*; do
     n=$(basename "$f")
     case $n in *.*) continue ;; esac
     [ -f "$f" ] && [ -x "$f" ] && printf '%s\n' "${n#bmb_}"
@@ -50,7 +50,7 @@ in_table=0
 while IFS='	' read -r level routines; do
     l=$(printf '%s\n' "$level" | sed 's/^Level \([123]\).*/\1/')
     for r in $routines; do
-        [ -x "../src/c/level$l/bmb_$r" ] || fail "the page puts $r in level $l, where there is no bmb_$r"
+        [ -n "$(bin_in_level "$l" "$r")" ] || fail "the page puts $r in level $l, where there is no bmb_$r"
         in_table=$((in_table + 1))
     done
 done <"$T/levels"

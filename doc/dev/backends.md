@@ -107,7 +107,7 @@ Two things that backend gets wrong easily:
   normally resolves to *OpenBLAS*, silently benchmarking the wrong library.
   `configure` therefore looks for the reference build's own directory
   (`/usr/lib/*/blas`) first. If you touch that probe, check what
-  `ldd src/c/level3/bmb_dgemm` actually resolves to.
+  `ldd src/c/level3/double/bmb_dgemm` actually resolves to.
 - The shim translates row-major CBLAS calls to the column-major Fortran
   ABI. Getting a flip wrong yields a transposed or mirror-triangle result
   silently, with no crash. `src/c/netlib/test_netlib_cblas.c` compares the

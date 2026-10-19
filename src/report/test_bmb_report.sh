@@ -21,8 +21,8 @@ mkdir "$T"
 
 # Current-format input is generated, not kept as a fixture, so it can never
 # fall out of date. The dgemm label carries a "</script>" on purpose.
-../c/level1/bmb_ddot -x 0 -i 1 -v 8:32 -o "$T/ddot.json" >/dev/null
-../c/level3/bmb_dgemm -x 0 -i 1 -m 8:16 --label 'x</script><b>y' -o "$T/dgemm.json" >/dev/null
+../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:32 -o "$T/ddot.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:16 --label 'x</script><b>y' -o "$T/dgemm.json" >/dev/null
 
 # ---- usage ----
 if $R >"$T/out" 2>"$T/err"; then
@@ -109,7 +109,7 @@ pass "a </script> inside a label stays inside its data block"
 sed -n '/^  var LEVEL = {$/,/^  };$/p' "${srcdir:-.}/report.html" \
     | grep -o '[a-z0-9]*: [123]' | sort >"$T/levels"
 test -s "$T/levels" || fail "no LEVEL table found in report.html"
-for f in ../c/level1/bmb_* ../c/level2/bmb_* ../c/level3/bmb_*; do
+for f in ../c/level1/*/bmb_* ../c/level2/*/bmb_* ../c/level3/*/bmb_*; do
     n=$(basename "$f")
     case $n in *.*) continue ;; esac
     [ -f "$f" ] && [ -x "$f" ] || continue

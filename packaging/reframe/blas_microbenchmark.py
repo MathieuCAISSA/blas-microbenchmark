@@ -17,6 +17,10 @@ from reframe.core.builtins import (fixture, parameter, performance_function,
 # Every benchmark and its BLAS level, which picks its size option (-v or
 # -m) and its directory under libexec. CI checks this against the
 # benchmarks a build installs.
+#: The directory each precision's benchmarks are built in, by the first
+#: letter of the routine (#148).
+PRECISION = {'s': 'single', 'd': 'double', 'c': 'complex', 'z': 'complex16'}
+
 ROUTINES = {
     'dasum': 1, 'daxpy': 1, 'dcopy': 1, 'ddot': 1, 'dnrm2': 1, 'dscal': 1,
     'dswap': 1, 'saxpy': 1, 'sdot': 1, 'zdotc': 1,
@@ -235,8 +239,13 @@ class bmb_tarball(rfm.CompileOnlyRegressionTest):
 
     @sanity_function
     def validate(self):
-        return sn.path_isfile(os.path.join(
-            self.stagedir, 'src', 'build', 'src', 'c', 'level3', 'bmb_dgemm'))
+        # In a directory per precision from 1.7.0, in the level's before
+        # (#148): a version may be either.
+        level3 = os.path.join(self.stagedir, 'src', 'build', 'src', 'c', 'level3')
+        return sn.assert_true(
+            os.path.isfile(os.path.join(level3, 'double', 'bmb_dgemm'))
+            or os.path.isfile(os.path.join(level3, 'bmb_dgemm')),
+            msg='no bmb_dgemm in the build tree')
 
 
 @rfm.simple_test
@@ -247,5 +256,12 @@ class bmb_build_run(bmb_base):
     bmb_build = fixture(bmb_tarball, scope='environment')
 
     def bmb_executable(self, level):
-        return os.path.join(self.bmb_build.stagedir, 'src', 'build', 'src',
-                            'c', f'level{level}', f'bmb_{self.routine}')
+        # In a directory per precision from 1.7.0, in the level's before
+        # (#148): a version may be either.
+        built = os.path.join(self.bmb_build.stagedir, 'src', 'build', 'src',
+                             'c', f'level{level}')
+        flat = os.path.join(built, f'bmb_{self.routine}')
+        if os.path.exists(flat):
+            return flat
+        return os.path.join(built, PRECISION[self.routine[0]],
+                            f'bmb_{self.routine}')

@@ -16,7 +16,7 @@ command -v script >/dev/null 2>&1 || { echo "SKIP: no script(1) to give the benc
 script -qec true /dev/null >/dev/null 2>&1 || { echo "SKIP: script(1) cannot open a terminal here"; exit 77; }
 
 esc=$(printf '\033')
-prog=./level3/bmb_dgemm
+prog=./level3/double/bmb_dgemm
 
 # An error (-m 0 is refused) and a warning (-L on a level 1 routine).
 NO_COLOR= script -qec "$prog -m 0" /dev/null >colors.tty 2>&1 || true
@@ -25,7 +25,7 @@ grep -q "${esc}\[31mInvalid value for --matrix-dim1" colors.tty \
 grep -q "${esc}\[0m" colors.tty || fail "the colour is not reset after the error"
 echo "ok   an error on a terminal is red"
 
-NO_COLOR= script -qec "./level1/bmb_ddot -x 0 -i 1 -v 8 -L col" /dev/null >colors.tty 2>&1 || true
+NO_COLOR= script -qec "./level1/double/bmb_ddot -x 0 -i 1 -v 8 -L col" /dev/null >colors.tty 2>&1 || true
 grep -q "${esc}\[33m" colors.tty || fail "a warning on a terminal is not in yellow: $(od -c colors.tty | head -3)"
 echo "ok   a warning on a terminal is yellow"
 

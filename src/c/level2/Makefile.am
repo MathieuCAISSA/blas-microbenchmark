@@ -2,36 +2,38 @@ AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src/c/common $(BMB_CBLAS_CPPFLAG
 AM_CFLAGS = $(BMB_WARN_CFLAGS)
 LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 
+# A directory per precision in the source and build trees; one, level2,
+# installed (see level1/Makefile.am).
 level2dir = $(pkglibexecdir)/level2
 
 level2_PROGRAMS = \
-	bmb_dgemv \
-	bmb_dger \
-	bmb_dsymv \
-	bmb_dsyr \
-	bmb_dsyr2 \
-	bmb_dtrmv \
-	bmb_dtrsv \
-	bmb_sgemv
+	single/bmb_sgemv \
+	double/bmb_dgemv \
+	double/bmb_dger \
+	double/bmb_dsymv \
+	double/bmb_dsyr \
+	double/bmb_dsyr2 \
+	double/bmb_dtrmv \
+	double/bmb_dtrsv
 
-bmb_dgemv_SOURCES = bmb_dgemv.c
-bmb_dger_SOURCES = bmb_dger.c
-bmb_dsymv_SOURCES = bmb_dsymv.c
-bmb_dsyr_SOURCES = bmb_dsyr.c
-bmb_dsyr2_SOURCES = bmb_dsyr2.c
-bmb_dtrmv_SOURCES = bmb_dtrmv.c
-bmb_dtrsv_SOURCES = bmb_dtrsv.c
-bmb_sgemv_SOURCES = bmb_sgemv.c
+single_bmb_sgemv_SOURCES = single/bmb_sgemv.c
+double_bmb_dgemv_SOURCES = double/bmb_dgemv.c
+double_bmb_dger_SOURCES = double/bmb_dger.c
+double_bmb_dsymv_SOURCES = double/bmb_dsymv.c
+double_bmb_dsyr_SOURCES = double/bmb_dsyr.c
+double_bmb_dsyr2_SOURCES = double/bmb_dsyr2.c
+double_bmb_dtrmv_SOURCES = double/bmb_dtrmv.c
+double_bmb_dtrsv_SOURCES = double/bmb_dtrsv.c
 
 # Minimalistic smoke tests (small matrices, 1 warmup + 2 timed iterations).
 TESTS = \
-	test_bmb_dgemv.sh \
-	test_bmb_dger.sh \
-	test_bmb_dsymv.sh \
-	test_bmb_dsyr.sh \
-	test_bmb_dsyr2.sh \
-	test_bmb_dtrmv.sh \
-	test_bmb_dtrsv.sh \
-	test_bmb_sgemv.sh
+	single/test_bmb_sgemv.sh \
+	double/test_bmb_dgemv.sh \
+	double/test_bmb_dger.sh \
+	double/test_bmb_dsymv.sh \
+	double/test_bmb_dsyr.sh \
+	double/test_bmb_dsyr2.sh \
+	double/test_bmb_dtrmv.sh \
+	double/test_bmb_dtrsv.sh
 
 EXTRA_DIST = $(TESTS)

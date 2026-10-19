@@ -9,6 +9,12 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Changed
+- The sources of each level are in a directory per precision, `single`,
+  `double`, `complex` and `complex16`, and so are the benchmarks a build
+  makes: `build/src/c/level3/double/bmb_dgemm`. Installed, nothing moves
+  (`<prefix>/libexec/blas-microbenchmark/level3/bmb_dgemm`).
+
 ## [1.6.1] - 2026-10-19
 
 ### Added

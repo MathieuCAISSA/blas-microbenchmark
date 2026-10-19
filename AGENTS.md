@@ -150,7 +150,7 @@ the test.
 | | `test_bmb_alloc_failures.sh` | every allocation a benchmark makes (setup, `--verify`'s check, the timing buffer, the results), made to fail in turn by a preloaded library (`bmb_failalloc.c`, built for `make check` only): exit 1 and "out of memory", never a crash; SKIPs under AddressSanitizer and outside glibc |
 | | `test_bmb_colors.sh` | errors in red and warnings in yellow on a terminal (a pseudo-terminal from `script(1)`), plain with `NO_COLOR` set or when stderr is a file; SKIPs without `script` |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, small or larger than the stream's buffer, or on stdout |
-| `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
+| `src/c/level{1,2,3}/<precision>` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label, a CPU name with a quote, a backslash and a control character escaped in the JSON; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
 | | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
@@ -213,11 +213,15 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # its seed corpus and dictionary
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
-src/c/level1/    # dasum, daxpy, dcopy, ddot, dnrm2, dscal, dswap, saxpy, sdot,
-                 # zdotc
-src/c/level2/    # dgemv, dger, dsymv, dsyr, dsyr2, dtrmv, dtrsv, sgemv
-src/c/level3/    # dgemm, dsymm, dsyrk, dsyr2k, dtrmm, dtrsm, sgemm, cgemm,
-                 # zgemm, strsm, ztrsm, ssyrk, zherk, zhemm
+src/c/level<N>/  # a directory per precision, each routine's source and
+                 # test in it; the level-wide tests beside them (#148)
+src/c/level1/    # single/ saxpy sdot; double/ dasum daxpy dcopy ddot
+                 # dnrm2 dscal dswap; complex16/ zdotc
+src/c/level2/    # single/ sgemv; double/ dgemv dger dsymv dsyr dsyr2
+                 # dtrmv dtrsv
+src/c/level3/    # single/ sgemm strsm ssyrk; double/ dgemm dsymm dsyrk
+                 # dsyr2k dtrmm dtrsm; complex/ cgemm; complex16/ zgemm
+                 # ztrsm zherk zhemm
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
@@ -262,7 +266,8 @@ file goes in one of the directories above.
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
 installed); each `level{1,2,3}` routine builds to its own installed
-executable named `bmb_<routine>`.
+executable named `bmb_<routine>`, in the build tree beside its source
+(`build/src/c/level3/double/bmb_dgemm`).
 
 Those go to `$(libexecdir)/blas-microbenchmark/level<N>`, the layout
 osu-micro-benchmarks uses, rather than to `bin` — 32 executables named
@@ -271,8 +276,15 @@ declares it with a custom Automake directory variable:
 
 ```make
 level1dir = $(pkglibexecdir)/level1
-level1_PROGRAMS = bmb_dasum ...
+level1_PROGRAMS = double/bmb_dasum ...
 ```
+
+A program in a subdirectory is installed by its name alone, so the
+directory per precision of the source and build trees is not in the
+installed one (#148): `level1/bmb_dasum`, as it always was. That
+layout is the users' (the README's `PATH`, the man page's FILES, Spack,
+the Docker image, the ReFrame tests, their scripts) and does not change
+with the sources'.
 
 This is a **deliberate** departure from the GNU standards, which reserve
 `libexecdir` for "programs to be run by other programs rather than by

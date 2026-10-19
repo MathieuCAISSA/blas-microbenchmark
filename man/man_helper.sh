@@ -6,7 +6,7 @@
 # the man pages, where a SKIP would let the pages go unchecked.
 
 PAGES="blas-microbenchmark.1 bmb_report.1"
-BENCH=../src/c/level3/bmb_dgemm
+BENCH=../src/c/level3/double/bmb_dgemm
 REPORT=../src/report/bmb_report
 
 fail() {
@@ -51,11 +51,23 @@ section() {
                       on' "$1"
 }
 
+# Where the binary of routine $2 is in level $1, or nothing: in the
+# build, a level has a directory per precision (single, double, ...).
+bin_in_level() {
+    for f in ../src/c/level"$1"/*/bmb_"$2"; do
+        if [ -f "$f" ] && [ -x "$f" ]; then
+            echo "$f"
+            return
+        fi
+    done
+}
+
 # Where the binary of a routine is, or nothing.
 bin_of() {
     for l in 1 2 3; do
-        if [ -x "../src/c/level$l/bmb_$1" ]; then
-            echo "../src/c/level$l/bmb_$1"
+        b=$(bin_in_level "$l" "$1")
+        if [ -n "$b" ]; then
+            echo "$b"
             return
         fi
     done

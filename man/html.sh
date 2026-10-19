@@ -63,8 +63,18 @@ for l in 1 2 3; do
         exit 1
     fi
 done
-BENCH_PATH=$(cd "$BENCH_DIR" && pwd)
-BENCH_PATH=$BENCH_PATH/level1:$BENCH_PATH/level2:$BENCH_PATH/level3
+# Each level's benchmarks: in a build, in a directory per precision
+# (level3/double/bmb_dgemm); installed, in the level's own (level3/bmb_dgemm).
+BENCH_PATH=
+for d in "$(cd "$BENCH_DIR" && pwd)"/level[123] "$(cd "$BENCH_DIR" && pwd)"/level[123]/*/; do
+    d=${d%/}
+    for b in "$d"/bmb_*; do
+        if [ -f "$b" ] && [ -x "$b" ]; then
+            BENCH_PATH=${BENCH_PATH:+$BENCH_PATH:}$d
+            break
+        fi
+    done
+done
 
 # The screenshots each page can show, light and dark; none without IMAGES.
 have_image() {

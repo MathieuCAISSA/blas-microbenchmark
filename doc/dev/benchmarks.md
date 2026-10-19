@@ -5,9 +5,9 @@ How a benchmark is written, checked and measured. Start at
 
 ## Adding a new BLAS routine benchmark
 
-Every routine file follows the same shape (see `src/c/level1/bmb_dasum.c` for
-the simplest example, `src/c/level2/bmb_dtrsv.c` for one with an in-place
-buffer, `src/c/level3/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
+Every routine file follows the same shape (see `src/c/level1/double/bmb_dasum.c` for
+the simplest example, `src/c/level2/double/bmb_dtrsv.c` for one with an in-place
+buffer, `src/c/level3/double/bmb_dsyrk.c` for a two-real-dimension level 3 routine):
 
 1. A `bmb_ctx_t` struct holding the routine's operands (`malloc`'d in
    `setup()`, freed in `teardown()`).
@@ -153,8 +153,11 @@ machine's peak) and every level 2 routine on roughly the same GB/s. A
 formula off by a factor of two shows up immediately as one routine
 beating the rest.
 
-Then wire the new file into the level's `Makefile.am` (`level<N>_PROGRAMS`,
-`<prog>_SOURCES`), add the routine to `ROUTINES` in `man/Makefile.am` and
+Then put the file, and its `test_bmb_<routine>.sh`, in its level's
+directory for its precision (`single`, `double`, `complex` or
+`complex16`, which is double-precision complex), and wire both into the
+level's `Makefile.am` (`level<N>_PROGRAMS += <precision>/bmb_<routine>`,
+`<precision>_bmb_<routine>_SOURCES`, `TESTS`), add the routine to `ROUTINES` in `man/Makefile.am` and
 to the NAME line and the routine tables of `man/blas-microbenchmark.1.in`
 (`test_man_content.sh` fails until all three are done), add it to the
 `LEVEL` table of `src/report/report.html`, which orders the report's

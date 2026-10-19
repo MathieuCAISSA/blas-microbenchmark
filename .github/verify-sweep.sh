@@ -17,7 +17,7 @@ B=${1:?usage: $0 BUILD_DIR}
 failed=0
 n=0
 
-for f in "$B"/src/c/level1/bmb_* "$B"/src/c/level2/bmb_* "$B"/src/c/level3/bmb_*; do
+for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*/bmb_*; do
     name=$(basename "$f")
     case $name in *.*) continue ;; esac
     [ -f "$f" ] && [ -x "$f" ] || continue

@@ -30,27 +30,10 @@ libtool
 # Build output
 /build/
 
-# Benchmark executables (one per BLAS routine, no extension)
-src/c/level1/bmb_dasum
-src/c/level1/bmb_daxpy
-src/c/level1/bmb_dcopy
-src/c/level1/bmb_ddot
-src/c/level1/bmb_dnrm2
-src/c/level1/bmb_dscal
-src/c/level1/bmb_dswap
-src/c/level2/bmb_dgemv
-src/c/level2/bmb_dger
-src/c/level2/bmb_dsymv
-src/c/level2/bmb_dsyr
-src/c/level2/bmb_dsyr2
-src/c/level2/bmb_dtrmv
-src/c/level2/bmb_dtrsv
-src/c/level3/bmb_dgemm
-src/c/level3/bmb_dsymm
-src/c/level3/bmb_dsyrk
-src/c/level3/bmb_dsyr2k
-src/c/level3/bmb_dtrmm
-src/c/level3/bmb_dtrsm
+# Benchmark executables of an in-tree build: one per BLAS routine, in a
+# directory per level and precision, no extension
+src/c/level[123]/*/bmb_*
+!src/c/level[123]/*/bmb_*.c
 
 # Editor / OS cruft
 *.swp

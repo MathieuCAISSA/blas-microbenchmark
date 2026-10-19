@@ -24,7 +24,7 @@ rm -rf "$T"
 mkdir "$T"
 
 n=0
-for b in level1/bmb_* level2/bmb_* level3/bmb_*; do
+for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     name=$(basename "$b")
     case $name in *.*) continue ;; esac
     [ -f "$b" ] && [ -x "$b" ] || continue
@@ -78,21 +78,21 @@ test "$n" -ge 32 || fail "only $n benchmarks found"
 echo "ok   all $n benchmarks pass --verify, in both layouts where they have a matrix, and each one's check catches a corrupted result"
 
 # On by default: no option, and the results are checked.
-level3/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"
 grep -q '^# verified: ' "$T/default.out" || fail "a run with no option is not verified"
 grep -q '^  "verified": true,$' "$T/default.json" || fail "a run with no option has no \"verified\": true"
 set +e
-BMB_VERIFY_CORRUPT=1 level3/bmb_dgemm -x 0 -i 1 -m 8 >/dev/null 2>&1
+BMB_VERIFY_CORRUPT=1 level3/double/bmb_dgemm -x 0 -i 1 -m 8 >/dev/null 2>&1
 rc=$?
 set -e
 test "$rc" -eq 2 || fail "a wrong result went through a run with no option (exit $rc)"
 echo "ok   with no option, the results are checked, and a wrong one stops the run"
 
 # -C: nothing claimed, and the corruption hook does nothing.
-level3/bmb_dgemm -x 0 -i 1 -m 8 -C -o "$T/plain.json" >"$T/plain.out"
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 -C -o "$T/plain.json" >"$T/plain.out"
 grep -q '^# verified' "$T/plain.out" && fail "a run with -C claims verified results"
 grep -q '"verified"' "$T/plain.json" && fail "a run with -C has \"verified\" in its JSON"
-BMB_VERIFY_CORRUPT=1 level3/bmb_dgemm -x 0 -i 1 -m 8 --no-verify >/dev/null \
+BMB_VERIFY_CORRUPT=1 level3/double/bmb_dgemm -x 0 -i 1 -m 8 --no-verify >/dev/null \
     || fail "BMB_VERIFY_CORRUPT changed a run with --no-verify"
 echo "ok   with -C or --no-verify, no claim, and BMB_VERIFY_CORRUPT has no effect"
 

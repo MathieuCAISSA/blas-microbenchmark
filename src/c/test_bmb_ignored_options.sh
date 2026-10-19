@@ -26,13 +26,13 @@ warns() {
     grep -q -- "$want" "$T/err" || fail "$* did not warn \"$want\": $(cat "$T/err")"
 }
 
-warns '--layout is ignored for ddot: it has no matrix' level1/bmb_ddot -v 8 -L col
-warns '--matrix-dim1 is ignored for ddot' level1/bmb_ddot -v 8 -m 8
-warns '--vector-size is ignored for dgemv' level2/bmb_dgemv -m 8 -v 8
-warns '--matrix-dim2 is ignored for dtrsv' level2/bmb_dtrsv -m 8 -M 8
+warns '--layout is ignored for ddot: it has no matrix' level1/double/bmb_ddot -v 8 -L col
+warns '--matrix-dim1 is ignored for ddot' level1/double/bmb_ddot -v 8 -m 8
+warns '--vector-size is ignored for dgemv' level2/double/bmb_dgemv -m 8 -v 8
+warns '--matrix-dim2 is ignored for dtrsv' level2/double/bmb_dtrsv -m 8 -M 8
 echo "ok   an option a routine does not use is ignored with a warning naming it"
 
-level2/bmb_dgemv -C -x 0 -i 1 -m 8 -M 8 -L col >/dev/null 2>"$T/err" || fail "dgemv -M -L failed"
+level2/double/bmb_dgemv -C -x 0 -i 1 -m 8 -M 8 -L col >/dev/null 2>"$T/err" || fail "dgemv -M -L failed"
 if grep -q 'is ignored' "$T/err"; then
     fail "dgemv, which uses -M and -L, warned: $(cat "$T/err")"
 fi

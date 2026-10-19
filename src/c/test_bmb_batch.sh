@@ -22,7 +22,7 @@ calls() {
     sed -n 's/^ *"calls_per_sample": \([0-9]*\),$/\1/p' "$1"
 }
 
-for b in level2/bmb_dtrmv level2/bmb_dtrsv level3/bmb_dtrmm level3/bmb_dtrsm level3/bmb_strsm level3/bmb_ztrsm; do
+for b in level2/double/bmb_dtrmv level2/double/bmb_dtrsv level3/double/bmb_dtrmm level3/double/bmb_dtrsm level3/single/bmb_strsm level3/complex16/bmb_ztrsm; do
     name=$(basename "$b")
     "$b" -C -x 0 -i 2 -b 50 -s -m 8,16 -o "$T/$name.json" >/dev/null 2>"$T/$name.err" \
         || fail "$name -b 50 failed: $(cat "$T/$name.err")"
@@ -33,7 +33,7 @@ for b in level2/bmb_dtrmv level2/bmb_dtrsv level3/bmb_dtrmm level3/bmb_dtrsm lev
 done
 echo "ok   -b 50: dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm stay at one call per sample, and say so"
 
-level2/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \
+level2/double/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \
     || fail "dgemv -b 50 failed: $(cat "$T/dgemv.err")"
 test "$(calls "$T/dgemv.json")" = 50 || fail "dgemv -b 50: calls_per_sample $(calls "$T/dgemv.json")"
 # Only this warning is looked for: on a machine that exposes its CPU
@@ -41,7 +41,7 @@ test "$(calls "$T/dgemv.json")" = 50 || fail "dgemv -b 50: calls_per_sample $(ca
 if grep -q -- '--batch is ignored' "$T/dgemv.err"; then
     fail "dgemv -b 50 said -b was ignored: $(cat "$T/dgemv.err")"
 fi
-level2/bmb_dtrsv -C -x 0 -i 2 -b 1 -m 8 >/dev/null 2>"$T/one.err" || fail "dtrsv -b 1 failed"
+level2/double/bmb_dtrsv -C -x 0 -i 2 -b 1 -m 8 >/dev/null 2>"$T/one.err" || fail "dtrsv -b 1 failed"
 if grep -q -- '--batch is ignored' "$T/one.err"; then
     fail "dtrsv -b 1, which changes nothing, said -b was ignored: $(cat "$T/one.err")"
 fi
