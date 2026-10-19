@@ -562,19 +562,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - backend: openblas
-            package: libopenblas-dev
-          - backend: netlib
-            package: libblas-dev
-          - backend: blis
-            package: libblis-openmp-dev
+        backend: [openblas, netlib, blis]
     permissions:
       contents: read
       id-token: write   # Codecov's upload, authenticated by OIDC
     env:
       BACKEND: ${{ matrix.backend }}
-      PACKAGE: ${{ matrix.package }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -582,7 +575,12 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf automake libtool "$PACKAGE" pkg-config gcovr
+          case $BACKEND in
+            openblas) package=libopenblas-dev ;;
+            netlib) package=libblas-dev ;;
+            blis) package=libblis-openmp-dev ;;
+          esac
+          sudo apt-get install -y autoconf automake libtool "$package" pkg-config gcovr
 
       - name: autoreconf
         run: ./autogen.sh
