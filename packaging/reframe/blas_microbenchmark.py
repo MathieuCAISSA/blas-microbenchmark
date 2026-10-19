@@ -189,7 +189,7 @@ class bmb_tarball(rfm.CompileOnlyRegressionTest):
     once per environment.'''
 
     #: The release to build.
-    version = variable(str, value='1.6.1')
+    version = variable(str, value='1.7.0')
 
     #: A URL or a path to take the tarball from instead of the release;
     #: then it is not checked against the release's SHA256SUMS.
