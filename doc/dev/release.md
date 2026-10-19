@@ -30,8 +30,8 @@ builds and checks the tarball, attests and verifies it, and uploads
 nothing; the `image` job builds and runs each image, and pushes
 nothing. Pull requests from Dependabot (which changes it every time it
 updates an action) or from a fork have no OIDC token to sign with and
-skip the four attestation steps (attest, verify, install cosign, check
-with cosign). To run it by hand on a branch, `publish` off:
+skip the five attestation steps (attest, verify, install cosign, check
+with cosign, write the in-toto file). To run it by hand on a branch, `publish` off:
 
 ```bash
 gh workflow run release.yml --ref <branch> -f tag=vX.Y.Z -f publish=false

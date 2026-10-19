@@ -30,6 +30,12 @@ check_PROGRAMS += test_bmb_verify
 test_bmb_verify_SOURCES = test_bmb_verify.c
 test_bmb_verify_LDADD = libbmbcommon.a -lm
 
+# The driver's refusal of a benchmark without a check, which no routine
+# is: --verify would otherwise time numbers nobody checked.
+check_PROGRAMS += test_bmb_bench
+test_bmb_bench_SOURCES = test_bmb_bench.c
+test_bmb_bench_LDADD = libbmbcommon.a
+
 # The output layer's corners no benchmark reaches: column names from
 # labels with any character, a routine without an operation count, a
 # stream already in error.

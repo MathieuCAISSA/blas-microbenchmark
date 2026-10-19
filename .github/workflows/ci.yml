@@ -549,9 +549,9 @@ jobs:
   # Which lines of the C code make check runs, and which it never reaches:
   # each test was seen to fail, but that says nothing of the paths no test
   # takes. No threshold -- the report is there to be read. The per-file
-  # summary is on the run's page; the line-by-line HTML report and an lcov
-  # file are in the coverage artifact. The lcov file also goes to Codecov,
-  # for the README's badge, authenticated by the job's OIDC token rather
+  # summary is on the run's page; the line-by-line HTML report, an lcov
+  # and a Cobertura file are in the coverage-<backend> artifact. The
+  # Cobertura one goes to Codecov, for the README's badge, authenticated by the job's OIDC token rather
   # than a stored secret; Codecov being down does not fail the job. Once
   # per backend Ubuntu packages, each uploaded with its own flag: code that
   # only runs under one (a library with no version string, a
@@ -681,8 +681,8 @@ jobs:
   # from its seed corpus and dictionary, then runs it for five minutes,
   # once under AddressSanitizer and once under UndefinedBehaviorSanitizer.
   # A crash, a sanitizer report or a promise of the parser broken fails
-  # the job, with the input that did it. make check replays the corpus in
-  # every other job.
+  # the job, with the input that did it. On pull requests only; every job
+  # that runs make check replays the corpus.
   fuzz:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

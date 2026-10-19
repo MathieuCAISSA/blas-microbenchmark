@@ -70,13 +70,15 @@ it comes from in brackets.
   optional field: `blas` is absent under Netlib, NVPL and ArmPL (#9's
   render test rewrote a line that was not there).
 - [ ] A coverage exclusion (`GCOVR_EXCL_*`) is for a line no test can
-  reach on Linux, and its reason says why; one nobody wrote a test for
+  reach in the coverage jobs' builds (OpenBLAS, Netlib, BLIS, on glibc
+  Linux), and its reason says why; one nobody wrote a test for
   gets the test ([coverage](../doc/dev/ci.md#coverage)).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
 - [ ] A change to what `bmb_options_parse()` accepts keeps the checks of
   `fuzz_bmb_options` true of everything it accepts, and a new form of
-  option gets a seed in `src/c/common/fuzz/bmb_options/`
+  option gets a seed in `src/c/common/fuzz/bmb_options/`, listed in
+  `FUZZ_CORPUS` (`src/c/common/Makefile.am`) for the tarball
   ([fuzzing](../doc/dev/ci.md#fuzzing)).
 
 ## Security

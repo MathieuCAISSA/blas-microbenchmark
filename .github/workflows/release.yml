@@ -30,8 +30,8 @@ permissions:
 jobs:
   # The tarball (make dist), built and checked with no Autotools present,
   # attested, the attestation checked with gh and with cosign, then
-  # uploaded with SHA256SUMS and the attestation's bundle, creating the
-  # release if the tag has none. A pull request stops before the
+  # uploaded with SHA256SUMS, the attestation's bundle and the provenance
+  # as an in-toto file, creating the release if the tag has none. A pull request stops before the
   # upload; one without an OIDC token (Dependabot's, a fork's) also skips
   # the attestation and its checks.
   tarball:
