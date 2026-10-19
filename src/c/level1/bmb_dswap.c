@@ -85,7 +85,7 @@ static int verify(void *vctx, char *msg, size_t size)
     call(ctx);
     bmb_verify_perturb(&ctx->x[0]);
     ok = bmb_verify_close("x", ctx->x, y0, NULL, n, 0.0, msg, size)
-         && bmb_verify_close("y", ctx->y, x0, NULL, n, 0.0, msg, size);
+         && bmb_verify_close("y", ctx->y, x0, NULL, n, 0.0, msg, size); /* GCOVR_EXCL_BR_LINE: the corruption hook changes x, so the check of y never fails */
     free(x0);
     return !ok;
 }

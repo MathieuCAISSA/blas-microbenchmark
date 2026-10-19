@@ -546,6 +546,49 @@ int main(void)
         }
     }
 
+    /* ---- the edges of the command line ---- */
+    {
+        bmb_options_t opts;
+        char list[2 * 257];
+        char longspec[600];
+        size_t v;
+
+        /* 257 points: past the cap, and so past the 511 characters a
+         * sweep may have, whichever is checked first. */
+        for (v = 0; v < 257; v++) {
+            list[2 * v] = '1';
+            list[2 * v + 1] = ',';
+        }
+        list[sizeof(list) - 1] = '\0';
+        check_sweep(list, NULL);
+        memset(longspec, '1', sizeof(longspec) - 1);
+        longspec[sizeof(longspec) - 1] = '\0';
+        check_sweep(longspec, NULL);   /* longer than any sweep can be */
+
+        check_count_option("--label", "del\x7f", 0);   /* DEL is a control character */
+
+        if (parse_args(&opts, "-o", "r.j", ARGS_END) == BMB_OPTIONS_OK
+            && opts.output_format == BMB_FORMAT_CSV) {
+            ok("-o r.j: a name shorter than .json is CSV");
+            bmb_options_free(&opts);
+        } else {
+            fail("-o r.j", "was not taken as CSV");
+        }
+
+        if (parse_args(&opts, "-m", ARGS_END) == BMB_OPTIONS_ERROR) {
+            ok("-m with no value is refused");
+        } else {
+            fail("-m with no value", "was accepted");
+            bmb_options_free(&opts);
+        }
+        if (parse_args(&opts, "--no-such-option", ARGS_END) == BMB_OPTIONS_ERROR) {
+            ok("an unknown option is refused");
+        } else {
+            fail("--no-such-option", "was accepted");
+            bmb_options_free(&opts);
+        }
+    }
+
     /* ---- how a sweep is described in a warning ---- */
     {
         static const struct {

@@ -127,22 +127,27 @@ gcovr --root .. src --exclude '.*/(test|fuzz)_[^/]*$' --html-details cov.html --
 ```
 
 `cov.html` shows each file line by line. There is no threshold: read it
-for paths no test takes, then decide whether one should.
+for paths no test takes, then decide whether one should. A line no test
+can reach on Linux is excluded where it is, with gcovr's marker and its
+reason (`/* GCOVR_EXCL_BR_LINE: uname() cannot fail ... */`; see
+[doc/dev/ci.md](doc/dev/ci.md#coverage)); one nobody wrote a test for gets
+the test.
 
 | Where | Test | What it pins down |
 |---|---|---|
-| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, each refused by every sweep option (`-v`, `-m`, `-M`, `-t`), `--label`, `--verify` on by default and `-C`, `--layout`; how a sweep is described in a warning, a point that does not fit left out whole; and the backend name FlexiBLAS's library is given, kept to safe characters, down to buffers too small for it |
-| | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, real and complex, double and single, the comparison and its message, the two tolerances, the probe vector, the two corruption hooks |
-| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, the frequency governor and turbo with the advice they get, and the CPUs the process may use under an affinity and cgroup quotas — and over trees it generates for what kernels rarely write: cache sizes in bytes, M and G, a missing file, an empty governor, malformed CPU lists and `cpu.max` lines, a cgroup path too long, each read as unknown |
+| `src/c/common` | `test_bmb_options` | the CLI parser: sweep forms, ceilings, the point cap, each refused by every sweep option (`-v`, `-m`, `-M`, `-t`), a list past the cap, a sweep longer than any, an option without its value, an unknown one, `--label`, `--verify` on by default and `-C`, `--layout`; how a sweep is described in a warning, a point that does not fit left out whole; and the backend name FlexiBLAS's library is given, kept to safe characters, down to buffers too small for it |
+| | `test_bmb_verify` | what `--verify` rests on: the reference products on hand-worked matrices, stored row- and column-major, real and complex, double and single, the comparison and its message, the two tolerances, the probe vector, the two corruption hooks, off when empty or 0 |
+| | `test_bmb_print` | the output layer's corners no benchmark reaches: a CSV column name from a label with any character around its words, a routine without an operation count, a stream already in error |
+| | `test_bmb_machine` | the machine probe, run over fake `/proc` and `/sys` trees in `fixtures/machine/` — including the aarch64 CPU string that must never change form, the frequency governor and turbo with the advice they get, and the CPUs the process may use under an affinity and cgroup quotas — and over trees it generates for what kernels rarely write: cache sizes in bytes, M and G, a missing file, an empty governor, malformed CPU lists and `cpu.max` lines, a cgroup path too long, a turbo switch reading neither 0 nor 1, cgroup v1 lines only, each read as unknown; the first processor's name, eight caches at most, sixteen governors at most, those that do not fit left out whole |
 | | `fuzz_bmb_options` | the parser on inputs nobody wrote: a libFuzzer target (an argv per input, split on NUL bytes) that holds whatever the parser accepts to what the benchmarks rely on — points between 1 and the size ceiling, at most 256, a printable label, the output format a `.json` file implies — and `bmb_range_describe` to its buffer; here it replays its seed corpus (`fuzz/bmb_options/`), and the `fuzz` CI job fuzzes it with ClusterFuzzLite |
-| | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references |
+| | `test_netlib_cblas` | (netlib only; its source is in `src/c/netlib`) the row-major → column-major shim against naive references, and what only column-major calls pass through as is (a lower triangle, the right side, a conjugate transpose) against the same call row-major on the same memory; a unit diagonal |
 | `src/c` | `test_bmb_verify.sh` | every benchmark passes `--verify` at several sizes, shapes and thread counts, in both storage orders where it has a matrix, and each one's check catches a corrupted result: exit 2, a message, no results file; a run with no option is checked, one with `-C` is not |
-| | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads, another backend's not read; the count checked in the table and the JSON; more threads than the CPUs the process may use warned about |
+| | `test_bmb_threads_env.sh` | the thread-count environment variables of the backend built (read from `config.h`), in its order: used without `-t`, overridden by `-t` with a warning when they disagree, ignored with a warning when not a number of threads (down to one too large for an `unsigned long`), another backend's not read, a `-t` list never equal to one; the count checked in the table and the JSON; more threads than the CPUs the process may use warned about, in whatever order `-t` gives them, one CPU in the singular |
 | | `test_bmb_batch.sh` | `-b` cannot batch dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm, whose operand is restored before every call: one call per sample (`calls_per_sample` under `-s`) and a warning; another routine keeps its `-b` |
 | | `test_bmb_ignored_options.sh` | an option a routine has no use for (`--layout` on a vector routine, `-v`, `-m`, `-M` where they do not apply) is ignored with a warning naming it, and none where it applies |
 | | `test_bmb_alloc_failures.sh` | every allocation a benchmark makes (setup, `--verify`'s check, the timing buffer, the results), made to fail in turn by a preloaded library (`bmb_failalloc.c`, built for `make check` only): exit 1 and "out of memory", never a crash; SKIPs under AddressSanitizer and outside glibc |
 | | `test_bmb_colors.sh` | errors in red and warnings in yellow on a terminal (a pseudo-terminal from `script(1)`), plain with `NO_COLOR` set or when stderr is a file; SKIPs without `script` |
-| | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, or on stdout |
+| | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, small or larger than the stream's buffer, or on stdout |
 | `src/c/level{1,2,3}` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`); those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
 | | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label, a CPU name with a quote, a backslash and a control character escaped in the JSON; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); `-s`'s median, last, against 1, 2 and 3 samples |
@@ -155,6 +160,7 @@ for paths no test takes, then decide whether one should.
 | | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
 | | `test_configure_paths.sh` | `--with-blas-incpath`/`--with-blas-libpath` come first in the search, ahead of a module's variables and of the directories `configure` probes in a distribution's install (#58): `configure` run per backend, its flags read from `config.log` |
+| | `test_coverage_exclusions.sh` | every coverage exclusion in the C code (`GCOVR_EXCL_*`) gives its reason on its line, and every `START` has its `STOP` |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
@@ -220,7 +226,7 @@ doc/             # the report's chart images, which the README and the
 doc/dev/         # the rest of this guide, one file per part (see above)
 tests/           # the project's own tests: the release files, the
                  # editor settings, the documentation's links, the pins,
-                 # configure's search order
+                 # configure's search order, the coverage exclusions
 .clusterfuzzlite/
                  # how ClusterFuzzLite builds the fuzz targets (its
                  # Dockerfile and build.sh), for the fuzz CI job

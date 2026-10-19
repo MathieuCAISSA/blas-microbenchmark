@@ -91,9 +91,9 @@ and BLIS: code that only runs under one of them (a library with no
 version string, a single-threaded one, Netlib's CBLAS layer) counts
 where it runs, and lines inside another backend's `#if` are not compiled,
 so not counted (#132). The per-file summary is on the run's page; the
-line-by-line HTML report and an lcov file are in the `coverage-<backend>`
-artifact. AGENTS.md gives the same commands for a local run.
-The lcov file also goes to [Codecov](https://codecov.io/gh/MathieuCAISSA/blas-microbenchmark),
+line-by-line HTML report, an lcov file and a Cobertura one are in the
+`coverage-<backend>` artifact. AGENTS.md gives the same commands for a local run.
+The Cobertura file goes to [Codecov](https://codecov.io/gh/MathieuCAISSA/blas-microbenchmark),
 which draws the README's coverage badge and the history of the figure,
 merging the three reports of a commit (each flagged with its backend):
 uploaded with the job's OIDC token, so no secret is stored, and without
@@ -122,6 +122,20 @@ makes each of the 200 or so allocations of the 32 benchmarks fail in
 turn, and took lines from 92.5% to 98.3% and branches from 81% to 91%
 (Codecov's figure, which counts partly taken branches against a line,
 moves with the second).
+
+#131 to #134 took Codecov's figure from 95% to 100%: a coverage job per
+backend Ubuntu packages (#132), dead code removed (#133), tests for every
+path a test could take (#131, #134), which found three descriptions cut
+mid-number. What is left cannot run on Linux, and is marked where it is
+with gcovr's `GCOVR_EXCL_LINE`, `GCOVR_EXCL_BR_LINE` or
+`GCOVR_EXCL_START`/`STOP`, and the reason after a colon: `uname()` or
+`clock_gettime(CLOCK_MONOTONIC)` failing, a call shorter than the clock
+resolves, `snprintf` returning a negative count, a branch only FlexiBLAS
+with Netlib loaded takes. An exclusion is for a line no test can reach
+there, never for one nobody wrote a test for: the review checks the
+reason, and `test_coverage_exclusions.sh` that there is one. Codecov is
+sent gcovr's Cobertura report, not its lcov one, which in gcovr 7.0 (the
+runners') keeps excluded lines as never run.
 
 ## OpenSSF Scorecard
 

@@ -192,7 +192,25 @@ static void test_describe(void)
     m.numa_nodes = 2;
     bmb_machine_describe_cpu(&m, buf, sizeof(buf));
     check_str(buf, "2 NUMA nodes", "describe: NUMA nodes without a CPU count");
+    m.numa_nodes = 1;
+    bmb_machine_describe_cpu(&m, buf, sizeof(buf));
+    check_str(buf, "1 NUMA node", "describe: one NUMA node without a CPU count");
     m.numa_nodes = 0;
+    m.logical_cpus = 1;
+    bmb_machine_describe_cpu(&m, buf, sizeof(buf));
+    check_str(buf, "1 logical CPU", "describe: one CPU, no NUMA count");
+
+    m.cache_count = 2;
+    m.caches[0].level = 1;
+    snprintf(m.caches[0].type, sizeof(m.caches[0].type), "data");
+    m.caches[0].size_bytes = 0;
+    m.caches[1].level = 2;
+    snprintf(m.caches[1].type, sizeof(m.caches[1].type), "unified");
+    m.caches[1].size_bytes = 1536;
+    bmb_machine_describe_caches(&m, buf, sizeof(buf));
+    check_str(buf, "L1d 0B, L2 1536B", "describe: a size of 0 and one not a whole K, in bytes");
+    m.cache_count = 0;
+    m.logical_cpus = 0;
 
     m.logical_cpus = 0;
     bmb_machine_describe_cpu(&m, buf, sizeof(buf));
@@ -369,6 +387,108 @@ static void test_generated(void)
     bmb_machine_probe_at(tree_root, &m);
     tree_end();
     check(m.usable_cpus == 8, "generated: a cgroup path too long to hold, no quota read from a guess");
+
+    /* The CPU, from the first processor's model name only; an Arm one
+     * named only when both codes are there. Directories beside the NUMA
+     * nodes that are not one. */
+    tree_begin();
+    tree_file("proc/cpuinfo", "processor\t: 0\nmodel name\t: First\nprocessor\t: 1\nmodel name\t: Second\n");
+    tree_file("sys/devices/system/node/node0/cpulist", "0-3\n");
+    tree_file("sys/devices/system/node/nodes/x", "\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check_str(m.cpu, "First", "generated: the first processor's model name, not the last");
+    check(m.numa_nodes == 1, "generated: a directory named node but not nodeN is no NUMA node");
+
+    tree_begin();
+    tree_file("proc/cpuinfo", "processor\t: 0\nCPU implementer\t: 0x41\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check_str(m.cpu, "", "generated: an Arm implementer without its part, no CPU named");
+
+    tree_begin();
+    tree_file("proc/cpuinfo", "processor\t: 0\nflags\t\t: fpu\n");
+    tree_file(CACHE "index0/level", "1\n");
+    tree_file(CACHE "index0/type", "Data\n");
+    tree_file(CACHE "index0/size", "0K\n");
+    tree_file("sys/devices/system/cpu/cpufreq/boost", "0\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check_str(m.cpu, "", "generated: neither a model name nor Arm codes, no CPU named");
+    check(m.cache_count == 0, "generated: a cache of size 0 not kept");
+    check(m.turbo == 0 && m.turbo_control == BMB_TURBO_CPUFREQ_BOOST, "generated: boost 0 is turbo off");
+
+    /* As many caches as the field holds, the ones of level 0 left out. */
+    {
+        static const char *const levels[] = {"1", "1", "2", "3", "0", "2", "3", "4", "4"};
+        char rel[128];
+        size_t i;
+
+        tree_begin();
+        for (i = 0; i < sizeof(levels) / sizeof(levels[0]); i++) {
+            snprintf(rel, sizeof(rel), CACHE "index%zu/level", i);
+            tree_file(rel, levels[i]);
+            snprintf(rel, sizeof(rel), CACHE "index%zu/type", i);
+            tree_file(rel, "Unified\n");
+            snprintf(rel, sizeof(rel), CACHE "index%zu/size", i);
+            tree_file(rel, "1M\n");
+        }
+        bmb_machine_probe_at(tree_root, &m);
+        tree_end();
+        check(m.cache_count == 7,
+              "generated: 8 cache entries read at most, the one of level 0 not kept, the ninth not read");
+    }
+
+    /* Seventeen governors, each named on two CPUs: sixteen kept at most,
+     * and those that do not fit in the field left out whole. A blank
+     * governor is none. */
+    {
+        char rel[128], name[32];
+        int i;
+
+        tree_begin();
+        for (i = 0; i < 34; i++) {
+            snprintf(rel, sizeof(rel), "sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor", i);
+            snprintf(name, sizeof(name), "governor-number-%02d\n", i % 17);
+            tree_file(rel, name);
+        }
+        tree_file("sys/devices/system/cpu/cpu40/cpufreq/scaling_governor", "   \n");
+        bmb_machine_probe_at(tree_root, &m);
+        tree_end();
+        check(strncmp(m.governor, "governor-number-", 16) == 0
+              && m.governor[strlen(m.governor) - 3] == '-'
+              && strlen(m.governor) % 19 == 18,
+              "generated: governors that do not all fit, the last kept one whole");
+    }
+
+    /* A turbo switch that reads neither 0 nor 1 says nothing. */
+    tree_begin();
+    tree_file("sys/devices/system/cpu/intel_pstate/no_turbo", "2\n");
+    tree_file("sys/devices/system/cpu/cpufreq/boost", "on\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(m.turbo == -1, "generated: no_turbo 2 and boost on, turbo unknown");
+
+    check(usable_cpus("+3", NULL) == 0, "generated: a CPU with a sign, unknown");
+    check(usable_cpus("0-+3", NULL) == 0, "generated: a range ending in a sign, unknown");
+
+    /* No affinity line, or no affinity at all: the quota alone; a cgroup
+     * file with only cgroup v1 lines: no quota. */
+    tree_begin();
+    tree_file("proc/self/status", "Name:\tbmb_dgemm\n");
+    tree_file("proc/self/cgroup", "0::/\n");
+    tree_file("sys/fs/cgroup/cpu.max", "200000 100000\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(m.usable_cpus == 2, "generated: no Cpus_allowed_list, a quota of 2 CPUs");
+
+    tree_begin();
+    tree_file("proc/self/status", "Cpus_allowed_list:\t0-5\n");
+    tree_file("proc/self/cgroup", "12:cpu,cpuacct:/user.slice\n");
+    tree_file("sys/fs/cgroup/cpu.max", "100000 100000\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(m.usable_cpus == 6, "generated: cgroup v1 lines only, no quota read");
 }
 
 int main(void)

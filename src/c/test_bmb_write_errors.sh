@@ -1,8 +1,8 @@
 #!/bin/sh
 # A run whose results cannot be written must fail, not pass with a short or
 # missing file (doc/dev/benchmarks.md, "Write failures"): a -o file that
-# cannot be opened, a -o file on a full disk, in JSON and in CSV, and
-# stdout on a full disk. Each exits non-zero and says what was lost.
+# cannot be opened, a -o file on a full disk, in JSON and in CSV, small
+# and larger than the stream's buffer, and stdout on a full disk. Each exits non-zero and says what was lost.
 # /dev/full, a device on which every write fails, stands for the full
 # disk; where there is none, those checks are left out with a note.
 set -e
@@ -36,6 +36,9 @@ echo "ok   a -o file that cannot be opened fails the run"
 if [ -w /dev/full ]; then
     fails 'Failed to write /dev/full in full; the file is incomplete' /dev/null -o /dev/full -f json
     fails 'Failed to write /dev/full in full; the file is incomplete' /dev/null -o /dev/full -f csv
+    # 256 rows, more than the stream's buffer holds: the write fails while
+    # the file is still being written, not only when it is closed.
+    fails 'Failed to write /dev/full in full; the file is incomplete' /dev/null -o /dev/full -f csv -v 1:256:1
     fails 'Failed to write the results to stdout' /dev/full
     echo "ok   a full disk, under -o (JSON, CSV) or stdout, fails the run"
 else

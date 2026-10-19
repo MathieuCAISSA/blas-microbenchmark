@@ -118,7 +118,14 @@ BMB_MACHINE_ROOT=$root "$B" -x 0 -i 1 -v 8 -C -t 1,4 >/dev/null 2>"$T/err" \
     || fail "-t 1,4 on the container fixture: exit $?: $(cat "$T/err")"
 if [ "$takes" = yes ]; then
     warned "The run uses up to 4 threads, but this process may only run on 3 CPUs"
-    ok "-t 1,4 on 3 usable CPUs: a warning, naming the most threads"
+    BMB_MACHINE_ROOT=$root "$B" -x 0 -i 1 -v 8 -C -t 4,1 >/dev/null 2>"$T/err" \
+        || fail "-t 4,1 on the container fixture: exit $?: $(cat "$T/err")"
+    warned "The run uses up to 4 threads, but this process may only run on 3 CPUs"
+    # The pinned fixture: one CPU, said in the singular.
+    BMB_MACHINE_ROOT=${srcdir}/common/fixtures/machine/pinned "$B" -x 0 -i 1 -v 8 -C -t 2 \
+        >/dev/null 2>"$T/err" || fail "-t 2 on the pinned fixture: exit $?: $(cat "$T/err")"
+    warned "may only run on 1 CPU (its CPU affinity"
+    ok "-t 1,4 and -t 4,1 on 3 usable CPUs: a warning, naming the most threads; 1 CPU in the singular"
 elif grep -qF "$cpus_warning" "$T/err"; then
     fail "a backend that takes no thread count was warned about CPUs: $(cat "$T/err")"
 else
@@ -143,9 +150,12 @@ for v in $vars; do
     warned "$v is ignored! Set to 3 but option -t is set to 2."
     expect 2 "-t 2" "$v=2"
     quiet "$v=2 -t 2"
+    env "$v=2" "$B" -x 0 -i 1 -v 8 -C -t 1,2 >/dev/null 2>"$T/err" \
+        || fail "$v=2 -t 1,2: exit $?: $(cat "$T/err")"
+    warned "$v is ignored! Set to 2 but option -t is set to 1, 2."
     expect 1 "" "$v="
     quiet "$v empty"
-    for bad in 0 -2 abc '3 ' ' 3' 2,1 99999999999 2147483648; do
+    for bad in 0 -2 abc '3 ' ' 3' 2,1 99999999999 2147483648 99999999999999999999; do
         expect 1 "" "$v=$bad"
         warned "$v=\"$bad\" is not a number of threads; ignored."
     done

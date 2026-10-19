@@ -611,6 +611,7 @@ jobs:
             --txt coverage/summary.txt \
             --html-details coverage/index.html \
             --lcov coverage/coverage.lcov \
+            --cobertura coverage/coverage.xml \
             --print-summary
           {
             echo "### Coverage of the C code by \`make check\`, $BACKEND"
@@ -625,10 +626,12 @@ jobs:
           name: coverage-${{ matrix.backend }}
           path: build/coverage/
 
+      # Cobertura rather than lcov: gcovr 7.0's lcov keeps the lines a
+      # GCOVR_EXCL marker excludes, as never run (#134).
       - name: Upload to Codecov
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
-          files: build/coverage/coverage.lcov
+          files: build/coverage/coverage.xml
           flags: ${{ matrix.backend }}
           disable_search: true
           use_oidc: true

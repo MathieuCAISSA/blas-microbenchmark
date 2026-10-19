@@ -83,16 +83,16 @@ static unsigned int bmb_batch_from(double per_call)
 
     /* Too short for the clock to resolve at all: take the largest batch
      * and let the second pass work from a real measurement. */
-    if (per_call <= 0.0) {
-        return BMB_BATCH_MAX;
+    if (per_call <= 0.0) { /* GCOVR_EXCL_BR_LINE: a call too short for the clock to resolve: not on Linux's nanosecond clock */
+        return BMB_BATCH_MAX; /* GCOVR_EXCL_LINE: a call too short for the clock to resolve: not on Linux's nanosecond clock */
     }
 
     batch = BMB_BATCH_TARGET_S / per_call;
     if (batch <= 1.0) {
         return 1;
     }
-    if (batch >= (double) BMB_BATCH_MAX) {
-        return BMB_BATCH_MAX;
+    if (batch >= (double) BMB_BATCH_MAX) { /* GCOVR_EXCL_BR_LINE: 10^6 calls in 0.1 ms, a call of 0.1 ns: none is that short */
+        return BMB_BATCH_MAX; /* GCOVR_EXCL_LINE: 10^6 calls in 0.1 ms, a call of 0.1 ns: none is that short */
     }
     return (unsigned int) batch;
 }
@@ -243,7 +243,7 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
      * and bandwidth figures. */
     row->gflops = 0.0;
     row->gbytes_s = 0.0;
-    if (row->time_s > 0.0) {
+    if (row->time_s > 0.0) { /* GCOVR_EXCL_BR_LINE: a call too short for the clock to resolve: not on Linux's nanosecond clock */
         if (bench->flops != NULL) {
             row->gflops = bench->flops(dim1, dim2) / row->time_s / 1.0e9;
         }
@@ -411,10 +411,12 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
-    if (opts.verify && bench->verify == NULL) {
+    if (opts.verify && bench->verify == NULL) { /* GCOVR_EXCL_BR_LINE: every benchmark has a check; this guards the next one */
+        /* GCOVR_EXCL_START: every benchmark has a check; this guards the next one */
         bmb_log_error("--verify: this benchmark has no check of its result.");
         bmb_options_free(&opts);
         return EXIT_FAILURE;
+        /* GCOVR_EXCL_STOP */
     }
 
     /* A warning, never a refusal: a laptop still gets its numbers, and the

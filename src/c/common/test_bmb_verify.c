@@ -273,6 +273,8 @@ static void test_close(void)
     got[0] = 5.0;
     check(!bmb_verify_close("the sum", got, want, scale, 1, 1e-12, msg, sizeof(msg))
           && strncmp(msg, "the sum is 5", 12) == 0, "a single value is named without an index");
+    check(!bmb_verify_close("the sum", got, want, NULL, 1, 0.0, msg, sizeof(msg))
+          && strstr(msg, "allowed 0)") != NULL, "a single value compared exactly allows 0");
 
     /* The worst offender is reported, not the first. */
     got[0] = 1.0 + 1e-9;
@@ -328,6 +330,10 @@ static void test_perturb(void)
     bmb_verify_perturb(&v);
     check(v == 2.0, "perturb: BMB_VERIFY_CORRUPT=0 is off");
 
+    setenv("BMB_VERIFY_CORRUPT", "", 1);
+    bmb_verify_perturb(&v);
+    check(v == 2.0, "perturb: an empty BMB_VERIFY_CORRUPT is off");
+
     setenv("BMB_VERIFY_CORRUPT", "1", 1);
     bmb_verify_perturb(&v);
     check(fabs(v - 2.0 - 3.0e-6) < 1e-12, "perturb: a relative 1e-6 (plus 1e-6) with BMB_VERIFY_CORRUPT=1");
@@ -341,6 +347,12 @@ static void test_perturb_single(void)
     unsetenv("BMB_VERIFY_CORRUPT");
     bmb_verify_perturb_single(&v);
     check(v == 2.0f, "perturb single: nothing happens without BMB_VERIFY_CORRUPT");
+
+    setenv("BMB_VERIFY_CORRUPT", "0", 1);
+    bmb_verify_perturb_single(&v);
+    setenv("BMB_VERIFY_CORRUPT", "", 1);
+    bmb_verify_perturb_single(&v);
+    check(v == 2.0f, "perturb single: BMB_VERIFY_CORRUPT=0 or empty is off");
 
     setenv("BMB_VERIFY_CORRUPT", "1", 1);
     bmb_verify_perturb_single(&v);

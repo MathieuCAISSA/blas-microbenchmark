@@ -93,7 +93,7 @@ static int bmb_parse_uint(const char *str, unsigned long long limit, unsigned lo
     char *endptr;
     unsigned long long value;
 
-    if (str == NULL || str[0] < '0' || str[0] > '9') {
+    if (str[0] < '0' || str[0] > '9') {
         return BMB_PARSE_MALFORMED;
     }
 
@@ -135,7 +135,7 @@ void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size)
 
         /* A point that does not fit is left out whole: cut, 1000 would
          * read as 10, a size nobody asked for. */
-        if (n < 0 || (size_t) n >= size - used) {
+        if (n < 0 || (size_t) n >= size - used) { /* GCOVR_EXCL_BR_LINE: snprintf does not fail on these formats, n < 0 never holds */
             buf[used] = '\0';
             return;
         }
@@ -145,7 +145,7 @@ void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size)
     if (range->count > shown) {
         int n = snprintf(buf + used, size - used, ", ... (%zu points)", range->count);
 
-        if (n < 0 || (size_t) n >= size - used) {
+        if (n < 0 || (size_t) n >= size - used) { /* GCOVR_EXCL_BR_LINE: snprintf does not fail on these formats, n < 0 never holds */
             buf[used] = '\0';
         }
     }
@@ -203,7 +203,7 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
     size_t i;
     int status;
 
-    if (str == NULL || str[0] == '\0' || strlen(str) >= sizeof(buf)) {
+    if (str[0] == '\0' || strlen(str) >= sizeof(buf)) {
         return BMB_PARSE_MALFORMED;
     }
     strncpy(buf, str, sizeof(buf) - 1);
@@ -233,8 +233,8 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
             }
 
             status = bmb_range_append(out, (size_t) value);
-            if (status != BMB_PARSE_OK) {
-                return status;
+            if (status != BMB_PARSE_OK) { /* GCOVR_EXCL_BR_LINE: 257 points take 513 characters, past the 511 a sweep may have */
+                return status; /* GCOVR_EXCL_LINE: 257 points take 513 characters, past the 511 a sweep may have */
             }
 
             p = (comma != NULL) ? comma + 1 : NULL;
@@ -521,8 +521,7 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
 
         case '?':
         default:
-            snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s",
-                     optind > 0 && optind <= argc ? argv[optind - 1] : "?");
+            snprintf(errbuf, sizeof(errbuf), "Unknown or malformed option: %s", optind <= argc ? argv[optind - 1] : "?"); /* GCOVR_EXCL_BR_LINE: glibc's getopt never leaves optind past argc; the guard is for another libc's */
             bmb_log_error(errbuf);
             bmb_options_print_help(argv[0]);
             return BMB_OPTIONS_ERROR;
@@ -587,7 +586,7 @@ void bmb_options_print_version(void)
     char line[512];
 
     printf("blas-microbenchmark %s\n", bmb_build_version());
-    if (blas != NULL && blas[0] != '\0') {
+    if (blas != NULL && blas[0] != '\0') { /* GCOVR_EXCL_BR_LINE: no library this builds against reports an empty version */
         printf("BLAS backend: %s (%s)\n", bmb_build_backend(), blas);
     } else {
         printf("BLAS backend: %s\n", bmb_build_backend());
@@ -596,7 +595,7 @@ void bmb_options_print_version(void)
     /* The machine as well: CI prints this for every job, which is how one
      * finds out what each runner's CPU actually reports. */
     bmb_machine_describe_cpu(m, line, sizeof(line));
-    if (line[0] != '\0') {
+    if (line[0] != '\0') { /* GCOVR_EXCL_BR_LINE: sysconf() always gives the CPU count on Linux */
         printf("CPU: %s\n", line);
     }
     bmb_machine_describe_caches(m, line, sizeof(line));
@@ -605,7 +604,7 @@ void bmb_options_print_version(void)
     }
     bmb_machine_describe_frequency(m, line, sizeof(line));
     printf("Frequency: %s\n", (line[0] != '\0') ? line : "not exposed by this system");
-    if (m->os[0] != '\0') {
+    if (m->os[0] != '\0') { /* GCOVR_EXCL_BR_LINE: uname() cannot fail with a valid buffer */
         printf("OS: %s\n", m->os);
     }
 }

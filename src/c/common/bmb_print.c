@@ -18,7 +18,7 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     char line[512];
 
     fprintf(out, "# blas-microbenchmark %s\n", bmb_build_version());
-    if (blas != NULL && blas[0] != '\0') {
+    if (blas != NULL && blas[0] != '\0') { /* GCOVR_EXCL_BR_LINE: no library this builds against reports an empty version */
         fprintf(out, "# backend: %s (%s)\n", bmb_build_backend(), blas);
     } else {
         fprintf(out, "# backend: %s\n", bmb_build_backend());
@@ -34,7 +34,7 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     }
 
     bmb_machine_describe_cpu(m, line, sizeof(line));
-    if (line[0] != '\0') {
+    if (line[0] != '\0') { /* GCOVR_EXCL_BR_LINE: sysconf() always gives the CPU count on Linux */
         fprintf(out, "# cpu: %s\n", line);
     }
     bmb_machine_describe_caches(m, line, sizeof(line));
@@ -45,10 +45,10 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     if (line[0] != '\0') {
         fprintf(out, "# frequency: %s\n", line);
     }
-    if (m->os[0] != '\0') {
+    if (m->os[0] != '\0') { /* GCOVR_EXCL_BR_LINE: uname() cannot fail with a valid buffer */
         fprintf(out, "# os: %s\n", m->os);
     }
-    if (m->date[0] != '\0') {
+    if (m->date[0] != '\0') { /* GCOVR_EXCL_BR_LINE: time() and gmtime_r() of now do not fail */
         fprintf(out, "# date: %s\n", m->date);
     }
 }
@@ -202,7 +202,7 @@ static void bmb_print_json_machine(FILE *out, const bmb_machine_t *m)
     const char *sep = "\n";
     int i;
 
-    if (m->date[0] != '\0') {
+    if (m->date[0] != '\0') { /* GCOVR_EXCL_BR_LINE: time() and gmtime_r() of now do not fail */
         fprintf(out, "  \"date\": \"%s\",\n", m->date);
     }
 
@@ -212,7 +212,7 @@ static void bmb_print_json_machine(FILE *out, const bmb_machine_t *m)
         bmb_print_json_string(out, m->cpu);
         sep = ",\n";
     }
-    if (m->logical_cpus > 0) {
+    if (m->logical_cpus > 0) { /* GCOVR_EXCL_BR_LINE: sysconf() always gives the CPU count on Linux */
         fprintf(out, "%s    \"logical_cpus\": %ld", sep, m->logical_cpus);
         sep = ",\n";
     }
@@ -239,12 +239,12 @@ static void bmb_print_json_machine(FILE *out, const bmb_machine_t *m)
         fprintf(out, "%s    \"turbo\": %s", sep, m->turbo ? "true" : "false");
         sep = ",\n";
     }
-    if (m->os[0] != '\0') {
+    if (m->os[0] != '\0') { /* GCOVR_EXCL_BR_LINE: uname() cannot fail with a valid buffer */
         fprintf(out, "%s    \"os\": ", sep);
         bmb_print_json_string(out, m->os);
         sep = ",\n";
     }
-    fprintf(out, "%s},\n", (sep[0] == ',') ? "\n  " : "");
+    fprintf(out, "%s},\n", (sep[0] == ',') ? "\n  " : ""); /* GCOVR_EXCL_BR_LINE: the logical CPUs and the OS are always there, so never an empty object */
 }
 
 void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
@@ -257,7 +257,7 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
     fprintf(out, "  \"backend\": ");
     bmb_print_json_string(out, bmb_build_backend());
     fprintf(out, ",\n");
-    if (blas != NULL && blas[0] != '\0') {
+    if (blas != NULL && blas[0] != '\0') { /* GCOVR_EXCL_BR_LINE: no library this builds against reports an empty version */
         fprintf(out, "  \"blas\": ");
         bmb_print_json_string(out, blas);
         fprintf(out, ",\n");

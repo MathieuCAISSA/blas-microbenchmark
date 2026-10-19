@@ -115,5 +115,17 @@ grep -q '^    "cpu": "Odd\\u0001CPU \\"x\\" \\\\ y",$' odd.json \
     || fail "json cpu not escaped: $(grep '"cpu"' odd.json)"
 rm -rf odd-machine odd.json
 
+# --version on a machine whose caches cannot be read: no Caches line, the
+# rest as usual.
+BMB_MACHINE_ROOT=$PWD/no-such-machine ./bmb_dgemm -V >version.txt 2>&1 || fail "-V failed: $(cat version.txt)"
+grep -q '^blas-microbenchmark [0-9]' version.txt || fail "-V printed no version: $(cat version.txt)"
+if grep -q '^Caches:' version.txt; then
+    fail "-V printed caches it could not read: $(cat version.txt)"
+fi
+BMB_MACHINE_ROOT=$F/x86 ./bmb_dgemm -V >version.txt 2>&1 || fail "-V failed: $(cat version.txt)"
+grep -q '^Frequency: governor performance, turbo off$' version.txt \
+    || fail "-V did not describe the x86 fixture's frequency: $(cat version.txt)"
+rm -f version.txt
+
 rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json
 echo "ok   output formats"
