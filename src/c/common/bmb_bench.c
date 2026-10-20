@@ -31,9 +31,7 @@ static int bmb_compare_times(const void *a, const void *b)
     return (x > y) - (x < y);
 }
 
-/* The quantile p of n sorted samples, interpolated between the two either
- * side of it: R's default (type 7), NumPy's and Excel's QUARTILE.INC. */
-static double bmb_quantile(const double *sorted, unsigned int n, double p)
+double bmb_quantile(const double *sorted, unsigned int n, double p)
 {
     const double h = (double) (n - 1) * p;
     const unsigned int i = (unsigned int) h;

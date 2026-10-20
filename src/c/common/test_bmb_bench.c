@@ -2,8 +2,10 @@
  * one without a check of its result. --verify, which is on by default,
  * must refuse to run it rather than time numbers nobody checked; with -C
  * it runs. Every real benchmark has its check (test_bmb_verify.sh), so
- * only a stub reaches the refusal. */
+ * only a stub reaches the refusal. And the quartiles, on samples a real
+ * run cannot be made to give. */
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -69,6 +71,25 @@ int main(void)
           "a benchmark without a check is refused under --verify, before any call");
     check(bmb_benchmark_main(8, unchecked, &bench) == EXIT_SUCCESS && calls > 0,
           "with -C it runs");
+
+    /* The values R's quantile() gives, exactly representable. One sample
+     * is every quantile; the NaN after it must never be read. */
+    {
+        static const double one_sample[] = {1.0, NAN};
+        static const double two[] = {1.0, 2.0};
+        static const double four[] = {1.0, 2.0, 3.0, 4.0};
+        static const double five[] = {1.0, 2.0, 4.0, 8.0, 16.0};
+
+        check(bmb_quantile(one_sample, 1, 0.25) == 1.0 && bmb_quantile(one_sample, 1, 0.75) == 1.0,
+              "quartiles of one sample: that sample, nothing past it read");
+        check(bmb_quantile(two, 2, 0.25) == 1.25 && bmb_quantile(two, 2, 0.75) == 1.75,
+              "quartiles of two samples: a quarter of the way in from either end");
+        check(bmb_quantile(four, 4, 0.25) == 1.75 && bmb_quantile(four, 4, 0.75) == 3.25,
+              "quartiles of four samples, as R gives them");
+        check(bmb_quantile(five, 5, 0.25) == 2.0 && bmb_quantile(five, 5, 0.75) == 8.0
+              && bmb_quantile(five, 5, 1.0) == 16.0,
+              "quartiles of five samples on samples themselves; the maximum at 1");
+    }
 
     if (failures != 0) {
         printf("%d check(s) failed\n", failures);

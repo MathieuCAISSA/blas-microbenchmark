@@ -112,6 +112,12 @@ int bmb_bench_column_major(void);
  * its matrices with this, and refuses the size with
  * bmb_bench_too_large(). */
 size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size);
+
+/* The quantile p of n sorted samples (n >= 1), interpolated between the
+ * two either side of it: R's default (type 7), NumPy's and Excel's
+ * QUARTILE.INC. The quartiles every output gives (#161). Exported for its
+ * unit test: the samples of a real run cannot be chosen. */
+double bmb_quantile(const double *sorted, unsigned int n, double p);
 void bmb_bench_too_large(void);
 
 #endif /* BMB_BENCH_H */
