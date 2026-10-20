@@ -64,6 +64,7 @@
     if (o.governor) { r.machine.governor = o.governor; }
     if (o.turbo !== undefined) { r.machine.turbo = o.turbo; }
     if (o.layout) { r.layout = o.layout; }
+    if (o.run) { r.run = o.run; }
     return r;
   }
 
@@ -577,6 +578,45 @@
 
       m = R.buildModel([entry("a.json", { rows: [[1, 8, null, 1e-6, 1, 8]] })]);
       eq(R.anyFrequency(m.identities), false, "and not before: a report of older results gets no empty column");
+    });
+
+    /* ---- How a run was made (#161) ---- */
+
+    test("run", function () {
+      var full = { command: ["bmb_ddot", "-v", "8"], warmup: 1, iterations: 10, compiler: "gcc 13.3.0",
+                   cflags: "-O2", cpus_allowed: "0-3",
+                   environment: { OMP_PROC_BIND: "close", OMP_PLACES: "cores" } };
+      var bare = { command: [], warmup: 0, iterations: 1, batch: 50, compiler: "gcc 13.3.0", cflags: "",
+                   environment: {} };
+      eq(R.runText(full), "10 samples, 1 warm-up call · gcc 13.3.0 -O2 · CPUs 0-3 · OMP_PROC_BIND=close · OMP_PLACES=cores",
+         "run: samples, warm-up, compiler and flags, affinity, variables in the order written");
+      eq(R.runText(bare), "1 sample, 0 warm-up calls, batches of 50 calls · gcc 13.3.0",
+         "run: -b, no flags, no affinity, no variable");
+      eq(R.runText(undefined), "", "run: a file from before the run block");
+      eq([R.commandText(full), R.commandText(undefined)], ["bmb_ddot -v 8", ""], "the command line, for the tooltip");
+
+      var m = R.buildModel([
+        entry("a.json", { run: full, rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("b.json", { run: bare, rows: [[1, 16, null, 1e-6, 1, 8]] }),
+        entry("c.json", { run: full, rows: [[1, 32, null, 1e-6, 1, 8]] }),
+        entry("d.json", { backend: "blis", blas: "", rows: [[1, 8, null, 1e-6, 1, 8]] })
+      ]);
+      eq(m.identities.map(function (id) { return id.runs.length; }), [2, 0],
+         "a series lists each way its files were run, once; none for files from before the run block");
+      eq(m.identities[0].commands, ["bmb_ddot -v 8"], "a command line given once, the empty one left out");
+      eq(R.anyRun(m.identities), true, "the Run column appears once some file has a run block");
+      m = R.buildModel([entry("a.json", { rows: [[1, 8, null, 1e-6, 1, 8]] })]);
+      eq(R.anyRun(m.identities), false, "and not before");
+
+      var p = { time: 0.5, gflops: 10, q3: 1, mean: 2 };
+      eq(R.bandOf(p, "gflops", false), { y2: 5, kind: "quartile", extra: null },
+         "band: down to the rate at the third quartile, ahead of the mean");
+      eq(R.bandOf({ time: 0.5, gflops: 10, mean: 2 }, "gflops", false), { y2: 2.5, kind: "mean", extra: null },
+         "band: down to the mean in a file from before the quartiles");
+      eq(R.bandOf({ time: 1e-6, gflops: 10 }, "gflops", false), null, "band: none without either");
+      eq(R.bandOf({ time: 1e-6, gflops: 10, q3: 2e-6, runs: [{ time: 1e-6, gflops: 10 }, { time: 2e-6, gflops: 5 }] }, "gflops", true),
+         { y2: 5, kind: "runs", extra: "2 runs: median 7.50, slowest 5.00" },
+         "band: down to the slowest run when the point was measured more than once");
     });
 
     /* ---- Formatting ---- */

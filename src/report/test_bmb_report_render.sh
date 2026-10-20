@@ -106,6 +106,11 @@ grep -q '>Frequency<' "$dom" || fail "no Frequency column in the provenance tabl
 grep -q '<td>performance, turbo off</td>' "$dom" || fail "the series run on the x86 fixture shows no frequency"
 echo "ok   rendered: the Frequency column, for the series that recorded one"
 
+grep -q '>Run<' "$dom" || fail "no Run column in the provenance table"
+grep -q '<td[^>]*>1 sample, 0 warm-up calls · ' "$dom" || fail "the Run column does not say how the series were measured"
+grep -q 'band: fastest sample to third quartile' "$dom" || fail "no quartile band for the series measured once"
+echo "ok   rendered: the Run column, and the samples' band, for files with a run block"
+
 grep -q 'class="line"' "$dom" || fail "no line was drawn"
 grep -q 'class="cell"' "$dom" || fail "no heatmap cell was drawn"
 echo "ok   lines and heatmap cells drawn"
