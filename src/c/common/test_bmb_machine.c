@@ -332,7 +332,7 @@ static void test_generated(void)
     char long_cgroup[400];
     char evens[400];
     char listed[300];
-    int i;
+    int cpu;
 
     /* Sizes in bytes, M and G; the fourth cache has no type, and stops
      * the list there. */
@@ -381,8 +381,8 @@ static void test_generated(void)
     /* The even CPUs up to 198, as SMT siblings left out give them: 344
      * characters, more than the field holds. */
     evens[0] = '\0';
-    for (i = 0; i < 200; i += 2) {
-        snprintf(evens + strlen(evens), sizeof(evens) - strlen(evens), "%s%d", i ? "," : "", i);
+    for (cpu = 0; cpu < 200; cpu += 2) {
+        snprintf(evens + strlen(evens), sizeof(evens) - strlen(evens), "%s%d", cpu ? "," : "", cpu);
     }
     check(probe_cpus(evens, NULL, listed, sizeof(listed)) == 100 && listed[0] == '\0',
           "generated: an affinity listed longer than its field, counted but left out whole");
