@@ -3,8 +3,8 @@
 # every call (dtrmv, dtrsv, dtrmm, dtrsm, strsm, ztrsm): N calls in a row would run on an
 # operand drifting towards infinity or denormals, and the timing would stop
 # meaning anything (#48). They stay at one call per sample, which the JSON gives
-# as calls_per_sample, with a warning; another routine keeps the batch it
-# was given, without one. Tiny sizes only.
+# as calls_per_sample and as the run block's batch, with a warning; another
+# routine keeps the batch it was given, without one. Tiny sizes only.
 set -e
 
 T=batch-test.d
@@ -30,12 +30,15 @@ for b in level2/double/bmb_dtrmv level2/double/bmb_dtrsv level3/double/bmb_dtrmm
         || fail "$name -b 50 batched its calls: calls_per_sample $(calls "$T/$name.json" | tr '\n' ' ')"
     grep -q -- "--batch is ignored for ${name#bmb_}" "$T/$name.err" \
         || fail "$name -b 50 did not say -b was ignored: $(cat "$T/$name.err")"
+    grep -q '^    "batch": 1,$' "$T/$name.json" \
+        || fail "$name -b 50: the run block does not give the batch size used, 1"
 done
-echo "ok   -b 50: dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm stay at one call per sample, and say so"
+echo "ok   -b 50: dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm stay at one call per sample, say so, and record it"
 
 level2/double/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \
     || fail "dgemv -b 50 failed: $(cat "$T/dgemv.err")"
 test "$(calls "$T/dgemv.json")" = 50 || fail "dgemv -b 50: calls_per_sample $(calls "$T/dgemv.json")"
+grep -q '^    "batch": 50,$' "$T/dgemv.json" || fail "dgemv -b 50: the run block does not give -b"
 # Only this warning is looked for: on a machine that exposes its CPU
 # frequency, every run may also warn about that.
 if grep -q -- '--batch is ignored' "$T/dgemv.err"; then

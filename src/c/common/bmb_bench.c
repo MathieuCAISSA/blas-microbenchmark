@@ -452,7 +452,9 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.argv = argv;
     rs.warmup = opts.warmup;
     rs.iterations = opts.iterations;
-    rs.batch = opts.batch;
+    /* The batch size used, not the one asked for: -b does not batch a
+     * routine whose operand is restored before every call. */
+    rs.batch = bench->reset_every_call ? 1 : opts.batch;
     if (!bench->use_vector_range) {
         rs.layout = opts.column_major ? "col" : "row";
         bmb_column_major = opts.column_major;

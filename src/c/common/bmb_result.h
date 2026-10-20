@@ -35,7 +35,8 @@ typedef struct {
     const char *layout;     /* "row" or "col" for routines with a matrix;
                              * NULL for vector routines, which have none */
     /* How the run was made, for the files to say (#161). argv is main's,
-     * argc 0 when there is none; batch is -b, 0 when chosen per point. */
+     * argc 0 when there is none; batch is the size every point used, 0
+     * when it was chosen per point. */
     int argc;
     char *const *argv;
     unsigned int warmup;

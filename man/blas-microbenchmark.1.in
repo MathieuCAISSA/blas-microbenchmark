@@ -473,8 +473,14 @@ The hostname is deliberately not recorded.
 The next lines say how the run was made, so that it can be made again:
 the CPUs the process could run on, as Linux lists its affinity; the
 command line, the program by its name and each word as a shell would
-take it back; the warm\-up calls, the samples and the batch size
-.RB ( \-x ", " \-i ", " \-b );
+take it back (as typed: a path given to
+.B \-o
+goes with the results, a relative one keeps a home directory out);
+the warm\-up calls, the samples and the batch size
+.RB ( \-x ", " \-i ", " \-b ,
+which is 1 whatever
+.B \-b
+says for the routines whose operand is restored before every call);
 the compiler and the CFLAGS the benchmarks were built with (not the BLAS
 library's own);
 and the variables set among those that change what a BLAS library does:
@@ -560,8 +566,9 @@ with
 .BR warmup ,
 .BR iterations ,
 .B batch
-(only with
-.BR \-b ),
+(when every point used the same:
+.B \-b
+or 1, as above),
 .BR compiler ,
 .BR cflags ,
 .B cpus_allowed
