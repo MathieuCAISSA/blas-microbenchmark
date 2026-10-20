@@ -73,22 +73,22 @@ int main(void)
           "with -C it runs");
 
     /* The values R's quantile() gives, exactly representable. One sample
-     * is every quantile; the NaN after it must never be read. */
+     * is both quartiles; the NaN after it must never be read. */
     {
         static const double one_sample[] = {1.0, NAN};
         static const double two[] = {1.0, 2.0};
         static const double four[] = {1.0, 2.0, 3.0, 4.0};
         static const double five[] = {1.0, 2.0, 4.0, 8.0, 16.0};
+        double q1, q3;
 
-        check(bmb_quantile(one_sample, 1, 0.25) == 1.0 && bmb_quantile(one_sample, 1, 0.75) == 1.0,
-              "quartiles of one sample: that sample, nothing past it read");
-        check(bmb_quantile(two, 2, 0.25) == 1.25 && bmb_quantile(two, 2, 0.75) == 1.75,
-              "quartiles of two samples: a quarter of the way in from either end");
-        check(bmb_quantile(four, 4, 0.25) == 1.75 && bmb_quantile(four, 4, 0.75) == 3.25,
-              "quartiles of four samples, as R gives them");
-        check(bmb_quantile(five, 5, 0.25) == 2.0 && bmb_quantile(five, 5, 0.75) == 8.0
-              && bmb_quantile(five, 5, 1.0) == 16.0,
-              "quartiles of five samples on samples themselves; the maximum at 1");
+        bmb_quartiles(one_sample, 1, &q1, &q3);
+        check(q1 == 1.0 && q3 == 1.0, "quartiles of one sample: that sample, nothing past it read");
+        bmb_quartiles(two, 2, &q1, &q3);
+        check(q1 == 1.25 && q3 == 1.75, "quartiles of two samples: a quarter of the way in from either end");
+        bmb_quartiles(four, 4, &q1, &q3);
+        check(q1 == 1.75 && q3 == 3.25, "quartiles of four samples, as R gives them");
+        bmb_quartiles(five, 5, &q1, &q3);
+        check(q1 == 2.0 && q3 == 8.0, "quartiles of five samples: on samples themselves");
     }
 
     if (failures != 0) {

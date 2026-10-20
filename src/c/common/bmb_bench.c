@@ -31,7 +31,7 @@ static int bmb_compare_times(const void *a, const void *b)
     return (x > y) - (x < y);
 }
 
-double bmb_quantile(const double *sorted, unsigned int n, double p)
+static double bmb_quantile(const double *sorted, unsigned int n, double p)
 {
     const double h = (double) (n - 1) * p;
     const unsigned int i = (unsigned int) h;
@@ -40,6 +40,12 @@ double bmb_quantile(const double *sorted, unsigned int n, double p)
         return sorted[n - 1];
     }
     return sorted[i] + (h - (double) i) * (sorted[i + 1] - sorted[i]);
+}
+
+void bmb_quartiles(const double *sorted, unsigned int n, double *q1, double *q3)
+{
+    *q1 = bmb_quantile(sorted, n, 0.25);
+    *q3 = bmb_quantile(sorted, n, 0.75);
 }
 
 /* Sorts `times`, for the median: the samples are not used afterwards. */
@@ -73,8 +79,7 @@ static void bmb_compute_stats(double *times, unsigned int n, bmb_result_row_t *r
 
     qsort(times, n, sizeof(*times), bmb_compare_times);
     row->median_s = (n % 2 == 1) ? times[n / 2] : (times[n / 2 - 1] + times[n / 2]) / 2.0;
-    row->q1_s = bmb_quantile(times, n, 0.25);
-    row->q3_s = bmb_quantile(times, n, 0.75);
+    bmb_quartiles(times, n, &row->q1_s, &row->q3_s);
 }
 
 /* How many calls go into one timed batch.
