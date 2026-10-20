@@ -2,10 +2,10 @@
  * CSV column name rewritten from a label with every kind of character
  * around its words (punctuation first, braces, brackets, @, ~, digits),
  * the columns of a routine with no operation count, a command line whose
- * words a shell would need quoted (a quote, a newline, an empty word) and
- * a variable's value with a space, in the run lines and the JSON, and a
- * stream already in error, or whose flush fails, when its writes are
- * checked. The rest of the output is checked end to end by
+ * words a shell would need quoted (a quote, a newline, a DEL, an empty
+ * word) and a variable's value with a space, in the run lines and the
+ * JSON, and a stream already in error, or whose flush fails, when its
+ * writes are checked. The rest of the output is checked end to end by
  * test_bmb_output_formats.sh. */
 
 #define _POSIX_C_SOURCE 200809L
@@ -89,7 +89,7 @@ static int printed(void (*print)(FILE *, const bmb_result_set_t *), const bmb_re
 
 int main(void)
 {
-    static char *const argv[] = {"/some/where/bmb_x", "it's", "a\nb", "", "-m", "8"};
+    static char *const argv[] = {"/some/where/bmb_x", "it's", "a\nb\177", "", "-m", "8"};
     bmb_result_set_t rs;
     bmb_result_row_t r;
     char header[256], row[256];
@@ -125,14 +125,14 @@ int main(void)
     rs.warmup = 1;
     rs.iterations = 1;
     rs.batch = 1;
-    check(printed(bmb_print_csv, &rs, "# command: bmb_x 'it'\\''s' 'a?b' '' -m 8", 0),
-          "run: the program by its name, a quote, a newline and an empty word quoted for a shell");
+    check(printed(bmb_print_csv, &rs, "# command: bmb_x 'it'\\''s' 'a?b?' '' -m 8", 0),
+          "run: the program by its name, a quote, a newline, a DEL and an empty word quoted for a shell");
     check(printed(bmb_print_csv, &rs, "# run: 1 warm-up call, 1 sample, batches of 1 call", 0),
           "run: one warm-up call, one sample, a batch of one, in the singular");
     check(printed(bmb_print_csv, &rs, "OMP_PROC_BIND='a b'", 1),
           "run: a variable set, its value quoted");
     check(printed(bmb_print_json, &rs,
-                  "\"command\": [\"bmb_x\", \"it's\", \"a\\u000ab\", \"\", \"-m\", \"8\"],", 1),
+                  "\"command\": [\"bmb_x\", \"it's\", \"a\\u000ab\177\", \"\", \"-m\", \"8\"],", 1),
           "json: the command line word for word, the program by its name");
     check(printed(bmb_print_json, &rs, "\"batch\": 1,", 1), "json: -b, when given");
     check(printed(bmb_print_json, &rs, "\"OMP_PROC_BIND\": \"a b\"", 1),
