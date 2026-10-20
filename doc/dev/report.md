@@ -57,13 +57,15 @@ the code points at them; the ones easiest to break by accident:
   (#66).
   The frequency governor and turbo are shown, not part of the key, so
   that older files still merge (see
-  [backends.md](backends.md)).
+  [backends.md](backends.md)); so is the run block (#161), the Run
+  column (`runText`), with the command lines in its tooltip.
 - **Repeated runs (#4).** Every measurement of a point is kept in its
   `runs`; the curve still goes through the fastest, as the benchmark
   reports the fastest sample. The band of
   a series with repeated runs goes from the fastest run to the slowest,
-  and takes the place of the `-s` band (fastest sample to mean). The raw
-  data has a row per run.
+  and takes the place of the samples' band (`bandOf`): fastest sample
+  to the third quartile (#161), or to the mean in a file from before the
+  quartiles measured with `-s`. The raw data has a row per run.
 - **History (#9)**, decided with the user over a separate comparison
   command: series of one library that differ only by version (backend,
   CPU, label and storage order alike; `historyGroups`), three or more

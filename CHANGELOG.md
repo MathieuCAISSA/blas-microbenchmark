@@ -9,6 +9,24 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- Every result says how it was measured, so that it can be measured
+  again (#161): the CPUs the process could run on, the command line, the
+  warm-up calls, samples and batch size, the compiler and CFLAGS of the
+  benchmarks, and the variables set among those that change what a BLAS
+  library does (`OMP_PROC_BIND`, `OMP_PLACES`, `OPENBLAS_CORETYPE`,
+  `MKL_ENABLE_INSTRUCTIONS`, ...). Comment lines in the table and the
+  CSV, a `run` object in the JSON.
+- The median and the quartiles of the samples, in every output, with or
+  without `-s`: `median_s`, `q1_s` and `q3_s` in the CSV and JSON, the
+  median and the interquartile range in % of it in the table. The
+  batch size (`calls_per_sample`) is always in the CSV and JSON too.
+  They come after `-s`'s columns, which stay where they were, so a CSV
+  read by column position keeps its columns.
+- `bmb_report` shows how each series was run (a Run column, the command
+  lines in its tooltip), and draws each point's band from the fastest
+  sample to the third quartile; the raw data has the quartiles.
+
 ## [1.7.0] - 2026-10-19
 
 ### Changed

@@ -29,8 +29,10 @@ Open it with a browser.
 Each part appears only when the results can support it:
 .IP \(bu 2
 a summary: the best figure for each routine, and where each series came
-from (library, CPU, caches, OS, date, and the CPU frequency governor and
-turbo where the machine exposed them) \(em and whether each series was
+from (library, CPU, caches, OS, date, the CPU frequency governor and
+turbo where the machine exposed them, and how the files were run: samples
+and warm-up, compiler and CFLAGS, the CPUs allowed, the variables set,
+with the command lines in a tooltip) \(em and whether each series was
 checked against a reference before it was timed, once any was (the
 benchmarks do it unless run with
 .BR \-C );
@@ -40,9 +42,10 @@ with the points where a sweep leaves L1, L2 and L3 marked.
 For a series with repeated runs (see
 .BR "Repeated runs and noise" ),
 a band shows the spread from the fastest run to the slowest; otherwise,
-for results measured with
+from the fastest sample to the third quartile of the samples, or, in
+files from before 1.8.0 measured with
 .BR \-s ,
-from the fastest sample to the mean;
+to the mean;
 .IP \(bu
 each library compared with a reference, on a log scale centred on \(mu1,
 so that twice as slow and twice as fast sit at the same distance from it.
