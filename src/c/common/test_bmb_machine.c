@@ -137,10 +137,12 @@ static void test_fixtures(void)
     check_str(buf, "", "aarch64 fixture: nothing known, no advice");
 
     check(m.usable_cpus == 0, "aarch64 fixture: no affinity or quota, usable CPUs unknown");
+    check_str(m.cpus_allowed, "", "aarch64 fixture: no affinity listed");
 
     fixture("container", root, sizeof(root));
     bmb_machine_probe_at(root, &m);
     check(m.usable_cpus == 3, "container: an affinity of 5 CPUs, a quota of 2.5 rounded up to 3");
+    check_str(m.cpus_allowed, "0-3,6", "container: the affinity listed as Linux lists it");
 
     fixture("slurm", root, sizeof(root));
     bmb_machine_probe_at(root, &m);
@@ -296,11 +298,12 @@ static void tree_end(void)
 #define CACHE "sys/devices/system/cpu/cpu0/cache/"
 
 /* The affinity and quota a status line and a cpu.max give, with the
- * process in the root cgroup. */
-static long usable_cpus(const char *allowed, const char *cpu_max)
+ * process in the root cgroup; the affinity as listed into `listed`, when
+ * not NULL. */
+static long probe_cpus(const char *allowed, const char *cpu_max, char *listed, size_t size)
 {
     bmb_machine_t m;
-    char line[128];
+    char line[512];
 
     tree_begin();
     snprintf(line, sizeof(line), "Name:\tbmb_dgemm\nCpus_allowed_list:\t%s\n", allowed);
@@ -311,7 +314,15 @@ static long usable_cpus(const char *allowed, const char *cpu_max)
     }
     bmb_machine_probe_at(tree_root, &m);
     tree_end();
+    if (listed != NULL) {
+        snprintf(listed, size, "%s", m.cpus_allowed);
+    }
     return m.usable_cpus;
+}
+
+static long usable_cpus(const char *allowed, const char *cpu_max)
+{
+    return probe_cpus(allowed, cpu_max, NULL, 0);
 }
 
 static void test_generated(void)
@@ -319,6 +330,9 @@ static void test_generated(void)
     bmb_machine_t m;
     char buf[512];
     char long_cgroup[400];
+    char evens[400];
+    char listed[300];
+    int i;
 
     /* Sizes in bytes, M and G; the fourth cache has no type, and stops
      * the list there. */
@@ -362,6 +376,16 @@ static void test_generated(void)
      * never a guess. */
     check(usable_cpus("0-3", NULL) == 4, "generated: an affinity of 0-3 is 4 CPUs");
     check(usable_cpus("x", NULL) == 0, "generated: an affinity that is not a list, unknown");
+    check(probe_cpus("x", NULL, listed, sizeof(listed)) == 0 && listed[0] == '\0',
+          "generated: an affinity that is not a list, not listed either");
+    /* The even CPUs up to 198, as SMT siblings left out give them: 344
+     * characters, more than the field holds. */
+    evens[0] = '\0';
+    for (i = 0; i < 200; i += 2) {
+        snprintf(evens + strlen(evens), sizeof(evens) - strlen(evens), "%s%d", i ? "," : "", i);
+    }
+    check(probe_cpus(evens, NULL, listed, sizeof(listed)) == 100 && listed[0] == '\0',
+          "generated: an affinity listed longer than its field, counted but left out whole");
     check(usable_cpus("3-1", NULL) == 0, "generated: a range that runs backwards, unknown");
     check(usable_cpus("0-", NULL) == 0, "generated: a range with no end, unknown");
     check(usable_cpus("0;1", NULL) == 0, "generated: a list with another separator, unknown");

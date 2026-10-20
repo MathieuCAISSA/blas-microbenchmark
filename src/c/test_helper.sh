@@ -42,9 +42,10 @@ bmb_check_run() {
     echo "$bmb_table" | sed -n 1p | grep -q 'time \[s\]' \
         || bmb_fail "$bmb_routine: no 'time [s]' column in the header"
 
-    # The time is the only column printed with nine decimals, which is what
-    # identifies it here without the helper having to know each routine's
-    # column layout.
+    # The time and the median are the only columns printed with nine
+    # decimals without -s, in that order, which is what identifies them
+    # here without the helper having to know each routine's column layout.
+    # The median of the samples is never faster than the fastest one.
     echo "$bmb_table" | awk -v routine="$bmb_routine" -v want="$bmb_rows" '
         NR == 1 { next }
         {
@@ -58,6 +59,7 @@ bmb_check_run() {
             }
 
             times = 0
+            fastest = -1
             for (i = 1; i <= NF; i++) {
                 if ($i !~ /^[0-9]+(\.[0-9]+)?$/) {
                     printf "FAIL: %s: row %d field %d is \"%s\", not a number\n",
@@ -73,10 +75,17 @@ bmb_check_run() {
                         printf "FAIL: %s: row %d reports a time of %s\n", routine, rows, $i
                         bad = 1
                     }
+                    if (fastest < 0) {
+                        fastest = $i + 0
+                    } else if ($i + 0 < fastest) {
+                        printf "FAIL: %s: row %d has a median of %s, faster than its time\n",
+                               routine, rows, $i
+                        bad = 1
+                    }
                 }
             }
-            if (times != 1) {
-                printf "FAIL: %s: row %d has %d timing columns, expected 1\n",
+            if (times != 2) {
+                printf "FAIL: %s: row %d has %d timing columns, expected 2: the time and the median\n",
                        routine, rows, times
                 bad = 1
             }

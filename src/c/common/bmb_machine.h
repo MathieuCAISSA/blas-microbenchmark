@@ -33,6 +33,8 @@ typedef struct {
     long usable_cpus;              /* the CPUs this process may run on: its
                                     * affinity, capped by its cgroup's CPU
                                     * quota; 0 when unknown */
+    char cpus_allowed[256];        /* the affinity as Linux lists it, "0-13";
+                                    * "" when unknown or longer than this */
     int numa_nodes;                /* 0 when unknown */
     bmb_cache_t caches[BMB_MACHINE_MAX_CACHES];
     int cache_count;

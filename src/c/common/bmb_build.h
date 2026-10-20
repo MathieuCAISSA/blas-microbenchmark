@@ -28,4 +28,11 @@ void bmb_build_backend_name(const char *library, char *buf, size_t size);
  * both say "openblas" -- 0.3.20 and 0.3.29 do not perform alike. */
 const char *bmb_build_blas_version(void);
 
+/* The compiler the benchmarks were built with, "gcc 13.3.0", and the
+ * CFLAGS configure ended with: what the run block of a result names
+ * (#161). The BLAS library was built on its own, so these say how the
+ * benchmarks and their checks were, not the library. */
+const char *bmb_build_compiler(void);
+const char *bmb_build_cflags(void);
+
 #endif /* BMB_BUILD_H */

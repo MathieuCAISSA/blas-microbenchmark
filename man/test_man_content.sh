@@ -141,6 +141,16 @@ section $PAGE ENVIRONMENT | grep -o '[A-Z_]*_NUM_THREADS' | sort -u >"$T/named"
 cmp -s "$T/read" "$T/named" || fail "the thread-count variables in ENVIRONMENT ($(echo $(cat "$T/named"))) are not the ones bmb_threads.c reads ($(echo $(cat "$T/read")))"
 ok "ENVIRONMENT names the $(wc -l <"$T/read") thread-count variables the code reads"
 
+# The variables a result records when they are set (#161): the list in
+# bmb_print.c, and the one in OUTPUT, from its paragraph on the run lines.
+sed -n '/bmb_run_variables\[\] = {/,/^};/p' "$S/../src/c/common/bmb_print.c" \
+    | grep -o '"[A-Z_]*"' | tr -d '"' | sort >"$T/recorded"
+section $PAGE OUTPUT | sed -n '/^The next lines say how the run was made/,/^\.PP/p' \
+    | sed -n 's/^\.BR\{0,1\} \([A-Z_]*\)\( .*\)\{0,1\}$/\1/p' | sort >"$T/listed"
+test -s "$T/recorded" || fail "no variables found in bmb_print.c's bmb_run_variables"
+cmp -s "$T/recorded" "$T/listed" || fail "the variables OUTPUT lists ($(echo $(cat "$T/listed"))) are not the ones bmb_print.c records ($(echo $(cat "$T/recorded")))"
+ok "OUTPUT lists the $(wc -l <"$T/recorded") variables a result records when set"
+
 # ---- exit statuses ----------------------------------------------------
 status() {
     set +e

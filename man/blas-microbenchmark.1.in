@@ -135,9 +135,11 @@ Also report, per point, the mean of the samples, their standard deviation
 (over the samples as measured, divided by
 .I n
 rather than
-.IR n \-1),
-the slowest sample, the batch size and the median of the samples, as
-columns in that order after the rates.
+.IR n \-1)
+and the slowest sample, as columns in that order after the rates; in
+the table, the batch size too, which the CSV and JSON always have.
+The median and the spread come after them, so that a table or a CSV
+read by column position keeps the columns it had before 1.8.0.
 .TP
 .B "\-c, \-\-verify"
 Before timing each point, check that the library computes the right
@@ -220,8 +222,8 @@ The batch size is chosen per point, so that a batch lasts long enough for
 the clock not to matter;
 calls that already take longer get a batch of 1, so nothing changes for
 level 3 or for large sizes.
-.B \-s
-shows the batch size chosen.
+.B calls_per_sample
+gives the batch size chosen.
 .PP
 The reported time is the
 .B fastest
@@ -229,9 +231,14 @@ sample, not the mean.
 A sample is already an average over a whole batch, so the fastest is not a
 lucky call: it is the batch that ran with the least interference.
 One scheduling hiccup inflates a sample a great deal, and would drag a
-mean with it;
+mean with it.
+How steady the samples were goes with it, in every output: their median,
+and their quartiles, interpolated between the samples either side as R
+and NumPy do; the table gives the interquartile range as a percentage of
+the median,
+.BR "IQR [%]" .
 .B \-s
-shows the mean and the spread for that reason.
+adds the mean, the standard deviation and the slowest sample.
 .PP
 Two rates are derived from that time:
 .TP
@@ -438,6 +445,11 @@ Every result starts with where it came from:
 # frequency: governor performance, turbo off
 # os: Linux 6.6.87 x86_64
 # date: 2026\-10\-02T09:05:04Z
+# affinity: CPUs 0\-13
+# command: bmb_dgemm \-m 512:2048 \-o dgemm.json
+# run: 1 warm\-up call, 10 samples, batch size chosen per point
+# compiler: gcc 13.3.0, CFLAGS \-g \-O2 \-fopenmp
+# environment: OMP_PROC_BIND=close
 # routine: dgemm
 .EE
 .RE
@@ -457,6 +469,44 @@ or turbo on, a warning on standard error says so and gives the commands
 that fix it; the run goes on.
 A field that cannot be read on a machine is left out, never guessed.
 The hostname is deliberately not recorded.
+.PP
+The next lines say how the run was made, so that it can be made again:
+the CPUs the process could run on, as Linux lists its affinity; the
+command line, the program by its name and each word as a shell would
+take it back; the warm\-up calls, the samples and the batch size
+.RB ( \-x ", " \-i ", " \-b );
+the compiler and the CFLAGS the benchmarks were built with (not the BLAS
+library's own);
+and the variables set among those that change what a BLAS library does:
+.BR OMP_NUM_THREADS ,
+.BR OMP_PROC_BIND ,
+.BR OMP_PLACES ,
+.BR OMP_DYNAMIC ,
+.BR OMP_WAIT_POLICY ,
+.BR GOMP_CPU_AFFINITY ,
+.BR GOMP_SPINCOUNT ,
+.BR KMP_AFFINITY ,
+.BR KMP_BLOCKTIME ,
+.BR KMP_HW_SUBSET ,
+.BR OPENBLAS_NUM_THREADS ,
+.BR GOTO_NUM_THREADS ,
+.BR OPENBLAS_CORETYPE ,
+.BR BLIS_NUM_THREADS ,
+.BR BLIS_JC_NT ,
+.BR BLIS_PC_NT ,
+.BR BLIS_IC_NT ,
+.BR BLIS_JR_NT ,
+.BR BLIS_IR_NT ,
+.BR BLIS_ARCH_TYPE ,
+.BR AOCL_ENABLE_INSTRUCTIONS ,
+.BR MKL_NUM_THREADS ,
+.BR MKL_DOMAIN_NUM_THREADS ,
+.BR MKL_DYNAMIC ,
+.BR MKL_THREADING_LAYER ,
+.BR MKL_ENABLE_INSTRUCTIONS ,
+.B MKL_CBWR
+and
+.BR FLEXIBLAS .
 With
 .BR \-l ,
 a
@@ -503,6 +553,21 @@ with
 (true or false)
 and
 .BR os ;
+.B run
+with
+.B command
+(the words of the command line),
+.BR warmup ,
+.BR iterations ,
+.B batch
+(only with
+.BR \-b ),
+.BR compiler ,
+.BR cflags ,
+.B cpus_allowed
+and
+.B environment
+(the variables set, by name);
 .B routine
 and, naming its dimensions,
 .B dim1_label
@@ -517,14 +582,18 @@ array, one object per point:
 .BR time_s ,
 .BR gflops ,
 .BR gbytes_per_s ,
-and with
-.BR \-s ,
+with
+.B \-s
 .BR mean_s ,
-.BR stddev_s ,
-.BR max_s ,
-.B calls_per_sample
+.B stddev_s
 and
-.BR median_s .
+.BR max_s ,
+then
+.BR calls_per_sample ,
+.BR median_s ,
+.B q1_s
+and
+.BR q3_s .
 A field that does not apply is left out.
 This is what
 .BR bmb_report (1)
@@ -585,6 +654,9 @@ and FlexiBLAS's version with the library's name.
 .PP
 .BR OMP_PROC_BIND " and " OMP_PLACES
 pin the threads of the OpenMP-threaded libraries.
+.PP
+The results record these variables, and the others that change what the
+library does, when they are set (OUTPUT).
 .PP
 .BR NO_COLOR ,
 when set and not empty, turns off the colours of warnings and errors,

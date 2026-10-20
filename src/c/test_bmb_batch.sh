@@ -2,7 +2,7 @@
 # Checks that -b cannot batch the routines whose operand is restored before
 # every call (dtrmv, dtrsv, dtrmm, dtrsm, strsm, ztrsm): N calls in a row would run on an
 # operand drifting towards infinity or denormals, and the timing would stop
-# meaning anything (#48). They stay at one call per sample, which -s shows
+# meaning anything (#48). They stay at one call per sample, which the JSON gives
 # as calls_per_sample, with a warning; another routine keeps the batch it
 # was given, without one. Tiny sizes only.
 set -e

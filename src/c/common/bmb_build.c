@@ -34,6 +34,29 @@ const char *bmb_build_version(void)
     return PACKAGE_VERSION;
 }
 
+/* icx is a clang that names itself in __VERSION__ only; clang's own
+ * __VERSION__ started with "4.2.1 Compatible" up to clang 13, and gcc's
+ * holds the version alone. */
+const char *bmb_build_compiler(void)
+{
+#if defined(__INTEL_LLVM_COMPILER)
+    return __VERSION__;
+#elif defined(__clang__)
+    return "clang " __clang_version__;
+#elif defined(__GNUC__)
+    return "gcc " __VERSION__;
+#elif defined(__VERSION__)
+    return __VERSION__;
+#else
+    return "unknown";
+#endif
+}
+
+const char *bmb_build_cflags(void)
+{
+    return BMB_CFLAGS;
+}
+
 void bmb_build_backend_name(const char *library, char *buf, size_t size)
 {
     static const char prefix[] = "flexiblas/";
