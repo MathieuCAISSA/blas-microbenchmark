@@ -329,6 +329,9 @@ static void bmb_probe_usable_cpus(bmb_machine_t *m, const char *root)
             if (strncmp(line, "Cpus_allowed_list:", 18) == 0) {
                 bmb_trim(line + 18);
                 usable = bmb_count_cpu_list(line + 18);
+                if (usable > 0 && strlen(line + 18) < sizeof(m->cpus_allowed)) {
+                    memcpy(m->cpus_allowed, line + 18, strlen(line + 18) + 1);
+                }
                 break;
             }
         }

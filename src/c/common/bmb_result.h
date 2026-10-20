@@ -18,7 +18,12 @@ typedef struct {
     double mean_s;
     double stddev_s;
     double max_s;
-    double median_s;     /* the samples' median, under -s too */
+    /* The samples' median and quartiles, always written (#161): the
+     * fastest sample says how fast the routine can go, these how steady
+     * that was. */
+    double median_s;
+    double q1_s;
+    double q3_s;
 } bmb_result_row_t;
 
 typedef struct {
@@ -29,6 +34,14 @@ typedef struct {
     int verified;           /* --verify: every point was checked */
     const char *layout;     /* "row" or "col" for routines with a matrix;
                              * NULL for vector routines, which have none */
+    /* How the run was made, for the files to say (#161). argv is main's,
+     * argc 0 when there is none; batch is the size every point used, 0
+     * when it was chosen per point. */
+    int argc;
+    char *const *argv;
+    unsigned int warmup;
+    unsigned int iterations;
+    unsigned int batch;
     int has_stats;
     int has_flops;
     int has_bytes;

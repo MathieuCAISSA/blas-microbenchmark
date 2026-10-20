@@ -504,6 +504,14 @@ AS_CASE(["$bmb_blas_backend"],
   [BMB_CBLAS_CPPFLAGS=])
 AC_SUBST([BMB_CBLAS_CPPFLAGS])
 
+dnl The flags the benchmarks are compiled with, which the results record
+dnl (#161). On one line, since the text and the CSV write them on a
+dnl comment line, and escaped for a C string; AC_DEFINE_UNQUOTED inserts
+dnl the value as it is, without expanding it again.
+bmb_cflags_c=$(printf '%s' "$CFLAGS" | tr '\n\r\t' '   ' | sed 's/[[\\"]]/\\&/g')
+AC_DEFINE_UNQUOTED([BMB_CFLAGS], ["$bmb_cflags_c"],
+  [The CFLAGS configure ended with, escaped for a C string.])
+
 AC_CONFIG_FILES([
   Makefile
   src/Makefile

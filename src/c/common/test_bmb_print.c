@@ -1,14 +1,18 @@
 /* Checks what the output layer makes of inputs no benchmark gives it: a
  * CSV column name rewritten from a label with every kind of character
  * around its words (punctuation first, braces, brackets, @, ~, digits),
- * the columns of a routine with no operation count, and a stream already
- * in error, or whose flush fails, when its writes are checked. The rest of the output is checked
- * end to end by test_bmb_output_formats.sh. */
+ * the columns of a routine with no operation count, a command line whose
+ * words a shell would need quoted (a quote, a newline, a DEL, an empty
+ * word) and a variable's value with a space, in the run lines and the
+ * JSON, and a stream already in error, or whose flush fails, when its
+ * writes are checked. The rest of the output is checked end to end by
+ * test_bmb_output_formats.sh. */
 
 #define _POSIX_C_SOURCE 200809L
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -61,8 +65,31 @@ static void csv_of(const bmb_result_set_t *rs, char *header, char *row, size_t s
     fclose(f);
 }
 
+/* Whether what `print` writes for rs has a line equal to `line`, or, with
+ * `json`, a line containing it. */
+static int printed(void (*print)(FILE *, const bmb_result_set_t *), const bmb_result_set_t *rs,
+                   const char *line, int json)
+{
+    FILE *f = tmpfile();
+    char buf[2048];
+    int found = 0;
+
+    if (f == NULL) {
+        return 0;
+    }
+    print(f, rs);
+    rewind(f);
+    while (!found && fgets(buf, sizeof(buf), f) != NULL) {
+        buf[strcspn(buf, "\n")] = '\0';
+        found = json ? strstr(buf, line) != NULL : strcmp(buf, line) == 0;
+    }
+    fclose(f);
+    return found;
+}
+
 int main(void)
 {
+    static char *const argv[] = {"/some/where/bmb_x", "it's", "a\nb\177", "", "-m", "8"};
     bmb_result_set_t rs;
     bmb_result_row_t r;
     char header[256], row[256];
@@ -79,13 +106,47 @@ int main(void)
     bmb_result_set_add(&rs, &r);
     csv_of(&rs, header, row, sizeof(header));
     bmb_result_set_free(&rs);
-    check(strcmp(header, "thread_count,size_x_y_z9,time_s,gbytes_per_s") == 0,
+    check(strcmp(header, "thread_count,size_x_y_z9,time_s,gbytes_per_s,calls_per_sample,median_s,"
+                         "q1_s,q3_s") == 0,
           "csv: a label's words joined by one underscore, nothing before the first");
-    check(strcmp(row, "1,8,0.000001000,2.500000") == 0,
+    check(strcmp(row, "1,8,0.000001000,2.500000,1,0.000000000,0.000000000,0.000000000") == 0,
           "csv: no gflops column, and no value for it, without an operation count");
     if (failures != 0) {
         printf("     header \"%s\", row \"%s\"\n", header, row);
     }
+
+    /* The run lines and block (#161). */
+    if (setenv("OMP_PROC_BIND", "a b", 1) != 0) {
+        check(0, "OMP_PROC_BIND could not be set");
+    }
+    bmb_result_set_init(&rs, "x", "Size", NULL, 0, 0, 1);
+    rs.argc = 6;
+    rs.argv = argv;
+    rs.warmup = 1;
+    rs.iterations = 1;
+    rs.batch = 1;
+    check(printed(bmb_print_csv, &rs, "# command: bmb_x 'it'\\''s' 'a?b?' '' -m 8", 0),
+          "run: the program by its name, a quote, a newline, a DEL and an empty word quoted for a shell");
+    check(printed(bmb_print_csv, &rs, "# run: 1 warm-up call, 1 sample, batches of 1 call", 0),
+          "run: one warm-up call, one sample, a batch of one, in the singular");
+    check(printed(bmb_print_csv, &rs, "OMP_PROC_BIND='a b'", 1),
+          "run: a variable set, its value quoted");
+    check(printed(bmb_print_json, &rs,
+                  "\"command\": [\"bmb_x\", \"it's\", \"a\\u000ab\177\", \"\", \"-m\", \"8\"],", 1),
+          "json: the command line word for word, the program by its name");
+    check(printed(bmb_print_json, &rs, "\"batch\": 1,", 1), "json: -b, when given");
+    check(printed(bmb_print_json, &rs, "\"OMP_PROC_BIND\": \"a b\"", 1),
+          "json: a variable set, in the environment");
+    rs.warmup = 2;
+    rs.iterations = 3;
+    rs.batch = 5;
+    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batches of 5 calls", 0),
+          "run: several of each, in the plural");
+    rs.batch = 0;
+    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batch size chosen per point", 0),
+          "run: no -b, the batch size chosen per point");
+    check(!printed(bmb_print_json, &rs, "\"batch\"", 1), "json: no batch without -b");
+    bmb_result_set_free(&rs);
 
     /* Reading from a write-only stream sets its error indicator, as a
      * failed write would, without anything left to flush. */

@@ -19,9 +19,10 @@ Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
 1               1024                1024                0.046092456     46.591
 1               2048                2048                0.400350851     42.912</pre>
 <ul>
-<li><b>The lines in <code>#</code></b> say where the numbers come from: the library and its exact build, the CPU and its caches, the system, the date. They go with the results into every file, so that a result is never mistaken for another machine's.</li>
+<li><b>The lines in <code>#</code></b> say where the numbers come from: the library and its exact build, the CPU and its caches, the system, the date; then how the run was made: the CPUs it could use, the command, the samples, the compiler, the thread and placement variables set. They go with the results into every file, so that a result is never mistaken for another machine's, and can be measured again.</li>
 <li><b><code>verified</code></b>: each point was computed once and checked against a reference before it was timed. A library that gets it wrong stops the run, with exit status 2, instead of looking fast (<a href="checking.html">Checking results</a>).</li>
 <li><b><code>time [s]</code></b> is the time of one call, from the fastest of the ten samples (each one a batch of calls, averaged); <b><code>GFLOP/s</code></b> the rate it makes, from the routine's operation count. Level 1 and 2 routines, limited by memory, also give <b><code>GB/s</code></b> (<a href="measuring.html">How a number is measured</a>).</li>
+<li><b><code>median [s]</code></b> and <b><code>IQR [%]</code></b>: the median of the samples, and how far apart the middle half of them were, as a percentage of it. A large spread says something else was running.</li>
 </ul>
 <p>The <a href="outputs.html">Outputs</a> page shows real runs of this version, in each format.</p>
 
@@ -46,7 +47,7 @@ bmb_dgemv -m 256:4096 -M 256:4096</pre>
 <h2 id="save">Save the results</h2>
 <p><code>-o</code> saves to a file as well, JSON or CSV by its extension. JSON is what <code>bmb_report</code> reads:</p>
 <pre>bmb_dgemm -m 512:4096 -t 1:8 -o results/dgemm.json</pre>
-<p><code>-l</code> labels a run, to tell two conditions apart on the same machine, and <code>-s</code> adds the mean, the spread and the median of the samples:</p>
+<p><code>-l</code> labels a run, to tell two conditions apart on the same machine, and <code>-s</code> adds the mean, the standard deviation and the slowest of the samples:</p>
 <pre>bmb_dgemm -m 512:4096 -s -l "turbo off" -o results/dgemm-turbo-off.json</pre>
 
 <h2 id="warnings">The warnings you may see</h2>

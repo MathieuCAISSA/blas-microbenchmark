@@ -1,9 +1,109 @@
+#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "bmb_print.h"
 #include "bmb_build.h"
 #include "bmb_machine.h"
 #include "bmb_log.h"
+
+/* The variables that change what a BLAS library does -- its threads,
+ * where they run, which kernels it picks -- recorded when set (#161): a
+ * result measured under OMP_PROC_BIND=close is not one measured without.
+ * In the order a reader looks for them: OpenMP's, then each library's. */
+static const char *const bmb_run_variables[] = {
+    "OMP_NUM_THREADS", "OMP_PROC_BIND", "OMP_PLACES", "OMP_DYNAMIC", "OMP_WAIT_POLICY",
+    "GOMP_CPU_AFFINITY", "GOMP_SPINCOUNT", "KMP_AFFINITY", "KMP_BLOCKTIME", "KMP_HW_SUBSET",
+    "OPENBLAS_NUM_THREADS", "GOTO_NUM_THREADS", "OPENBLAS_CORETYPE",
+    "BLIS_NUM_THREADS", "BLIS_JC_NT", "BLIS_PC_NT", "BLIS_IC_NT", "BLIS_JR_NT", "BLIS_IR_NT",
+    "BLIS_ARCH_TYPE", "AOCL_ENABLE_INSTRUCTIONS",
+    "MKL_NUM_THREADS", "MKL_DOMAIN_NUM_THREADS", "MKL_DYNAMIC", "MKL_THREADING_LAYER",
+    "MKL_ENABLE_INSTRUCTIONS", "MKL_CBWR",
+    "FLEXIBLAS"
+};
+
+#define BMB_RUN_VARIABLES (sizeof(bmb_run_variables) / sizeof(bmb_run_variables[0]))
+
+/* A word of the command line or a variable's value, as a shell would take
+ * it back: bare when it is plain, in single quotes otherwise. A control
+ * character becomes '?', so that a file name holding a newline cannot end
+ * the comment line it is written on. */
+static void bmb_print_shell_word(FILE *out, const char *word)
+{
+    const char *p;
+    int plain = word[0] != '\0';
+
+    for (p = word; *p != '\0' && plain; p++) {
+        plain = isalnum((unsigned char) *p) || strchr("_-./:=,+@%", *p) != NULL;
+    }
+    if (plain) {
+        fputs(word, out);
+        return;
+    }
+    fputc('\'', out);
+    for (p = word; *p != '\0'; p++) {
+        if (*p == '\'') {
+            fputs("'\\''", out);
+        } else if ((unsigned char) *p < 0x20 || *p == 0x7f) {
+            fputc('?', out);
+        } else {
+            fputc(*p, out);
+        }
+    }
+    fputc('\'', out);
+}
+
+/* The program by its name alone: the directory it was run from says
+ * nothing about the result. */
+static const char *bmb_print_program(const char *argv0)
+{
+    const char *slash = strrchr(argv0, '/');
+
+    return (slash != NULL) ? slash + 1 : argv0;
+}
+
+/* How the run was made, after where it ran: everything needed to make
+ * the same measurement again (#161). */
+static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machine_t *m)
+{
+    size_t i;
+    int first = 1;
+
+    if (m->cpus_allowed[0] != '\0') {
+        fprintf(out, "# affinity: CPUs %s\n", m->cpus_allowed);
+    }
+    if (rs->argc > 0) {
+        int a;
+
+        fprintf(out, "# command: ");
+        bmb_print_shell_word(out, bmb_print_program(rs->argv[0]));
+        for (a = 1; a < rs->argc; a++) {
+            fputc(' ', out);
+            bmb_print_shell_word(out, rs->argv[a]);
+        }
+        fputc('\n', out);
+    }
+    fprintf(out, "# run: %u warm-up call%s, %u sample%s, ", rs->warmup, rs->warmup == 1 ? "" : "s",
+            rs->iterations, rs->iterations == 1 ? "" : "s");
+    if (rs->batch != 0) {
+        fprintf(out, "batches of %u call%s\n", rs->batch, rs->batch == 1 ? "" : "s");
+    } else {
+        fprintf(out, "batch size chosen per point\n");
+    }
+    fprintf(out, "# compiler: %s, CFLAGS %s\n", bmb_build_compiler(), bmb_build_cflags());
+    for (i = 0; i < BMB_RUN_VARIABLES; i++) {
+        const char *value = getenv(bmb_run_variables[i]);
+
+        if (value != NULL) {
+            fprintf(out, "%s%s=", first ? "# environment: " : " ", bmb_run_variables[i]);
+            bmb_print_shell_word(out, value);
+            first = 0;
+        }
+    }
+    if (!first) {
+        fputc('\n', out);
+    }
+}
 
 /* Which build and which BLAS produced the numbers below. Written as
  * comment lines so the same two lines can head the text and the CSV
@@ -51,6 +151,7 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     if (m->date[0] != '\0') { /* GCOVR_EXCL_BR_LINE: time() and gmtime_r() of now do not fail */
         fprintf(out, "# date: %s\n", m->date);
     }
+    bmb_print_run(out, rs, m);
 }
 
 void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
@@ -69,11 +170,20 @@ void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
     if (rs->has_bytes) {
         fprintf(out, "%-14s", "GB/s");
     }
+    /* -s's columns first, where they always were, so that a table or a
+     * CSV read by column position keeps its columns (#161). */
     if (rs->has_stats) {
-        fprintf(out, "%-16s%-16s%-16s%-14s%-16s", "mean [s]", "stddev [s]", "max [s]",
-                "calls/sample", "median [s]");
+        fprintf(out, "%-16s%-16s%-16s%-14s", "mean [s]", "stddev [s]", "max [s]", "calls/sample");
     }
+    fprintf(out, "%-16s%-10s", "median [s]", "IQR [%]");
     fprintf(out, "\n");
+}
+
+/* The interquartile range as a percentage of the median: how far apart
+ * the middle half of the samples were, readable at a glance in a table. */
+static double bmb_print_iqr_percent(const bmb_result_row_t *row)
+{
+    return (row->median_s > 0.0) ? (row->q3_s - row->q1_s) / row->median_s * 100.0 : 0.0; /* GCOVR_EXCL_BR_LINE: a call too short for the clock to resolve: not on Linux's nanosecond clock */
 }
 
 void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
@@ -92,9 +202,10 @@ void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
         fprintf(out, "%-14.3f", row->gbytes_s);
     }
     if (rs->has_stats) {
-        fprintf(out, "%-16.9f%-16.9f%-16.9f%-14u%-16.9f", row->mean_s, row->stddev_s, row->max_s,
-                row->batch, row->median_s);
+        fprintf(out, "%-16.9f%-16.9f%-16.9f%-14u", row->mean_s, row->stddev_s, row->max_s,
+                row->batch);
     }
+    fprintf(out, "%-16.9f%-10.1f", row->median_s, bmb_print_iqr_percent(row));
     fprintf(out, "\n");
 
     /* Flushed per row so that progress is visible through a pipe or a
@@ -149,8 +260,9 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, ",gbytes_per_s");
     }
     if (rs->has_stats) {
-        fprintf(out, ",mean_s,stddev_s,max_s,calls_per_sample,median_s");
+        fprintf(out, ",mean_s,stddev_s,max_s");
     }
+    fprintf(out, ",calls_per_sample,median_s,q1_s,q3_s");
     fprintf(out, "\n");
 
     for (i = 0; i < rs->count; i++) {
@@ -169,9 +281,9 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
             fprintf(out, ",%.6f", row->gbytes_s);
         }
         if (rs->has_stats) {
-            fprintf(out, ",%.9f,%.9f,%.9f,%u,%.9f", row->mean_s, row->stddev_s, row->max_s,
-                    row->batch, row->median_s);
+            fprintf(out, ",%.9f,%.9f,%.9f", row->mean_s, row->stddev_s, row->max_s);
         }
+        fprintf(out, ",%u,%.9f,%.9f,%.9f", row->batch, row->median_s, row->q1_s, row->q3_s);
         fprintf(out, "\n");
     }
 }
@@ -247,6 +359,47 @@ static void bmb_print_json_machine(FILE *out, const bmb_machine_t *m)
     fprintf(out, "%s},\n", (sep[0] == ',') ? "\n  " : ""); /* GCOVR_EXCL_BR_LINE: the logical CPUs and the OS are always there, so never an empty object */
 }
 
+/* The run block: how the measurement was made (#161), the same as the
+ * text's run lines. */
+static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_machine_t *m)
+{
+    const char *sep = "";
+    size_t i;
+    int a;
+
+    fprintf(out, "  \"run\": {\n");
+    fprintf(out, "    \"command\": [");
+    for (a = 0; a < rs->argc; a++) {
+        fprintf(out, "%s", a == 0 ? "" : ", ");
+        bmb_print_json_string(out, a == 0 ? bmb_print_program(rs->argv[0]) : rs->argv[a]);
+    }
+    fprintf(out, "],\n");
+    fprintf(out, "    \"warmup\": %u,\n", rs->warmup);
+    fprintf(out, "    \"iterations\": %u,\n", rs->iterations);
+    if (rs->batch != 0) {
+        fprintf(out, "    \"batch\": %u,\n", rs->batch);
+    }
+    fprintf(out, "    \"compiler\": ");
+    bmb_print_json_string(out, bmb_build_compiler());
+    fprintf(out, ",\n    \"cflags\": ");
+    bmb_print_json_string(out, bmb_build_cflags());
+    fprintf(out, ",\n");
+    if (m->cpus_allowed[0] != '\0') {
+        fprintf(out, "    \"cpus_allowed\": \"%s\",\n", m->cpus_allowed);
+    }
+    fprintf(out, "    \"environment\": {");
+    for (i = 0; i < BMB_RUN_VARIABLES; i++) {
+        const char *value = getenv(bmb_run_variables[i]);
+
+        if (value != NULL) {
+            fprintf(out, "%s\"%s\": ", sep, bmb_run_variables[i]);
+            bmb_print_json_string(out, value);
+            sep = ", ";
+        }
+    }
+    fprintf(out, "}\n  },\n");
+}
+
 void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
@@ -274,6 +427,7 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "  \"layout\": \"%s\",\n", rs->layout);
     }
     bmb_print_json_machine(out, bmb_machine());
+    bmb_print_json_run(out, rs, bmb_machine());
     fprintf(out, "  \"routine\": \"%s\",\n", rs->routine_name);
 
     /* What dim1 and dim2 *are* for this routine ("Matrix dim1 (M=K)"). The
@@ -310,10 +464,12 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         }
         if (rs->has_stats) {
             fprintf(out, ",\n      \"mean_s\": %.9f,\n      \"stddev_s\": %.9f,"
-                         "\n      \"max_s\": %.9f,\n      \"calls_per_sample\": %u,"
-                         "\n      \"median_s\": %.9f",
-                    row->mean_s, row->stddev_s, row->max_s, row->batch, row->median_s);
+                         "\n      \"max_s\": %.9f",
+                    row->mean_s, row->stddev_s, row->max_s);
         }
+        fprintf(out, ",\n      \"calls_per_sample\": %u,\n      \"median_s\": %.9f,"
+                     "\n      \"q1_s\": %.9f,\n      \"q3_s\": %.9f",
+                row->batch, row->median_s, row->q1_s, row->q3_s);
         fprintf(out, "\n    }%s\n", (i + 1 < rs->count) ? "," : "");
     }
     fprintf(out, "  ]\n}\n");

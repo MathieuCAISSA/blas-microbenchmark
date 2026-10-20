@@ -12,6 +12,11 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->label = NULL;
     rs->verified = 0;
     rs->layout = NULL;
+    rs->argc = 0;
+    rs->argv = NULL;
+    rs->warmup = 0;
+    rs->iterations = 0;
+    rs->batch = 0;
     rs->has_stats = has_stats;
     rs->has_flops = has_flops;
     rs->has_bytes = has_bytes;

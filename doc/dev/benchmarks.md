@@ -258,9 +258,19 @@ weighing what the fix costs.
   factor, and a handful of samples then drags the mean with it. Measured on
   the development machine, three runs of ddot at n=1024 gave means of 2949,
   396 and 131 ns for fastest samples of 163, 121 and 127 ns. Don't "fix"
-  this back to a mean without re-measuring that. `-s` adds the mean, the
-  spread, the slowest and the median; variability across whole runs is
-  the report's (#4: repeated runs, a band, a Mann-Whitney U test).
+  this back to a mean without re-measuring that. The median and the
+  quartiles go with it in every output (#161: interpolated as R's type 7,
+  the median computed apart so that two samples give their mean to the
+  last bit); `-s` adds the mean, the standard deviation and the slowest.
+  Variability across whole runs is the report's (#4: repeated runs, a
+  band, a Mann-Whitney U test).
+- **The run block (#161).** Every output says how it was measured: the
+  command line (the program by its basename), `-x`, `-i`, `-b`, the
+  compiler and the CFLAGS configure ended with (`BMB_CFLAGS`, escaped for
+  C in `configure.ac`), the affinity as `/proc/self/status` lists it, and
+  the variables of `bmb_run_variables` in `bmb_print.c` that are set. A
+  variable that changes what a library does goes in that list, and in
+  the man page's OUTPUT, which `test_man_content.sh` holds to it.
 - **First-touch NUMA.** `setup()` allocates and fills operands from the
   main thread, so every page lands on that thread's node. Thread-scaling
   numbers on a multi-socket machine are therefore pessimistic. Making the

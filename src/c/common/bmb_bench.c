@@ -21,13 +21,31 @@
  * of ddot at n=1024 on the development machine gave means of 2949, 396 and
  * 131 ns while their fastest samples were 163, 121 and 127 ns.
  *
- * The mean, the spread, the worst sample and the median are still reported
- * under -s, which is where variability belongs. */
+ * The median and the quartiles go with it into every output, so that how
+ * steady the samples were is never lost (#161); the mean, the standard
+ * deviation and the slowest sample are added under -s. */
 static int bmb_compare_times(const void *a, const void *b)
 {
     const double x = *(const double *) a, y = *(const double *) b;
 
     return (x > y) - (x < y);
+}
+
+static double bmb_quantile(const double *sorted, unsigned int n, double p)
+{
+    const double h = (double) (n - 1) * p;
+    const unsigned int i = (unsigned int) h;
+
+    if (i + 1 >= n) {
+        return sorted[n - 1];
+    }
+    return sorted[i] + (h - (double) i) * (sorted[i + 1] - sorted[i]);
+}
+
+void bmb_quartiles(const double *sorted, unsigned int n, double *q1, double *q3)
+{
+    *q1 = bmb_quantile(sorted, n, 0.25);
+    *q3 = bmb_quantile(sorted, n, 0.75);
 }
 
 /* Sorts `times`, for the median: the samples are not used afterwards. */
@@ -61,6 +79,7 @@ static void bmb_compute_stats(double *times, unsigned int n, bmb_result_row_t *r
 
     qsort(times, n, sizeof(*times), bmb_compare_times);
     row->median_s = (n % 2 == 1) ? times[n / 2] : (times[n / 2 - 1] + times[n / 2]) / 2.0;
+    bmb_quartiles(times, n, &row->q1_s, &row->q3_s);
 }
 
 /* How many calls go into one timed batch.
@@ -429,6 +448,13 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
     rs.label = opts.label;
     rs.verified = opts.verify;
+    rs.argc = argc;
+    rs.argv = argv;
+    rs.warmup = opts.warmup;
+    rs.iterations = opts.iterations;
+    /* The batch size used, not the one asked for: -b does not batch a
+     * routine whose operand is restored before every call. */
+    rs.batch = bench->reset_every_call ? 1 : opts.batch;
     if (!bench->use_vector_range) {
         rs.layout = opts.column_major ? "col" : "row";
         bmb_column_major = opts.column_major;
