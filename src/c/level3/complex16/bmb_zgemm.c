@@ -34,16 +34,17 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     bmb_ctx_t *ctx;
     size_t m = dim1, n = dim2, k = dim1;
     const int col = bmb_bench_column_major();
-    /* Each matrix as stored: its rows, or its columns with --layout col. */
-    const size_t outa = col ? k : m, outb = col ? n : k, outc = col ? n : m;
-    const size_t lda = bmb_bench_ld(outa, col ? m : k, BMB_Z);
-    const size_t ldb = bmb_bench_ld(outb, col ? k : n, BMB_Z);
-    const size_t ldc = bmb_bench_ld(outc, col ? m : n, BMB_Z);
+    /* K is M: A is M x M, B and C both M x N, each stored as its rows, or
+     * its columns with --layout col. */
+    const size_t outa = m, outb = col ? n : m, outc = outb;
+    const size_t lda = bmb_bench_ld(outa, m, BMB_Z);
+    const size_t ldb = bmb_bench_ld(outb, col ? m : n, BMB_Z);
+    const size_t ldc = ldb;
     size_t i;
 
     (void) thread_count;
 
-    if (lda == 0 || ldb == 0 || ldc == 0) {
+    if (lda == 0 || ldb == 0) {
         bmb_bench_too_large();
         return NULL;
     }
