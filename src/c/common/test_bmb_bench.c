@@ -8,12 +8,15 @@
  * of the x86 fixture calls for, each call on the next one, each restored
  * after its call and before the next on it -- after --verify's call too,
  * that copy going last -- none called right after its restore, every
- * copy torn down; at most 16384 copies; refused for a benchmark
- * that does not say what its operands take. */
+ * copy torn down; at most 16384 copies; refused for a benchmark that
+ * does not say what its operands take. And --align and --ld-pad (#163),
+ * on a stub whose setup() asks for an operand and a leading dimension:
+ * the operand aligned as asked, the leading dimension padded. */
 
 #define _POSIX_C_SOURCE 200809L
 
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -180,6 +183,23 @@ static void cold_count_reset(void)
     last_reset = NULL;
 }
 
+/* --align and --ld-pad's stub: what setup() was given. */
+static size_t mem_misaligned, mem_ld;
+
+static void *mem_setup(size_t dim1, size_t dim2, unsigned int thread_count)
+{
+    static int ctx;
+    void *operand = bmb_bench_alloc(64);
+
+    (void) dim1;
+    (void) dim2;
+    (void) thread_count;
+    mem_misaligned = (operand == NULL) ? 1 : (size_t) ((uintptr_t) operand % 4096);
+    free(operand);
+    mem_ld = bmb_bench_ld(4, 5, sizeof(double));
+    return &ctx;
+}
+
 /* Whether the n copies made took `total` calls round robin, from the
  * first: --verify's, then the next copy's. */
 static int round_robin(int n, int total)
@@ -274,6 +294,23 @@ int main(void)
         status = bmb_benchmark_main(10, bare, &cb);
         check(status == EXIT_FAILURE && cold_setups == 0,
               "cold: refused, before any setup, for a benchmark that says nothing of its operands");
+    }
+
+    /* --align 4096 and --ld-pad 3 (#163), on a matrix routine's stub. */
+    {
+        static char a[] = "-a", page[] = "4096", p[] = "-p", three[] = "3", m[] = "-m";
+        char *memory[] = {prog, m, one, x, zero, i, one, a, page, p, three, c, NULL};
+        bmb_benchmark_t mb = {0};
+        int status;
+
+        mb.routine_name = "memory stub";
+        mb.dim1_label = "Matrix dim (N)";
+        mb.setup = mem_setup;
+        mb.call = call;
+        mb.teardown = teardown;
+        status = bmb_benchmark_main(12, memory, &mb);
+        check(status == EXIT_SUCCESS && mem_misaligned == 0, "--align 4096: an operand on a page boundary");
+        check(mem_ld == 8, "--ld-pad 3: a leading dimension of 5 + 3");
     }
 
     /* The values R's quantile() gives, exactly representable. One sample

@@ -89,22 +89,26 @@ grep -q '^      "q3_s": [0-9.]*$' stat.json || fail "json has no q3_s, last in i
 
 # How the run was made (#161): the command line, the program by its name,
 # the warm-up, samples and batch, the compiler, the variables set, the
-# affinity.
+# affinity; the operands' alignment and padding (#163).
 grep -q '^# command: bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o fmt.csv -f csv$' fmt.csv \
     || fail "csv has no command line: $(grep '^# command' fmt.csv)"
 grep -q '^# run: 0 warm-up calls, 1 sample, batch size chosen per point, hot cache$' fmt.csv \
     || fail "csv has no run line: $(grep '^# run' fmt.csv)"
 grep -q '^# compiler: [^,]*, CFLAGS ' fmt.csv || fail "csv has no compiler line"
+grep -q '^# operands: aligned to 64 bytes, leading dimensions + 0$' fmt.csv || fail "csv has no operands line"
 for field in '"run": {' '"command": \["bmb_dgemm", "-x", "0", "-i", "1", "-m", "8", "-M", "8", "-o", "fmt.json", "-f", "json"\],' \
-             '"warmup": 0,' '"iterations": 1,' '"cache": "hot",' '"compiler": "' '"cflags": "' '"environment": {'; do
+             '"warmup": 0,' '"iterations": 1,' '"cache": "hot",' '"align": 64,' '"ld_pad": 0,' \
+             '"compiler": "' '"cflags": "' '"environment": {'; do
     grep -q "$field" fmt.json || fail "json carries no $field field"
 done
 OMP_PROC_BIND=close BMB_MACHINE_ROOT=${srcdir:-.}/../common/fixtures/machine/container \
-    ./double/bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o run.json >run.txt 2>/dev/null || fail "the run with a variable set failed"
+    ./double/bmb_dgemm -x 0 -i 1 -m 8 -M 8 -a 4096 -p 8 -o run.json >run.txt 2>/dev/null || fail "the run with a variable set failed"
 grep -q '^# environment: .*OMP_PROC_BIND=close' run.txt || fail "text has no OMP_PROC_BIND: $(grep '^# environment' run.txt)"
 grep -q '"OMP_PROC_BIND": "close"' run.json || fail "json has no OMP_PROC_BIND"
 grep -q '^# affinity: CPUs 0-3,6$' run.txt || fail "text has no affinity: $(grep '^# affinity' run.txt)"
 grep -q '^    "cpus_allowed": "0-3,6",$' run.json || fail "json has no cpus_allowed"
+grep -q '^# operands: aligned to 4096 bytes, leading dimensions + 8$' run.txt || fail "text has no -a 4096 -p 8"
+grep -q '^    "align": 4096,$' run.json && grep -q '^    "ld_pad": 8,$' run.json || fail "json has no -a 4096 -p 8"
 rm -f run.json run.txt stat.txt
 
 # The CPU frequency (#3), read from the fake sysfs trees of the machine

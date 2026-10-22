@@ -91,6 +91,11 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
         fprintf(out, "batch size chosen per point, ");
     }
     fprintf(out, "%s cache\n", rs->cache_cold ? "cold" : "hot");
+    fprintf(out, "# operands: aligned to %u bytes", rs->align);
+    if (rs->layout != NULL) {
+        fprintf(out, ", leading dimensions + %u", rs->ld_pad);
+    }
+    fputc('\n', out);
     fprintf(out, "# compiler: %s, CFLAGS %s\n", bmb_build_compiler(), bmb_build_cflags());
     for (i = 0; i < BMB_RUN_VARIABLES; i++) {
         const char *value = getenv(bmb_run_variables[i]);
@@ -393,6 +398,10 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
         fprintf(out, "    \"batch\": %u,\n", rs->batch);
     }
     fprintf(out, "    \"cache\": \"%s\",\n", rs->cache_cold ? "cold" : "hot");
+    fprintf(out, "    \"align\": %u,\n", rs->align);
+    if (rs->layout != NULL) {
+        fprintf(out, "    \"ld_pad\": %u,\n", rs->ld_pad);
+    }
     fprintf(out, "    \"compiler\": ");
     bmb_print_json_string(out, bmb_build_compiler());
     fprintf(out, ",\n    \"cflags\": ");

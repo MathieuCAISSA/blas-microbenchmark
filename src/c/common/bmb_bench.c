@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -504,6 +506,26 @@ size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size)
     return rows * cols * size;
 }
 
+/* --align and --ld-pad (#163), set once a run. */
+static size_t bmb_align = 64;
+static size_t bmb_ld_pad;
+
+void *bmb_bench_alloc(size_t bytes)
+{
+    void *p = NULL;
+
+    return (posix_memalign(&p, bmb_align, bytes) == 0) ? p : NULL;
+}
+
+/* The parser keeps a size plus --ld-pad within the int BLAS takes (see
+ * BMB_MAX_LD_PAD), so only the bytes can wrap. */
+size_t bmb_bench_ld(size_t outer, size_t inner, size_t size)
+{
+    const size_t ld = inner + bmb_ld_pad;
+
+    return (bmb_bench_matrix_bytes(outer, ld, size) != 0) ? ld : 0;
+}
+
 void bmb_bench_too_large(void)
 {
     bmb_log_error("These matrices would take more bytes than size_t can count.");
@@ -533,6 +555,11 @@ static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_opti
     }
     if (opts->layout_set && bench->use_vector_range) {
         snprintf(msg, sizeof(msg), "--layout is ignored for %s: it has no matrix.",
+                 bench->routine_name);
+        bmb_log_warning(msg);
+    }
+    if (opts->ld_pad_set && bench->use_vector_range) {
+        snprintf(msg, sizeof(msg), "--ld-pad is ignored for %s: it has no matrix.",
                  bench->routine_name);
         bmb_log_warning(msg);
     }
@@ -613,6 +640,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
      * routine whose operand is restored before every call. */
     rs.batch = bench->reset_every_call ? 1 : opts.batch;
     rs.cache_cold = opts.cache_cold;
+    rs.align = opts.align;
+    rs.ld_pad = opts.ld_pad;
+    bmb_align = opts.align;
+    bmb_ld_pad = opts.ld_pad;
     if (!bench->use_vector_range) {
         rs.layout = opts.column_major ? "col" : "row";
         bmb_column_major = opts.column_major;

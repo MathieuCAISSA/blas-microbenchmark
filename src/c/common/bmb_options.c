@@ -17,6 +17,15 @@
 #define BMB_DEFAULT_ITERATIONS   10u
 #define BMB_DEFAULT_SIZE         4096u
 #define BMB_DEFAULT_THREADS      1u
+#define BMB_DEFAULT_ALIGN        64u
+/* A cache line on most of today's CPUs, and the most any vector
+ * instruction asks for (AVX-512); up to a 2 MiB huge page. */
+#define BMB_MIN_ALIGN            8u
+#define BMB_MAX_ALIGN            2097152u
+/* Enough to step off any power-of-two stride a cache or a TLB cares
+ * about. Small enough that a size the parser accepts, plus it, still fits
+ * the int BLAS takes: 1518500249 + 65536 < INT_MAX. */
+#define BMB_MAX_LD_PAD           65536u
 
 static const struct option bmb_long_options[] = {
     {"warmup",         required_argument, NULL, 'x'},
@@ -31,6 +40,8 @@ static const struct option bmb_long_options[] = {
     {"no-verify",      no_argument,       NULL, 'C'},
     {"layout",         required_argument, NULL, 'L'},
     {"cache",          required_argument, NULL, 'k'},
+    {"align",          required_argument, NULL, 'a'},
+    {"ld-pad",         required_argument, NULL, 'p'},
     {"label",          required_argument, NULL, 'l'},
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
@@ -39,7 +50,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:k:l:o:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:k:a:p:l:o:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -150,6 +161,16 @@ void bmb_range_describe(const bmb_range_t *range, char *buf, size_t size)
             buf[used] = '\0';
         }
     }
+}
+
+static unsigned long long bmb_range_max(const bmb_range_t *range)
+{
+    size_t i, max = 0;
+
+    for (i = 0; i < range->count; i++) {
+        max = (range->values[i] > max) ? range->values[i] : max;
+    }
+    return (unsigned long long) max;
 }
 
 static int bmb_range_append(bmb_range_t *out, size_t value)
@@ -392,6 +413,9 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->column_major = 0;
     opts->layout_set = 0;
     opts->cache_cold = 0;
+    opts->align = BMB_DEFAULT_ALIGN;
+    opts->ld_pad = 0;
+    opts->ld_pad_set = 0;
 
     opts->output_file = NULL;
     opts->output_format = BMB_FORMAT_CSV;
@@ -493,6 +517,9 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
         case 'k':
             if (strcmp(optarg, "hot") == 0) {
                 opts->cache_cold = 0;
+    opts->align = BMB_DEFAULT_ALIGN;
+    opts->ld_pad = 0;
+    opts->ld_pad_set = 0;
             } else if (strcmp(optarg, "cold") == 0) {
                 opts->cache_cold = 1;
             } else {
@@ -500,6 +527,38 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
                 return BMB_OPTIONS_ERROR;
             }
             break;
+
+        case 'a': {
+            unsigned long long value;
+
+            /* posix_memalign() takes a power of two, at least a pointer's
+             * size. */
+            if (bmb_parse_uint(optarg, BMB_MAX_ALIGN, &value) != BMB_PARSE_OK
+                || value < BMB_MIN_ALIGN || (value & (value - 1)) != 0) {
+                snprintf(errbuf, sizeof(errbuf),
+                         "Invalid value for --align (expected a power of two from %u to %u).",
+                         BMB_MIN_ALIGN, BMB_MAX_ALIGN);
+                bmb_log_error(errbuf);
+                return BMB_OPTIONS_ERROR;
+            }
+            opts->align = (unsigned int) value;
+            break;
+        }
+
+        case 'p': {
+            unsigned long long value;
+
+            if (bmb_parse_uint(optarg, BMB_MAX_LD_PAD, &value) != BMB_PARSE_OK) {
+                snprintf(errbuf, sizeof(errbuf),
+                         "Invalid value for --ld-pad (expected an integer between 0 and %u).",
+                         BMB_MAX_LD_PAD);
+                bmb_log_error(errbuf);
+                return BMB_OPTIONS_ERROR;
+            }
+            opts->ld_pad = (unsigned int) value;
+            opts->ld_pad_set = 1;
+            break;
+        }
 
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
@@ -545,6 +604,18 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
         opts->output_format = bmb_infer_output_format(opts->output_file) ? BMB_FORMAT_JSON : BMB_FORMAT_CSV;
     }
 
+    /* A matrix size plus --ld-pad within the ceiling (#163): a padded
+     * matrix of elements of 8 bytes or less then cannot wrap size_t
+     * either, so only the routines with larger ones check theirs. */
+    if (bmb_range_max(&opts->matrix_dim1) + opts->ld_pad > bmb_max_value()
+        || bmb_range_max(&opts->matrix_dim2) + opts->ld_pad > bmb_max_value()) {
+        snprintf(errbuf, sizeof(errbuf),
+                 "With --ld-pad %u, a matrix size is at most %llu.", opts->ld_pad,
+                 bmb_max_value() - opts->ld_pad);
+        bmb_log_error(errbuf);
+        return BMB_OPTIONS_ERROR;
+    }
+
     return BMB_OPTIONS_OK;
 }
 
@@ -578,6 +649,9 @@ void bmb_options_print_help(const char *prog_name)
         "  -k, --cache <state>           hot: operands reused from call to call, as in cache;\n"
         "                                 cold: rotated over copies beyond the last-level cache\n"
         "                                 (default: hot)\n"
+        "  -a, --align <bytes>           align every operand to bytes, a power of two (default: %u)\n"
+        "  -p, --ld-pad <n>              add n elements to every matrix's leading dimension\n"
+        "                                 (default: 0)\n"
         "  -l, --label <text>            tag the results, e.g. \"turbo off\" (default: none)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
@@ -592,7 +666,8 @@ void bmb_options_print_help(const char *prog_name)
         "<max> is always measured, even when the stride would overshoot it.\n"
         "\n"
         "Full documentation: man blas-microbenchmark\n",
-        BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS);
+        BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS,
+        BMB_DEFAULT_ALIGN);
 }
 
 void bmb_options_print_version(void)

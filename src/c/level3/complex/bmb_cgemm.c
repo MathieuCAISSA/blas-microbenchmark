@@ -27,6 +27,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t m = dim1, n = dim2, k = dim1;
+    const int col = bmb_bench_column_major();
+    /* K is M: A is M x M, B and C both M x N, each stored as its rows, or
+     * its columns with --layout col. */
+    const size_t outa = m, outb = col ? n : m, outc = outb;
+    const size_t lda = bmb_bench_ld(outa, m, 2 * sizeof(float));
+    const size_t ldb = bmb_bench_ld(outb, col ? m : n, 2 * sizeof(float));
+    const size_t ldc = ldb;
     size_t i;
 
     (void) thread_count;
@@ -43,14 +50,14 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->alpha[1] = 0.0f;
     ctx->beta[0] = 0.0f; /* verify() relies on it */
     ctx->beta[1] = 0.0f;
-    ctx->col = bmb_bench_column_major();
+    ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = ctx->col ? ctx->m : ctx->k;
-    ctx->ldb = ctx->col ? ctx->k : ctx->n;
-    ctx->ldc = ctx->col ? ctx->m : ctx->n;
-    ctx->a = malloc(2 * m * k * sizeof(float));
-    ctx->b = malloc(2 * k * n * sizeof(float));
-    ctx->c = malloc(2 * m * n * sizeof(float));
+    ctx->lda = (int) lda;
+    ctx->ldb = (int) ldb;
+    ctx->ldc = (int) ldc;
+    ctx->a = bmb_bench_alloc(2 * outa * lda * sizeof(float));
+    ctx->b = bmb_bench_alloc(2 * outb * ldb * sizeof(float));
+    ctx->c = bmb_bench_alloc(2 * outc * ldc * sizeof(float));
     if (ctx->a == NULL || ctx->b == NULL || ctx->c == NULL) {
         free(ctx->a);
         free(ctx->b);
@@ -59,15 +66,15 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < m * k; i++) {
+    for (i = 0; i < outa * lda; i++) {
         ctx->a[2 * i] = (float) (i % 100) * 0.01f - 0.5f;
         ctx->a[2 * i + 1] = (float) ((i + 31) % 100) * 0.01f - 0.5f;
     }
-    for (i = 0; i < k * n; i++) {
+    for (i = 0; i < outb * ldb; i++) {
         ctx->b[2 * i] = (float) ((i + 7) % 100) * 0.01f - 0.5f;
         ctx->b[2 * i + 1] = (float) ((i + 53) % 100) * 0.01f - 0.5f;
     }
-    for (i = 0; i < 2 * m * n; i++) {
+    for (i = 0; i < 2 * outc * ldc; i++) {
         ctx->c[i] = 0.0f;
     }
 

@@ -527,6 +527,13 @@
         v("d.json", "0.3.9", base, cold), v("e.json", "0.3.26", base, cold), v("f.json", "0.3.28", base, cold)
       ]);
       eq(R.historyGroups(m.identities).length, 2, "and by their cache (#160): hot and cold are two histories");
+
+      var padded = { run: { ld_pad: 8 } };
+      m = R.buildModel([
+        v("a.json", "0.3.9", base), v("b.json", "0.3.26", base), v("c.json", "0.3.28", base),
+        v("d.json", "0.3.9", base, padded), v("e.json", "0.3.26", base, padded), v("f.json", "0.3.28", base, padded)
+      ]);
+      eq(R.historyGroups(m.identities).length, 2, "and by their padding (#163)");
     });
 
     /* ---- FlexiBLAS (#5) ---- */
@@ -574,6 +581,15 @@
          "a cold run is its own series, named so; a hot one keeps the plain name");
       eq(byName(m, "openblas").files, ["old.json", "hot.json"],
          "files without a run block (before 1.8) merge with hot ones");
+
+      m = R.buildModel([
+        entry("old.json", gemm({ rows: [[1, 8, 8, 1e-6, 1, null]] })),
+        entry("zero.json", gemm({ run: { ld_pad: 0 }, rows: [[1, 16, 16, 1e-6, 1, null]] })),
+        entry("pad.json", gemm({ run: { ld_pad: 8 }, rows: [[1, 8, 8, 2e-6, 1, null]] }))
+      ]);
+      eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · ld + 8"],
+         "--ld-pad (#163): a padded run is its own series, named so");
+      eq(byName(m, "openblas").files, ["old.json", "zero.json"], "files without a padding merge with unpadded ones");
     });
 
     /* ---- The CPU frequency (#3) ---- */
@@ -604,13 +620,13 @@
     /* ---- How a run was made (#161) ---- */
 
     test("run", function () {
-      var full = { command: ["bmb_ddot", "-v", "8"], warmup: 1, iterations: 10, compiler: "gcc 13.3.0",
+      var full = { command: ["bmb_ddot", "-v", "8"], warmup: 1, iterations: 10, align: 64, compiler: "gcc 13.3.0",
                    cflags: "-O2", cpus_allowed: "0-3",
                    environment: { OMP_PROC_BIND: "close", OMP_PLACES: "cores" } };
       var bare = { command: [], warmup: 0, iterations: 1, batch: 50, compiler: "gcc 13.3.0", cflags: "",
                    environment: {} };
-      eq(R.runText(full), "10 samples, 1 warm-up call · gcc 13.3.0 -O2 · CPUs 0-3 · OMP_PROC_BIND=close · OMP_PLACES=cores",
-         "run: samples, warm-up, compiler and flags, affinity, variables in the order written");
+      eq(R.runText(full), "10 samples, 1 warm-up call · aligned to 64 bytes · gcc 13.3.0 -O2 · CPUs 0-3 · OMP_PROC_BIND=close · OMP_PLACES=cores",
+         "run: samples, warm-up, alignment, compiler and flags, affinity, variables in the order written");
       eq(R.runText(bare), "1 sample, 0 warm-up calls, batches of 50 calls · gcc 13.3.0",
          "run: -b, no flags, no affinity, no variable");
       eq(R.runText(undefined), "", "run: a file from before the run block");

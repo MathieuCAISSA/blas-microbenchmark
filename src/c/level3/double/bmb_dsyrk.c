@@ -10,6 +10,7 @@ typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
     int lda;
+    int ldc;
     int n;
     int k;
     double alpha;
@@ -22,6 +23,11 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t n = dim1, k = dim2;
+    const int col = bmb_bench_column_major();
+    /* A as stored: its rows, or its columns with --layout col. */
+    const size_t outa = col ? k : n;
+    const size_t lda = bmb_bench_ld(outa, col ? n : k, sizeof(double));
+    const size_t ldc = bmb_bench_ld(n, n, sizeof(double));
     size_t i;
 
     (void) thread_count;
@@ -35,11 +41,12 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->k = (int) k;
     ctx->alpha = 1.0;
     ctx->beta = 0.0; /* verify() relies on it */
-    ctx->col = bmb_bench_column_major();
+    ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = ctx->col ? ctx->n : ctx->k;
-    ctx->a = malloc(n * k * sizeof(double));
-    ctx->c = malloc(n * n * sizeof(double));
+    ctx->lda = (int) lda;
+    ctx->ldc = (int) ldc;
+    ctx->a = bmb_bench_alloc(outa * lda * sizeof(double));
+    ctx->c = bmb_bench_alloc(n * ldc * sizeof(double));
     if (ctx->a == NULL || ctx->c == NULL) {
         free(ctx->a);
         free(ctx->c);
@@ -47,10 +54,10 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < n * k; i++) {
+    for (i = 0; i < outa * lda; i++) {
         ctx->a[i] = (double) (i % 100) * 0.01 - 0.5;
     }
-    for (i = 0; i < n * n; i++) {
+    for (i = 0; i < n * ldc; i++) {
         ctx->c[i] = 0.0;
     }
 
@@ -62,7 +69,7 @@ static void call(void *vctx)
     bmb_ctx_t *ctx = vctx;
 
     cblas_dsyrk(ctx->order, CblasUpper, CblasNoTrans, ctx->n, ctx->k,
-                ctx->alpha, ctx->a, ctx->lda, ctx->beta, ctx->c, ctx->n);
+                ctx->alpha, ctx->a, ctx->lda, ctx->beta, ctx->c, ctx->ldc);
 }
 
 static void teardown(void *vctx)
@@ -114,10 +121,10 @@ static int verify(void *vctx, char *msg, size_t size)
     (void) u;
     (void) uabs;
     bmb_verify_probe(r, n);
-    bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, n, r, NULL, l0, labs);
+    bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, ctx->ldc, r, NULL, l0, labs);
     call(ctx);
     bmb_verify_perturb(&ctx->c[0]);
-    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->c, n, r, NULL, y1, y1abs);
+    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->c, ctx->ldc, r, NULL, y1, y1abs);
     bmb_verify_matvec(BMB_VERIFY_FULL_T, ctx->col, n, k, ctx->a, ctx->lda, r, NULL, t, tabs);
     bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, n, k, ctx->a, ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < n; i++) {
@@ -127,7 +134,7 @@ static int verify(void *vctx, char *msg, size_t size)
     ok = bmb_verify_close("C*r, for a random vector r", y1, want, scale, n,
                           bmb_verify_tolerance(k + n), msg, size);
     if (ok) {
-        bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, n, r, NULL, l, labs);
+        bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, ctx->ldc, r, NULL, l, labs);
         ok = bmb_verify_close("the strictly lower part of C, times r, which the call must not change",
                               l, l0, NULL, n, 0.0, msg, size);
     }

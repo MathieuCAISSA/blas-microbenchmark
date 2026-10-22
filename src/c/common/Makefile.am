@@ -125,6 +125,7 @@ FUZZ_CORPUS = \
 	fuzz/bmb_options/grid \
 	fuzz/bmb_options/help \
 	fuzz/bmb_options/label \
+	fuzz/bmb_options/layout-memory \
 	fuzz/bmb_options/label-newline \
 	fuzz/bmb_options/linear-sweep \
 	fuzz/bmb_options/quick-start \

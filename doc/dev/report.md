@@ -61,7 +61,10 @@ the code points at them; the ones easiest to break by accident:
   column (`runText`), with the command lines in its tooltip. Its cache
   is the exception (#160): a cold run measures something else than a hot
   one, so it is part of the key and of the history's, and a file without
-  it counts as hot.
+  it counts as hot; so is its `ld_pad` (#163), a storage of its own as
+  the layout is, 0 in a file without it. Its alignment is not: the
+  default changed from whatever `malloc` gave to 64 bytes in 1.8.0, and
+  a key on it would cut every library's history there.
 - **Repeated runs (#4).** Every measurement of a point is kept in its
   `runs`; the curve still goes through the fastest, as the benchmark
   reports the fastest sample. The band of

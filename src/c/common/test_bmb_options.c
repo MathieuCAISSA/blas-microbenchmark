@@ -186,6 +186,8 @@ static void test_defaults(void)
         fail("defaults", "the layout is not row-major");
     } else if (opts.cache_cold != 0) {
         fail("defaults", "the cache is not hot");
+    } else if (opts.align != 64 || opts.ld_pad != 0 || opts.ld_pad_set) {
+        fail("defaults", "operands are not aligned to 64 bytes, or leading dimensions are padded");
     } else if (opts.vector_size_set || opts.matrix_dim1_set
                || opts.matrix_dim2_set || opts.thread_count_set || opts.layout_set) {
         fail("defaults", "an option is marked as given when none were");
@@ -465,6 +467,79 @@ int main(void)
                 fail(cases[i].what, "got the wrong status");
             } else if (st == BMB_OPTIONS_OK && opts.cache_cold != cases[i].want) {
                 fail(cases[i].what, "left the cache in the wrong state");
+            } else {
+                ok(cases[i].what);
+            }
+            if (st == BMB_OPTIONS_OK) {
+                bmb_options_free(&opts);
+            }
+        }
+    }
+
+    /* ---- --align and --ld-pad (#163) ---- */
+    {
+        static const struct {
+            const char *a, *b;
+            bmb_options_status_t status;
+            unsigned int align, pad;
+            const char *what;
+        } cases[] = {
+            {"-a", "4096", BMB_OPTIONS_OK, 4096, 0, "-a 4096: a page"},
+            {"--align", "8", BMB_OPTIONS_OK, 8, 0, "--align 8, a pointer's size, the least"},
+            {"--align", "2097152", BMB_OPTIONS_OK, 2097152, 0, "--align 2097152, a huge page, the most"},
+            {"--align", "4", BMB_OPTIONS_ERROR, 0, 0, "--align 4 is refused: less than a pointer"},
+            {"--align", "4194304", BMB_OPTIONS_ERROR, 0, 0, "--align 4194304 is refused: past a huge page"},
+            {"--align", "96", BMB_OPTIONS_ERROR, 0, 0, "--align 96 is refused: not a power of two"},
+            {"--align", "-64", BMB_OPTIONS_ERROR, 0, 0, "--align -64 is refused"},
+            {"--align", "", BMB_OPTIONS_ERROR, 0, 0, "an empty --align is refused"},
+            {"-p", "8", BMB_OPTIONS_OK, 64, 8, "-p 8"},
+            {"--ld-pad", "0", BMB_OPTIONS_OK, 64, 0, "--ld-pad 0, given"},
+            {"--ld-pad", "65536", BMB_OPTIONS_OK, 64, 65536, "--ld-pad 65536, the most"},
+            {"--ld-pad", "65537", BMB_OPTIONS_ERROR, 0, 0, "--ld-pad 65537 is refused"},
+            {"--ld-pad", "-1", BMB_OPTIONS_ERROR, 0, 0, "--ld-pad -1 is refused"},
+            {"--ld-pad", "x", BMB_OPTIONS_ERROR, 0, 0, "--ld-pad x is refused"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+            bmb_options_status_t st = parse_args(&opts, cases[i].a, cases[i].b, ARGS_END);
+
+            if (st != cases[i].status) {
+                fail(cases[i].what, "got the wrong status");
+            } else if (st == BMB_OPTIONS_OK
+                       && (opts.align != cases[i].align || opts.ld_pad != cases[i].pad
+                           || opts.ld_pad_set != (cases[i].a[1] == 'p' || cases[i].a[2] == 'l'))) {
+                fail(cases[i].what, "left the alignment or the padding in the wrong state");
+            } else {
+                ok(cases[i].what);
+            }
+            if (st == BMB_OPTIONS_OK) {
+                bmb_options_free(&opts);
+            }
+        }
+    }
+
+    /* A matrix size plus the padding within the ceiling: 1518500249 - 8. */
+    {
+        static const struct {
+            const char *dim, *sizes;
+            bmb_options_status_t status;
+            const char *what;
+        } cases[] = {
+            {"-m", "1518500241", BMB_OPTIONS_OK, "-p 8 -m 1518500241: padded, at the ceiling"},
+            {"-m", "1518500242", BMB_OPTIONS_ERROR, "-p 8 -m 1518500242 is refused: padded, past it"},
+            {"-m", "1518500242,64", BMB_OPTIONS_ERROR, "-p 8 -m 1518500242,64: the largest point, not the last"},
+            {"-M", "1518500242", BMB_OPTIONS_ERROR, "-p 8 -M 1518500242 is refused too"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+            bmb_options_status_t st = parse_args(&opts, "-p", "8", cases[i].dim, cases[i].sizes, ARGS_END);
+
+            if (st != cases[i].status) {
+                fail(cases[i].what, "got the wrong status");
             } else {
                 ok(cases[i].what);
             }

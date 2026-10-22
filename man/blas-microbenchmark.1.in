@@ -178,6 +178,25 @@ See
 .BR "HOW A NUMBER IS MEASURED" .
 Default: hot.
 .TP
+.BI "\-a, \-\-align " bytes
+Align every operand to
+.I bytes
+(a power of two from 8 to 2097152, a huge page), so that no library is
+measured on operands it finds misaligned.
+Default: 64, a cache line.
+.TP
+.BI "\-p, \-\-ld\-pad " n
+Add
+.I n
+elements (up to 65536) to every matrix's leading dimension: the distance
+in memory between two of its rows, or its columns with
+.BR "\-L col" .
+A size that is a power of two, such as the default 4096, puts every row
+on the same cache sets, which slows some libraries at exactly that size;
+a few elements of padding steps off it.
+Ignored, with a warning, by the vector routines.
+Default: 0.
+.TP
 .BI "\-l, \-\-label " text
 Tag the results, for what no automatic field records: a BIOS setting, a
 NUMA binding, SMT off.
@@ -486,6 +505,7 @@ Every result starts with where it came from:
 # affinity: CPUs 0\-13
 # command: bmb_dgemm \-m 512:2048 \-o dgemm.json
 # run: 1 warm\-up call, 10 samples, batch size chosen per point, hot cache
+# operands: aligned to 64 bytes, leading dimensions + 0
 # compiler: gcc 13.3.0, CFLAGS \-g \-O2 \-fopenmp
 # environment: OMP_PROC_BIND=close
 # routine: dgemm
@@ -521,6 +541,9 @@ which is 1 whatever
 says for the routines whose operand is restored before every call),
 and the cache
 .RB ( \-k );
+the operands' alignment and, for the routines with a matrix, the padding
+of their leading dimensions
+.RB ( \-a ", " \-p );
 the compiler and the CFLAGS the benchmarks were built with (not the BLAS
 library's own);
 and the variables set among those that change what a BLAS library does:
@@ -607,6 +630,9 @@ with
 .BR iterations ,
 .B cache
 .RB ( hot " or " cold ),
+.BR align ,
+.B ld_pad
+(for the routines with a matrix),
 .B batch
 (when every point used the same:
 .B \-b

@@ -11,6 +11,7 @@ typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
     int n;
+    int lda;
     double alpha;
     double *a;
     double *x;
@@ -21,6 +22,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t n = dim1;
+    const size_t lda = bmb_bench_ld(n, n, sizeof(double));
     size_t i;
 
     (void) dim2;
@@ -32,12 +34,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     }
 
     ctx->n = (int) n;
+    ctx->lda = (int) lda;
     ctx->alpha = 1.0e-6;
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->a = malloc(n * n * sizeof(double));
-    ctx->x = malloc(n * sizeof(double));
-    ctx->y = malloc(n * sizeof(double));
+    ctx->a = bmb_bench_alloc(n * lda * sizeof(double));
+    ctx->x = bmb_bench_alloc(n * sizeof(double));
+    ctx->y = bmb_bench_alloc(n * sizeof(double));
     if (ctx->a == NULL || ctx->x == NULL || ctx->y == NULL) {
         free(ctx->a);
         free(ctx->x);
@@ -46,7 +49,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < n * n; i++) {
+    for (i = 0; i < n * lda; i++) {
         ctx->a[i] = (double) (i % 100) * 0.01 - 0.5;
     }
     for (i = 0; i < n; i++) {
@@ -61,7 +64,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsyr2(ctx->order, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->n);
+    cblas_dsyr2(ctx->order, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->lda);
 }
 
 static void teardown(void *vctx)
@@ -111,10 +114,10 @@ static int verify(void *vctx, char *msg, size_t size)
 
     bmb_verify_probe(r, n);
 
-    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, n, r, NULL, p0, p0abs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p0, p0abs);
     call(ctx);
     bmb_verify_perturb(&ctx->a[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, n, r, NULL, p, pabs);
+    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
     for (i = m; i-- > 0;) {
         s1 += ctx->y[i] * r[i];
         s1abs += fabs(ctx->y[i] * r[i]);

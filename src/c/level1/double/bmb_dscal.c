@@ -34,8 +34,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     /* Deliberately not exactly 1.0: some BLAS implementations special-case
      * alpha == 1 as a no-op fast path, which would not reflect real work. */
     ctx->alpha = 0.999999;
-    ctx->x0 = malloc(dim1 * sizeof(double));
-    ctx->x = malloc(dim1 * sizeof(double));
+    ctx->x0 = bmb_bench_alloc(dim1 * sizeof(double));
+    ctx->x = bmb_bench_alloc(dim1 * sizeof(double));
     if (ctx->x0 == NULL || ctx->x == NULL) {
         free(ctx->x0);
         free(ctx->x);

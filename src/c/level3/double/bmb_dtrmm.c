@@ -13,6 +13,7 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
+    int lda;
     int ldb;
     int m;
     int n;
@@ -35,6 +36,11 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t m = dim1, n = dim2;
+    const int col = bmb_bench_column_major();
+    /* B as stored: its rows, or its columns with --layout col. */
+    const size_t outb = col ? n : m;
+    const size_t lda = bmb_bench_ld(m, m, sizeof(double));
+    const size_t ldb = bmb_bench_ld(outb, col ? m : n, sizeof(double));
     size_t i;
 
     (void) thread_count;
@@ -47,12 +53,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->m = (int) m;
     ctx->n = (int) n;
     ctx->alpha = 1.0;
-    ctx->col = bmb_bench_column_major();
+    ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->ldb = ctx->col ? ctx->m : ctx->n;
-    ctx->a = malloc(m * m * sizeof(double));
-    ctx->b0 = malloc(m * n * sizeof(double));
-    ctx->b = malloc(m * n * sizeof(double));
+    ctx->lda = (int) lda;
+    ctx->ldb = (int) ldb;
+    ctx->a = bmb_bench_alloc(m * lda * sizeof(double));
+    ctx->b0 = bmb_bench_alloc(outb * ldb * sizeof(double));
+    ctx->b = bmb_bench_alloc(outb * ldb * sizeof(double));
     if (ctx->a == NULL || ctx->b0 == NULL || ctx->b == NULL) {
         free(ctx->a);
         free(ctx->b0);
@@ -64,14 +71,16 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     for (i = 0; i < m; i++) {
         size_t j;
 
-        for (j = 0; j < m; j++) {
-            ctx->a[i * m + j] = (i == j) ? 2.0 : bmb_off_diagonal(i, j, m);
+        /* Through the padding too, so that no element of A is left
+         * uninitialised. */
+        for (j = 0; j < lda; j++) {
+            ctx->a[i * lda + j] = (i == j) ? 2.0 : bmb_off_diagonal(i, j, m);
         }
     }
-    for (i = 0; i < m * n; i++) {
+    for (i = 0; i < outb * ldb; i++) {
         ctx->b0[i] = (double) (i % 100) * 0.01 - 0.5;
     }
-    memcpy(ctx->b, ctx->b0, m * n * sizeof(double));
+    memcpy(ctx->b, ctx->b0, outb * ldb * sizeof(double));
 
     return ctx;
 }
@@ -81,14 +90,14 @@ static void call(void *vctx)
     bmb_ctx_t *ctx = vctx;
 
     cblas_dtrmm(ctx->order, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit,
-                ctx->m, ctx->n, ctx->alpha, ctx->a, ctx->m, ctx->b, ctx->ldb);
+                ctx->m, ctx->n, ctx->alpha, ctx->a, ctx->lda, ctx->b, ctx->ldb);
 }
 
 static void reset(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    memcpy(ctx->b, ctx->b0, (size_t) ctx->m * (size_t) ctx->n * sizeof(double));
+    memcpy(ctx->b, ctx->b0, (size_t) (ctx->col ? ctx->n : ctx->m) * (size_t) ctx->ldb * sizeof(double));
 }
 
 static void teardown(void *vctx)
@@ -138,7 +147,7 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_verify_perturb(&ctx->b[0]);
     bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b, ctx->ldb, r, NULL, y1, y1abs);
     bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b0, ctx->ldb, r, NULL, t, tabs);
-    bmb_verify_matvec(BMB_VERIFY_UPPER, ctx->col, m, m, ctx->a, m, t, tabs, y2, y2abs);
+    bmb_verify_matvec(BMB_VERIFY_UPPER, ctx->col, m, m, ctx->a, ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         want[i] = ctx->alpha * y2[i];
         scale[i] = y1abs[i] + fabs(ctx->alpha) * y2abs[i];

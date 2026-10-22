@@ -21,6 +21,10 @@ typedef struct {
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
+    const int col = bmb_bench_column_major();
+    /* A as stored: its rows, or its columns with --layout col. */
+    const size_t outer = col ? dim2 : dim1;
+    const size_t lda = bmb_bench_ld(outer, col ? dim1 : dim2, sizeof(double));
     size_t i;
 
     (void) thread_count;
@@ -35,12 +39,12 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     /* Small alpha: A accumulates rank-1 updates across iterations, kept bounded
      * regardless of --iterations. */
     ctx->alpha = 1.0e-6;
-    ctx->col = bmb_bench_column_major();
+    ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = ctx->col ? ctx->m : ctx->n;
-    ctx->a = malloc(dim1 * dim2 * sizeof(double));
-    ctx->x = malloc(dim1 * sizeof(double));
-    ctx->y = malloc(dim2 * sizeof(double));
+    ctx->lda = (int) lda;
+    ctx->a = bmb_bench_alloc(outer * lda * sizeof(double));
+    ctx->x = bmb_bench_alloc(dim1 * sizeof(double));
+    ctx->y = bmb_bench_alloc(dim2 * sizeof(double));
     if (ctx->a == NULL || ctx->x == NULL || ctx->y == NULL) {
         free(ctx->a);
         free(ctx->x);
@@ -49,7 +53,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < dim1 * dim2; i++) {
+    for (i = 0; i < outer * lda; i++) {
         ctx->a[i] = (double) (i % 100) * 0.01 - 0.5;
     }
     for (i = 0; i < dim1; i++) {
