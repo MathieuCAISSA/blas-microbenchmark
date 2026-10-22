@@ -326,12 +326,15 @@ details[open] > summary { margin-bottom: 12px; }
       /* --cache cold (#160): another measurement than the hot one, so a
        * series of its own. Files before it were hot. */
       var cache = (r.run && r.run.cache === "cold") ? "cold" : "hot";
-      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache].join("\u0001");
+      /* --ld-pad (#163): a storage of its own, as the layout is. Files
+       * before it, and vector routines, had none. */
+      var pad = (r.run && r.run.ld_pad) || 0;
+      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache, pad].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
-          cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, machine: machine,
+          cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, pad: pad, machine: machine,
           versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: []
         };
         identityOrder.push(id);
@@ -420,6 +423,7 @@ details[open] > summary { margin-bottom: 12px; }
         if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
         if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
         if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
+        if (differs(function (o) { return o.pad; }) && id.pad) { parts.push("ld + " + id.pad); }
       }
       id.name = parts.join(" · ");
     });
@@ -530,6 +534,7 @@ details[open] > summary { margin-bottom: 12px; }
       parts.push(plural(run.iterations, "sample") + ", " + plural(run.warmup, "warm-up call") +
                  (run.batch ? ", batches of " + plural(run.batch, "call") : ""));
     }
+    if (run.align) { parts.push("aligned to " + run.align + " bytes"); }
     if (run.compiler) { parts.push(run.compiler + (run.cflags ? " " + run.cflags : "")); }
     if (run.cpus_allowed) { parts.push("CPUs " + run.cpus_allowed); }
     Object.keys(env).forEach(function (k) { parts.push(k + "=" + env[k]); });
@@ -1266,7 +1271,7 @@ details[open] > summary { margin-bottom: 12px; }
   function historyGroups(identities) {
     var groups = {}, order = [];
     identities.forEach(function (id) {
-      var key = [id.backend, id.cpu, id.label, id.layout, id.cache].join("\u0001");
+      var key = [id.backend, id.cpu, id.label, id.layout, id.cache, id.pad].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });
