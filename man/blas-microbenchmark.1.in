@@ -326,6 +326,8 @@ settling, and a quartile does not see it.
 The samples taken are in the results, and in the table when
 .BR \-T " or " \-e
 is given.
+The fastest of more samples is faster still: compare runs taken with the
+same settings, which the results record.
 .PP
 Two rates are derived from that time:
 .TP
