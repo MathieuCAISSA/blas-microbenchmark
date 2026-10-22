@@ -100,6 +100,7 @@ int main(void)
     r.dim1 = 8;
     r.time_s = 1.0e-6;
     r.batch = 1;
+    r.samples = 1;
     r.gbytes_s = 2.5;
 
     bmb_result_set_init(&rs, "x", "(Size{x} @[y]: ~Z9", NULL, 0, 0, 1);
@@ -107,9 +108,9 @@ int main(void)
     csv_of(&rs, header, row, sizeof(header));
     bmb_result_set_free(&rs);
     check(strcmp(header, "thread_count,size_x_y_z9,time_s,gbytes_per_s,calls_per_sample,median_s,"
-                         "q1_s,q3_s") == 0,
+                         "q1_s,q3_s,samples") == 0,
           "csv: a label's words joined by one underscore, nothing before the first");
-    check(strcmp(row, "1,8,0.000001000,2.500000,1,0.000000000,0.000000000,0.000000000") == 0,
+    check(strcmp(row, "1,8,0.000001000,2.500000,1,0.000000000,0.000000000,0.000000000,1") == 0,
           "csv: no gflops column, and no value for it, without an operation count");
     if (failures != 0) {
         printf("     header \"%s\", row \"%s\"\n", header, row);
@@ -127,7 +128,7 @@ int main(void)
     rs.batch = 1;
     check(printed(bmb_print_csv, &rs, "# command: bmb_x 'it'\\''s' 'a?b?' '' -m 8", 0),
           "run: the program by its name, a quote, a newline, a DEL and an empty word quoted for a shell");
-    check(printed(bmb_print_csv, &rs, "# run: 1 warm-up call, 1 sample, batches of 1 call, hot cache", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 0 s and 1 call of warm-up, 1 sample, batches of 1 call, hot cache", 0),
           "run: one warm-up call, one sample, a batch of one, in the singular");
     check(printed(bmb_print_csv, &rs, "OMP_PROC_BIND='a b'", 1),
           "run: a variable set, its value quoted");
@@ -140,10 +141,10 @@ int main(void)
     rs.warmup = 2;
     rs.iterations = 3;
     rs.batch = 5;
-    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batches of 5 calls, hot cache", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 0 s and 2 calls of warm-up, 3 samples, batches of 5 calls, hot cache", 0),
           "run: several of each, in the plural");
     rs.batch = 0;
-    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batch size chosen per point, hot cache", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 0 s and 2 calls of warm-up, 3 samples, batch size chosen per point, hot cache", 0),
           "run: no -b, the batch size chosen per point");
     check(!printed(bmb_print_json, &rs, "\"batch\"", 1), "json: no batch without -b");
     check(printed(bmb_print_json, &rs, "\"cache\": \"hot\",", 1), "json: the cache hot by default");
@@ -166,14 +167,39 @@ int main(void)
     rs.cache_cold = 1;
     r.copies = 17;
     bmb_result_set_add(&rs, &r);
-    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batch size chosen per point, cold cache", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 0 s and 2 calls of warm-up, 3 samples, batch size chosen per point, cold cache", 0),
           "run: --cache cold");
     check(printed(bmb_print_json, &rs, "\"cache\": \"cold\",", 1), "json: --cache cold");
     check(printed(bmb_print_json, &rs, "\"copies\": 17", 1), "json: the copies of a row, under --cache cold");
     csv_of(&rs, header, row, sizeof(header));
-    check(strcmp(header, "thread_count,size,time_s,gbytes_per_s,calls_per_sample,median_s,q1_s,q3_s,copies") == 0
-          && strcmp(row, "1,8,0.000001000,2.500000,1,0.000000000,0.000000000,0.000000000,17") == 0,
+    check(strcmp(header, "thread_count,size,time_s,gbytes_per_s,calls_per_sample,median_s,q1_s,q3_s,samples,copies") == 0
+          && strcmp(row, "1,8,0.000001000,2.500000,1,0.000000000,0.000000000,0.000000000,1,17") == 0,
           "csv: the copies, last, under --cache cold");
+
+    /* --warmup-time, --min-time, --max-spread, --max-time (#164): in the
+     * run line and block; the samples taken in the table once -T or -e
+     * may make them more than -i. */
+    rs.cache_cold = 0;
+    rs.warmup_time = 0.2;
+    check(printed(bmb_print_csv, &rs, "# run: 0.2 s and 2 calls of warm-up, 3 samples, batch size chosen per point, hot cache", 0)
+          && !printed(bmb_print_txt_begin, &rs, "IQR [%]   samples", 1),
+          "run: the warm-up time; without -T or -e, no samples column in the table");
+    rs.min_time = 0.5;
+    rs.max_time = 10.0;
+    check(printed(bmb_print_csv, &rs, "# run: 0.2 s and 2 calls of warm-up, 3 samples or more, for 0.5 s, at most 10 s, "
+                                      "batch size chosen per point, hot cache", 0)
+          && printed(bmb_print_txt_begin, &rs, "IQR [%]   samples", 1),
+          "run: -T, and the samples column");
+    rs.min_time = 0.0;
+    rs.max_spread = 2.0;
+    check(printed(bmb_print_csv, &rs, "# run: 0.2 s and 2 calls of warm-up, 3 samples or more, for 0 s and an IQR of 2 %, "
+                                      "at most 10 s, batch size chosen per point, hot cache", 0)
+          && printed(bmb_print_txt_begin, &rs, "IQR [%]   samples", 1),
+          "run: -e alone, and the samples column");
+    check(printed(bmb_print_json, &rs, "\"warmup_time\": 0.2,", 1) && printed(bmb_print_json, &rs, "\"min_time\": 0,", 1)
+          && printed(bmb_print_json, &rs, "\"max_spread\": 2,", 1) && printed(bmb_print_json, &rs, "\"max_time\": 10,", 1)
+          && printed(bmb_print_json, &rs, "\"samples\": 1", 1),
+          "json: the four settings, and each row's samples");
     bmb_result_set_free(&rs);
 
     /* Reading from a write-only stream sets its error indicator, as a

@@ -58,6 +58,17 @@ typedef struct {
     unsigned int ld_pad;      /* -p, --ld-pad: what is added to a matrix's
                                * leading dimension, in elements (#163) */
     int ld_pad_set;           /* whether -p/--ld-pad was given */
+    /* Time-based warm-up and sampling (#164), in seconds; 0 is off. */
+    double warmup_time;       /* -w, --warmup-time: calls repeated for this
+                               * long before the first point of each thread
+                               * count, on top of -x */
+    double min_time;          /* -T, --min-time: samples beyond -i until
+                               * their total reaches it */
+    double max_spread;        /* -e, --max-spread: then samples until their
+                               * interquartile range is at most this, in
+                               * percent of their median */
+    double max_time;          /* -E, --max-time: past it, sampling stops
+                               * whatever -T and -e ask */
 
     char *label;              /* -l, --label; NULL when not given */
 

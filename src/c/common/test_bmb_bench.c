@@ -9,17 +9,23 @@
  * after its call and before the next on it -- after --verify's call too,
  * that copy going last -- none called right after its restore, every
  * copy torn down; at most 16384 copies; refused for a benchmark that
- * does not say what its operands take. And --align and --ld-pad (#163),
- * on a stub whose setup() asks for an operand and a leading dimension:
- * the operand aligned as asked, the leading dimension padded. */
+ * does not say what its operands take. --align and --ld-pad (#163), on a
+ * stub whose setup() asks for an operand and a leading dimension: the
+ * operand aligned as asked, the leading dimension padded. And the
+ * time-based warm-up and sampling (#164), on stubs whose calls take a
+ * known time or none to speak of: --warmup-time once a thread count,
+ * --min-time and --max-time in the calls they allow, --max-spread
+ * judged on 10 samples at least, or -i, and never more than 100000. */
 
 #define _POSIX_C_SOURCE 200809L
 
 #include <math.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "bmb_bench.h"
 
@@ -200,6 +206,56 @@ static void *mem_setup(size_t dim1, size_t dim2, unsigned int thread_count)
     return &ctx;
 }
 
+/* A call of 200 microseconds, spun on the clock: the time-based options'
+ * stub, whose calls are counted. */
+static int timed_calls;
+
+static double now(void)
+{
+    struct timespec ts;
+
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double) ts.tv_sec + (double) ts.tv_nsec * 1.0e-9;
+}
+
+static void timed_call(void *ctx)
+{
+    const double t0 = now();
+
+    (void) ctx;
+    while (now() - t0 < 200.0e-6) {
+        work += 1.0;
+    }
+    timed_calls++;
+}
+
+/* Runs `bench` with -v 8 -x 0 -b 1 -i 1 -C followed by the arguments
+ * given, ending in NULL: the calls it made in *count, and the seconds it
+ * took in *seconds. */
+static int timed_run(const bmb_benchmark_t *bench, int *count, double *seconds, ...)
+{
+    static char prog[] = "bmb_stub", v[] = "-v", eight[] = "8", x[] = "-x", zero[] = "0",
+                b[] = "-b", one[] = "1", i[] = "-i", c[] = "-C";
+    char *argv[32] = {prog, v, eight, x, zero, b, one, i, one, c};
+    int argc = 10, status;
+    double t0;
+    va_list ap;
+    char *arg;
+
+    va_start(ap, seconds);
+    while ((arg = va_arg(ap, char *)) != NULL && argc < 31) {
+        argv[argc++] = arg;
+    }
+    va_end(ap);
+    argv[argc] = NULL;
+    timed_calls = calls = 0;
+    t0 = now();
+    status = bmb_benchmark_main(argc, argv, bench);
+    *seconds = now() - t0;
+    *count = (bench->call == timed_call) ? timed_calls : calls;
+    return status;
+}
+
 /* Whether the n copies made took `total` calls round robin, from the
  * first: --verify's, then the next copy's. */
 static int round_robin(int n, int total)
@@ -247,8 +303,8 @@ int main(void)
      * by their teardown, so what they record is read before the next
      * run, from counts: the contexts themselves are gone by then. */
     {
-        static char k[] = "-k", cold[] = "cold", two[] = "2", seven[] = "7";
-        char *verified[] = {prog, v, one, x, two, i, seven, k, cold, NULL};
+        static char k[] = "-k", cold[] = "cold", two[] = "2", seven[] = "7", w[] = "-w";
+        char *verified[] = {prog, v, one, x, two, i, seven, k, cold, w, zero, NULL};
         char *bare[] = {prog, v, one, x, zero, i, one, k, cold, c, NULL};
         bmb_benchmark_t cb = {0};
         int status, rr;
@@ -266,7 +322,7 @@ int main(void)
 
         /* 2 warm-up calls and 7 samples of one call each, after --verify's. */
         cold_count_reset();
-        status = bmb_benchmark_main(9, verified, &cb);
+        status = bmb_benchmark_main(11, verified, &cb);
         rr = cold_setups == 5 && round_robin(5, 1 + 2 + 7);
         free_kept();
         check(status == EXIT_SUCCESS && cold_setups == 5, "cold: 5 copies, the others reaching twice the 32 MiB L3");
@@ -311,6 +367,52 @@ int main(void)
         status = bmb_benchmark_main(12, memory, &mb);
         check(status == EXIT_SUCCESS && mem_misaligned == 0, "--align 4096: an operand on a page boundary");
         check(mem_ld == 8, "--ld-pad 3: a leading dimension of 5 + 3");
+    }
+
+    /* --warmup-time, --min-time, --max-spread, --max-time (#164). With -b 1,
+     * no check and no -x, every call is a warm-up one or a sample. Each
+     * timed call takes 200 us at least, so a time allows that many calls
+     * at most; the run took that time at least. */
+    {
+        static char w[] = "-w", wt[] = "0.05", z[] = "0", t[] = "-t", t12[] = "1,2", T[] = "-T",
+                    Tt[] = "0.02", e[] = "-e", loose[] = "50", tight[] = "0.000001", E[] = "-E",
+                    Et[] = "0.02", Tbig[] = "3600", i[] = "-i", i20[] = "20", ibig[] = "100001";
+        bmb_benchmark_t tb = {0};
+        int n, status;
+        double secs;
+
+        tb.routine_name = "timed stub";
+        tb.dim1_label = "Vector size";
+        tb.use_vector_range = 1;
+        tb.setup = setup;
+        tb.call = timed_call;
+        tb.teardown = teardown;
+
+        status = timed_run(&tb, &n, &secs, w, wt, (char *) NULL);
+        check(status == EXIT_SUCCESS && n > 1 && n <= 251 + 1 && secs >= 0.05,
+              "--warmup-time 0.05: calls for 0.05 s, then the sample");
+        status = timed_run(&tb, &n, &secs, w, wt, t, t12, (char *) NULL);
+        check(status == EXIT_SUCCESS && n <= 2 * 251 + 2 && secs >= 0.1,
+              "--warmup-time 0.05 -t 1,2: once a thread count");
+        status = timed_run(&tb, &n, &secs, w, z, (char *) NULL);
+        check(status == EXIT_SUCCESS && n == 1, "--warmup-time 0: no warm-up, the sample alone");
+        status = timed_run(&tb, &n, &secs, w, z, T, Tt, (char *) NULL);
+        check(status == EXIT_SUCCESS && n > 1 && n <= 101 && secs >= 0.02,
+              "--min-time 0.02: samples until they add up to 0.02 s");
+        status = timed_run(&tb, &n, &secs, w, z, e, loose, (char *) NULL);
+        check(status == EXIT_SUCCESS && n == 10, "--max-spread 50: calls this regular stop at 10 samples");
+        status = timed_run(&tb, &n, &secs, w, z, e, loose, i, i20, (char *) NULL);
+        check(status == EXIT_SUCCESS && n == 20, "--max-spread 50 -i 20: at -i, past 10");
+        status = timed_run(&tb, &n, &secs, w, z, e, tight, E, Et, (char *) NULL);
+        check(status == EXIT_SUCCESS && n > 10 && n <= 101 && secs >= 0.02,
+              "--max-spread never met: --max-time 0.02 stops it");
+
+        /* Calls of a microsecond or so: the cap, and -i past it. */
+        tb.call = call;
+        status = timed_run(&tb, &n, &secs, w, z, T, Tbig, E, Tbig, (char *) NULL);
+        check(status == EXIT_SUCCESS && n == 100000, "--min-time 3600 on short calls: 100000 samples at most");
+        status = timed_run(&tb, &n, &secs, w, z, T, Tbig, E, Tbig, i, ibig, (char *) NULL);
+        check(status == EXIT_SUCCESS && n == 100001, "and -i 100001, past it, has its samples");
     }
 
     /* The values R's quantile() gives, exactly representable. One sample

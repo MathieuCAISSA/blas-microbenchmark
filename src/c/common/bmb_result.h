@@ -25,6 +25,7 @@ typedef struct {
     double q1_s;
     double q3_s;
     unsigned int copies; /* --cache cold: the copies of the operands rotated over */
+    unsigned int samples; /* the samples taken: -i, or more with -T and -e (#164) */
 } bmb_result_row_t;
 
 typedef struct {
@@ -47,6 +48,10 @@ typedef struct {
     unsigned int align;     /* --align, in bytes (#163) */
     unsigned int ld_pad;    /* --ld-pad, in elements (#163); written
                              * for the routines with a matrix only */
+    double warmup_time;     /* --warmup-time, --min-time, --max-spread */
+    double min_time;        /* (in percent) and --max-time (#164) */
+    double max_spread;
+    double max_time;
     int has_stats;
     int has_flops;
     int has_bytes;

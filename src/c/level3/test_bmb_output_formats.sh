@@ -16,7 +16,7 @@ grep -q "^# blas-microbenchmark [0-9]" fmt.csv || fail "csv carries no version l
 grep -q "^# backend: " fmt.csv || fail "csv carries no backend line"
 
 header=`grep -v '^#' fmt.csv | sed -n 1p`
-want="thread_count,matrix_dim1_m_k,matrix_dim2_n,time_s,gflops,calls_per_sample,median_s,q1_s,q3_s"
+want="thread_count,matrix_dim1_m_k,matrix_dim2_n,time_s,gflops,calls_per_sample,median_s,q1_s,q3_s,samples"
 test "$header" = "$want" || fail "csv header is '$header', expected '$want'"
 
 rows=`grep -cv '^#' fmt.csv`
@@ -68,7 +68,7 @@ grep -q '"label": "say \\"hi\\""' fmtl.json || fail "json label is missing or no
 # one sample.
 ./double/bmb_dgemm -x 0 -i 1 -m 8 -M 8 -s -C -o stat.csv -f csv >stat.txt || fail "the -s run failed"
 header=$(grep -v '^#' stat.csv | sed -n 1p)
-want="thread_count,matrix_dim1_m_k,matrix_dim2_n,time_s,gflops,mean_s,stddev_s,max_s,calls_per_sample,median_s,q1_s,q3_s"
+want="thread_count,matrix_dim1_m_k,matrix_dim2_n,time_s,gflops,mean_s,stddev_s,max_s,calls_per_sample,median_s,q1_s,q3_s,samples"
 test "$header" = "$want" || fail "-s csv header is '$header', expected '$want'"
 row=$(grep -v '^#' stat.csv | sed -n 2p)
 echo "$row" | awk -F, '{ exit !($4 == $10 && $4 == $11 && $4 == $12) }' \
@@ -85,19 +85,20 @@ echo "$row" | awk -F, '{ d = $8 - $4; e1 = $11 - ($4 + d / 4); e3 = $12 - ($4 + 
 awk -F': ' '{ v = $2 + 0 } /"time_s"/ { t = v } /"q1_s"/ { a = v } /"median_s"/ { m = v } /"q3_s"/ { b = v }
     /"max_s"/ { x = v } END { exit !(t <= a && a <= m && m <= b && b <= x) }' stat.json \
     || fail "the quartiles and median are not in order between the fastest and slowest samples"
-grep -q '^      "q3_s": [0-9.]*$' stat.json || fail "json has no q3_s, last in its row"
+grep -q '^      "samples": 3$' stat.json || fail "json has no samples, 3, last in its row"
 
 # How the run was made (#161): the command line, the program by its name,
 # the warm-up, samples and batch, the compiler, the variables set, the
 # affinity; the operands' alignment and padding (#163).
 grep -q '^# command: bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o fmt.csv -f csv$' fmt.csv \
     || fail "csv has no command line: $(grep '^# command' fmt.csv)"
-grep -q '^# run: 0 warm-up calls, 1 sample, batch size chosen per point, hot cache$' fmt.csv \
+grep -q '^# run: 0.2 s and 0 calls of warm-up, 1 sample, batch size chosen per point, hot cache$' fmt.csv \
     || fail "csv has no run line: $(grep '^# run' fmt.csv)"
 grep -q '^# compiler: [^,]*, CFLAGS ' fmt.csv || fail "csv has no compiler line"
 grep -q '^# operands: aligned to 64 bytes, leading dimensions + 0$' fmt.csv || fail "csv has no operands line"
 for field in '"run": {' '"command": \["bmb_dgemm", "-x", "0", "-i", "1", "-m", "8", "-M", "8", "-o", "fmt.json", "-f", "json"\],' \
-             '"warmup": 0,' '"iterations": 1,' '"cache": "hot",' '"align": 64,' '"ld_pad": 0,' \
+             '"warmup": 0,' '"warmup_time": 0.2,' '"iterations": 1,' '"min_time": 0,' '"max_spread": 0,' \
+             '"max_time": 10,' '"cache": "hot",' '"align": 64,' '"ld_pad": 0,' \
              '"compiler": "' '"cflags": "' '"environment": {'; do
     grep -q "$field" fmt.json || fail "json carries no $field field"
 done
@@ -110,6 +111,18 @@ grep -q '^    "cpus_allowed": "0-3,6",$' run.json || fail "json has no cpus_allo
 grep -q '^# operands: aligned to 4096 bytes, leading dimensions + 8$' run.txt || fail "text has no -a 4096 -p 8"
 grep -q '^    "align": 4096,$' run.json && grep -q '^    "ld_pad": 8,$' run.json || fail "json has no -a 4096 -p 8"
 rm -f run.json run.txt stat.txt
+
+# --min-time (#164): samples past -i, as many as it takes, said in the
+# run line, and in a samples column of the table, before the copies.
+./double/bmb_dgemm -x 0 -i 1 -m 8 -M 8 -w 0 -T 0.01 -k cold -o adaptive.json >adaptive.txt 2>/dev/null \
+    || fail "the -T run failed"
+grep -q '^# run: 0 s and 0 calls of warm-up, 1 sample or more, for 0.01 s, at most 10 s, ' adaptive.txt \
+    || fail "the run line does not give -T: $(grep '^# run' adaptive.txt)"
+grep -v '^#' adaptive.txt | awk 'NR == 1 { exit !($(NF - 1) == "samples" && $NF == "copies") }' \
+    || fail "no samples column before the copies: $(grep -v '^#' adaptive.txt | sed -n 1p)"
+grep -v '^#' adaptive.txt | awk 'NR == 2 { exit !($(NF - 1) > 1) }' || fail "-T 0.01 took a single sample"
+grep -q '^      "samples": [0-9]*,$' adaptive.json || fail "json has no samples before the copies"
+rm -f adaptive.json adaptive.txt
 
 # The CPU frequency (#3), read from the fake sysfs trees of the machine
 # probe's tests: the governor and turbo in every format, and a warning

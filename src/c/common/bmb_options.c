@@ -26,6 +26,12 @@
  * about. Small enough that a size the parser accepts, plus it, still fits
  * the int BLAS takes: 1518500249 + 65536 < INT_MAX. */
 #define BMB_MAX_LD_PAD           65536u
+/* Long enough for a CPU to leave its idle clock under the schedutil or
+ * powersave governors, which take tens of milliseconds; short enough to
+ * pay once for each thread count of a run (#164). */
+#define BMB_DEFAULT_WARMUP_TIME  0.2
+#define BMB_DEFAULT_MAX_TIME     10.0
+#define BMB_MAX_SECONDS          3600.0
 
 static const struct option bmb_long_options[] = {
     {"warmup",         required_argument, NULL, 'x'},
@@ -42,6 +48,10 @@ static const struct option bmb_long_options[] = {
     {"cache",          required_argument, NULL, 'k'},
     {"align",          required_argument, NULL, 'a'},
     {"ld-pad",         required_argument, NULL, 'p'},
+    {"warmup-time",    required_argument, NULL, 'w'},
+    {"min-time",       required_argument, NULL, 'T'},
+    {"max-spread",     required_argument, NULL, 'e'},
+    {"max-time",       required_argument, NULL, 'E'},
     {"label",          required_argument, NULL, 'l'},
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
@@ -50,7 +60,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:k:a:p:l:o:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:k:a:p:w:T:e:E:l:o:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -329,6 +339,39 @@ static int bmb_option_range(const char *str, const char *option, bmb_range_t *ou
     return -1;
 }
 
+/* Parses a duration or a percentage: digits, then optionally a point and
+ * more digits ("0.2", "10"), between 0 and `max`. Nothing strtod would
+ * take besides: no sign, no exponent, no "inf" or "nan". */
+static int bmb_option_decimal(const char *str, const char *option, double max, double *out)
+{
+    const char *p = str;
+    char msg[256];
+    double value;
+
+    while (*p >= '0' && *p <= '9') {
+        p++;
+    }
+    if (p > str && *p == '.') {
+        const char *frac = ++p;
+
+        while (*p >= '0' && *p <= '9') {
+            p++;
+        }
+        if (p == frac) {
+            p = str;
+        }
+    }
+    value = (p > str && *p == '\0') ? strtod(str, NULL) : -1.0;
+    if (value < 0.0 || value > max) {
+        snprintf(msg, sizeof(msg), "Invalid value for %s (expected a number from 0 to %g, e.g. 0.5).",
+                 option, max);
+        bmb_log_error(msg);
+        return -1;
+    }
+    *out = value;
+    return 0;
+}
+
 /* Parses one plain count option (--warmup, --iterations). */
 static int bmb_option_count(const char *str, const char *option, unsigned int min_allowed,
                             unsigned int *out)
@@ -416,6 +459,10 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->align = BMB_DEFAULT_ALIGN;
     opts->ld_pad = 0;
     opts->ld_pad_set = 0;
+    opts->warmup_time = BMB_DEFAULT_WARMUP_TIME;
+    opts->min_time = 0.0;
+    opts->max_spread = 0.0;
+    opts->max_time = BMB_DEFAULT_MAX_TIME;
 
     opts->output_file = NULL;
     opts->output_format = BMB_FORMAT_CSV;
@@ -520,6 +567,10 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
     opts->align = BMB_DEFAULT_ALIGN;
     opts->ld_pad = 0;
     opts->ld_pad_set = 0;
+    opts->warmup_time = BMB_DEFAULT_WARMUP_TIME;
+    opts->min_time = 0.0;
+    opts->max_spread = 0.0;
+    opts->max_time = BMB_DEFAULT_MAX_TIME;
             } else if (strcmp(optarg, "cold") == 0) {
                 opts->cache_cold = 1;
             } else {
@@ -559,6 +610,30 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             opts->ld_pad_set = 1;
             break;
         }
+
+        case 'w':
+            if (bmb_option_decimal(optarg, "--warmup-time", BMB_MAX_SECONDS, &opts->warmup_time) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
+        case 'T':
+            if (bmb_option_decimal(optarg, "--min-time", BMB_MAX_SECONDS, &opts->min_time) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
+        case 'e':
+            if (bmb_option_decimal(optarg, "--max-spread", 100.0, &opts->max_spread) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
+        case 'E':
+            if (bmb_option_decimal(optarg, "--max-time", BMB_MAX_SECONDS, &opts->max_time) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
 
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
@@ -602,6 +677,14 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
 
     if (opts->output_file != NULL && !opts->output_format_set) {
         opts->output_format = bmb_infer_output_format(opts->output_file) ? BMB_FORMAT_JSON : BMB_FORMAT_CSV;
+    }
+
+    /* Sampling stops at --max-time: a --min-time past it could not be met. */
+    if (opts->min_time > opts->max_time) {
+        snprintf(errbuf, sizeof(errbuf), "--min-time %g is past --max-time %g.", opts->min_time,
+                 opts->max_time);
+        bmb_log_error(errbuf);
+        return BMB_OPTIONS_ERROR;
     }
 
     /* A matrix size plus --ld-pad within the ceiling (#163): a padded
@@ -652,6 +735,14 @@ void bmb_options_print_help(const char *prog_name)
         "  -a, --align <bytes>           align every operand to bytes, a power of two (default: %u)\n"
         "  -p, --ld-pad <n>              add n elements to every matrix's leading dimension\n"
         "                                 (default: 0)\n"
+        "  -w, --warmup-time <s>         repeat calls for s seconds before the first point of\n"
+        "                                 each thread count, on top of -x (default: %g)\n"
+        "  -T, --min-time <s>            take samples beyond -i until they add up to s seconds\n"
+        "                                 (default: 0)\n"
+        "  -e, --max-spread <percent>    then take samples until their interquartile range is\n"
+        "                                 at most percent of their median (default: 0, off)\n"
+        "  -E, --max-time <s>            stop taking samples at s seconds whatever -T and -e ask\n"
+        "                                 (default: %g)\n"
         "  -l, --label <text>            tag the results, e.g. \"turbo off\" (default: none)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
@@ -667,7 +758,7 @@ void bmb_options_print_help(const char *prog_name)
         "\n"
         "Full documentation: man blas-microbenchmark\n",
         BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS,
-        BMB_DEFAULT_ALIGN);
+        BMB_DEFAULT_ALIGN, BMB_DEFAULT_WARMUP_TIME, BMB_DEFAULT_MAX_TIME);
 }
 
 void bmb_options_print_version(void)
