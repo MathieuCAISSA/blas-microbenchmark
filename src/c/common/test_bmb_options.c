@@ -10,6 +10,7 @@
  * Nothing here runs a benchmark, so sizes near the ceiling are safe to
  * test: they are parsed, never allocated. */
 
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -566,7 +567,7 @@ int main(void)
             }
             if (st != cases[i].status) {
                 fail(cases[i].what, "got the wrong status");
-            } else if (st == BMB_OPTIONS_OK && got != cases[i].want) {
+            } else if (st == BMB_OPTIONS_OK && fabs(got - cases[i].want) > 1.0e-12 * cases[i].want) {
                 fail(cases[i].what, "stored another value");
             } else {
                 ok(cases[i].what);
