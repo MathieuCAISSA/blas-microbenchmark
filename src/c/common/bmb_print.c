@@ -62,6 +62,13 @@ static const char *bmb_print_program(const char *argv0)
     return (slash != NULL) ? slash + 1 : argv0;
 }
 
+/* Whether -T or -e asked for more samples than -i (#164): the samples
+ * taken then go in the table too. */
+static int bmb_print_adaptive(const bmb_result_set_t *rs)
+{
+    return rs->min_time > 0.0 || rs->max_spread > 0.0;
+}
+
 /* How the run was made, after where it ran: everything needed to make
  * the same measurement again (#161). */
 static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machine_t *m)
@@ -83,8 +90,16 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
         }
         fputc('\n', out);
     }
-    fprintf(out, "# run: %u warm-up call%s, %u sample%s, ", rs->warmup, rs->warmup == 1 ? "" : "s",
-            rs->iterations, rs->iterations == 1 ? "" : "s");
+    fprintf(out, "# run: %g s and %u call%s of warm-up, %u sample%s", rs->warmup_time, rs->warmup,
+            rs->warmup == 1 ? "" : "s", rs->iterations, rs->iterations == 1 ? "" : "s");
+    if (bmb_print_adaptive(rs)) {
+        fprintf(out, " or more, for %g s", rs->min_time);
+        if (rs->max_spread > 0.0) {
+            fprintf(out, " and an IQR of %g %%", rs->max_spread);
+        }
+        fprintf(out, ", at most %g s", rs->max_time);
+    }
+    fprintf(out, ", ");
     if (rs->batch != 0) {
         fprintf(out, "batches of %u call%s, ", rs->batch, rs->batch == 1 ? "" : "s");
     } else {
@@ -182,6 +197,9 @@ void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "%-16s%-16s%-16s%-14s", "mean [s]", "stddev [s]", "max [s]", "calls/sample");
     }
     fprintf(out, "%-16s%-10s", "median [s]", "IQR [%]");
+    if (bmb_print_adaptive(rs)) {
+        fprintf(out, "%-10s", "samples");
+    }
     if (rs->cache_cold) {
         fprintf(out, "%-8s", "copies");
     }
@@ -215,6 +233,9 @@ void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
                 row->batch);
     }
     fprintf(out, "%-16.9f%-10.1f", row->median_s, bmb_print_iqr_percent(row));
+    if (bmb_print_adaptive(rs)) {
+        fprintf(out, "%-10u", row->samples);
+    }
     if (rs->cache_cold) {
         fprintf(out, "%-8u", row->copies);
     }
@@ -274,7 +295,7 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
     if (rs->has_stats) {
         fprintf(out, ",mean_s,stddev_s,max_s");
     }
-    fprintf(out, ",calls_per_sample,median_s,q1_s,q3_s");
+    fprintf(out, ",calls_per_sample,median_s,q1_s,q3_s,samples");
     if (rs->cache_cold) {
         fprintf(out, ",copies");
     }
@@ -298,7 +319,8 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         if (rs->has_stats) {
             fprintf(out, ",%.9f,%.9f,%.9f", row->mean_s, row->stddev_s, row->max_s);
         }
-        fprintf(out, ",%u,%.9f,%.9f,%.9f", row->batch, row->median_s, row->q1_s, row->q3_s);
+        fprintf(out, ",%u,%.9f,%.9f,%.9f,%u", row->batch, row->median_s, row->q1_s, row->q3_s,
+                row->samples);
         if (rs->cache_cold) {
             fprintf(out, ",%u", row->copies);
         }
@@ -393,7 +415,11 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
     }
     fprintf(out, "],\n");
     fprintf(out, "    \"warmup\": %u,\n", rs->warmup);
+    fprintf(out, "    \"warmup_time\": %g,\n", rs->warmup_time);
     fprintf(out, "    \"iterations\": %u,\n", rs->iterations);
+    fprintf(out, "    \"min_time\": %g,\n", rs->min_time);
+    fprintf(out, "    \"max_spread\": %g,\n", rs->max_spread);
+    fprintf(out, "    \"max_time\": %g,\n", rs->max_time);
     if (rs->batch != 0) {
         fprintf(out, "    \"batch\": %u,\n", rs->batch);
     }
@@ -491,8 +517,8 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
                     row->mean_s, row->stddev_s, row->max_s);
         }
         fprintf(out, ",\n      \"calls_per_sample\": %u,\n      \"median_s\": %.9f,"
-                     "\n      \"q1_s\": %.9f,\n      \"q3_s\": %.9f",
-                row->batch, row->median_s, row->q1_s, row->q3_s);
+                     "\n      \"q1_s\": %.9f,\n      \"q3_s\": %.9f,\n      \"samples\": %u",
+                row->batch, row->median_s, row->q1_s, row->q3_s, row->samples);
         if (rs->cache_cold) {
             fprintf(out, ",\n      \"copies\": %u", row->copies);
         }

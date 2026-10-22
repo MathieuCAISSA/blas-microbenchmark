@@ -188,6 +188,8 @@ static void test_defaults(void)
         fail("defaults", "the cache is not hot");
     } else if (opts.align != 64 || opts.ld_pad != 0 || opts.ld_pad_set) {
         fail("defaults", "operands are not aligned to 64 bytes, or leading dimensions are padded");
+    } else if (opts.warmup_time != 0.2 || opts.min_time != 0.0 || opts.max_spread != 0.0 || opts.max_time != 10.0) {
+        fail("defaults", "not 0.2 s of warm-up, no -T or -e, a --max-time of 10 s");
     } else if (opts.vector_size_set || opts.matrix_dim1_set
                || opts.matrix_dim2_set || opts.thread_count_set || opts.layout_set) {
         fail("defaults", "an option is marked as given when none were");
@@ -517,6 +519,77 @@ int main(void)
             if (st == BMB_OPTIONS_OK) {
                 bmb_options_free(&opts);
             }
+        }
+    }
+
+    /* ---- --warmup-time, --min-time, --max-spread, --max-time (#164) ---- */
+    {
+        static const struct {
+            const char *a, *b;
+            bmb_options_status_t status;
+            double want;
+            const char *what;
+        } cases[] = {
+            {"-w", "0", BMB_OPTIONS_OK, 0.0, "-w 0: no warm-up"},
+            {"--warmup-time", "0.5", BMB_OPTIONS_OK, 0.5, "--warmup-time 0.5"},
+            {"--warmup-time", "3600", BMB_OPTIONS_OK, 3600.0, "--warmup-time 3600, the most"},
+            {"--warmup-time", "3600.5", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 3600.5 is refused"},
+            {"--warmup-time", "-1", BMB_OPTIONS_ERROR, 0.0, "--warmup-time -1 is refused: no sign"},
+            {"--warmup-time", "1e3", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 1e3 is refused: no exponent"},
+            {"--warmup-time", ".5", BMB_OPTIONS_ERROR, 0.0, "--warmup-time .5 is refused: a digit first"},
+            {"--warmup-time", "5.", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 5. is refused: a digit after the point"},
+            {"--warmup-time", "1.5s", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 1.5s is refused: nothing after the digits"},
+            {"--warmup-time", "inf", BMB_OPTIONS_ERROR, 0.0, "--warmup-time inf is refused"},
+            {"--warmup-time", "nan", BMB_OPTIONS_ERROR, 0.0, "--warmup-time nan is refused"},
+            {"--warmup-time", "0x1", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 0x1 is refused"},
+            {"--warmup-time", "", BMB_OPTIONS_ERROR, 0.0, "an empty --warmup-time is refused"},
+            {"-T", "1.25", BMB_OPTIONS_OK, 1.25, "-T 1.25"},
+            {"-T", "x", BMB_OPTIONS_ERROR, 0.0, "-T x is refused"},
+            {"-e", "2.5", BMB_OPTIONS_OK, 2.5, "-e 2.5"},
+            {"--max-spread", "100", BMB_OPTIONS_OK, 100.0, "--max-spread 100, the most"},
+            {"--max-spread", "100.5", BMB_OPTIONS_ERROR, 0.0, "--max-spread 100.5 is refused"},
+            {"-E", "0.5", BMB_OPTIONS_OK, 0.5, "-E 0.5"},
+            {"-E", "-1", BMB_OPTIONS_ERROR, 0.0, "-E -1 is refused"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+            bmb_options_status_t st = parse_args(&opts, cases[i].a, cases[i].b, ARGS_END);
+            double got = 0.0;
+
+            if (st == BMB_OPTIONS_OK) {
+                got = (cases[i].a[1] == 'w' || cases[i].a[2] == 'w') ? opts.warmup_time
+                    : (cases[i].a[1] == 'T') ? opts.min_time
+                    : (cases[i].a[1] == 'e' || cases[i].a[2] == 'm') ? opts.max_spread
+                    : opts.max_time;
+            }
+            if (st != cases[i].status) {
+                fail(cases[i].what, "got the wrong status");
+            } else if (st == BMB_OPTIONS_OK && got != cases[i].want) {
+                fail(cases[i].what, "stored another value");
+            } else {
+                ok(cases[i].what);
+            }
+            if (st == BMB_OPTIONS_OK) {
+                bmb_options_free(&opts);
+            }
+        }
+    }
+    {
+        bmb_options_t opts;
+
+        if (parse_args(&opts, "-T", "20", ARGS_END) == BMB_OPTIONS_ERROR) {
+            ok("-T 20 past the default --max-time of 10 is refused");
+        } else {
+            fail("-T 20", "was accepted past --max-time 10");
+            bmb_options_free(&opts);
+        }
+        if (parse_args(&opts, "-T", "20", "-E", "20", ARGS_END) == BMB_OPTIONS_OK) {
+            ok("-T 20 -E 20: at --max-time, accepted");
+            bmb_options_free(&opts);
+        } else {
+            fail("-T 20 -E 20", "was refused");
         }
     }
 

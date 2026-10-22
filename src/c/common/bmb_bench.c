@@ -44,6 +44,13 @@ static double bmb_quantile(const double *sorted, unsigned int n, double p)
     return sorted[i] + (h - (double) i) * (sorted[i + 1] - sorted[i]);
 }
 
+/* The median of n sorted samples, computed apart from the quartiles so
+ * that two give their mean to the last bit. */
+static double bmb_median(const double *sorted, unsigned int n)
+{
+    return (n % 2 == 1) ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0;
+}
+
 void bmb_quartiles(const double *sorted, unsigned int n, double *q1, double *q3)
 {
     *q1 = bmb_quantile(sorted, n, 0.25);
@@ -80,7 +87,7 @@ static void bmb_compute_stats(double *times, unsigned int n, bmb_result_row_t *r
     row->stddev_s = sqrt(variance);
 
     qsort(times, n, sizeof(*times), bmb_compare_times);
-    row->median_s = (n % 2 == 1) ? times[n / 2] : (times[n / 2 - 1] + times[n / 2]) / 2.0;
+    row->median_s = bmb_median(times, n);
     bmb_quartiles(times, n, &row->q1_s, &row->q3_s);
 }
 
@@ -327,14 +334,60 @@ static void bmb_warn_partly_warm(const bmb_benchmark_t *bench, size_t dim1, size
 /* The last-level cache --cache cold must reach past, read once a run. */
 static unsigned long long bmb_llc;
 
+/* Whether the next point is the first of its thread count, which
+ * --warmup-time warms up before (#164). */
+static int bmb_warm_pending;
+
+/* The most samples --min-time and --max-spread take at a point: the
+ * buffer for them is set aside whole, 800 KB, rather than grown as they
+ * come. And the fewest --max-spread judges a spread from. */
+#define BMB_MAX_SAMPLES   100000u
+#define BMB_SPREAD_SAMPLES 10u
+
+/* Whether the n samples taken, which add up to `total` seconds, are
+ * enough (#164): --min-time reached, then --max-spread, unless --max-time
+ * is. The spread is the interquartile range over the median, not the
+ * coefficient of variation: one preempted sample in thousands keeps a
+ * standard deviation, and so the CV, from ever settling. It is judged
+ * each time the samples have doubled since it was last, so that sorting
+ * them costs O(n log n) in all; *check is when it is next. Sorts
+ * `times`, whose order nothing after depends on. */
+static int bmb_samples_enough(const bmb_options_t *opts, double *times, unsigned int n,
+                              double total, unsigned int *check)
+{
+    double q1, q3;
+
+    if (total >= opts->max_time) {
+        return 1;
+    }
+    if (total < opts->min_time) {
+        return 0;
+    }
+    if (opts->max_spread <= 0.0) {
+        return 1;
+    }
+    if (n < *check) {
+        return 0;
+    }
+    *check = 2 * n;
+    qsort(times, n, sizeof(*times), bmb_compare_times);
+    bmb_quartiles(times, n, &q1, &q3);
+    return q3 - q1 <= opts->max_spread / 100.0 * bmb_median(times, n);
+}
+
 static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                         unsigned int thread_count, size_t dim1, size_t dim2,
                         bmb_result_row_t *row)
 {
     bmb_operands_t ops;
     double *times;
+    double total = 0.0;
+    const int adaptive = opts->min_time > 0.0 || opts->max_spread > 0.0;
+    const unsigned int capacity = (adaptive && opts->iterations < BMB_MAX_SAMPLES) ? BMB_MAX_SAMPLES
+                                                                                   : opts->iterations;
     unsigned int batch;
-    unsigned int i;
+    unsigned int i, n;
+    unsigned int check = BMB_SPREAD_SAMPLES;
     int v;
 
     bmb_threads_set(thread_count);
@@ -364,11 +417,21 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
         }
     }
 
+    /* Before the first point of a thread count, calls for --warmup-time:
+     * the CPU leaves its idle clock, the library its threads' sleep. */
+    if (bmb_warm_pending) {
+        const double t0 = bmb_timer_now();
+
+        while (bmb_timer_now() - t0 < opts->warmup_time) {
+            (void) bmb_time_batch(bench, &ops, 1);
+        }
+        bmb_warm_pending = 0;
+    }
     for (i = 0; i < opts->warmup; i++) {
         (void) bmb_time_batch(bench, &ops, 1);
     }
 
-    times = malloc(opts->iterations * sizeof(*times));
+    times = malloc(capacity * sizeof(*times));
     if (times == NULL) {
         bmb_log_error("Out of memory while allocating timing buffer.");
         bmb_operands_free(bench, &ops);
@@ -386,18 +449,23 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
      * operand is bookkeeping, and for dtrmm/dtrsm it is an O(M*N) copy that
      * would otherwise be a large part of what gets reported as the
      * routine's time. */
-    for (i = 0; i < opts->iterations; i++) {
-        times[i] = bmb_time_batch(bench, &ops, batch);
+    for (n = 0; n < capacity;) {
+        times[n] = bmb_time_batch(bench, &ops, batch);
+        total += times[n++] * (double) batch;
+        if (n >= opts->iterations && bmb_samples_enough(opts, times, n, total, &check)) {
+            break;
+        }
     }
 
     row->copies = ops.count;
+    row->samples = n;
     bmb_operands_free(bench, &ops);
 
     row->thread_count = thread_count;
     row->dim1 = dim1;
     row->dim2 = dim2;
     row->batch = batch;
-    bmb_compute_stats(times, opts->iterations, row);
+    bmb_compute_stats(times, n, row);
 
     /* Rates come from the reported time, i.e. the fastest sample. GFLOP/s
      * and GB/s are decimal (1e9), as they conventionally are for compute
@@ -642,6 +710,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.cache_cold = opts.cache_cold;
     rs.align = opts.align;
     rs.ld_pad = opts.ld_pad;
+    rs.warmup_time = opts.warmup_time;
+    rs.min_time = opts.min_time;
+    rs.max_spread = opts.max_spread;
+    rs.max_time = opts.max_time;
     bmb_align = opts.align;
     bmb_ld_pad = opts.ld_pad;
     if (!bench->use_vector_range) {
@@ -652,7 +724,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     for (ti = 0; ti < opts.thread_count.count; ti++) {
         unsigned int thread_count = (unsigned int) opts.thread_count.values[ti];
-        int r = bmb_sweep_dim1(bench, &opts, thread_count, &rs);
+        int r;
+
+        bmb_warm_pending = opts.warmup_time > 0.0;
+        r = bmb_sweep_dim1(bench, &opts, thread_count, &rs);
 
         if (r == -2) {
             status = BMB_EXIT_WRONG_RESULT;

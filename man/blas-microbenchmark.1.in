@@ -95,7 +95,41 @@ Untimed calls before measuring each point.
 Default: 1.
 .TP
 .BI "\-i, \-\-iterations " n
-Timed samples taken at each point.
+Timed samples taken at each point, at least.
+Default: 10.
+.TP
+.BI "\-w, \-\-warmup\-time " s
+Calls repeated for
+.I s
+seconds before the first point of each thread count, on top of
+.BR \-x :
+the CPU leaves its idle clock, and the library wakes its threads.
+0 turns it off.
+Default: 0.2.
+.TP
+.BI "\-T, \-\-min\-time " s
+Samples taken past
+.B \-i
+until they add up to
+.I s
+seconds.
+Default: 0.
+.TP
+.BI "\-e, \-\-max\-spread " percent
+Then samples taken until their interquartile range is at most
+.I percent
+of their median, judged on 10 samples at least, or
+.BR \-i .
+Default: 0, off.
+.TP
+.BI "\-E, \-\-max\-time " s
+Sampling stops once the samples add up to
+.I s
+seconds, whatever
+.B \-T
+and
+.B \-e
+ask; at most 100000 samples are taken.
 Default: 10.
 .TP
 .BI "\-b, \-\-batch " n
@@ -271,6 +305,29 @@ the median,
 .BR "IQR [%]" .
 .B \-s
 adds the mean, the standard deviation and the slowest sample.
+.PP
+Ten samples say little about noise, and a small point measured in a
+millisecond may run before the CPU has left its idle clock.
+.B \-w
+warms up for a time rather than a number of calls, once a thread count.
+.B \-T
+takes as many samples as fill a time, and
+.B \-e
+as many as it takes for them to agree:
+.RS
+.EX
+bmb_ddot \-v 1024:1048576 \-T 0.1 \-e 2
+.EE
+.RE
+.PP
+The spread is the interquartile range, not the coefficient of variation:
+one preempted sample in thousands keeps a standard deviation from ever
+settling, and a quartile does not see it.
+The samples taken are in the results, and in the table when
+.BR \-T " or " \-e
+is given.
+The fastest of more samples is faster still: compare runs taken with the
+same settings, which the results record.
 .PP
 Two rates are derived from that time:
 .TP
@@ -504,7 +561,7 @@ Every result starts with where it came from:
 # date: 2026\-10\-02T09:05:04Z
 # affinity: CPUs 0\-13
 # command: bmb_dgemm \-m 512:2048 \-o dgemm.json
-# run: 1 warm\-up call, 10 samples, batch size chosen per point, hot cache
+# run: 0.2 s and 1 call of warm\-up, 10 samples, batch size chosen per point, hot cache
 # operands: aligned to 64 bytes, leading dimensions + 0
 # compiler: gcc 13.3.0, CFLAGS \-g \-O2 \-fopenmp
 # environment: OMP_PROC_BIND=close
@@ -534,8 +591,9 @@ command line, the program by its name and each word as a shell would
 take it back (as typed: a path given to
 .B \-o
 goes with the results, a relative one keeps a home directory out);
-the warm\-up calls, the samples and the batch size
-.RB ( \-x ", " \-i ", " \-b ,
+the warm\-up time and calls, the samples and the time and spread that
+may ask for more, and the batch size
+.RB ( \-w ", " \-x ", " \-i ", " \-T ", " \-e ", " \-E ", " \-b ,
 which is 1 whatever
 .B \-b
 says for the routines whose operand is restored before every call),
@@ -627,7 +685,11 @@ with
 .B command
 (the words of the command line),
 .BR warmup ,
+.BR warmup_time ,
 .BR iterations ,
+.BR min_time ,
+.BR max_spread ,
+.BR max_time ,
 .B cache
 .RB ( hot " or " cold ),
 .BR align ,
@@ -666,9 +728,10 @@ and
 then
 .BR calls_per_sample ,
 .BR median_s ,
-.B q1_s
+.BR q1_s ,
+.B q3_s
 and
-.BR q3_s ,
+.BR samples ,
 and with
 .BR "\-k cold" ,
 .BR copies ,

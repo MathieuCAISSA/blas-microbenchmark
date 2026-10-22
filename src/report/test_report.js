@@ -630,6 +630,12 @@
       eq(R.runText(bare), "1 sample, 0 warm-up calls, batches of 50 calls · gcc 13.3.0",
          "run: -b, no flags, no affinity, no variable");
       eq(R.runText(undefined), "", "run: a file from before the run block");
+      eq(R.runText({ warmup: 1, warmup_time: 0.2, iterations: 10, min_time: 0.5, max_spread: 2, max_time: 10 }),
+         "10 samples or more, for 0.5 s and an IQR of 2 %, at most 10 s, 0.2 s and 1 warm-up call",
+         "run: the warm-up time and the sampling targets (#164)");
+      eq(R.runText({ warmup: 0, warmup_time: 0, iterations: 3, min_time: 0.1, max_spread: 0, max_time: 10 }),
+         "3 samples or more, for 0.1 s, at most 10 s, 0 warm-up calls",
+         "run: -T alone, no warm-up time");
       eq([R.commandText(full), R.commandText(undefined)], ["bmb_ddot -v 8", ""], "the command line, for the tooltip");
 
       var m = R.buildModel([

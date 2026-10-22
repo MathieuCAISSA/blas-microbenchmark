@@ -130,6 +130,7 @@ FUZZ_CORPUS = \
 	fuzz/bmb_options/linear-sweep \
 	fuzz/bmb_options/quick-start \
 	fuzz/bmb_options/refused \
+	fuzz/bmb_options/sampling \
 	fuzz/bmb_options/thread-list \
 	fuzz/bmb_options/threads \
 	fuzz/bmb_options/too-many \
