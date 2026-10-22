@@ -774,6 +774,9 @@ void bmb_options_print_version(void)
     } else {
         printf("BLAS backend: %s\n", bmb_build_backend());
     }
+    if (bmb_build_kernels() != NULL) {
+        printf("Kernels: %s\n", bmb_build_kernels());
+    }
 
     /* The machine as well: CI prints this for every job, which is how one
      * finds out what each runner's CPU actually reports. */

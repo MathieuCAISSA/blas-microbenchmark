@@ -28,6 +28,14 @@ void bmb_build_backend_name(const char *library, char *buf, size_t size);
  * both say "openblas" -- 0.3.20 and 0.3.29 do not perform alike. */
 const char *bmb_build_blas_version(void);
 
+/* The kernels the library's dispatch chose at run time, as the library
+ * names them: "Haswell" (OpenBLAS's core), "zen3" (BLIS's and AOCL-BLAS's
+ * configuration), "AVX2" (MKL's code branch); NULL for a library that
+ * does not say (Netlib, NVPL, ArmPL, FlexiBLAS). Since SME, AMX and
+ * AVX10, the path chosen changes the numbers, and the version string
+ * does not tell it (#162). */
+const char *bmb_build_kernels(void);
+
 /* The compiler the benchmarks were built with, "gcc 13.3.0", and the
  * CFLAGS configure ended with: what the run block of a result names
  * (#161). The BLAS library was built on its own, so these say how the

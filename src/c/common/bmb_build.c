@@ -146,3 +146,63 @@ const char *bmb_build_blas_version(void)
     return NULL;
 }
 #endif
+
+#if defined(HAVE_OPENBLAS_GET_CORENAME)
+extern char *openblas_get_corename(void);
+
+const char *bmb_build_kernels(void)
+{
+    return openblas_get_corename();
+}
+#elif defined(HAVE_BLI_ARCH_QUERY_ID)
+/* arch_t is an enum, passed as an int. */
+extern int bli_arch_query_id(void);
+extern const char *bli_arch_string(int id);
+
+const char *bmb_build_kernels(void)
+{
+    return bli_arch_string(bli_arch_query_id());
+}
+#elif defined(HAVE_MKL_CBWR_GET_AUTO_BRANCH)
+#include <mkl_service.h>
+
+/* The branch MKL's dispatch takes on this CPU, under
+ * MKL_ENABLE_INSTRUCTIONS if it is set. The constants a release does not
+ * have are left out. */
+const char *bmb_build_kernels(void)
+{
+    switch (mkl_cbwr_get_auto_branch()) {
+    case MKL_CBWR_COMPATIBLE:
+        return "COMPATIBLE";
+    case MKL_CBWR_SSE2:
+        return "SSE2";
+#if defined(MKL_CBWR_SSE4_2)
+    case MKL_CBWR_SSE4_2:
+        return "SSE4_2";
+#endif
+#if defined(MKL_CBWR_AVX2)
+    case MKL_CBWR_AVX2:
+        return "AVX2";
+#endif
+#if defined(MKL_CBWR_AVX512)
+    case MKL_CBWR_AVX512:
+        return "AVX512";
+#endif
+#if defined(MKL_CBWR_AVX512_E1)
+    case MKL_CBWR_AVX512_E1:
+        return "AVX512_E1";
+#endif
+#if defined(MKL_CBWR_AVX10)
+    case MKL_CBWR_AVX10:
+        return "AVX10";
+#endif
+    default:
+        return "unknown branch";
+    }
+}
+#else
+const char *bmb_build_kernels(void)
+{
+    return NULL;
+}
+#endif

@@ -28,7 +28,15 @@ own version string through. `bmb_build.c` turns both into the provenance
 block every result carries. A new backend must set the name; the version
 string is a bonus where the library has one (OpenBLAS's
 `openblas_get_config()`, BLIS's `bli_info_get_version_str()`) and NULL
-where it does not.
+where it does not. So are the kernels its dispatch chose at run time
+(#162, `bmb_build_kernels()`): OpenBLAS's `openblas_get_corename()`,
+BLIS's and AOCL-BLAS's `bli_arch_string(bli_arch_query_id())`, MKL's
+`mkl_cbwr_get_auto_branch()`, which follows `MKL_ENABLE_INSTRUCTIONS`,
+each detected by `configure`; NULL for Netlib, NVPL and ArmPL, which have
+no such call, and for FlexiBLAS, which loads its library where the
+benchmark cannot reach it. Debian's BLIS 0.9 aborts with any
+`BLIS_ARCH_TYPE` set, so only OpenBLAS's and MKL's overrides are tested
+(`test_bmb_kernels.sh`).
 
 The machine side of the provenance lives in `bmb_machine.c`, probed once per
 run: CPU model, logical CPUs, NUMA nodes, cpu0's caches, the CPU frequency

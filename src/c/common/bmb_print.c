@@ -135,6 +135,7 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
 static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
+    const char *kernels = bmb_build_kernels();
     const bmb_machine_t *m = bmb_machine();
     char line[512];
 
@@ -143,6 +144,9 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "# backend: %s (%s)\n", bmb_build_backend(), blas);
     } else {
         fprintf(out, "# backend: %s\n", bmb_build_backend());
+    }
+    if (kernels != NULL) {
+        fprintf(out, "# kernels: %s\n", kernels);
     }
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
@@ -452,6 +456,7 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
 void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
+    const char *kernels = bmb_build_kernels();
     size_t i;
 
     fprintf(out, "{\n");
@@ -462,6 +467,11 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
     if (blas != NULL && blas[0] != '\0') { /* GCOVR_EXCL_BR_LINE: no library this builds against reports an empty version */
         fprintf(out, "  \"blas\": ");
         bmb_print_json_string(out, blas);
+        fprintf(out, ",\n");
+    }
+    if (kernels != NULL) {
+        fprintf(out, "  \"kernels\": ");
+        bmb_print_json_string(out, kernels);
         fprintf(out, ",\n");
     }
     if (rs->label != NULL) {
