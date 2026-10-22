@@ -26,8 +26,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     }
 
     ctx->n = (int) dim1;
-    ctx->x = malloc(dim1 * sizeof(double));
-    ctx->y = malloc(dim1 * sizeof(double));
+    ctx->x = bmb_bench_alloc(dim1 * sizeof(double));
+    ctx->y = bmb_bench_alloc(dim1 * sizeof(double));
     if (ctx->x == NULL || ctx->y == NULL) {
         free(ctx->x);
         free(ctx->y);

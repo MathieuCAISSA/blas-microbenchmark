@@ -2,8 +2,10 @@
  * is an argv given to bmb_options_parse(), and whatever it accepts is
  * held to what the benchmarks rely on -- every point between 1 and the
  * size ceiling, at most BMB_MAX_SWEEP_POINTS of them, at least one
- * iteration, a printable label, the output format a .json file implies
- * -- then described into buffers of every small size. A crash, a
+ * iteration, a printable label, the output format a .json file implies,
+ * an alignment posix_memalign() takes and a padding that keeps every
+ * matrix size within the ceiling (#163) -- then described into buffers
+ * of every small size. A crash, a
  * sanitizer report or a broken promise aborts.
  *
  * Built two ways. With -DBMB_LIBFUZZER it is a libFuzzer target, which
@@ -84,6 +86,16 @@ static void check_range(const bmb_range_t *range)
     }
 }
 
+static size_t max_point(const bmb_range_t *range)
+{
+    size_t i, max = 0;
+
+    for (i = 0; i < range->count; i++) {
+        max = (range->values[i] > max) ? range->values[i] : max;
+    }
+    return max;
+}
+
 static void check_options(const bmb_options_t *opts)
 {
     check_range(&opts->vector_size);
@@ -92,6 +104,11 @@ static void check_options(const bmb_options_t *opts)
     check_range(&opts->thread_count);
 
     check(opts->iterations >= 1, "no iteration");
+    check(opts->align >= sizeof(void *) && (opts->align & (opts->align - 1)) == 0,
+          "an alignment posix_memalign() refuses");
+    check(max_point(&opts->matrix_dim1) + opts->ld_pad <= size_ceiling()
+          && max_point(&opts->matrix_dim2) + opts->ld_pad <= size_ceiling(),
+          "a matrix size, padded, past the size ceiling");
 
     if (opts->label != NULL) {
         size_t len = strlen(opts->label);

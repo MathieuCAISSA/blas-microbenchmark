@@ -1,7 +1,8 @@
 #!/bin/sh
 # Every benchmark, checked at realistic sizes, non-square shapes, 1, 2
 # and 4 threads and, for those with a matrix, both storage orders
-# (--layout row and col), against the library this CI job built with:
+# (--layout row and col) and padded leading dimensions (column-major,
+# --ld-pad 8, #163), against the library this CI job built with:
 #
 #     .github/verify-sweep.sh BUILD_DIR
 #
@@ -33,11 +34,13 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
     esac
     case $f in
         */level1/*) layouts=- ;;
-        *) layouts="row col" ;;
+        *) layouts="row col col:8" ;;
     esac
-    for layout in $layouts; do
+    for variant in $layouts; do
+        layout=${variant%%:*}
         lo=
         [ "$layout" = - ] || lo="--layout $layout"
+        [ "$variant" = "$layout" ] || lo="$lo --ld-pad ${variant#*:}"
         if "$f" -x 0 -i 1 -t 1,2,4 -c $lo $sizes >/dev/null 2>"$B/verify-sweep.err"; then
             echo "ok   $name $lo $sizes, 1 to 4 threads"
         else

@@ -13,7 +13,8 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int ldb;
+    int lda;
+    int ldb; /* B's and C's: they have the same shape */
     int m;
     int n;
     double alpha[2];
@@ -31,11 +32,16 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t m = dim1, n = dim2;
+    const int col = bmb_bench_column_major();
+    /* B and C as stored: their rows, or their columns with --layout col. */
+    const size_t outb = col ? n : m;
+    const size_t lda = bmb_bench_ld(m, m, BMB_Z);
+    const size_t ldb = bmb_bench_ld(outb, col ? m : n, BMB_Z);
     size_t i;
 
     (void) thread_count;
 
-    if (bmb_bench_matrix_bytes(m, m, BMB_Z) == 0 || bmb_bench_matrix_bytes(m, n, BMB_Z) == 0) {
+    if (lda == 0 || ldb == 0) {
         bmb_bench_too_large();
         return NULL;
     }
@@ -50,12 +56,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->alpha[1] = 0.0;
     ctx->beta[0] = 0.0; /* verify() relies on it */
     ctx->beta[1] = 0.0;
-    ctx->col = bmb_bench_column_major();
+    ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->ldb = ctx->col ? ctx->m : ctx->n;
-    ctx->a = malloc(bmb_bench_matrix_bytes(m, m, BMB_Z));
-    ctx->b = malloc(bmb_bench_matrix_bytes(m, n, BMB_Z));
-    ctx->c = malloc(bmb_bench_matrix_bytes(m, n, BMB_Z));
+    ctx->lda = (int) lda;
+    ctx->ldb = (int) ldb;
+    ctx->a = bmb_bench_alloc(m * lda * BMB_Z);
+    ctx->b = bmb_bench_alloc(outb * ldb * BMB_Z);
+    ctx->c = bmb_bench_alloc(outb * ldb * BMB_Z);
     if (ctx->a == NULL || ctx->b == NULL || ctx->c == NULL) {
         free(ctx->a);
         free(ctx->b);
@@ -64,15 +71,15 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < m * m; i++) {
+    for (i = 0; i < m * lda; i++) {
         ctx->a[2 * i] = (double) (i % 100) * 0.01 - 0.5;
         ctx->a[2 * i + 1] = (double) ((i + 31) % 100) * 0.01 - 0.5;
     }
-    for (i = 0; i < m * n; i++) {
+    for (i = 0; i < outb * ldb; i++) {
         ctx->b[2 * i] = (double) ((i + 7) % 100) * 0.01 - 0.5;
         ctx->b[2 * i + 1] = (double) ((i + 53) % 100) * 0.01 - 0.5;
     }
-    for (i = 0; i < 2 * m * n; i++) {
+    for (i = 0; i < 2 * outb * ldb; i++) {
         ctx->c[i] = 0.0;
     }
 
@@ -84,7 +91,7 @@ static void call(void *vctx)
     bmb_ctx_t *ctx = vctx;
 
     cblas_zhemm(ctx->order, CblasLeft, CblasUpper, ctx->m, ctx->n,
-                (const void *) ctx->alpha, (const void *) ctx->a, ctx->m,
+                (const void *) ctx->alpha, (const void *) ctx->a, ctx->lda,
                 (const void *) ctx->b, ctx->ldb, (const void *) ctx->beta,
                 (void *) ctx->c, ctx->ldb);
 }
@@ -140,7 +147,7 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_verify_perturb(&ctx->c[0]);
     bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, ctx->ldb, r, NULL, y1, y1abs);
     bmb_verify_matvec_complex(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b, ctx->ldb, r, NULL, t, tabs);
-    bmb_verify_matvec_complex(BMB_VERIFY_HERM_UPPER, ctx->col, m, m, ctx->a, m, t, tabs, y2, y2abs);
+    bmb_verify_matvec_complex(BMB_VERIFY_HERM_UPPER, ctx->col, m, m, ctx->a, ctx->lda, t, tabs, y2, y2abs);
     for (i = 0; i < m; i++) {
         double yr = y2[2 * i], yi = y2[2 * i + 1];
 

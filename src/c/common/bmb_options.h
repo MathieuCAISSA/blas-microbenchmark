@@ -53,6 +53,11 @@ typedef struct {
     int layout_set;           /* whether -L/--layout was given */
     int cache_cold;           /* -k, --cache cold: each timed call finds its
                                * operands out of the caches (#160) */
+    unsigned int align;       /* -a, --align: the bytes every operand is
+                               * aligned to (#163) */
+    unsigned int ld_pad;      /* -p, --ld-pad: what is added to a matrix's
+                               * leading dimension, in elements (#163) */
+    int ld_pad_set;           /* whether -p/--ld-pad was given */
 
     char *label;              /* -l, --label; NULL when not given */
 

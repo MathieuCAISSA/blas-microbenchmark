@@ -44,6 +44,9 @@ typedef struct {
     unsigned int iterations;
     unsigned int batch;
     int cache_cold;         /* --cache cold (#160) */
+    unsigned int align;     /* --align, in bytes (#163) */
+    unsigned int ld_pad;    /* --ld-pad, in elements (#163); written
+                             * for the routines with a matrix only */
     int has_stats;
     int has_flops;
     int has_bytes;

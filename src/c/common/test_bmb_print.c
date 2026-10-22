@@ -148,6 +148,19 @@ int main(void)
     check(!printed(bmb_print_json, &rs, "\"batch\"", 1), "json: no batch without -b");
     check(printed(bmb_print_json, &rs, "\"cache\": \"hot\",", 1), "json: the cache hot by default");
 
+    /* --align and --ld-pad (#163): the padding only for a routine with a
+     * matrix. */
+    rs.align = 64;
+    check(printed(bmb_print_csv, &rs, "# operands: aligned to 64 bytes", 0)
+          && printed(bmb_print_json, &rs, "\"align\": 64,", 1) && !printed(bmb_print_json, &rs, "ld_pad", 1),
+          "operands: a vector routine's alignment, no padding");
+    rs.layout = "row";
+    rs.ld_pad = 8;
+    check(printed(bmb_print_csv, &rs, "# operands: aligned to 64 bytes, leading dimensions + 8", 0)
+          && printed(bmb_print_json, &rs, "\"ld_pad\": 8,", 1),
+          "operands: a matrix routine's alignment and padding");
+    rs.layout = NULL;
+
     /* --cache cold (#160): said in the run line and block, and each row
      * gives the copies of the operands it rotated over. */
     rs.cache_cold = 1;

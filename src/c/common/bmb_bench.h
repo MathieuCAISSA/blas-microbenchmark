@@ -128,4 +128,21 @@ size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size);
 void bmb_quartiles(const double *sorted, unsigned int n, double *q1, double *q3);
 void bmb_bench_too_large(void);
 
+/* For setup(): memory for an operand, aligned as --align says (64 bytes
+ * by default), or NULL when out of memory; freed with free(). Every
+ * operand comes from here (#163), so that two libraries are never
+ * compared on operands one of them finds misaligned. */
+void *bmb_bench_alloc(size_t bytes);
+
+/* For setup(): the leading dimension of a matrix of `outer` rows
+ * (row-major) or columns (column-major) of `inner` elements of `size`
+ * bytes each: inner plus --ld-pad, which steps a power-of-two size off
+ * the cache-aliasing stride it would otherwise have (#163). The matrix
+ * then takes outer * ld * size bytes, from bmb_bench_alloc(). 0 when that
+ * would wrap size_t: setup() refuses the size with bmb_bench_too_large().
+ * Only elements of more than 8 bytes can: the parser keeps a size plus
+ * --ld-pad within the ceiling it sets for 8-byte ones. Its fill and its
+ * check go through the leading dimension. */
+size_t bmb_bench_ld(size_t outer, size_t inner, size_t size);
+
 #endif /* BMB_BENCH_H */

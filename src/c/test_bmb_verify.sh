@@ -8,8 +8,9 @@
 # Without it, every benchmark has to pass at several sizes, non-square
 # shapes and two thread counts -- a library can be right at one and wrong
 # at another -- in both storage orders for the routines with a matrix
-# (--layout row and col), and say in its output that the results were
-# verified, and in which order.
+# (--layout row and col), each also with its leading dimensions padded
+# (--ld-pad 3, #163), which the check reads through, and say in its output
+# that the results were verified, and in which order.
 # Tiny sizes only (see AGENTS.md).
 set -e
 
@@ -42,13 +43,17 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
 
     case $b in
         level1/*) layouts=none ;;
-        *) layouts="row col" ;;
+        *) layouts="row col row:3 col:3" ;;
     esac
-    for layout in $layouts; do
+    for variant in $layouts; do
+        layout=${variant%%:*}
+        pad=${variant#*:}
         if [ "$layout" = none ]; then
             lo=
-        else
+        elif [ "$pad" = "$variant" ]; then
             lo="--layout $layout"
+        else
+            lo="--layout $layout --ld-pad $pad"
         fi
 
         # Right results: verified, and said so.
@@ -61,6 +66,9 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
             none) ! grep -q '"layout"' "$T/$r.json" || fail "$name, a vector routine, records a layout" ;;
             *) grep -q "^  \"layout\": \"$layout\",\$" "$T/$r.json" || fail "$name $lo: no \"layout\": \"$layout\" in the JSON" ;;
         esac
+        if [ "$pad" != "$variant" ]; then
+            grep -q "^    \"ld_pad\": $pad,\$" "$T/$r.json" || fail "$name $lo: no \"ld_pad\": $pad in the JSON"
+        fi
 
         # A wrong result: stopped, explained, nothing written.
         set +e
@@ -75,7 +83,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     n=$((n + 1))
 done
 test "$n" -ge 32 || fail "only $n benchmarks found"
-echo "ok   all $n benchmarks pass --verify, in both layouts where they have a matrix, and each one's check catches a corrupted result"
+echo "ok   all $n benchmarks pass --verify, in both layouts, padded or not, where they have a matrix, and each one's check catches a corrupted result"
 
 # On by default: no option, and the results are checked.
 level3/double/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"

@@ -29,8 +29,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     /* Small, as for daxpy, so repeated calls (Y += alpha*X) never
      * over/underflow, regardless of --iterations. */
     ctx->alpha = 1.0e-6f;
-    ctx->x = malloc(dim1 * sizeof(float));
-    ctx->y = malloc(dim1 * sizeof(float));
+    ctx->x = bmb_bench_alloc(dim1 * sizeof(float));
+    ctx->y = bmb_bench_alloc(dim1 * sizeof(float));
     if (ctx->x == NULL || ctx->y == NULL) {
         free(ctx->x);
         free(ctx->y);

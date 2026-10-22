@@ -27,6 +27,12 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t m = dim1, n = dim2, k = dim1;
+    const int col = bmb_bench_column_major();
+    /* Each matrix as stored: its rows, or its columns with --layout col. */
+    const size_t outa = col ? k : m, outb = col ? n : k, outc = col ? n : m;
+    const size_t lda = bmb_bench_ld(outa, col ? m : k, sizeof(double));
+    const size_t ldb = bmb_bench_ld(outb, col ? k : n, sizeof(double));
+    const size_t ldc = bmb_bench_ld(outc, col ? m : n, sizeof(double));
     size_t i;
 
     (void) thread_count;
@@ -41,14 +47,14 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->k = (int) k;
     ctx->alpha = 1.0;
     ctx->beta = 0.0; /* verify() relies on it */
-    ctx->col = bmb_bench_column_major();
+    ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = ctx->col ? ctx->m : ctx->k;
-    ctx->ldb = ctx->col ? ctx->k : ctx->n;
-    ctx->ldc = ctx->col ? ctx->m : ctx->n;
-    ctx->a = malloc(m * k * sizeof(double));
-    ctx->b = malloc(k * n * sizeof(double));
-    ctx->c = malloc(m * n * sizeof(double));
+    ctx->lda = (int) lda;
+    ctx->ldb = (int) ldb;
+    ctx->ldc = (int) ldc;
+    ctx->a = bmb_bench_alloc(outa * lda * sizeof(double));
+    ctx->b = bmb_bench_alloc(outb * ldb * sizeof(double));
+    ctx->c = bmb_bench_alloc(outc * ldc * sizeof(double));
     if (ctx->a == NULL || ctx->b == NULL || ctx->c == NULL) {
         free(ctx->a);
         free(ctx->b);
@@ -57,13 +63,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < m * k; i++) {
+    for (i = 0; i < outa * lda; i++) {
         ctx->a[i] = (double) (i % 100) * 0.01 - 0.5;
     }
-    for (i = 0; i < k * n; i++) {
+    for (i = 0; i < outb * ldb; i++) {
         ctx->b[i] = (double) ((i + 7) % 100) * 0.01 - 0.5;
     }
-    for (i = 0; i < m * n; i++) {
+    for (i = 0; i < outc * ldc; i++) {
         ctx->c[i] = 0.0;
     }
 

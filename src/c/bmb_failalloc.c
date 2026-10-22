@@ -1,9 +1,10 @@
 /* A test helper, never installed: loaded with LD_PRELOAD by
  * test_bmb_alloc_failures.sh, it makes the BMB_FAIL_ALLOC-th allocation
- * the program's own code asks for (malloc, calloc, realloc; counting from
- * 1) return NULL, as an exhausted heap would. With BMB_ALLOC_COUNT set,
- * it says on stderr how many there were ("bmb_failalloc: N allocations"),
- * so that the test knows how many to try.
+ * the program's own code asks for (malloc, calloc, realloc,
+ * posix_memalign; counting from 1) fail, as an exhausted heap would.
+ * With BMB_ALLOC_COUNT set, it says on stderr how many there were
+ * ("bmb_failalloc: N allocations"), so that the test knows how many to
+ * try.
  *
  * Only the program's allocations count: those whose caller is in its own
  * executable segment, not the C library's (fopen, strdup) nor the BLAS
@@ -23,6 +24,7 @@
 extern void *__libc_malloc(size_t size);
 extern void *__libc_calloc(size_t count, size_t size);
 extern void *__libc_realloc(void *ptr, size_t size);
+extern void *__libc_memalign(size_t alignment, size_t size);
 
 typedef int (*main_fn)(int, char **, char **);
 typedef int (*start_main_fn)(main_fn, int, char **, void (*)(void), void (*)(void),
@@ -80,6 +82,23 @@ void *calloc(size_t count, size_t size)
 void *realloc(void *ptr, size_t size)
 {
     return fails(__builtin_return_address(0)) ? NULL : __libc_realloc(ptr, size);
+}
+
+/* The operands' (bmb_bench_alloc(), #163). The benchmarks only ask for
+ * the alignments posix_memalign() takes, which the parser checks. */
+int posix_memalign(void **out, size_t alignment, size_t size)
+{
+    void *p;
+
+    if (fails(__builtin_return_address(0))) {
+        return ENOMEM;
+    }
+    p = __libc_memalign(alignment, size);
+    if (p == NULL) {
+        return ENOMEM;
+    }
+    *out = p;
+    return 0;
 }
 
 static int wrapped_main(int argc, char **argv, char **envp)
