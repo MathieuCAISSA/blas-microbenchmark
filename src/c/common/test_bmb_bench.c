@@ -374,9 +374,9 @@ int main(void)
      * timed call takes 200 us at least, so a time allows that many calls
      * at most; the run took that time at least. */
     {
-        static char w[] = "-w", wt[] = "0.05", z[] = "0", t[] = "-t", t12[] = "1,2", v[] = "-v", v2[] = "8,16", T[] = "-T",
+        static char w[] = "-w", wt[] = "0.05", z[] = "0", t[] = "-t", t12[] = "1,2", v2[] = "8,16", T[] = "-T",
                     Tt[] = "0.02", e[] = "-e", loose[] = "50", tight[] = "0.000001", E[] = "-E",
-                    Et[] = "0.02", Tbig[] = "3600", i[] = "-i", i20[] = "20", ibig[] = "100001";
+                    Et[] = "0.02", Tbig[] = "3600", i20[] = "20", ibig[] = "100001";
         bmb_benchmark_t tb = {0};
         int n, status;
         double secs;

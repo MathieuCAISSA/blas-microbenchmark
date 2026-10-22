@@ -538,15 +538,18 @@ int main(void)
             {"--warmup-time", "1e3", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 1e3 is refused: no exponent"},
             {"--warmup-time", ".5", BMB_OPTIONS_ERROR, 0.0, "--warmup-time .5 is refused: a digit first"},
             {"--warmup-time", "5.", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 5. is refused: a digit after the point"},
+            {"--warmup-time", "1.5s", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 1.5s is refused: nothing after the digits"},
             {"--warmup-time", "inf", BMB_OPTIONS_ERROR, 0.0, "--warmup-time inf is refused"},
             {"--warmup-time", "nan", BMB_OPTIONS_ERROR, 0.0, "--warmup-time nan is refused"},
             {"--warmup-time", "0x1", BMB_OPTIONS_ERROR, 0.0, "--warmup-time 0x1 is refused"},
             {"--warmup-time", "", BMB_OPTIONS_ERROR, 0.0, "an empty --warmup-time is refused"},
             {"-T", "1.25", BMB_OPTIONS_OK, 1.25, "-T 1.25"},
+            {"-T", "x", BMB_OPTIONS_ERROR, 0.0, "-T x is refused"},
             {"-e", "2.5", BMB_OPTIONS_OK, 2.5, "-e 2.5"},
             {"--max-spread", "100", BMB_OPTIONS_OK, 100.0, "--max-spread 100, the most"},
             {"--max-spread", "100.5", BMB_OPTIONS_ERROR, 0.0, "--max-spread 100.5 is refused"},
             {"-E", "0.5", BMB_OPTIONS_OK, 0.5, "-E 0.5"},
+            {"-E", "-1", BMB_OPTIONS_ERROR, 0.0, "-E -1 is refused"},
         };
         size_t i;
 
