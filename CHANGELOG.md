@@ -10,6 +10,13 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `-k cold` (`--cache cold`): each timed call finds its operands out of
+  the caches, by rotating over enough copies of them that the others
+  reach past twice the last-level cache (#160). The GB/s of a vector that
+  fits in a cache then compare with STREAM's, not with that cache's.
+  Hot, the default, is what the benchmarks always did. The results say
+  which (`cache` in the JSON's run block), how many copies each point
+  took (`copies`), and `bmb_report` keeps hot and cold series apart.
 - Every result says how it was measured, so that it can be measured
   again (#161): the CPUs the process could run on, the command line, the
   warm-up calls, samples and batch size, the compiler and CFLAGS of the

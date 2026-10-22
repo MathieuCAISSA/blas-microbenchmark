@@ -58,7 +58,10 @@ the code points at them; the ones easiest to break by accident:
   The frequency governor and turbo are shown, not part of the key, so
   that older files still merge (see
   [backends.md](backends.md)); so is the run block (#161), the Run
-  column (`runText`), with the command lines in its tooltip.
+  column (`runText`), with the command lines in its tooltip. Its cache
+  is the exception (#160): a cold run measures something else than a hot
+  one, so it is part of the key and of the history's, and a file without
+  it counts as hot.
 - **Repeated runs (#4).** Every measurement of a point is kept in its
   `runs`; the curve still goes through the fastest, as the benchmark
   reports the fastest sample. The band of

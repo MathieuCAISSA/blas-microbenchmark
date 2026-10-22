@@ -18,11 +18,14 @@ routine):
 3. `call(void *ctx)`: exactly one call to the `cblas_*` routine and nothing
    else — this is what the timer wraps.
 4. `reset(void *ctx)`, optional: restore whatever `call()` consumed. Run
-   before every timed batch, outside the timing window. Set
-   `reset_every_call` as well if once per batch is not enough — see below.
+   before every timed batch, outside the timing window (after it under
+   `--cache cold`). Set `reset_every_call` as well if once per batch is
+   not enough — see below.
 5. `flops(dim1, dim2)` / `bytes(dim1, dim2)`, optional: the operation count
    and the minimum memory traffic of one call, for the `GFLOP/s` and `GB/s`
    columns. See below for which of the two a routine should declare.
+   `footprint(dim1, dim2)`: the bytes of the operands one call touches,
+   for `--cache cold`; level 3 declares it, having no `bytes`.
 6. `teardown(void *ctx)`: free everything.
 7. `verify(void *ctx, char *msg, size_t size)`: for `--verify`, make one
    call and check its result against a reference — see [Checking
@@ -147,6 +150,11 @@ cost back into every measurement, which is the whole point of batching.
   with O(N³) work over O(N²) data the operands live in cache, so a rate
   built from compulsory traffic is not a bandwidth measurement and would
   be read as one.
+- `footprint`: level 3 (#160). The bytes of the operands the call
+  touches, not the copy `reset()` restores from. `--cache cold` counts
+  its copies from it; without it, from half of `bytes`, a lower bound
+  since `bytes` counts an operand at most twice. A routine with neither
+  is refused under `--cache cold`.
 
 Sanity-check a new formula by comparing across routines rather than
 eyeballing it: at a size large enough to leave the startup noise behind,
@@ -244,6 +252,24 @@ with the transpose, a `saxpy` with twice its alpha.
 
 Recorded here so they are not mistaken for bugs, and not "fixed" without
 weighing what the fix costs.
+
+- **Hot by default, cold on request (#160).** By default every call
+  reuses the operands of the last, so a size that fits in a cache is
+  measured from it. `--cache cold` sets up enough copies that the others
+  reach twice the last-level cache (`BMB_COLD_REACH`, read from the
+  machine block) and rotates over them, one call each; it keeps the
+  batch, so the clock is amortised as hot, and a loop of its own, so a
+  hot run carries none of the rotation's bookkeeping. `reset()` runs
+  right after a copy's call, in the order the copies are used next, so
+  that it does not bring them back into the cache. At most 16384 copies
+  (`BMB_COLD_MAX_COPIES`): below the size where that falls short, a
+  warning says the points are partly warm, and `copies` in the results
+  shows by how much. Hardware prefetchers still see each copy's own
+  accesses: cold means out of the caches, not unpredictable. Measured on
+  the development machine (OpenBLAS, one thread): daxpy at 4096 goes
+  from 51 GB/s hot to 11.5 cold, below the 26 GB/s it streams at 16M,
+  since a small cold vector waits for memory more than it streams from
+  it.
 
 - **The clock is not free.** An empty timed region costs tens of
   nanoseconds. `bmb_bench.c` therefore times a *batch* of calls and divides,
