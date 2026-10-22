@@ -18,8 +18,8 @@ reframe -C site-config.py -c $R/blas_microbenchmark.py -n 'bmb_run' -r</pre>
 <p><code>-S</code> sets the tests' variables:</p>
 <table class="grid">
 <tr><th>Variable</th><th>Default</th><th></th></tr>
-<tr><td><code>level1_size</code></td><td>4000000</td><td>the vector length at level 1</td></tr>
-<tr><td><code>level2_size</code>, <code>level3_size</code></td><td>4096, 2048</td><td>M = N = K at levels 2 and 3</td></tr>
+<tr><td><code>level1_size</code></td><td>10000000</td><td>the vector length at level 1</td></tr>
+<tr><td><code>level2_size</code>, <code>level3_size</code></td><td>5000, 2000</td><td>M = N = K at levels 2 and 3</td></tr>
 <tr><td><code>num_threads</code></td><td>the partition's cores</td><td><code>-t</code></td></tr>
 <tr><td><code>bmb_options</code></td><td>none</td><td>more options, such as <code>-S bmb_options=-i,50</code></td></tr>
 <tr><td><code>install_prefix</code></td><td>this file's install, or <code>PATH</code></td><td>where the benchmarks were installed</td></tr>

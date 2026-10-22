@@ -150,6 +150,7 @@ int main(int argc, char *argv[])
     bench.dim1_label = "Matrix dim (N)";
     bench.dim2_label = NULL;
     bench.use_vector_range = 0;
+    bench.level = 2;
     bench.setup = setup;
     bench.call = call;
     bench.reset = reset;

@@ -49,9 +49,9 @@ class bmb_base(rfm.RunOnlyRegressionTest):
     #: the caches of a current server: the vector length at level 1 (two
     #: vectors of 32 MB), M = N = K at levels 2 and 3 (128 MB and 32 MB
     #: per matrix).
-    level1_size = variable(int, value=4000000)
-    level2_size = variable(int, value=4096)
-    level3_size = variable(int, value=2048)
+    level1_size = variable(int, value=10000000)
+    level2_size = variable(int, value=5000)
+    level3_size = variable(int, value=2000)
 
     #: Threads, through -t. 0: the partition's cores, as ReFrame knows
     #: them (its CPUs when it knows no cores, 1 when it knows neither).

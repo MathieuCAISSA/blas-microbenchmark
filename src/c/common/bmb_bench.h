@@ -78,6 +78,10 @@ typedef struct {
      * 0: dim1 is swept over --matrix-dim1 (level 2 & 3 routines). */
     int use_vector_range;
 
+    /* 1, 2 or 3: the BLAS level, whose default size the routine takes
+     * when no size is given (#165). */
+    int level;
+
     bmb_bench_setup_fn setup;
     bmb_bench_call_fn call;
     bmb_bench_reset_fn reset; /* optional, may stay NULL */

@@ -146,11 +146,15 @@ Default: 0.
 .TP
 .BI "\-v, \-\-vector\-size " sweep
 Vector sizes, for level 1 routines.
-Default: 4096.
+Default: 10000000, past any last-level cache, so that the bandwidth is
+the memory's.
 .TP
 .BI "\-m, \-\-matrix\-dim1 " sweep
 First matrix dimension, for level 2 and 3 routines.
-Default: 4096.
+Default: 5000 at level 2, a matrix past any last-level cache, and 2000
+at level 3, under a second a dgemm call on one core.
+None is a power of two (see
+.BR \-p ).
 .TP
 .BI "\-M, \-\-matrix\-dim2 " sweep
 Second matrix dimension.
@@ -225,7 +229,7 @@ Add
 elements (up to 65536) to every matrix's leading dimension: the distance
 in memory between two of its rows, or its columns with
 .BR "\-L col" .
-A size that is a power of two, such as the default 4096, puts every row
+A size that is a power of two, such as 4096, puts every row
 on the same cache sets, which slows some libraries at exactly that size;
 a few elements of padding steps off it.
 Ignored, with a warning, by the vector routines.

@@ -37,8 +37,8 @@ reframe -C site-config.py -c $R/blas_microbenchmark.py -n bmb_run -r
 | Variable | Default | |
 |---|---|---|
 | `install_prefix` | this file's install, or `PATH` | where it was installed (`bmb_run`) |
-| `level1_size` | 4000000 | the vector length at level 1 |
-| `level2_size`, `level3_size` | 4096, 2048 | M = N = K at levels 2 and 3 |
+| `level1_size` | 10000000 | the vector length at level 1 |
+| `level2_size`, `level3_size` | 5000, 2000 | M = N = K at levels 2 and 3 |
 | `num_threads` | the partition's cores | `-t` |
 | `bmb_options` | none | more options, such as `-S bmb_options=-i,50` |
 | `reference_file` | none | the references, below |

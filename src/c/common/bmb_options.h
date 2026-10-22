@@ -20,6 +20,14 @@ typedef struct {
     size_t count;
 } bmb_range_t;
 
+/* The default size of each level (#165): out of the last-level cache at
+ * levels 1 and 2, where bandwidth is what is measured; under a second a
+ * dgemm call at level 3 on one core; none a power of two, which would put
+ * every row of a matrix on the same cache sets (#163). */
+#define BMB_DEFAULT_VECTOR_SIZE  10000000u
+#define BMB_DEFAULT_LEVEL2_SIZE  5000u
+#define BMB_DEFAULT_LEVEL3_SIZE  2000u
+
 /* Reduces range to the single point value. */
 void bmb_range_set_single(bmb_range_t *range, size_t value);
 

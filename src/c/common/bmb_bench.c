@@ -663,6 +663,9 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         break;
     }
 
+    if (bench->level == 3 && !opts.matrix_dim1_set) {
+        bmb_range_set_single(&opts.matrix_dim1, BMB_DEFAULT_LEVEL3_SIZE);
+    }
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
     if (opts.verify && bench->verify == NULL) {
