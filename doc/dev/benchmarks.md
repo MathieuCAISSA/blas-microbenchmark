@@ -26,6 +26,18 @@ routine):
    columns. See below for which of the two a routine should declare.
    `footprint(dim1, dim2)`: the bytes of the operands one call touches,
    for `--cache cold`; level 3 declares it, having no `bytes`.
+
+Every operand comes from `bmb_bench_alloc()`, aligned as `--align` says,
+never from `malloc` (#163); the context itself, and `verify()`'s scratch,
+may. A matrix gets its leading dimension from `bmb_bench_ld(outer,
+inner, size)` — `inner` plus `--ld-pad`, 0 when the matrix would not fit
+`size_t`, which `setup()` refuses with `bmb_bench_too_large()` before
+allocating — and takes `outer * ld` elements. Every place that passes a
+leading dimension (the call, `verify()`, `reset()`) uses the stored one,
+never a dimension; a linear fill runs over `outer * ld` elements, so that
+`--ld-pad 0` gives the values it always did, and an indexed one strides
+by the leading dimension, the padding initialised too. `test_bmb_verify.sh`
+checks every matrix routine padded, in both storage orders.
 6. `teardown(void *ctx)`: free everything.
 7. `verify(void *ctx, char *msg, size_t size)`: for `--verify`, make one
    call and check its result against a reference — see [Checking

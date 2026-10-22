@@ -9,7 +9,18 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Changed
+- Operands are aligned to 64 bytes, where they were wherever `malloc`
+  put them (16 bytes with glibc). A library sensitive to it can measure
+  differently from 1.7.0 at the same size; `-a 16` comes close to before.
+
 ### Added
+- `-a` (`--align`) and `-p` (`--ld-pad`): every operand is aligned, to 64
+  bytes by default, and a matrix's leading dimension can be padded, to
+  step a power-of-two size such as the default 4096 off the cache sets
+  it would otherwise share (#163). The results say both (`# operands:`,
+  `align` and `ld_pad` in the JSON), and `bmb_report` keeps a padded
+  series apart.
 - `-k cold` (`--cache cold`): each timed call finds its operands out of
   the caches, by rotating over enough copies of them that the others
   reach past twice the last-level cache (#160). The GB/s of a vector that
