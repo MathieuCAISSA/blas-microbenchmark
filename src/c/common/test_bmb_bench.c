@@ -15,7 +15,9 @@
  * time-based warm-up and sampling (#164), on stubs whose calls take a
  * known time or none to speak of: --warmup-time once a thread count,
  * --min-time and --max-time in the calls they allow, --max-spread
- * judged on 10 samples at least, or -i, and never more than 100000. */
+ * judged on 10 samples at least, or -i, and never more than 100000.
+ * And the default size of each level (#165), on stubs that only record
+ * the size they are set up for. */
 
 #define _POSIX_C_SOURCE 200809L
 
@@ -187,6 +189,19 @@ static void cold_count_reset(void)
 {
     cold_setups = cold_teardowns = stale_calls = warm_calls = 0;
     last_reset = NULL;
+}
+
+/* The default sizes' stub: the size setup() was given. */
+static size_t sized_dim1, sized_dim2;
+
+static void *sized_setup(size_t dim1, size_t dim2, unsigned int thread_count)
+{
+    static int ctx;
+
+    (void) thread_count;
+    sized_dim1 = dim1;
+    sized_dim2 = dim2;
+    return &ctx;
 }
 
 /* --align and --ld-pad's stub: what setup() was given. */
@@ -416,6 +431,37 @@ int main(void)
         check(status == EXIT_SUCCESS && n == 100000, "--min-time 3600 on short calls: 100000 samples at most");
         status = timed_run(&tb, &n, &secs, w, z, T, Tbig, E, Tbig, i, ibig, (char *) NULL);
         check(status == EXIT_SUCCESS && n == 100001, "and -i 100001, past it, has its samples");
+    }
+
+    /* No size given: each level's default (#165); -v and -m still win. */
+    {
+        static char w[] = "-w", z[] = "0", b[] = "-b", m[] = "-m", m7[] = "7";
+        char *plain_args[] = {prog, x, zero, i, one, b, one, w, z, c, NULL};
+        char *sized_args[] = {prog, x, zero, i, one, b, one, w, z, c, m, m7, NULL};
+        bmb_benchmark_t sb = {0};
+        int status;
+
+        sb.routine_name = "sized stub";
+        sb.dim1_label = "Vector size";
+        sb.setup = sized_setup;
+        sb.call = call;
+        sb.teardown = teardown;
+        sb.use_vector_range = 1;
+        sb.level = 1;
+        status = bmb_benchmark_main(10, plain_args, &sb);
+        check(status == EXIT_SUCCESS && sized_dim1 == 10000000, "level 1: 10000000 by default");
+        sb.dim1_label = "Matrix dim (N)";
+        sb.use_vector_range = 0;
+        sb.level = 2;
+        status = bmb_benchmark_main(10, plain_args, &sb);
+        check(status == EXIT_SUCCESS && sized_dim1 == 5000, "level 2: 5000 by default");
+        sb.level = 3;
+        sb.dim2_label = "Matrix dim2 (N)";
+        status = bmb_benchmark_main(10, plain_args, &sb);
+        check(status == EXIT_SUCCESS && sized_dim1 == 2000 && sized_dim2 == 2000,
+              "level 3: 2000 by default, square");
+        status = bmb_benchmark_main(12, sized_args, &sb);
+        check(status == EXIT_SUCCESS && sized_dim1 == 7, "level 3 with -m 7: 7");
     }
 
     /* The values R's quantile() gives, exactly representable. One sample

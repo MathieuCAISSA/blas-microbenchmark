@@ -172,8 +172,10 @@ static void test_defaults(void)
     }
 
     format_range(&opts.vector_size, got, sizeof(got));
-    if (strcmp(got, "4096") != 0) {
-        fail("defaults", "vector size is not 4096");
+    if (strcmp(got, "10000000") != 0) {
+        fail("defaults", "vector size is not 10000000");
+    } else if (opts.matrix_dim1.count != 1 || opts.matrix_dim1.values[0] != 5000) {
+        fail("defaults", "the matrix size is not level 2's, 5000 (the driver gives level 3 its own)");
     } else if (opts.warmup != 1 || opts.iterations != 10) {
         fail("defaults", "warmup/iterations are not 1/10");
     } else if (opts.thread_count.count != 1 || opts.thread_count.values[0] != 1) {

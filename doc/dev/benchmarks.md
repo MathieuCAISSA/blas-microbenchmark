@@ -43,8 +43,10 @@ checks every matrix routine padded, in both storage orders.
    call and check its result against a reference — see [Checking
    results](#checking-results---verify).
 8. `main()`: fill a `bmb_benchmark_t` (routine name, dimension labels,
-   whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, and the
-   function pointers above) and call `bmb_benchmark_main(argc, argv, &bench)`.
+   whether `dim1` sweeps `--vector-size` or `--matrix-dim1`, its `level`,
+   whose default size it takes (#165), and the function pointers above)
+   and call `bmb_benchmark_main(argc, argv, &bench)`. `test_bmb_levels.sh`
+   holds `level` to the routine's directory.
 
 A size option is expanded into its explicit list of points while the
 command line is parsed (`bmb_range_t` is a list, not a min/max pair), so

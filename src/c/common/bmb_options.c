@@ -15,7 +15,6 @@
 
 #define BMB_DEFAULT_WARMUP       1u
 #define BMB_DEFAULT_ITERATIONS   10u
-#define BMB_DEFAULT_SIZE         4096u
 #define BMB_DEFAULT_THREADS      1u
 #define BMB_DEFAULT_ALIGN        64u
 /* A cache line on most of today's CPUs, and the most any vector
@@ -437,12 +436,12 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->iterations = BMB_DEFAULT_ITERATIONS;
     opts->batch = 0;
 
-    bmb_range_set_single(&opts->vector_size, BMB_DEFAULT_SIZE);
+    bmb_range_set_single(&opts->vector_size, BMB_DEFAULT_VECTOR_SIZE);
     opts->vector_size_set = 0;
 
-    bmb_range_set_single(&opts->matrix_dim1, BMB_DEFAULT_SIZE);
+    bmb_range_set_single(&opts->matrix_dim1, BMB_DEFAULT_LEVEL2_SIZE);
     opts->matrix_dim1_set = 0;
-    bmb_range_set_single(&opts->matrix_dim2, BMB_DEFAULT_SIZE);
+    bmb_range_set_single(&opts->matrix_dim2, BMB_DEFAULT_LEVEL2_SIZE);
     opts->matrix_dim2_set = 0;
 
     bmb_range_set_single(&opts->thread_count, BMB_DEFAULT_THREADS);
@@ -719,7 +718,8 @@ void bmb_options_print_help(const char *prog_name)
         "  -b, --batch <n>               calls averaged per sample, 0 = choose automatically\n"
         "                                 (default: 0; a batch amortises the clock's own cost)\n"
         "  -v, --vector-size <sweep>     vector sizes for level 1 routines (default: %u)\n"
-        "  -m, --matrix-dim1 <sweep>     matrix first dimension for level 2 & 3 (default: %u)\n"
+        "  -m, --matrix-dim1 <sweep>     matrix first dimension for level 2 & 3\n"
+        "                                 (default: %u at level 2, %u at level 3)\n"
         "  -M, --matrix-dim2 <sweep>     matrix second dimension for level 2 & 3\n"
         "                                 (default: square matrices, dim2 = dim1 at every point;\n"
         "                                 with -M, every dim1 x dim2 combination is measured)\n"
@@ -757,7 +757,8 @@ void bmb_options_print_help(const char *prog_name)
         "<max> is always measured, even when the stride would overshoot it.\n"
         "\n"
         "Full documentation: man blas-microbenchmark\n",
-        BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_SIZE, BMB_DEFAULT_SIZE, BMB_DEFAULT_THREADS,
+        BMB_DEFAULT_WARMUP, BMB_DEFAULT_ITERATIONS, BMB_DEFAULT_VECTOR_SIZE, BMB_DEFAULT_LEVEL2_SIZE,
+        BMB_DEFAULT_LEVEL3_SIZE, BMB_DEFAULT_THREADS,
         BMB_DEFAULT_ALIGN, BMB_DEFAULT_WARMUP_TIME, BMB_DEFAULT_MAX_TIME);
 }
 

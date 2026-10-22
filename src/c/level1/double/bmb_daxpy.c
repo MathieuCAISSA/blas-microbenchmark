@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
     bench.dim1_label = "Vector size";
     bench.dim2_label = NULL;
     bench.use_vector_range = 1;
+    bench.level = 1;
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;

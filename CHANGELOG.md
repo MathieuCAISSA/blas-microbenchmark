@@ -10,6 +10,12 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Changed
+- The default size depends on the level (#165): 10000000 at level 1 and
+  5000 at level 2, past the last-level cache, so that their GB/s are the
+  memory's; 2000 at level 3, under a second a dgemm call on one core
+  (5 s a point, where 4096 took about 30 s). None is a power of two. A run that
+  gave no size measures something else than in 1.7.0; the ReFrame tests'
+  defaults are the same.
 - Each thread count of a run starts with 0.2 s of warm-up calls
   (`-w`, `--warmup-time`; `-w 0` turns it off), so that a small point
   is not measured before the CPU has left its idle clock (#164).
@@ -26,7 +32,7 @@ releases with the same major version can be compared and read by the same
   settling. Every row says how many samples it took (`samples`).
 - `-a` (`--align`) and `-p` (`--ld-pad`): every operand is aligned, to 64
   bytes by default, and a matrix's leading dimension can be padded, to
-  step a power-of-two size such as the default 4096 off the cache sets
+  step a power-of-two size such as 4096 off the cache sets
   it would otherwise share (#163). The results say both (`# operands:`,
   `align` and `ld_pad` in the JSON), and `bmb_report` keeps a padded
   series apart.
