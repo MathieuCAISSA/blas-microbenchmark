@@ -378,7 +378,7 @@ details[open] > summary { margin-bottom: 12px; }
           d2: (row.dim2 === undefined) ? null : row.dim2,
           time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
           mean: row.mean_s, stddev: row.stddev_s, max: row.max_s, median: row.median_s,
-          q1: row.q1_s, q3: row.q3_s,
+          q1: row.q1_s, q3: row.q3_s, samples: row.samples,
           calls: row.calls_per_sample, copies: row.copies, file: file, verified: r.verified === true
         };
         var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
@@ -531,7 +531,10 @@ details[open] > summary { margin-bottom: 12px; }
     var parts = [];
     var env = run.environment || {};
     if (run.iterations !== undefined) {
-      parts.push(plural(run.iterations, "sample") + ", " + plural(run.warmup, "warm-up call") +
+      parts.push(plural(run.iterations, "sample") +
+                 (run.min_time || run.max_spread ? " or more, for " + run.min_time + " s" +
+                  (run.max_spread ? " and an IQR of " + run.max_spread + " %" : "") + ", at most " + run.max_time + " s" : "") +
+                 ", " + (run.warmup_time ? run.warmup_time + " s and " : "") + plural(run.warmup, "warm-up call") +
                  (run.batch ? ", batches of " + plural(run.batch, "call") : ""));
     }
     if (run.align) { parts.push("aligned to " + run.align + " bytes"); }
@@ -1901,6 +1904,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "Median", n: true, v: function (r) { return r.p.median; }, f: fmtTime },
     { h: "Q1", n: true, v: function (r) { return r.p.q1; }, f: fmtTime },
     { h: "Q3", n: true, v: function (r) { return r.p.q3; }, f: fmtTime },
+    { h: "Samples", n: true, v: function (r) { return r.p.samples; } },
     { h: "Calls/sample", n: true, v: function (r) { return r.p.calls; } },
     { h: "Copies", n: true, v: function (r) { return r.p.copies; } },
     { h: "Mean", n: true, v: function (r) { return r.p.mean; }, f: fmtTime },
