@@ -108,6 +108,10 @@ it comes from in brackets.
   an alert is open there, which a pull request's analysis, covering only
   its diff, does not show (#12 showed none while `main` had four;
   [static analysis](../doc/dev/ci.md#static-analysis)).
+- [ ] No two floating-point values are compared with `==` or `!=`, tests
+  included: CodeQL's `cpp/equality-on-floats` is only a note on the pull
+  request, and fails the run on `main` (#179). Compare within a
+  tolerance; a value against an exact literal is fine.
 - [ ] A new action is pinned to a commit SHA with its version; a
   workflow asks only for the permissions it needs
   ([CI](../doc/dev/ci.md)).
