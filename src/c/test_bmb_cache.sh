@@ -4,10 +4,11 @@
 # count): the copies of the operands each point rotates over, enough
 # that the others reach twice that cache, from what the operands take
 # (level 3 says it, levels 1 and 2 half their bytes); 1 once the operands
-# alone are past it; at most 16384, with a warning, on the x86 fixture's
-# 32M L3; in the text, the CSV and the JSON; a run of a routine whose
-# operand is restored, checked by --verify; refused where the cache size
-# cannot be read. Tiny sizes only.
+# alone are past it; at most 16384, with one warning, on the x86
+# fixture's 32M L3; in the text, the CSV and the JSON; a run of a routine
+# whose operand is restored, checked by --verify, and every benchmark run
+# cold and checked; refused where the cache size cannot be read. Tiny
+# sizes only.
 set -e
 
 T=cache-test.d
@@ -67,6 +68,21 @@ BMB_MACHINE_ROOT=$M level3/double/bmb_dtrsm -x 2 -i 3 -c -k cold -m 16 -o "$T/dt
 test "$(copies "$T/dtrsm.json")" = 33 || fail "dtrsm -k cold: copies $(copies "$T/dtrsm.json"), expected 33"
 echo "ok   dtrsm: 33 copies, verified, restored after each call"
 
+# Every benchmark, cold and checked: each says what its operands take,
+# and restores its copies so that each call still computes the right
+# thing.
+n=0
+for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
+    case $b in *.*) continue ;; esac
+    test -x "$b" || continue
+    case $b in level1/*) flag=-v ;; *) flag=-m ;; esac
+    BMB_MACHINE_ROOT=$M "$b" -x 1 -i 2 -c -k cold "$flag" 16 >/dev/null 2>"$T/err" \
+        || fail "$b -k cold failed: $(cat "$T/err")"
+    n=$((n + 1))
+done
+test "$n" -ge 32 || fail "only $n benchmarks found"
+echo "ok   all $n benchmarks run cold, checked"
+
 # Hot by default: said so, and no copies anywhere.
 BMB_MACHINE_ROOT=$M level1/double/bmb_ddot -x 0 -i 1 -v 1024 -o "$T/hot.json" >"$T/hot.txt" 2>"$T/err" \
     || fail "ddot failed: $(cat "$T/err")"
@@ -76,14 +92,17 @@ if grep -q '"copies"' "$T/hot.json" || grep -v '^#' "$T/hot.txt" | grep -q copie
 fi
 echo "ok   hot by default, without copies"
 
-# The x86 fixture's L3 is 32M: a vector of 8 takes more copies than the
-# 16384 allowed, and the run says those points are partly warm.
+# The x86 fixture's L3 is 32M: vectors of 8 and 16 take more copies than
+# the 16384 allowed, and the run says once, from the first, that those
+# points are partly warm.
 F=${srcdir:-.}/common/fixtures/machine/x86
-BMB_MACHINE_ROOT=$F level1/double/bmb_ddot -x 0 -i 1 -k cold -v 8 -o "$T/tiny.json" >/dev/null 2>"$T/err" \
-    || fail "ddot -k cold -v 8 failed: $(cat "$T/err")"
-test "$(copies "$T/tiny.json")" = 16384 || fail "ddot -k cold -v 8: copies $(copies "$T/tiny.json"), expected 16384"
-grep -q 'partly warm' "$T/err" || fail "ddot -k cold -v 8: no warning that it is partly warm: $(cat "$T/err")"
-echo "ok   at most 16384 copies, and a warning past that"
+BMB_MACHINE_ROOT=$F level1/double/bmb_ddot -x 0 -i 1 -k cold -v 8,16 -o "$T/tiny.json" >/dev/null 2>"$T/err" \
+    || fail "ddot -k cold -v 8,16 failed: $(cat "$T/err")"
+test "$(copies "$T/tiny.json" | tr '\n' ' ')" = "16384 16384 " \
+    || fail "ddot -k cold -v 8,16: copies $(copies "$T/tiny.json" | tr '\n' ' '), expected 16384 16384"
+test "$(grep -c 'partly warm' "$T/err")" -eq 1 || fail "ddot -k cold -v 8,16: not one warning: $(cat "$T/err")"
+grep -q 'from Vector size 8 down' "$T/err" || fail "ddot -k cold -v 8,16: the warning does not start at 8: $(cat "$T/err")"
+echo "ok   at most 16384 copies, and one warning past that"
 
 # No cache size, no cold run: exit 1, and why.
 status=0
