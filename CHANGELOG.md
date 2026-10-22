@@ -10,11 +10,20 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Changed
+- Each thread count of a run starts with 0.2 s of warm-up calls
+  (`-w`, `--warmup-time`; `-w 0` turns it off), so that a small point
+  is not measured before the CPU has left its idle clock (#164).
 - Operands are aligned to 64 bytes, where they were wherever `malloc`
   put them (16 bytes with glibc). A library sensitive to it can measure
   differently from 1.7.0 at the same size; `-a 16` comes close to before.
 
 ### Added
+- `-T` (`--min-time`) takes samples past `-i` until they add up to a
+  time, and `-e` (`--max-spread`) until their interquartile range is
+  within a percentage of their median, capped by `-E` (`--max-time`,
+  10 s by default) and 100000 samples (#164). The spread is the IQR, not
+  the coefficient of variation, which one preempted sample keeps from
+  settling. Every row says how many samples it took (`samples`).
 - `-a` (`--align`) and `-p` (`--ld-pad`): every operand is aligned, to 64
   bytes by default, and a matrix's leading dimension can be padded, to
   step a power-of-two size such as the default 4096 off the cache sets

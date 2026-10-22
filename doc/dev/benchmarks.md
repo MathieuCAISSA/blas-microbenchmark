@@ -265,6 +265,20 @@ with the transpose, a `saxpy` with twice its alpha.
 Recorded here so they are not mistaken for bugs, and not "fixed" without
 weighing what the fix costs.
 
+- **Warm-up and samples by time (#164).** `--warmup-time` (0.2 s by
+  default) spins the first point of each thread count, once, rather than
+  every point: a sweep of 256 points would otherwise pay it 256 times,
+  and the CPU stays at its clock while it is busy. It replaces part of
+  the thread start-up a first call paid anyway: `make check` takes no
+  longer with it. `--min-time` and `--max-spread` take samples past
+  `-i`; the spread is judged each time the samples have doubled
+  (sorted in place, O(n log n) in all), on 10 at least, and is the IQR
+  over the median, since the coefficient of variation of thousands of
+  ddot samples stayed above 100 % on the development machine, a few
+  preempted ones keeping the standard deviation up. The buffer for them
+  is 100000 samples, set aside whole, so that the allocations a run
+  makes do not depend on its timing (`test_bmb_alloc_failures.sh` counts
+  them).
 - **Hot by default, cold on request (#160).** By default every call
   reuses the operands of the last, so a size that fits in a cache is
   measured from it. `--cache cold` sets up enough copies that the others
