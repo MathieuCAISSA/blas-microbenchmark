@@ -387,7 +387,7 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                                                                                    : opts->iterations;
     unsigned int batch;
     unsigned int i, n;
-    unsigned int check = (opts->iterations > BMB_SPREAD_SAMPLES) ? opts->iterations : BMB_SPREAD_SAMPLES;
+    unsigned int check = BMB_SPREAD_SAMPLES;
     int v;
 
     bmb_threads_set(thread_count);

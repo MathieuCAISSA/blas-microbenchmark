@@ -374,7 +374,7 @@ int main(void)
      * timed call takes 200 us at least, so a time allows that many calls
      * at most; the run took that time at least. */
     {
-        static char w[] = "-w", wt[] = "0.05", z[] = "0", t[] = "-t", t12[] = "1,2", T[] = "-T",
+        static char w[] = "-w", wt[] = "0.05", z[] = "0", t[] = "-t", t12[] = "1,2", v[] = "-v", v2[] = "8,16", T[] = "-T",
                     Tt[] = "0.02", e[] = "-e", loose[] = "50", tight[] = "0.000001", E[] = "-E",
                     Et[] = "0.02", Tbig[] = "3600", i[] = "-i", i20[] = "20", ibig[] = "100001";
         bmb_benchmark_t tb = {0};
@@ -394,6 +394,9 @@ int main(void)
         status = timed_run(&tb, &n, &secs, w, wt, t, t12, (char *) NULL);
         check(status == EXIT_SUCCESS && n <= 2 * 251 + 2 && secs >= 0.1,
               "--warmup-time 0.05 -t 1,2: once a thread count");
+        status = timed_run(&tb, &n, &secs, w, wt, v, v2, (char *) NULL);
+        check(status == EXIT_SUCCESS && n <= 251 + 2 && secs >= 0.05,
+              "--warmup-time 0.05 -v 8,16: before the first point only");
         status = timed_run(&tb, &n, &secs, w, z, (char *) NULL);
         check(status == EXIT_SUCCESS && n == 1, "--warmup-time 0: no warm-up, the sample alone");
         status = timed_run(&tb, &n, &secs, w, z, T, Tt, (char *) NULL);
