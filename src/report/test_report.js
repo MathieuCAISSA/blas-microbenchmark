@@ -520,6 +520,13 @@
       ]);
       eq(R.historyGroups(m.identities).map(function (g) { return R.historyData(routine(m, "dgemm"), g, 1).name; }).sort(),
          ["openblas", "openblas · turbo"], "two histories of one library are told apart by their label");
+
+      var cold = { run: { cache: "cold" } };
+      m = R.buildModel([
+        v("a.json", "0.3.9", base), v("b.json", "0.3.26", base), v("c.json", "0.3.28", base),
+        v("d.json", "0.3.9", base, cold), v("e.json", "0.3.26", base, cold), v("f.json", "0.3.28", base, cold)
+      ]);
+      eq(R.historyGroups(m.identities).length, 2, "and by their cache (#160): hot and cold are two histories");
     });
 
     /* ---- FlexiBLAS (#5) ---- */
@@ -553,6 +560,20 @@
       eq(routine(m, "dgemm").seriesOrder.length, 2, "dgemm has the two layouts as two curves");
       eq(routine(m, "ddot").seriesOrder.map(function (s) { return s.identity.name; }), ["openblas"],
          "a vector routine stays in the library's one series");
+    });
+
+    /* ---- --cache cold (#160) ---- */
+
+    test("cache", function () {
+      var m = R.buildModel([
+        entry("old.json", { rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("hot.json", { run: { cache: "hot" }, rows: [[1, 16, null, 1e-6, 1, 8]] }),
+        entry("cold.json", { run: { cache: "cold" }, rows: [[1, 8, null, 2e-6, 1, 4]] })
+      ]);
+      eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · cold cache"],
+         "a cold run is its own series, named so; a hot one keeps the plain name");
+      eq(byName(m, "openblas").files, ["old.json", "hot.json"],
+         "files without a run block (before 1.8) merge with hot ones");
     });
 
     /* ---- The CPU frequency (#3) ---- */

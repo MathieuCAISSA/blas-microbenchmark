@@ -69,6 +69,11 @@ void bmb_machine_describe_cpu(const bmb_machine_t *m, char *buf, size_t size);
  * cache that does not fit in size bytes is left out whole. */
 void bmb_machine_describe_caches(const bmb_machine_t *m, char *buf, size_t size);
 
+/* The size of the last-level cache, the data or unified one of the highest
+ * level, in bytes; 0 when no cache could be read. What --cache cold must
+ * exceed (#160). */
+unsigned long long bmb_machine_last_level_cache(const bmb_machine_t *m);
+
 /* "governor performance, turbo off", or as much of it as is known; "" when
  * nothing is. */
 void bmb_machine_describe_frequency(const bmb_machine_t *m, char *buf, size_t size);

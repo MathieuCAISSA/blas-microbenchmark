@@ -165,6 +165,19 @@ no transpose); only its storage changes.
 Ignored, with a warning, by the vector routines.
 Default: row.
 .TP
+.BI "\-k, \-\-cache " state
+Where the operands of each timed call are:
+.B hot
+reuses them from call to call, so that those that fit are in the caches,
+as in a code calling the routine in a loop on the same data;
+.B cold
+rotates over copies of them, enough that the others reach past twice
+the last-level cache, so that each call finds its own out of the caches,
+as in a code that touches much other data in between.
+See
+.BR "HOW A NUMBER IS MEASURED" .
+Default: hot.
+.TP
 .BI "\-l, \-\-label " text
 Tag the results, for what no automatic field records: a BIOS setting, a
 NUMA binding, SMT off.
@@ -258,6 +271,31 @@ written once, counted the way STREAM counts them, 4 bytes an element in
 single precision and 8 in double \(em divided by the time.
 Levels 1 and 2 only: level 3 routines reuse their operands from cache, so
 a rate built from that traffic would not measure bandwidth.
+The comparison with STREAM holds for operands out of the caches: past the
+last-level cache, or at any size with
+.BR "\-k cold" ;
+a smaller vector measured hot is read from a cache, at that cache's
+bandwidth.
+.PP
+.B \-k cold
+sets up as many copies of the operands as it takes for the others to
+reach twice the last-level cache, from what the operands of one call
+take, and gives each call the next one; a copy whose operand the routine
+overwrites is restored right after its call, never before the next, which
+would bring it back into the cache.
+Once the operands alone reach that far, there is one copy, each call
+pushing its own operands out.
+The copies take about twice the last-level cache in memory, on top of
+one set of operands.
+The copies are at most 16384: below the size where that is not enough,
+the points are partly warm, and a warning says from which size.
+The size of the last-level cache comes from
+.IR /sys ;
+where it cannot be read,
+.B \-k cold
+is refused.
+A cold call on a small vector waits for memory more than it streams from
+it, so its GB/s are below STREAM's.
 .SH CHECKING RESULTS
 A benchmark times a call whatever it computes: a library that gets the
 result wrong \(em a broken build, a bug at one size or thread count \(em
@@ -447,7 +485,7 @@ Every result starts with where it came from:
 # date: 2026\-10\-02T09:05:04Z
 # affinity: CPUs 0\-13
 # command: bmb_dgemm \-m 512:2048 \-o dgemm.json
-# run: 1 warm\-up call, 10 samples, batch size chosen per point
+# run: 1 warm\-up call, 10 samples, batch size chosen per point, hot cache
 # compiler: gcc 13.3.0, CFLAGS \-g \-O2 \-fopenmp
 # environment: OMP_PROC_BIND=close
 # routine: dgemm
@@ -480,7 +518,9 @@ the warm\-up calls, the samples and the batch size
 .RB ( \-x ", " \-i ", " \-b ,
 which is 1 whatever
 .B \-b
-says for the routines whose operand is restored before every call);
+says for the routines whose operand is restored before every call),
+and the cache
+.RB ( \-k );
 the compiler and the CFLAGS the benchmarks were built with (not the BLAS
 library's own);
 and the variables set among those that change what a BLAS library does:
@@ -565,6 +605,8 @@ with
 (the words of the command line),
 .BR warmup ,
 .BR iterations ,
+.B cache
+.RB ( hot " or " cold ),
 .B batch
 (when every point used the same:
 .B \-b
@@ -600,7 +642,12 @@ then
 .BR median_s ,
 .B q1_s
 and
-.BR q3_s .
+.BR q3_s ,
+and with
+.BR "\-k cold" ,
+.BR copies ,
+the copies of the operands the point rotated over, which the table and
+the CSV give last too.
 A field that does not apply is left out.
 This is what
 .BR bmb_report (1)
@@ -701,6 +748,15 @@ Sweep ddot from 1K to 16M elements, with the statistics, saved as CSV:
 .RS
 .EX
 bmb_ddot \-v 1024:16777216 \-s \-o ddot.csv
+.EE
+.RE
+.PP
+The same with the vectors out of the caches at every size, for the
+memory's bandwidth rather than a cache's:
+.PP
+.RS
+.EX
+bmb_ddot \-v 1024:16777216 \-k cold \-o ddot\-cold.json
 .EE
 .RE
 .PP

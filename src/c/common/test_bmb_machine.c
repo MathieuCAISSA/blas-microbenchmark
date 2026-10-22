@@ -360,6 +360,29 @@ static void test_generated(void)
     bmb_machine_describe_caches(&m, buf, 13);
     check_str(buf, "L1d 64B", "generated: a cache that does not fit is left out whole");
     check_str(m.governor, "performance", "generated: a governor trimmed, an empty one skipped");
+    check(bmb_machine_last_level_cache(&m) == 1024ULL * 1024 * 1024, "generated: the last-level cache, the L3 of 1G");
+
+    /* An instruction cache is not where operands go, at any level, and a
+     * lower level listed after does not replace the last; a machine with
+     * no cache read has no last level. */
+    tree_begin();
+    tree_file(CACHE "index0/level", "2\n");
+    tree_file(CACHE "index0/type", "Unified\n");
+    tree_file(CACHE "index0/size", "64K\n");
+    tree_file(CACHE "index1/level", "3\n");
+    tree_file(CACHE "index1/type", "Instruction\n");
+    tree_file(CACHE "index1/size", "64M\n");
+    tree_file(CACHE "index2/level", "1\n");
+    tree_file(CACHE "index2/type", "Data\n");
+    tree_file(CACHE "index2/size", "32K\n");
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(bmb_machine_last_level_cache(&m) == 64ULL * 1024,
+          "generated: an instruction cache above the L2 not taken, an L1 listed after it neither");
+    tree_begin();
+    bmb_machine_probe_at(tree_root, &m);
+    tree_end();
+    check(bmb_machine_last_level_cache(&m) == 0, "generated: no cache read, no last level");
 
     tree_begin();
     tree_file(CACHE "index0/level", "1\n");

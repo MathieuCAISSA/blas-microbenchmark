@@ -323,12 +323,15 @@ details[open] > summary { margin-bottom: 12px; }
        * without the field -- vector routines, results from before 1.4 --
        * were row-major, so they stay in the same series as row ones. */
       var layout = r.layout === "col" ? "col" : "row";
-      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout].join("\u0001");
+      /* --cache cold (#160): another measurement than the hot one, so a
+       * series of its own. Files before it were hot. */
+      var cache = (r.run && r.run.cache === "cold") ? "cold" : "hot";
+      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
-          cpu: machine.cpu || "", label: r.label || "", layout: layout, machine: machine,
+          cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, machine: machine,
           versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: []
         };
         identityOrder.push(id);
@@ -373,7 +376,7 @@ details[open] > summary { margin-bottom: 12px; }
           time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
           mean: row.mean_s, stddev: row.stddev_s, max: row.max_s, median: row.median_s,
           q1: row.q1_s, q3: row.q3_s,
-          calls: row.calls_per_sample, file: file, verified: r.verified === true
+          calls: row.calls_per_sample, copies: row.copies, file: file, verified: r.verified === true
         };
         var pkey = p.threads + "x" + p.d1 + "x" + p.d2;
         var prev = series.points[pkey];
@@ -416,6 +419,7 @@ details[open] > summary { margin-bottom: 12px; }
         if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
         if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
         if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
+        if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
       }
       id.name = parts.join(" · ");
     });
@@ -1262,7 +1266,7 @@ details[open] > summary { margin-bottom: 12px; }
   function historyGroups(identities) {
     var groups = {}, order = [];
     identities.forEach(function (id) {
-      var key = [id.backend, id.cpu, id.label, id.layout].join("\u0001");
+      var key = [id.backend, id.cpu, id.label, id.layout, id.cache].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });
@@ -1893,6 +1897,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "Q1", n: true, v: function (r) { return r.p.q1; }, f: fmtTime },
     { h: "Q3", n: true, v: function (r) { return r.p.q3; }, f: fmtTime },
     { h: "Calls/sample", n: true, v: function (r) { return r.p.calls; } },
+    { h: "Copies", n: true, v: function (r) { return r.p.copies; } },
     { h: "Mean", n: true, v: function (r) { return r.p.mean; }, f: fmtTime },
     { h: "Std dev", n: true, v: function (r) { return r.p.stddev; }, f: fmtTime },
     { h: "Max", n: true, v: function (r) { return r.p.max; }, f: fmtTime },

@@ -30,6 +30,7 @@ static const struct option bmb_long_options[] = {
     {"verify",         no_argument,       NULL, 'c'},
     {"no-verify",      no_argument,       NULL, 'C'},
     {"layout",         required_argument, NULL, 'L'},
+    {"cache",          required_argument, NULL, 'k'},
     {"label",          required_argument, NULL, 'l'},
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
@@ -38,7 +39,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:l:o:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:k:l:o:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -390,6 +391,7 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->verify = 1;
     opts->column_major = 0;
     opts->layout_set = 0;
+    opts->cache_cold = 0;
 
     opts->output_file = NULL;
     opts->output_format = BMB_FORMAT_CSV;
@@ -488,6 +490,17 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             opts->layout_set = 1;
             break;
 
+        case 'k':
+            if (strcmp(optarg, "hot") == 0) {
+                opts->cache_cold = 0;
+            } else if (strcmp(optarg, "cold") == 0) {
+                opts->cache_cold = 1;
+            } else {
+                bmb_log_error("Invalid value for --cache (expected hot or cold).");
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
                 return BMB_OPTIONS_ERROR;
@@ -557,11 +570,14 @@ void bmb_options_print_help(const char *prog_name)
         "                                 (default: square matrices, dim2 = dim1 at every point;\n"
         "                                 with -M, every dim1 x dim2 combination is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
-        "  -s, --statistics              add mean/stddev/max, the batch size and the median (default: off)\n"
+        "  -s, --statistics              add the mean, stddev and slowest sample (default: off)\n"
         "  -c, --verify                  check each point's result against a reference before\n"
         "                                 timing it; stop, exit 2, if it is wrong (default: on)\n"
         "  -C, --no-verify               do not check the results\n"
         "  -L, --layout <order>          matrix storage order, row or col (default: row)\n"
+        "  -k, --cache <state>           hot: operands reused from call to call, as in cache;\n"
+        "                                 cold: rotated over copies beyond the last-level cache\n"
+        "                                 (default: hot)\n"
         "  -l, --label <text>            tag the results, e.g. \"turbo off\" (default: none)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"

@@ -86,10 +86,11 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
     fprintf(out, "# run: %u warm-up call%s, %u sample%s, ", rs->warmup, rs->warmup == 1 ? "" : "s",
             rs->iterations, rs->iterations == 1 ? "" : "s");
     if (rs->batch != 0) {
-        fprintf(out, "batches of %u call%s\n", rs->batch, rs->batch == 1 ? "" : "s");
+        fprintf(out, "batches of %u call%s, ", rs->batch, rs->batch == 1 ? "" : "s");
     } else {
-        fprintf(out, "batch size chosen per point\n");
+        fprintf(out, "batch size chosen per point, ");
     }
+    fprintf(out, "%s cache\n", rs->cache_cold ? "cold" : "hot");
     fprintf(out, "# compiler: %s, CFLAGS %s\n", bmb_build_compiler(), bmb_build_cflags());
     for (i = 0; i < BMB_RUN_VARIABLES; i++) {
         const char *value = getenv(bmb_run_variables[i]);
@@ -176,6 +177,9 @@ void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "%-16s%-16s%-16s%-14s", "mean [s]", "stddev [s]", "max [s]", "calls/sample");
     }
     fprintf(out, "%-16s%-10s", "median [s]", "IQR [%]");
+    if (rs->cache_cold) {
+        fprintf(out, "%-8s", "copies");
+    }
     fprintf(out, "\n");
 }
 
@@ -206,6 +210,9 @@ void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
                 row->batch);
     }
     fprintf(out, "%-16.9f%-10.1f", row->median_s, bmb_print_iqr_percent(row));
+    if (rs->cache_cold) {
+        fprintf(out, "%-8u", row->copies);
+    }
     fprintf(out, "\n");
 
     /* Flushed per row so that progress is visible through a pipe or a
@@ -263,6 +270,9 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, ",mean_s,stddev_s,max_s");
     }
     fprintf(out, ",calls_per_sample,median_s,q1_s,q3_s");
+    if (rs->cache_cold) {
+        fprintf(out, ",copies");
+    }
     fprintf(out, "\n");
 
     for (i = 0; i < rs->count; i++) {
@@ -284,6 +294,9 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
             fprintf(out, ",%.9f,%.9f,%.9f", row->mean_s, row->stddev_s, row->max_s);
         }
         fprintf(out, ",%u,%.9f,%.9f,%.9f", row->batch, row->median_s, row->q1_s, row->q3_s);
+        if (rs->cache_cold) {
+            fprintf(out, ",%u", row->copies);
+        }
         fprintf(out, "\n");
     }
 }
@@ -379,6 +392,7 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
     if (rs->batch != 0) {
         fprintf(out, "    \"batch\": %u,\n", rs->batch);
     }
+    fprintf(out, "    \"cache\": \"%s\",\n", rs->cache_cold ? "cold" : "hot");
     fprintf(out, "    \"compiler\": ");
     bmb_print_json_string(out, bmb_build_compiler());
     fprintf(out, ",\n    \"cflags\": ");
@@ -470,6 +484,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, ",\n      \"calls_per_sample\": %u,\n      \"median_s\": %.9f,"
                      "\n      \"q1_s\": %.9f,\n      \"q3_s\": %.9f",
                 row->batch, row->median_s, row->q1_s, row->q3_s);
+        if (rs->cache_cold) {
+            fprintf(out, ",\n      \"copies\": %u", row->copies);
+        }
         fprintf(out, "\n    }%s\n", (i + 1 < rs->count) ? "," : "");
     }
     fprintf(out, "  ]\n}\n");

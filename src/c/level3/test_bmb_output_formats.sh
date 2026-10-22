@@ -92,11 +92,11 @@ grep -q '^      "q3_s": [0-9.]*$' stat.json || fail "json has no q3_s, last in i
 # affinity.
 grep -q '^# command: bmb_dgemm -x 0 -i 1 -m 8 -M 8 -o fmt.csv -f csv$' fmt.csv \
     || fail "csv has no command line: $(grep '^# command' fmt.csv)"
-grep -q '^# run: 0 warm-up calls, 1 sample, batch size chosen per point$' fmt.csv \
+grep -q '^# run: 0 warm-up calls, 1 sample, batch size chosen per point, hot cache$' fmt.csv \
     || fail "csv has no run line: $(grep '^# run' fmt.csv)"
 grep -q '^# compiler: [^,]*, CFLAGS ' fmt.csv || fail "csv has no compiler line"
 for field in '"run": {' '"command": \["bmb_dgemm", "-x", "0", "-i", "1", "-m", "8", "-M", "8", "-o", "fmt.json", "-f", "json"\],' \
-             '"warmup": 0,' '"iterations": 1,' '"compiler": "' '"cflags": "' '"environment": {'; do
+             '"warmup": 0,' '"iterations": 1,' '"cache": "hot",' '"compiler": "' '"cflags": "' '"environment": {'; do
     grep -q "$field" fmt.json || fail "json carries no $field field"
 done
 OMP_PROC_BIND=close BMB_MACHINE_ROOT=${srcdir:-.}/../common/fixtures/machine/container \

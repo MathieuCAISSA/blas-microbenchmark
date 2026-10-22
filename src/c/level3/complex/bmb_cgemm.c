@@ -103,6 +103,15 @@ static double flops(size_t dim1, size_t dim2)
     return 8.0 * d1 * d1 * d2;
 }
 
+/* --cache cold: the bytes of A, B and C: M x K (K = M), K x N, M x N. */
+static double footprint(size_t dim1, size_t dim2)
+{
+    const double d1 = (double) dim1;
+    const double d2 = (double) dim2;
+
+    return (d1 * d1 + 2.0 * d1 * d2) * (double) (2 * sizeof(float));
+}
+
 /* --verify, by random projection in double: C*r against alpha*A*(B*r),
  * for a complex r. beta is 0 (setup), so what C held before the call
  * does not enter. The scale leaves out |C||r|, as sgemm's does, for the
@@ -154,6 +163,7 @@ int main(int argc, char *argv[])
     bench.teardown = teardown;
     bench.verify = verify;
     bench.flops = flops;
+    bench.footprint = footprint;
 
     return bmb_benchmark_main(argc, argv, &bench);
 }

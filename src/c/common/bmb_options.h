@@ -51,6 +51,8 @@ typedef struct {
     int column_major;         /* -L, --layout col: matrices stored and
                                * passed column-major, as Fortran does */
     int layout_set;           /* whether -L/--layout was given */
+    int cache_cold;           /* -k, --cache cold: each timed call finds its
+                               * operands out of the caches (#160) */
 
     char *label;              /* -l, --label; NULL when not given */
 

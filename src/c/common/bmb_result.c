@@ -17,6 +17,7 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->warmup = 0;
     rs->iterations = 0;
     rs->batch = 0;
+    rs->cache_cold = 0;
     rs->has_stats = has_stats;
     rs->has_flops = has_flops;
     rs->has_bytes = has_bytes;
