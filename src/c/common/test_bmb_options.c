@@ -184,6 +184,8 @@ static void test_defaults(void)
         fail("defaults", "--verify is not on");
     } else if (opts.column_major != 0) {
         fail("defaults", "the layout is not row-major");
+    } else if (opts.cache_cold != 0) {
+        fail("defaults", "the cache is not hot");
     } else if (opts.vector_size_set || opts.matrix_dim1_set
                || opts.matrix_dim2_set || opts.thread_count_set || opts.layout_set) {
         fail("defaults", "an option is marked as given when none were");
@@ -429,6 +431,40 @@ int main(void)
                 fail(cases[i].what, "got the wrong status");
             } else if (st == BMB_OPTIONS_OK && (opts.column_major != cases[i].want || !opts.layout_set)) {
                 fail(cases[i].what, "left the layout in the wrong state");
+            } else {
+                ok(cases[i].what);
+            }
+            if (st == BMB_OPTIONS_OK) {
+                bmb_options_free(&opts);
+            }
+        }
+    }
+
+    /* ---- --cache, hot by default (#160) ---- */
+    {
+        static const struct {
+            const char *a, *b, *c, *d;
+            bmb_options_status_t status;
+            int want;
+            const char *what;
+        } cases[] = {
+            {"-k", "cold", ARGS_END, NULL, BMB_OPTIONS_OK, 1, "-k cold: cold"},
+            {"--cache", "cold", ARGS_END, NULL, BMB_OPTIONS_OK, 1, "--cache cold: cold"},
+            {"--cache", "hot", ARGS_END, NULL, BMB_OPTIONS_OK, 0, "--cache hot: hot"},
+            {"-k", "cold", "-k", "hot", BMB_OPTIONS_OK, 0, "the last --cache given wins"},
+            {"--cache", "warm", ARGS_END, NULL, BMB_OPTIONS_ERROR, 0, "--cache warm is refused: hot or cold only"},
+            {"--cache", "", ARGS_END, NULL, BMB_OPTIONS_ERROR, 0, "an empty --cache is refused"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            bmb_options_t opts;
+            bmb_options_status_t st = parse_args(&opts, cases[i].a, cases[i].b, cases[i].c, cases[i].d, ARGS_END);
+
+            if (st != cases[i].status) {
+                fail(cases[i].what, "got the wrong status");
+            } else if (st == BMB_OPTIONS_OK && opts.cache_cold != cases[i].want) {
+                fail(cases[i].what, "left the cache in the wrong state");
             } else {
                 ok(cases[i].what);
             }

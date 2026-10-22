@@ -124,6 +124,15 @@ static double flops(size_t dim1, size_t dim2)
     return 4.0 * d2 * d1 * (d1 + 1.0);
 }
 
+/* --cache cold: the bytes of A and B: M x M, M x N; the copy reset() restores B from is not touched by the call. */
+static double footprint(size_t dim1, size_t dim2)
+{
+    const double d1 = (double) dim1;
+    const double d2 = (double) dim2;
+
+    return (d1 * d1 + d1 * d2) * (double) (BMB_Z);
+}
+
 /* --verify, by random projection of the residual: U*(X*r) against
  * alpha*B0*r for a complex r, as dtrsm's. */
 static int verify(void *vctx, char *msg, size_t size)
@@ -174,6 +183,7 @@ int main(int argc, char *argv[])
     bench.teardown = teardown;
     bench.verify = verify;
     bench.flops = flops;
+    bench.footprint = footprint;
 
     return bmb_benchmark_main(argc, argv, &bench);
 }

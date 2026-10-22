@@ -119,6 +119,7 @@ MACHINE_FIXTURES = \
 FUZZ_CORPUS = \
 	fuzz/bmb_options.dict \
 	fuzz/bmb_options/above-ceiling \
+	fuzz/bmb_options/cache \
 	fuzz/bmb_options/ceiling \
 	fuzz/bmb_options/counts \
 	fuzz/bmb_options/grid \

@@ -87,6 +87,15 @@ static double flops(size_t dim1, size_t dim2)
     return 2.0 * d2 * d1 * (d1 + 1.0);
 }
 
+/* --cache cold: the bytes of A, B and C: N x K, N x K, N x N. */
+static double footprint(size_t dim1, size_t dim2)
+{
+    const double d1 = (double) dim1;
+    const double d2 = (double) dim2;
+
+    return (2.0 * d1 * d2 + d1 * d1) * (double) (sizeof(double));
+}
+
 /* --verify, by random projection: Sym(C)*r against alpha*(A*(B'*r) + B*(A'*r)),
  * Sym(C) being the symmetric matrix C's upper triangle stands for; beta
  * is 0 (setup), so what C held before the call does not enter. The
@@ -150,6 +159,7 @@ int main(int argc, char *argv[])
     bench.teardown = teardown;
     bench.verify = verify;
     bench.flops = flops;
+    bench.footprint = footprint;
 
     return bmb_benchmark_main(argc, argv, &bench);
 }

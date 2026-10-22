@@ -47,6 +47,13 @@ typedef double (*bmb_bench_flops_fn)(size_t dim1, size_t dim2);
  * it informs. */
 typedef double (*bmb_bench_bytes_fn)(size_t dim1, size_t dim2);
 
+/* Optional. The bytes of the operands one call touches: what --cache cold
+ * (#160) must keep out of the caches, and so how many copies of them it
+ * rotates over. Level 3 routines declare it, having no bytes(); without
+ * it, half of bytes() is taken, a lower bound since bytes() counts an
+ * operand at most twice, read and written. */
+typedef double (*bmb_bench_footprint_fn)(size_t dim1, size_t dim2);
+
 /* --verify: makes one call on the operands the benchmark is about to time
  * and checks its result against a reference (see bmb_verify.h). Returns 0
  * when it is right, 1 when it is wrong -- describing what is wrong in msg
@@ -88,6 +95,7 @@ typedef struct {
 
     bmb_bench_flops_fn flops; /* optional, may stay NULL */
     bmb_bench_bytes_fn bytes; /* optional, may stay NULL */
+    bmb_bench_footprint_fn footprint; /* optional, may stay NULL */
     bmb_bench_verify_fn verify;
 } bmb_benchmark_t;
 

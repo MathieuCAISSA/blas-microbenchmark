@@ -116,25 +116,93 @@ static unsigned int bmb_batch_from(double per_call)
     return (unsigned int) batch;
 }
 
-static double bmb_time_batch(const bmb_benchmark_t *bench, void *ctx, unsigned int batch)
+/* The operands a point is timed on: one set, reused from call to call, as
+ * a code calling the routine in a loop would; or, under --cache cold
+ * (#160), `count` copies of them, each call taking the next, so that the
+ * others, used in between, have pushed it out of the caches. */
+typedef struct {
+    void **ctx;
+    unsigned int count;
+    unsigned int next;   /* the copy the next call takes */
+    int cold;
+} bmb_operands_t;
+
+/* How far past the last-level cache the copies other than the one in use
+ * reach: twice it, so that what a cache keeps of data it has seen go by
+ * is gone too. And how many copies at most, for the smallest sizes, where
+ * the operands are a few bytes: past that, a point is partly warm, and a
+ * warning says so. */
+#define BMB_COLD_REACH    2.0
+#define BMB_COLD_MAX_COPIES 16384u
+
+/* The copies --cache cold rotates over at a point: 1 when the operands
+ * alone are past the reach, as each call then pushes its own out. */
+static unsigned int bmb_cold_copies(const bmb_benchmark_t *bench, size_t dim1, size_t dim2,
+                                    unsigned long long llc)
+{
+    const double footprint = (bench->footprint != NULL) ? bench->footprint(dim1, dim2)
+                                                        : bench->bytes(dim1, dim2) / 2.0;
+    const double reach = BMB_COLD_REACH * (double) llc;
+    double copies;
+
+    if (footprint >= reach) {
+        return 1;
+    }
+    copies = ceil(reach / footprint) + 1.0;
+    return (copies > (double) BMB_COLD_MAX_COPIES) ? BMB_COLD_MAX_COPIES : (unsigned int) copies;
+}
+
+/* Restores, after a batch, the copies it used, in the order they will be
+ * used next: under --cache cold, a reset() before the call would bring
+ * the operand it restores back into the cache, so it runs right after the
+ * call instead, and the copies used before the next call on this one push
+ * it back out. */
+static void bmb_reset_used(const bmb_benchmark_t *bench, const bmb_operands_t *ops,
+                           unsigned int batch)
+{
+    const unsigned int used = (batch < ops->count) ? batch : ops->count;
+    const unsigned int first = (ops->next + ops->count - used) % ops->count;
+    unsigned int j;
+
+    for (j = 0; j < used; j++) {
+        bench->reset(ops->ctx[(first + j) % ops->count]);
+    }
+}
+
+static double bmb_time_batch(const bmb_benchmark_t *bench, bmb_operands_t *ops, unsigned int batch)
 {
     double t0, t1;
     unsigned int b;
 
-    if (bench->reset != NULL) {
-        bench->reset(ctx);
+    if (bench->reset != NULL && !ops->cold) {
+        bench->reset(ops->ctx[0]);
     }
 
+    /* One set of operands keeps the loop it always had: a call of a few
+     * nanoseconds would carry the rotation's bookkeeping. */
     t0 = bmb_timer_now();
-    for (b = 0; b < batch; b++) {
-        bench->call(ctx);
+    if (ops->count == 1) {
+        for (b = 0; b < batch; b++) {
+            bench->call(ops->ctx[0]);
+        }
+    } else {
+        for (b = 0; b < batch; b++) {
+            bench->call(ops->ctx[ops->next]);
+            if (++ops->next == ops->count) {
+                ops->next = 0;
+            }
+        }
     }
     t1 = bmb_timer_now();
+
+    if (bench->reset != NULL && ops->cold) {
+        bmb_reset_used(bench, ops, batch);
+    }
 
     return (t1 - t0) / (double) batch;
 }
 
-static unsigned int bmb_choose_batch(const bmb_benchmark_t *bench, void *ctx)
+static unsigned int bmb_choose_batch(const bmb_benchmark_t *bench, bmb_operands_t *ops)
 {
     unsigned int batch;
 
@@ -147,12 +215,12 @@ static unsigned int bmb_choose_batch(const bmb_benchmark_t *bench, void *ctx)
      * the batch too small and some of that cost still in the result. The
      * second pass re-measures with a real batch, where the cost is already
      * negligible, and lands on the right size. */
-    batch = bmb_batch_from(bmb_time_batch(bench, ctx, 1));
+    batch = bmb_batch_from(bmb_time_batch(bench, ops, 1));
     if (batch == 1) {
         return 1;
     }
 
-    return bmb_batch_from(bmb_time_batch(bench, ctx, batch));
+    return bmb_batch_from(bmb_time_batch(bench, ops, batch));
 }
 
 /* --verify, for one point: one call on the operands about to be timed,
@@ -193,11 +261,75 @@ static int bmb_verify_point(const bmb_benchmark_t *bench, void *ctx,
     return 0;
 }
 
+static void bmb_operands_free(const bmb_benchmark_t *bench, bmb_operands_t *ops)
+{
+    unsigned int i;
+
+    for (i = 0; i < ops->count; i++) {
+        bench->teardown(ops->ctx[i]);
+    }
+    free(ops->ctx);
+}
+
+/* Sets up the operands of a point: one set, or under --cache cold as many
+ * copies as bmb_cold_copies() says. 0, or -1 when one could not be made,
+ * those already made freed. */
+static int bmb_operands_setup(const bmb_benchmark_t *bench, const bmb_options_t *opts,
+                              unsigned int thread_count, size_t dim1, size_t dim2,
+                              unsigned long long llc, bmb_operands_t *ops)
+{
+    const unsigned int count = opts->cache_cold ? bmb_cold_copies(bench, dim1, dim2, llc) : 1;
+
+    ops->cold = opts->cache_cold;
+    ops->next = 0;
+    ops->count = 0;
+    ops->ctx = malloc(count * sizeof(*ops->ctx));
+    if (ops->ctx == NULL) {
+        bmb_log_error("Out of memory while allocating the copies of the operands.");
+        return -1;
+    }
+    while (ops->count < count) {
+        void *ctx = bench->setup(dim1, dim2, thread_count);
+
+        if (ctx == NULL) {
+            bmb_log_error("Benchmark setup failed (out of memory?); skipping this data point.");
+            bmb_operands_free(bench, ops);
+            return -1;
+        }
+        ops->ctx[ops->count++] = ctx;
+    }
+    return 0;
+}
+
+/* What --cache cold could not do at the smallest sizes, said once a run:
+ * the copies it is allowed do not reach past the last-level cache. */
+static void bmb_warn_partly_warm(const bmb_benchmark_t *bench, size_t dim1, size_t dim2,
+                                 unsigned long long llc)
+{
+    static int warned;
+    const double footprint = (bench->footprint != NULL) ? bench->footprint(dim1, dim2)
+                                                        : bench->bytes(dim1, dim2) / 2.0;
+    char msg[512];
+
+    if (warned || footprint * (double) (BMB_COLD_MAX_COPIES - 1) >= BMB_COLD_REACH * (double) llc) {
+        return;
+    }
+    warned = 1;
+    snprintf(msg, sizeof(msg),
+             "--cache cold: from %s %zu down, %u copies of the operands do not reach twice the "
+             "last-level cache; those points are partly warm (\"copies\" in the results).",
+             bench->dim1_label, dim1, BMB_COLD_MAX_COPIES);
+    bmb_log_warning(msg);
+}
+
+/* The last-level cache --cache cold must reach past, read once a run. */
+static unsigned long long bmb_llc;
+
 static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                         unsigned int thread_count, size_t dim1, size_t dim2,
                         bmb_result_row_t *row)
 {
-    void *ctx;
+    bmb_operands_t ops;
     double *times;
     unsigned int batch;
     unsigned int i;
@@ -205,33 +337,39 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
 
     bmb_threads_set(thread_count);
 
-    ctx = bench->setup(dim1, dim2, thread_count);
-    if (ctx == NULL) {
-        bmb_log_error("Benchmark setup failed (out of memory?); skipping this data point.");
+    if (bmb_operands_setup(bench, opts, thread_count, dim1, dim2, bmb_llc, &ops) != 0) {
         return -1;
+    }
+    if (ops.cold) {
+        bmb_warn_partly_warm(bench, dim1, dim2, bmb_llc);
     }
 
     /* Checked on the very operands that are timed next, at this size and
      * thread count: a library can be right at one and wrong at another. */
     if (opts->verify) {
-        v = bmb_verify_point(bench, ctx, thread_count, dim1, dim2);
+        v = bmb_verify_point(bench, ops.ctx[0], thread_count, dim1, dim2);
         if (v != 0) {
-            bench->teardown(ctx);
+            bmb_operands_free(bench, &ops);
             return v;
+        }
+        /* Under --cache cold, the copy --verify called is restored and
+         * goes last, so the next call does not find it just restored. */
+        if (ops.cold) {
+            if (bench->reset != NULL) {
+                bench->reset(ops.ctx[0]);
+            }
+            ops.next = 1 % ops.count;
         }
     }
 
     for (i = 0; i < opts->warmup; i++) {
-        if (bench->reset != NULL) {
-            bench->reset(ctx);
-        }
-        bench->call(ctx);
+        (void) bmb_time_batch(bench, &ops, 1);
     }
 
     times = malloc(opts->iterations * sizeof(*times));
     if (times == NULL) {
         bmb_log_error("Out of memory while allocating timing buffer.");
-        bench->teardown(ctx);
+        bmb_operands_free(bench, &ops);
         return -1;
     }
 
@@ -239,17 +377,19 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
      * one call at a time, whatever -b says: N calls in a row would run on
      * an operand drifting towards infinity or denormals (#48). */
     batch = (opts->batch != 0 && !bench->reset_every_call) ? opts->batch
-                                                           : bmb_choose_batch(bench, ctx);
+                                                           : bmb_choose_batch(bench, &ops);
 
     /* Each sample is the mean over `batch` calls. reset() runs before the
-     * batch, never inside it: restoring an operand is bookkeeping, and for
-     * dtrmm/dtrsm it is an O(M*N) copy that would otherwise be a large
-     * part of what gets reported as the routine's time. */
+     * batch, or after it under --cache cold, never inside it: restoring an
+     * operand is bookkeeping, and for dtrmm/dtrsm it is an O(M*N) copy that
+     * would otherwise be a large part of what gets reported as the
+     * routine's time. */
     for (i = 0; i < opts->iterations; i++) {
-        times[i] = bmb_time_batch(bench, ctx, batch);
+        times[i] = bmb_time_batch(bench, &ops, batch);
     }
 
-    bench->teardown(ctx);
+    row->copies = ops.count;
+    bmb_operands_free(bench, &ops);
 
     row->thread_count = thread_count;
     row->dim1 = dim1;
@@ -435,6 +575,23 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         bmb_options_free(&opts);
         return EXIT_FAILURE;
     }
+    if (opts.cache_cold) {
+        /* Without the size of what to push the operands out of, or of the
+         * operands, a cold run would be a guess: refused, not guessed. */
+        bmb_llc = bmb_machine_last_level_cache(bmb_machine());
+        if (bmb_llc == 0) {
+            bmb_log_error("--cache cold: the size of the last-level cache cannot be read here "
+                          "(/sys/devices/system/cpu/cpu0/cache), and the copies of the operands "
+                          "are counted from it.");
+            bmb_options_free(&opts);
+            return EXIT_FAILURE;
+        }
+        if (bench->footprint == NULL && bench->bytes == NULL) {
+            bmb_log_error("--cache cold: this benchmark does not say how many bytes its operands take.");
+            bmb_options_free(&opts);
+            return EXIT_FAILURE;
+        }
+    }
 
     /* A warning, never a refusal: a laptop still gets its numbers, and the
      * provenance says under what conditions they were measured. */
@@ -455,6 +612,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     /* The batch size used, not the one asked for: -b does not batch a
      * routine whose operand is restored before every call. */
     rs.batch = bench->reset_every_call ? 1 : opts.batch;
+    rs.cache_cold = opts.cache_cold;
     if (!bench->use_vector_range) {
         rs.layout = opts.column_major ? "col" : "row";
         bmb_column_major = opts.column_major;

@@ -24,6 +24,7 @@ typedef struct {
     double median_s;
     double q1_s;
     double q3_s;
+    unsigned int copies; /* --cache cold: the copies of the operands rotated over */
 } bmb_result_row_t;
 
 typedef struct {
@@ -42,6 +43,7 @@ typedef struct {
     unsigned int warmup;
     unsigned int iterations;
     unsigned int batch;
+    int cache_cold;         /* --cache cold (#160) */
     int has_stats;
     int has_flops;
     int has_bytes;

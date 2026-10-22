@@ -127,7 +127,7 @@ int main(void)
     rs.batch = 1;
     check(printed(bmb_print_csv, &rs, "# command: bmb_x 'it'\\''s' 'a?b?' '' -m 8", 0),
           "run: the program by its name, a quote, a newline, a DEL and an empty word quoted for a shell");
-    check(printed(bmb_print_csv, &rs, "# run: 1 warm-up call, 1 sample, batches of 1 call", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 1 warm-up call, 1 sample, batches of 1 call, hot cache", 0),
           "run: one warm-up call, one sample, a batch of one, in the singular");
     check(printed(bmb_print_csv, &rs, "OMP_PROC_BIND='a b'", 1),
           "run: a variable set, its value quoted");
@@ -140,12 +140,27 @@ int main(void)
     rs.warmup = 2;
     rs.iterations = 3;
     rs.batch = 5;
-    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batches of 5 calls", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batches of 5 calls, hot cache", 0),
           "run: several of each, in the plural");
     rs.batch = 0;
-    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batch size chosen per point", 0),
+    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batch size chosen per point, hot cache", 0),
           "run: no -b, the batch size chosen per point");
     check(!printed(bmb_print_json, &rs, "\"batch\"", 1), "json: no batch without -b");
+    check(printed(bmb_print_json, &rs, "\"cache\": \"hot\",", 1), "json: the cache hot by default");
+
+    /* --cache cold (#160): said in the run line and block, and each row
+     * gives the copies of the operands it rotated over. */
+    rs.cache_cold = 1;
+    r.copies = 17;
+    bmb_result_set_add(&rs, &r);
+    check(printed(bmb_print_csv, &rs, "# run: 2 warm-up calls, 3 samples, batch size chosen per point, cold cache", 0),
+          "run: --cache cold");
+    check(printed(bmb_print_json, &rs, "\"cache\": \"cold\",", 1), "json: --cache cold");
+    check(printed(bmb_print_json, &rs, "\"copies\": 17", 1), "json: the copies of a row, under --cache cold");
+    csv_of(&rs, header, row, sizeof(header));
+    check(strcmp(header, "thread_count,size,time_s,gbytes_per_s,calls_per_sample,median_s,q1_s,q3_s,copies") == 0
+          && strcmp(row, "1,8,0.000001000,2.500000,1,0.000000000,0.000000000,0.000000000,17") == 0,
+          "csv: the copies, last, under --cache cold");
     bmb_result_set_free(&rs);
 
     /* Reading from a write-only stream sets its error indicator, as a

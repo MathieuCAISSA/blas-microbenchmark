@@ -493,6 +493,21 @@ void bmb_machine_describe_caches(const bmb_machine_t *m, char *buf, size_t size)
     }
 }
 
+unsigned long long bmb_machine_last_level_cache(const bmb_machine_t *m)
+{
+    unsigned long long size = 0;
+    int level = 0;
+    int i;
+
+    for (i = 0; i < m->cache_count; i++) {
+        if (strcmp(m->caches[i].type, "instruction") != 0 && m->caches[i].level >= level) {
+            level = m->caches[i].level;
+            size = m->caches[i].size_bytes;
+        }
+    }
+    return size;
+}
+
 void bmb_machine_describe_frequency(const bmb_machine_t *m, char *buf, size_t size)
 {
     const char *turbo = (m->turbo == 1) ? "turbo on" : (m->turbo == 0) ? "turbo off" : "";
