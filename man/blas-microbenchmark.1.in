@@ -285,6 +285,8 @@ overwrites is restored right after its call, never before the next, which
 would bring it back into the cache.
 Once the operands alone reach that far, there is one copy, each call
 pushing its own operands out.
+The copies take about twice the last-level cache in memory, on top of
+one set of operands.
 The copies are at most 16384: below the size where that is not enough,
 the points are partly warm, and a warning says from which size.
 The size of the last-level cache comes from
