@@ -238,7 +238,7 @@ static double now(void)
 static void timed_call(void *ctx)
 {
     const double t0 = now();
-    const double length = (timed_alternate && timed_calls % 2 == 1) ? 400.0e-6 : 200.0e-6;
+    const double length = (timed_alternate && timed_calls % 2 != 0) ? 400.0e-6 : 200.0e-6;
 
     (void) ctx;
     while (now() - t0 < length) {

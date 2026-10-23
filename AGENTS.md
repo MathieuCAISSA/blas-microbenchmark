@@ -88,7 +88,9 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
   Every job of `ci.yml` is required except `coverage`, which has no
   threshold. CodeQL is not required: its pull request check fails on a
   new alert in the diff, and its run on `main` while any alert is open
-  ([CI](doc/dev/ci.md#static-analysis)). A new job is added to the required checks
+  ([CI](doc/dev/ci.md#static-analysis)). Wait for that check too before
+  merging: GitHub lets a pull request through while it still runs, and
+  #184 brought an alert to `main` that way (#194). A new job is added to the required checks
   (branch protection settings) when it merges. The repository
   deletes a branch once its pull request is merged; the issue closes
   itself through "Closes #N".
