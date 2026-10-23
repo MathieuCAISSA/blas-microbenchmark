@@ -198,7 +198,10 @@ Three rules the existing tests follow, and new ones should too:
   broken the first time, which is how the rules in [Testing the
   page](doc/dev/report.md#testing-the-page) were learnt. Make sure the mutation still
   *compiles* — under `--enable-werror` an unused variable stops the build,
-  `make check` then runs the old binary, and the test "passes".
+  `make check` then runs the old binary, and the test "passes". Commit
+  the change before mutating it: restoring the file with `git checkout`
+  takes an uncommitted fix with it, as it took #187's (its new test
+  caught it in CI).
 
 ## Layout
 
