@@ -26,9 +26,10 @@ releases with the same major version can be compared and read by the same
 ### Added
 - Every result says which kernels the library's dispatch chose at run
   time (#162): OpenBLAS's core, BLIS's and AOCL-BLAS's configuration,
-  MKL's code branch (`# kernels:` in the text and CSV, `kernels` in the
-  JSON, `Kernels:` in `-V`), and `bmb_report` shows it beside the
-  library. Netlib, NVPL, ArmPL and FlexiBLAS do not say.
+  MKL's code branch, `AUTO` where it names none, as on AMD CPUs
+  (`# kernels:` in the text and CSV, `kernels` in the JSON, `Kernels:`
+  in `-V`), and `bmb_report` shows it beside the library. Netlib, NVPL,
+  ArmPL and FlexiBLAS do not say.
 - `-T` (`--min-time`) takes samples past `-i` until they add up to a
   time, and `-e` (`--max-spread`) until their interquartile range is
   within a percentage of their median, capped by `-E` (`--max-time`,

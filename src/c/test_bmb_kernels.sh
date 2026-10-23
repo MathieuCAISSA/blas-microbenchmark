@@ -38,6 +38,10 @@ kernels() {
 if has HAVE_OPENBLAS_GET_CORENAME || has HAVE_BLI_ARCH_QUERY_ID || has HAVE_MKL_CBWR_GET_AUTO_BRANCH; then
     k=$(kernels)
     test -n "$k" || fail "the library can say which kernels it chose, and nothing was recorded"
+    # MKL's branch by its name, AUTO on a CPU MKL names none for (#187).
+    if has HAVE_MKL_CBWR_GET_AUTO_BRANCH; then
+        case $k in "branch "*) fail "MKL's branch recorded as a number, $k: one constant is not named" ;; esac
+    fi
     echo "ok   the kernels the library chose, $k, in -V, the text and the JSON"
 else
     k=$(kernels)

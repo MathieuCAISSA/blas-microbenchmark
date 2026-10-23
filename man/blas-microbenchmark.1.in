@@ -580,7 +580,9 @@ The kernels are those the library's dispatch chose at run time, as it
 names them: OpenBLAS's core, BLIS's and AOCL-BLAS's configuration, MKL's
 code branch (which
 .B MKL_ENABLE_INSTRUCTIONS
-limits).
+limits;
+.B AUTO
+where MKL names none, as on AMD CPUs).
 On a CPU with SME, AMX or AVX10 the path changes the numbers, and two
 files from the same library can only be told apart by it.
 Netlib, NVPL, ArmPL and FlexiBLAS do not say, and the line is left out.
