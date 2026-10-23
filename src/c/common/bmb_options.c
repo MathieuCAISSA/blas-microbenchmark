@@ -565,13 +565,6 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
         case 'k':
             if (strcmp(optarg, "hot") == 0) {
                 opts->cache_cold = 0;
-    opts->align = BMB_DEFAULT_ALIGN;
-    opts->ld_pad = 0;
-    opts->ld_pad_set = 0;
-    opts->warmup_time = BMB_DEFAULT_WARMUP_TIME;
-    opts->min_time = 0.0;
-    opts->max_spread = 0.0;
-    opts->max_time = BMB_DEFAULT_MAX_TIME;
             } else if (strcmp(optarg, "cold") == 0) {
                 opts->cache_cold = 1;
             } else {
