@@ -48,7 +48,7 @@ NVPL and ArmPL (aarch64-only) aren't installable here on x86_64, nor
 FlexiBLAS on Debian or Ubuntu; see their CI job steps in
 `.github/workflows/ci.yml` for the exact `--with-blas-backend=nvpl`,
 `=armpl` and `=flexiblas` setup (FlexiBLAS's runs in a Fedora container).
-MKL (`=mkl`) comes from Intel's apt repository: `.github/install-oneapi-mkl.sh`
+MKL (`=mkl`) comes from Intel's apt repository: `.github/scripts/install-oneapi-mkl.sh`
 installs it (sudo, several GB). AOCL-BLAS (`=aocl`) has no package: build
 AMD's sources as the `aocl` job does, then `AOCL_ROOT=<its prefix>
 ../configure --with-blas-backend=aocl`.
@@ -152,10 +152,10 @@ the test.
 | | `test_bmb_cache.sh` | `--cache cold` on real benchmarks over a generated machine with a 64K last-level cache: the copies ddot, dgemm and dtrsm take, from their bytes or their footprint, 1 once the operands alone are past it, in the table, the CSV and the JSON, dtrsm checked by `--verify`, every benchmark run cold and checked; hot by default, without copies; at most 16384 with one warning, on the x86 fixture; refused where the cache size cannot be read |
 | | `test_bmb_levels.sh` | every benchmark declares the level of its directory, whose default size it takes: read from the sources, nothing run |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, small or larger than the stream's buffer, or on stdout |
-| `src/c/level{1,2,3}/<precision>` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`), a median never faster than the time; those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
-| `src/c/level1`, `src/c/level3` | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label, a CPU name with a quote, a backslash and a control character escaped in the JSON; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); the median and quartiles after `-s`'s columns, against 1, 2 and 3 samples, the IQR in the table; the run lines and block: command, samples, compiler, a variable set, the affinity of a fixture; the operands line and fields, `-a 4096 -p 8` in them; a `-T` run: more samples than `-i`, in a column before the copies |
-| | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
+| `src/c/level{1,2,3}/<precision>` | `test_bmb_<routine>.sh` | each benchmark runs and prints the expected rows (`test_helper.sh`), a median never faster than the time; those of zgemm, zhemm, zherk and ztrsm also have the sizes whose complex matrices would wrap `size_t` refused before anything is allocated, one per matrix that could |
+| `src/c/level1` | `test_bmb_size_limits.sh` | sizes that would wrap `size_t` are refused |
+| `src/c/level3` | `test_bmb_square_default.sh` | without `-M` a level 2/3 sweep is square; with it, a grid |
 | `src/report` | `test_assemble.sh` | `assemble.awk`: byte-for-byte copy, and each refusal |
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, that the page is self-contained, and that its `LEVEL` table lists every benchmark built, in its level |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws; a series run four times gets its band, the noise test and a raw row per run; three versions of a library get a history; files with a run block get the Run column and the samples' band |
@@ -248,14 +248,13 @@ packaging/reframe/
                  # the ReFrame tests, and how a site runs them; also
                  # distributed, and installed in $(pkgdatadir)/reframe
 .github/         # the workflows (ci, codeql, scorecard, pages, release),
-                 # Codecov's settings (codecov.yml), the scripts
-                 # CI runs (cppcheck.sh, verify-sweep.sh, spack-check.sh,
-                 # install-oneapi-mkl.sh), the sanitizers job's leak
-                 # suppressions (lsan-suppressions.txt),
-                 # the issue and
-                 # pull request templates, Dependabot's settings, and the
+                 # Codecov's settings (codecov.yml), the issue and pull
+                 # request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,
                  # SECURITY.md, and REVIEWS.md beside the PR template
+.github/scripts/ # what CI runs: cppcheck.sh, verify-sweep.sh,
+                 # spack-check.sh, install-oneapi-mkl.sh, and the
+                 # sanitizers job's leak suppressions (lsan-suppressions.txt)
 ```
 
 The top of the repository holds only what has to be there: the README,

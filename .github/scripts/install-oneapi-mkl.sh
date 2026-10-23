@@ -5,7 +5,7 @@
 # Debian or Ubuntu machine to build --with-blas-backend=mkl on. Needs root
 # or sudo, curl and gpg; several GB.
 #
-#     .github/install-oneapi-mkl.sh
+#     .github/scripts/install-oneapi-mkl.sh
 set -e
 
 sudo=sudo

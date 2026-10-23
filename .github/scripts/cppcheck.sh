@@ -3,7 +3,7 @@
 # see, on paths no test takes. Run from the top of the source tree, after
 # configure, with the build directory whose config.h to use:
 #
-#   .github/cppcheck.sh build
+#   .github/scripts/cppcheck.sh build
 #
 # Any finding fails. A finding that is wrong is suppressed where it is, with
 # a comment saying why (/* cppcheck-suppress <id> */ on the line above);

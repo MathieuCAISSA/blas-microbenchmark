@@ -32,7 +32,7 @@ RUN case "$BLAS_BACKEND" in \
         autoconf automake libtool make gcc libc6-dev pkg-config $blas \
     && rm -rf /var/lib/apt/lists/*
 
-COPY .github/install-oneapi-mkl.sh /tmp/
+COPY .github/scripts/install-oneapi-mkl.sh /tmp/
 RUN if [ "$BLAS_BACKEND" = mkl ]; then \
         /tmp/install-oneapi-mkl.sh && rm -rf /var/lib/apt/lists/*; \
     fi

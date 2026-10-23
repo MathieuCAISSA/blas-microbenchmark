@@ -52,7 +52,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       # The browser tests SKIP without a browser, which make check counts
       # as a pass. The x86 runners have Chrome, so here a SKIP means the
@@ -167,7 +167,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -220,7 +220,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -411,7 +411,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -468,7 +468,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -519,11 +519,11 @@ jobs:
 
       # Leak detection stays on for our own code; the BLAS library's own
       # per-thread buffers, which it never frees by design, are suppressed
-      # by module in .github/lsan-suppressions.txt.
+      # by module in .github/scripts/lsan-suppressions.txt.
       - name: make check
         env:
           ASAN_OPTIONS: detect_leaks=1
-          LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/lsan-suppressions.txt
+          LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/scripts/lsan-suppressions.txt
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
         run: make -C build check
 
@@ -532,9 +532,9 @@ jobs:
       - name: Verified at real sizes
         env:
           ASAN_OPTIONS: detect_leaks=1
-          LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/lsan-suppressions.txt
+          LSAN_OPTIONS: suppressions=${{ github.workspace }}/.github/scripts/lsan-suppressions.txt
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -648,7 +648,7 @@ jobs:
   # cppcheck over the C code: what -Wall -Wextra does not see, on paths no
   # test takes -- its first run found pointer arithmetic on a failed malloc
   # in every verify(). Any finding fails the job; a wrong one is suppressed
-  # where it is, with the reason (.github/cppcheck.sh). CodeQL runs in its
+  # where it is, with the reason (.github/scripts/cppcheck.sh). CodeQL runs in its
   # own workflow, codeql.yml.
   cppcheck:
     runs-on: ubuntu-latest
@@ -674,7 +674,7 @@ jobs:
       - name: cppcheck
         run: |
           cppcheck --version
-          .github/cppcheck.sh build
+          .github/scripts/cppcheck.sh build
 
   # The command-line parser fuzzed, on inputs no test wrote: ClusterFuzzLite
   # builds src/c/common/fuzz_bmb_options.c with libFuzzer (.clusterfuzzlite/),
@@ -759,7 +759,7 @@ jobs:
       - name: Verified at real sizes, once per backend
         run: |
           for b in OPENBLAS-OPENMP BLIS-OPENMP; do
-            FLEXIBLAS=$b .github/verify-sweep.sh build
+            FLEXIBLAS=$b .github/scripts/verify-sweep.sh build
           done
 
       # The point of FlexiBLAS here: the same binary, two libraries, two
@@ -847,7 +847,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       # libblis (single-threaded) would ignore -t and still pass everything
       # above: on 4 threads dgemm must take clearly less time than on 1.
@@ -888,7 +888,7 @@ jobs:
           sudo apt-get install -y autoconf automake libtool pkg-config
 
       - name: Install oneAPI MKL
-        run: .github/install-oneapi-mkl.sh
+        run: .github/scripts/install-oneapi-mkl.sh
 
       - name: autoreconf
         run: autoreconf -fi
@@ -911,7 +911,7 @@ jobs:
       # --verify at the sizes and thread counts a user measures, against this
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
-        run: .github/verify-sweep.sh build
+        run: .github/scripts/verify-sweep.sh build
 
       - name: Upload test logs
         if: always()
@@ -1172,7 +1172,7 @@ jobs:
           case "${{ matrix.blas }}" in
             blis|amdblis) sudo apt-get install -y libblis-openmp-dev ;;
             netlib-lapack) sudo apt-get install -y libblas-dev ;;
-            intel-oneapi-mkl) .github/install-oneapi-mkl.sh ;;
+            intel-oneapi-mkl) .github/scripts/install-oneapi-mkl.sh ;;
           esac
 
       - name: This commit's tarball
@@ -1220,4 +1220,4 @@ jobs:
       - name: spack install and spack test
         run: |
           . "$HOME/spack/share/spack/setup-env.sh"
-          .github/spack-check.sh "${{ matrix.blas }}" "$RUNNER_TEMP"/src/blas-microbenchmark-*
+          .github/scripts/spack-check.sh "${{ matrix.blas }}" "$RUNNER_TEMP"/src/blas-microbenchmark-*
