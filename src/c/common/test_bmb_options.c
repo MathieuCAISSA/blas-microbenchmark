@@ -42,7 +42,7 @@ static void ok(const char *what)
 /* Parses a command line given as an argument list ending in ARGS_END. */
 static bmb_options_status_t parse_args(bmb_options_t *opts, ...)
 {
-    char *argv[16];
+    char *argv[32];
     int argc = 0;
     va_list ap;
     const char *arg;
@@ -478,6 +478,35 @@ int main(void)
             if (st == BMB_OPTIONS_OK) {
                 bmb_options_free(&opts);
             }
+        }
+    }
+
+    /* --cache after every other option leaves them as given (#190): its
+     * hot branch once reset them to their defaults. */
+    {
+        static const char *const states[] = {"hot", "cold"};
+        size_t k;
+
+        for (k = 0; k < 2; k++) {
+            bmb_options_t opts;
+            char what[96];
+
+            snprintf(what, sizeof(what), "-k %s after -L, -a, -p, -w, -T, -e, -E leaves them as given",
+                     states[k]);
+            if (parse_args(&opts, "-L", "col", "-a", "4096", "-p", "8", "-w", "0.5", "-T", "1", "-e", "2",
+                           "-E", "20", "-k", states[k], ARGS_END) != BMB_OPTIONS_OK) {
+                fail(what, "was refused");
+                continue;
+            }
+            if (!opts.column_major || opts.align != 4096 || opts.ld_pad != 8 || !opts.ld_pad_set
+                || fabs(opts.warmup_time - 0.5) > 1.0e-12 || fabs(opts.min_time - 1.0) > 1.0e-12
+                || fabs(opts.max_spread - 2.0) > 1.0e-12 || fabs(opts.max_time - 20.0) > 1.0e-12
+                || opts.cache_cold != (int) k) {
+                fail(what, "changed one of them");
+            } else {
+                ok(what);
+            }
+            bmb_options_free(&opts);
         }
     }
 
