@@ -24,6 +24,9 @@ it comes from in brackets.
 
 ## Code quality
 
+- [ ] Every line of the diff is where it was meant to be: an edit made
+  by a script, on an anchor that occurs twice, changes both (#163 put
+  the new defaults in `-k`'s case as well as in the defaults, #190).
 - [ ] No new warning under `-Wall -Wextra`; `_POSIX_C_SOURCE` first in a
   file using POSIX functions ([code style](../AGENTS.md#code-style)).
 - [ ] `common/` stays generic: shapes, alpha values and resets belong to
