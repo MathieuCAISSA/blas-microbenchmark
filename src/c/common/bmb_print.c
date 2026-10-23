@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,7 +137,6 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
 static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
-    const char *kernels = bmb_build_kernels();
     const bmb_machine_t *m = bmb_machine();
     char line[512];
 
@@ -145,9 +146,9 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     } else {
         fprintf(out, "# backend: %s\n", bmb_build_backend());
     }
-    if (kernels != NULL) {
-        fprintf(out, "# kernels: %s\n", kernels);
-    }
+#if defined(BMB_BUILD_HAS_KERNELS)
+    fprintf(out, "# kernels: %s\n", bmb_build_kernels());
+#endif
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
     }
@@ -456,7 +457,6 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
 void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
 {
     const char *blas = bmb_build_blas_version();
-    const char *kernels = bmb_build_kernels();
     size_t i;
 
     fprintf(out, "{\n");
@@ -469,11 +469,11 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         bmb_print_json_string(out, blas);
         fprintf(out, ",\n");
     }
-    if (kernels != NULL) {
-        fprintf(out, "  \"kernels\": ");
-        bmb_print_json_string(out, kernels);
-        fprintf(out, ",\n");
-    }
+#if defined(BMB_BUILD_HAS_KERNELS)
+    fprintf(out, "  \"kernels\": ");
+    bmb_print_json_string(out, bmb_build_kernels());
+    fprintf(out, ",\n");
+#endif
     if (rs->label != NULL) {
         fprintf(out, "  \"label\": ");
         bmb_print_json_string(out, rs->label);

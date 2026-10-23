@@ -200,9 +200,4 @@ const char *bmb_build_kernels(void)
         return "unknown branch";
     }
 }
-#else
-const char *bmb_build_kernels(void)
-{
-    return NULL;
-}
 #endif

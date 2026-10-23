@@ -30,11 +30,18 @@ const char *bmb_build_blas_version(void);
 
 /* The kernels the library's dispatch chose at run time, as the library
  * names them: "Haswell" (OpenBLAS's core), "zen3" (BLIS's and AOCL-BLAS's
- * configuration), "AVX2" (MKL's code branch); NULL for a library that
- * does not say (Netlib, NVPL, ArmPL, FlexiBLAS). Since SME, AMX and
- * AVX10, the path chosen changes the numbers, and the version string
- * does not tell it (#162). */
+ * configuration), "AVX2" (MKL's code branch). Since SME, AMX and AVX10,
+ * the path chosen changes the numbers, and the version string does not
+ * tell it (#162). Only where the library says it: Netlib, NVPL, ArmPL
+ * and FlexiBLAS do not. Whether it does is fixed when the benchmarks are
+ * built, so the outputs ask the preprocessor (BMB_BUILD_HAS_KERNELS,
+ * after config.h) rather than test a pointer each coverage job would
+ * only find one way. */
+#if defined(HAVE_OPENBLAS_GET_CORENAME) || defined(HAVE_BLI_ARCH_QUERY_ID) \
+    || defined(HAVE_MKL_CBWR_GET_AUTO_BRANCH)
+#define BMB_BUILD_HAS_KERNELS 1
 const char *bmb_build_kernels(void);
+#endif
 
 /* The compiler the benchmarks were built with, "gcc 13.3.0", and the
  * CFLAGS configure ended with: what the run block of a result names
