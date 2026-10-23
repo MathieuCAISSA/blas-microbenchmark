@@ -1719,7 +1719,7 @@ details[open] > summary { margin-bottom: 12px; }
     var th = el("th", null, h);
     if (h === "Verified") { th.title = "Each result checked against a reference before it was timed (bmb_<routine> --verify)"; }
     if (h === "Frequency") { th.title = "The CPU frequency governor and turbo the results were measured under; several when the files of a series differ"; }
-    if (h === "Run") { th.title = "How the results were measured: samples and warm-up calls, the compiler and CFLAGS of the benchmarks, the CPUs the process could run on, the variables set; several when the files of a series differ. The command lines are in the tooltip"; }
+    if (h === "Run") { th.title = "How the results were measured: samples and warm-up, batch size, alignment, the compiler and CFLAGS of the benchmarks, the CPUs the process could run on, the variables set; several when the files of a series differ. The command lines are in the tooltip"; }
     phead.appendChild(th);
   });
   var pthead = el("thead");

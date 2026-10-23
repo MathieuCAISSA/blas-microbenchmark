@@ -31,9 +31,9 @@ Each part appears only when the results can support it:
 a summary: the best figure for each routine, and where each series came
 from (library and the kernels it chose, CPU, caches, OS, date, the CPU
 frequency governor and turbo where the machine exposed them, and how the
-files were run: samples
-and warm-up, compiler and CFLAGS, the CPUs allowed, the variables set,
-with the command lines in a tooltip) \(em and whether each series was
+files were run: samples and warm-up, batch size, alignment, compiler and
+CFLAGS, the CPUs allowed, the variables set, with the command lines in a
+tooltip) \(em and whether each series was
 checked against a reference before it was timed, once any was (the
 benchmarks do it unless run with
 .BR \-C );
