@@ -57,7 +57,7 @@ it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
 The `spack` job builds the Spack package with Spack, against OpenBLAS,
 BLIS, AOCL-BLAS, Netlib, FlexiBLAS and MKL, from this commit's tarball and from the
 latest release, and runs its tests (`spack test run`), through
-`.github/spack-check.sh`; see [packaging](packaging.md#in-ci).
+`.github/scripts/spack-check.sh`; see [packaging](packaging.md#in-ci).
 
 The `docker` job builds the Docker image once per backend it offers
 (OpenBLAS, BLIS, Netlib, MKL) and runs every benchmark from it, then
@@ -73,7 +73,7 @@ The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
 The nine jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
-`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`) also run `.github/verify-sweep.sh` ("Verified at
+`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`) also run `.github/scripts/verify-sweep.sh` ("Verified at
 real sizes"): all 32, checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on
@@ -171,7 +171,7 @@ old, until 2026-12-20 here.
 Two analysers read the code rather than run it, so they see the paths no
 test takes:
 
-- The `cppcheck` job runs `.github/cppcheck.sh`, which fails on any
+- The `cppcheck` job runs `.github/scripts/cppcheck.sh`, which fails on any
   finding. A wrong finding is suppressed on the line above it with
   `/* cppcheck-suppress <id> */` and a comment saying why;
   `variableScope` (narrowing each variable to its innermost block is a
@@ -181,7 +181,7 @@ test takes:
   `malloc` result before the NULL check in every `verify()`, undefined
   behaviour on the out-of-memory path, and bare `NULL` as the sentinel of
   a variadic call in the option tests. To run it locally, after
-  configure: `.github/cppcheck.sh build` (`apt install cppcheck`, or
+  configure: `.github/scripts/cppcheck.sh build` (`apt install cppcheck`, or
   `pip install cppcheck`).
 - CodeQL (`codeql.yml`, its own workflow) builds the code and runs
   GitHub's security and quality queries, which follow data across
@@ -222,7 +222,7 @@ produced was a format-truncation warning invisible at `-O2`.
 
 Leak detection is on, with the BLAS library's own per-thread buffers --
 which it never frees by design -- suppressed by module in
-`.github/lsan-suppressions.txt`. That keeps it useful for our code: an
+`.github/scripts/lsan-suppressions.txt`. That keeps it useful for our code: an
 option string that an early return forgot to free is exactly the kind of
 thing it catches. To reproduce locally:
 
@@ -230,7 +230,7 @@ thing it catches. To reproduce locally:
 ../configure --enable-werror CFLAGS="-O1 -g -fsanitize=address,undefined" \
     LDFLAGS="-fsanitize=address,undefined"
 ASAN_OPTIONS=detect_leaks=1 \
-  LSAN_OPTIONS=suppressions=$PWD/../.github/lsan-suppressions.txt make check
+  LSAN_OPTIONS=suppressions=$PWD/../.github/scripts/lsan-suppressions.txt make check
 ```
 
 ## Fuzzing

@@ -2,7 +2,7 @@
 # The Spack package (packaging/spack) built against one BLAS and checked by
 # its own tests (spack test run), twice:
 #
-#     .github/spack-check.sh BLAS SRC
+#     .github/scripts/spack-check.sh BLAS SRC
 #
 # - this commit, from SRC, the unpacked tarball of `make dist`, through a
 #   Spack environment that develops it: the recipe as it is, on the code

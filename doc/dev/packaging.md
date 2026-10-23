@@ -70,7 +70,7 @@ page, another version.
 
 ### In CI
 
-The `spack` job of `ci.yml` runs `.github/spack-check.sh BLAS SRC` for
+The `spack` job of `ci.yml` runs `.github/scripts/spack-check.sh BLAS SRC` for
 OpenBLAS, BLIS, AOCL-BLAS, Netlib, FlexiBLAS and MKL (NVPL and ArmPL are
 aarch64-only, and their Spack packages download the vendor's binaries).
 MKL is Intel's apt package, declared to Spack as an external
@@ -106,7 +106,7 @@ git clone --depth 1 -b v1.2.2 https://github.com/spack/spack.git ~/spack
 spack repo update builtin --tag v2026.06.0   # the commits CI pins
 spack repo add packaging/spack/spack_repo/blas_microbenchmark
 (cd build && make dist && tar xf blas-microbenchmark-*.tar.gz -C /tmp)
-.github/spack-check.sh openblas /tmp/blas-microbenchmark-<version>
+.github/scripts/spack-check.sh openblas /tmp/blas-microbenchmark-<version>
 ```
 
 ### After a release
@@ -155,7 +155,7 @@ history, the build directories and what `autoreconf` makes again.
   | `openblas` | `libopenblas-dev` | `libopenblas0-pthread` |
   | `blis` | `libblis-openmp-dev` | `libblis4-openmp` |
   | `netlib` | `libblas-dev` | `libblas3` |
-  | `mkl` | Intel's repository (`.github/install-oneapi-mkl.sh`) | `libgomp1`, and MKL's libraries copied |
+  | `mkl` | Intel's repository (`.github/scripts/install-oneapi-mkl.sh`) | `libgomp1`, and MKL's libraries copied |
 
   FlexiBLAS and AOCL-BLAS are not there: Ubuntu packages neither
   (AOCL-BLAS is built from AMD's sources, as the `aocl` CI job does).
