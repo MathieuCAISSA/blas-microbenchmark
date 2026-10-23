@@ -47,19 +47,25 @@ bmb_dgemm -m 512:2048
 
 ```
 $ bmb_dgemm -m 512:2048
-# blas-microbenchmark 1.7.0
+# blas-microbenchmark 1.8.0
 # backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
+# kernels: Haswell
 # verified: every point, against a reference, before it was timed
 # layout: row-major
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
-# date: 2026-10-19T18:08:18Z
+# date: 2026-10-23T12:34:59Z
+# affinity: CPUs 0-13
+# command: bmb_dgemm -m 512:2048
+# run: 0.2 s and 1 call of warm-up, 10 samples, batch size chosen per point, hot cache
+# operands: aligned to 64 bytes, leading dimensions + 0
+# compiler: gcc 13.3.0, CFLAGS -g -O2 -fopenmp
 # routine: dgemm
-Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s
-1               512                 512                 0.005189896     51.723
-1               1024                1024                0.046092456     46.591
-1               2048                2048                0.400350851     42.912
+Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s       median [s]      IQR [%]
+1               512                 512                 0.006034826     44.481        0.011482770     33.9
+1               1024                1024                0.044718863     48.022        0.046378110     19.0
+1               2048                2048                0.381516047     45.031        0.423780287     4.3
 ```
 
 Every benchmark takes the same options: the sizes to sweep (`-v` for
@@ -87,7 +93,7 @@ firefox report.html
 </picture>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-ratio-dark.png">
-  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.5 and x0.9 depending on size" width="49%">
+  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.45 and x1 depending on size" width="49%">
 </picture>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-threads-dark.png">
