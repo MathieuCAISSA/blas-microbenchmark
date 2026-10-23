@@ -63,6 +63,10 @@ it comes from in brackets.
   status alone (`gh attestation verify` prints nothing outside a
   terminal, #13), and only the part of a page that was rendered
   ([testing the page](../doc/dev/report.md#testing-the-page)).
+- [ ] A test that times calls holds them only to what the clock
+  guarantees: a lower bound on time, an upper bound on calls. It never
+  counts on two samples differing: equal calls can tie to the clock's
+  resolution, and then spread by nothing (#183).
 - [ ] A test looks for the message it expects, never for an empty
   stderr from a run on the real machine: one that exposes its CPU
   frequency adds a warning to every run (a CI runner did, #48).

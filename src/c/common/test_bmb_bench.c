@@ -222,8 +222,10 @@ static void *mem_setup(size_t dim1, size_t dim2, unsigned int thread_count)
 }
 
 /* A call of 200 microseconds, spun on the clock: the time-based options'
- * stub, whose calls are counted. */
-static int timed_calls;
+ * stub, whose calls are counted. With timed_alternate, every other call
+ * takes 400: samples that spread for certain, where equal ones can tie
+ * to the clock's resolution and spread by nothing (#183). */
+static int timed_calls, timed_alternate;
 
 static double now(void)
 {
@@ -236,9 +238,10 @@ static double now(void)
 static void timed_call(void *ctx)
 {
     const double t0 = now();
+    const double length = (timed_alternate && timed_calls % 2 == 1) ? 400.0e-6 : 200.0e-6;
 
     (void) ctx;
-    while (now() - t0 < 200.0e-6) {
+    while (now() - t0 < length) {
         work += 1.0;
     }
     timed_calls++;
@@ -390,7 +393,7 @@ int main(void)
      * at most; the run took that time at least. */
     {
         static char w[] = "-w", wt[] = "0.05", z[] = "0", t[] = "-t", t12[] = "1,2", v2[] = "8,16", T[] = "-T",
-                    Tt[] = "0.02", e[] = "-e", loose[] = "50", tight[] = "0.000001", E[] = "-E",
+                    Tt[] = "0.02", e[] = "-e", loose[] = "50", tight[] = "10", E[] = "-E",
                     Et[] = "0.02", Tbig[] = "3600", i20[] = "20", ibig[] = "100001";
         bmb_benchmark_t tb = {0};
         int n, status;
@@ -421,7 +424,11 @@ int main(void)
         check(status == EXIT_SUCCESS && n == 10, "--max-spread 50: calls this regular stop at 10 samples");
         status = timed_run(&tb, &n, &secs, w, z, e, loose, i, i20, (char *) NULL);
         check(status == EXIT_SUCCESS && n == 20, "--max-spread 50 -i 20: at -i, past 10");
+        /* Calls of 200 and 400 us in turn spread by 2/3 of their median:
+         * --max-spread 10 is never met. */
+        timed_alternate = 1;
         status = timed_run(&tb, &n, &secs, w, z, e, tight, E, Et, (char *) NULL);
+        timed_alternate = 0;
         check(status == EXIT_SUCCESS && n > 10 && n <= 101 && secs >= 0.02,
               "--max-spread never met: --max-time 0.02 stops it");
 
