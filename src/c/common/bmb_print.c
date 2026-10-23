@@ -1,3 +1,5 @@
+#include <config.h>
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -144,6 +146,9 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     } else {
         fprintf(out, "# backend: %s\n", bmb_build_backend());
     }
+#if defined(BMB_BUILD_HAS_KERNELS)
+    fprintf(out, "# kernels: %s\n", bmb_build_kernels());
+#endif
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
     }
@@ -464,6 +469,11 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         bmb_print_json_string(out, blas);
         fprintf(out, ",\n");
     }
+#if defined(BMB_BUILD_HAS_KERNELS)
+    fprintf(out, "  \"kernels\": ");
+    bmb_print_json_string(out, bmb_build_kernels());
+    fprintf(out, ",\n");
+#endif
     if (rs->label != NULL) {
         fprintf(out, "  \"label\": ");
         bmb_print_json_string(out, rs->label);

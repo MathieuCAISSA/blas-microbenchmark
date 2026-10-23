@@ -478,6 +478,13 @@ AS_IF([test -z "$bmb_blas_backend_name"], [bmb_blas_backend_name=unknown])
 AC_DEFINE_UNQUOTED([BMB_BLAS_BACKEND], ["$bmb_blas_backend_name"],
   [Name of the BLAS backend this build was configured against.])
 
+dnl The kernels a library's dispatch chose at run time, which the results
+dnl record (#162): OpenBLAS's core, BLIS's and AOCL-BLAS's configuration,
+dnl MKL's code branch. Whichever the library linked has; none for Netlib,
+dnl NVPL, ArmPL or FlexiBLAS, which do not say.
+AS_IF([test "x$bmb_blas_backend" != xflexiblas],
+  [AC_CHECK_FUNCS([openblas_get_corename bli_arch_query_id mkl_cbwr_get_auto_branch])])
+
 dnl -----------------------------------------------------------------------
 dnl Optional runtime thread-count control via OpenMP (OpenBLAS-OpenMP,
 dnl NVPL, ArmPL all use omp_set_num_threads()/OMP_NUM_THREADS).

@@ -65,6 +65,7 @@
     if (o.turbo !== undefined) { r.machine.turbo = o.turbo; }
     if (o.layout) { r.layout = o.layout; }
     if (o.run) { r.run = o.run; }
+    if (o.kernels) { r.kernels = o.kernels; }
     return r;
   }
 
@@ -567,6 +568,19 @@
       eq(routine(m, "dgemm").seriesOrder.length, 2, "dgemm has the two layouts as two curves");
       eq(routine(m, "ddot").seriesOrder.map(function (s) { return s.identity.name; }), ["openblas"],
          "a vector routine stays in the library's one series");
+    });
+
+    /* ---- The kernels a library chose (#162) ---- */
+
+    test("kernels", function () {
+      var m = R.buildModel([
+        entry("a.json", { kernels: "Haswell", rows: [[1, 8, null, 1e-6, 1, 8]] }),
+        entry("b.json", { kernels: "Sandybridge", rows: [[1, 16, null, 1e-6, 1, 8]] }),
+        entry("c.json", { kernels: "Haswell", rows: [[1, 32, null, 1e-6, 1, 8]] }),
+        entry("d.json", { rows: [[1, 64, null, 1e-6, 1, 8]] })
+      ]);
+      eq(m.identities.length, 1, "the kernels do not split a series");
+      eq(m.identities[0].kernels, ["Haswell", "Sandybridge"], "a series lists each kernel path its files ran, once");
     });
 
     /* ---- --cache cold (#160) ---- */
