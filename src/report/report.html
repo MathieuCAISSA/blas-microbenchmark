@@ -335,7 +335,7 @@ details[open] > summary { margin-bottom: 12px; }
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
           cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, pad: pad, machine: machine,
-          versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: []
+          versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: [], kernels: []
         };
         identityOrder.push(id);
       }
@@ -353,6 +353,9 @@ details[open] > summary { margin-bottom: 12px; }
       if (r.verified === true && id.verifiedFiles.indexOf(file) < 0) { id.verifiedFiles.push(file); }
       var freq = frequencyText(r.machine || {});
       if (freq && id.frequencies.indexOf(freq) < 0) { id.frequencies.push(freq); }
+      /* The kernels the library's dispatch chose (#162): shown with the
+       * library, not part of the key, as the frequency is not. */
+      if (r.kernels && id.kernels.indexOf(r.kernels) < 0) { id.kernels.push(r.kernels); }
       var run = runText(r.run);
       if (run && id.runs.indexOf(run) < 0) { id.runs.push(run); }
       var command = commandText(r.run);
@@ -1734,7 +1737,7 @@ details[open] > summary { margin-bottom: 12px; }
     }
     name.appendChild(document.createTextNode(id.name + (id.slot ? "" : " (not drawn: past eight series)")));
     tr.appendChild(name);
-    tr.appendChild(el("td", null, id.blas || id.backend));
+    tr.appendChild(el("td", null, (id.blas || id.backend) + (id.kernels.length ? " · kernels " + id.kernels.join(", ") : "")));
     var cpu = el("td", null, cpuName(id.cpu) + (id.machine.logical_cpus ? ", " + plural(id.machine.logical_cpus, "CPU") : "") +
       (id.machine.numa_nodes ? ", " + plural(id.machine.numa_nodes, "NUMA node") : ""));
     if (cpuName(id.cpu) !== id.cpu && id.cpu) { cpu.title = id.cpu; }

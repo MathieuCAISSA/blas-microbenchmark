@@ -556,6 +556,7 @@ Every result starts with where it came from:
 .EX
 # blas\-microbenchmark @PACKAGE_VERSION@
 # backend: openblas (OpenBLAS 0.3.26 DYNAMIC_ARCH Haswell MAX_THREADS=64)
+# kernels: Haswell
 # verified: every point, against a reference, before it was timed
 # layout: row\-major
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
@@ -575,6 +576,14 @@ Every result starts with where it came from:
 .PP
 The library's version string, where it exposes one, tells apart two
 builds of the same library.
+The kernels are those the library's dispatch chose at run time, as it
+names them: OpenBLAS's core, BLIS's and AOCL-BLAS's configuration, MKL's
+code branch (which
+.B MKL_ENABLE_INSTRUCTIONS
+limits).
+On a CPU with SME, AMX or AVX10 the path changes the numbers, and two
+files from the same library can only be told apart by it.
+Netlib, NVPL, ArmPL and FlexiBLAS do not say, and the line is left out.
 The caches show where a sweep leaves each level.
 The frequency line gives the CPU frequency governor (several, joined by
 .BR / ,
@@ -667,6 +676,7 @@ one object holding the same information as fields:
 .BR version ,
 .BR backend ,
 .BR blas ,
+.BR kernels ,
 .BR label ,
 .BR verified ,
 .B layout

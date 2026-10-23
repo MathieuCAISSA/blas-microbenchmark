@@ -111,6 +111,14 @@ grep -q '<td[^>]*>1 sample, 0.2 s and 0 warm-up calls · ' "$dom" || fail "the R
 grep -q 'band: fastest sample to third quartile' "$dom" || fail "no quartile band for the series measured once"
 echo "ok   rendered: the Run column, and the samples' band, for files with a run block"
 
+# The kernels the library chose (#162), beside it, where it says them.
+if grep -q '^  "kernels": ' "$T/ddot.json"; then
+    grep -q ' · kernels ' "$dom" || fail "the library's kernels are not shown beside it"
+    echo "ok   rendered: the kernels the library chose"
+else
+    echo "note this library does not say which kernels it chose: nothing to show"
+fi
+
 grep -q 'class="line"' "$dom" || fail "no line was drawn"
 grep -q 'class="cell"' "$dom" || fail "no heatmap cell was drawn"
 echo "ok   lines and heatmap cells drawn"
