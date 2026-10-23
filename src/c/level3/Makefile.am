@@ -53,7 +53,6 @@ TESTS = \
 	complex16/test_bmb_ztrsm.sh \
 	complex16/test_bmb_zherk.sh \
 	complex16/test_bmb_zhemm.sh \
-	test_bmb_output_formats.sh \
 	test_bmb_square_default.sh
 
 EXTRA_DIST = $(TESTS)

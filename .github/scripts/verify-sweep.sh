@@ -4,7 +4,7 @@
 # (--layout row and col) and padded leading dimensions (column-major,
 # --ld-pad 8, #163), against the library this CI job built with:
 #
-#     .github/verify-sweep.sh BUILD_DIR
+#     .github/scripts/verify-sweep.sh BUILD_DIR
 #
 # make check runs --verify on tiny sizes only, by rule (AGENTS.md, "Tiny
 # sizes only"). A tolerance too tight for a real size, or a library that is
