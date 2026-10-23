@@ -93,7 +93,7 @@ firefox report.html
 </picture>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-ratio-dark.png">
-  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.5 and x0.9 depending on size" width="49%">
+  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.45 and x1 depending on size" width="49%">
 </picture>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-threads-dark.png">
