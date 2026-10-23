@@ -10,8 +10,8 @@ abstract: >-
 authors:
   - given-names: Mathieu
     family-names: Caissa
-version: 1.7.0
-date-released: 2026-10-19
+version: 1.8.0
+date-released: 2026-10-23
 license: Apache-2.0
 repository-code: "https://github.com/MathieuCAISSA/blas-microbenchmark"
 url: "https://mathieucaissa.github.io/blas-microbenchmark/"
