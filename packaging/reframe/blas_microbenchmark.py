@@ -45,10 +45,9 @@ class bmb_base(rfm.RunOnlyRegressionTest):
 
     routine = parameter(sorted(ROUTINES))
 
-    #: The size each level runs at, large enough that the operands leave
-    #: the caches of a current server: the vector length at level 1 (two
-    #: vectors of 32 MB), M = N = K at levels 2 and 3 (128 MB and 32 MB
-    #: per matrix).
+    #: The size each level runs at, the benchmarks' own defaults (#165):
+    #: the vector length at level 1 (two vectors of 80 MB), M = N = K at
+    #: levels 2 and 3 (200 MB and 32 MB per matrix).
     level1_size = variable(int, value=10000000)
     level2_size = variable(int, value=5000)
     level3_size = variable(int, value=2000)

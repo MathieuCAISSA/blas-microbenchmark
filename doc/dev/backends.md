@@ -28,11 +28,15 @@ own version string through. `bmb_build.c` turns both into the provenance
 block every result carries. A new backend must set the name; the version
 string is a bonus where the library has one (OpenBLAS's
 `openblas_get_config()`, BLIS's `bli_info_get_version_str()`) and NULL
-where it does not. So are the kernels its dispatch chose at run time
-(#162, `bmb_build_kernels()`): OpenBLAS's `openblas_get_corename()`,
-BLIS's and AOCL-BLAS's `bli_arch_string(bli_arch_query_id())`, MKL's
-`mkl_cbwr_get_auto_branch()`, which follows `MKL_ENABLE_INSTRUCTIONS`,
-each detected by `configure`; NULL for Netlib, NVPL and ArmPL, which have
+where it does not. The kernels its dispatch chose at run time are a
+bonus too (#162, `bmb_build_kernels()`): OpenBLAS's
+`openblas_get_corename()`, BLIS's and AOCL-BLAS's
+`bli_arch_string(bli_arch_query_id())`, MKL's
+`mkl_cbwr_get_auto_branch()`, which follows `MKL_ENABLE_INSTRUCTIONS`
+(`AUTO` where MKL names no branch, as on AMD CPUs, #187), each detected
+by `configure`. Whether a build has one is fixed when it is built, so
+`bmb_build.h` defines `BMB_BUILD_HAS_KERNELS` and the outputs test it in
+the preprocessor; it is undefined for Netlib, NVPL and ArmPL, which have
 no such call, and for FlexiBLAS, which loads its library where the
 benchmark cannot reach it. Debian's BLIS 0.9 aborts with any
 `BLIS_ARCH_TYPE` set, so only OpenBLAS's and MKL's overrides are tested
@@ -91,7 +95,9 @@ count (Netlib, also when FlexiBLAS loaded it).
 `bmb_machine_probe_at()`. It is a test hook, so that the output and the
 warnings can be checked against the fixtures in
 `src/c/common/fixtures/machine/` (`test_bmb_output_formats.sh`,
-`test_bmb_threads_env.sh`, and the report's render test); it is not in
+`test_bmb_threads_env.sh`, `test_bmb_cache.sh`,
+`test_bmb_alloc_failures.sh`, `test_bmb_bench`, and the report's render
+test); it is not in
 the man page. The logical CPU count,
 the OS and the date still come from the real system.
 
