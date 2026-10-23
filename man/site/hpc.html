@@ -27,7 +27,7 @@ bmb_dgemm -m 1024:16384 -t 1,2,4,8,16,32 -l "$SLURM_JOB_PARTITION" -o "dgemm-$SL
 <pre>numactl --cpunodebind=0 --membind=0 bmb_dgemm -t 1:16
 numactl --interleave=all bmb_dgemm -t 1:32</pre></li>
 </ul>
-<p>The result records the CPU, its NUMA nodes and caches; not how the threads were placed, so put that in a label (<code>-l</code>). More in <a href="threads.html">Threads</a>.</p>
+<p>The result records the CPU, its NUMA nodes and caches, the CPUs the process could run on, and the placement variables set (<code>OMP_PROC_BIND</code>, <code>OMP_PLACES</code>, <code>GOMP_CPU_AFFINITY</code>, <code>KMP_AFFINITY</code>); not <code>numactl</code>'s memory policy, so put that in a label (<code>-l</code>). More in <a href="threads.html">Threads</a>.</p>
 
 <h2 id="frequency">The CPU frequency</h2>
 <p>Each result records the frequency governor and turbo, where the node exposes them, and the benchmark warns when they let the frequency move during the run. On a node you can configure, <code>sudo cpupower frequency-set -g performance</code> and turbo off give steadier numbers; otherwise the report says under what conditions each series ran.</p>

@@ -11,11 +11,11 @@ releases with the same major version can be compared and read by the same
 
 ### Changed
 - The default size depends on the level (#165): 10000000 at level 1 and
-  5000 at level 2, past the last-level cache, so that their GB/s are the
-  memory's; 2000 at level 3, under a second a dgemm call on one core
-  (5 s a point, where 4096 took about 30 s). None is a power of two. A run that
-  gave no size measures something else than in 1.7.0; the ReFrame tests'
-  defaults are the same.
+  5000 at level 2, past most last-level caches, so that their GB/s are
+  the memory's; 2000 at level 3, under a second a dgemm call on one core
+  (5 s a point, where 4096 took about 30 s). None is a power of two. A
+  run that gave no size measures something else than in 1.7.0; the
+  ReFrame tests' defaults are the same.
 - Each thread count of a run starts with 0.2 s of warm-up calls
   (`-w`, `--warmup-time`; `-w 0` turns it off), so that a small point
   is not measured before the CPU has left its idle clock (#164).
@@ -35,7 +35,8 @@ releases with the same major version can be compared and read by the same
   within a percentage of their median, capped by `-E` (`--max-time`,
   10 s by default) and 100000 samples (#164). The spread is the IQR, not
   the coefficient of variation, which one preempted sample keeps from
-  settling. Every row says how many samples it took (`samples`).
+  settling. Every row says how many samples it took (`samples`, in the
+  CSV and JSON, and in the table with `-T` or `-e`).
 - `-a` (`--align`) and `-p` (`--ld-pad`): every operand is aligned, to 64
   bytes by default, and a matrix's leading dimension can be padded, to
   step a power-of-two size such as 4096 off the cache sets

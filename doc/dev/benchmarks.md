@@ -319,8 +319,9 @@ weighing what the fix costs.
   Variability across whole runs is the report's (#4: repeated runs, a
   band, a Mann-Whitney U test).
 - **The run block (#161).** Every output says how it was measured: the
-  command line (the program by its basename), `-x`, `-i`, `-b`, the
-  compiler and the CFLAGS configure ended with (`BMB_CFLAGS`, escaped for
+  command line (the program by its basename), `-x`, `-w`, `-i`, `-T`,
+  `-e`, `-E`, `-b`, `-k`, `-a` and `-p`, the compiler and the CFLAGS
+  configure ended with (`BMB_CFLAGS`, escaped for
   C in `configure.ac`), the affinity as `/proc/self/status` lists it, and
   the variables of `bmb_run_variables` in `bmb_print.c` that are set. A
   variable that changes what a library does goes in that list, and in

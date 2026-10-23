@@ -21,8 +21,9 @@
   for BLAS instead of MPI.
 - **Numbers you can trust**: every point is checked against a reference
   before it is timed, so a library that computes the wrong thing stops
-  the run instead of looking fast. The CPU, its frequency, the library
-  and its version are recorded with every result.
+  the run instead of looking fast. The CPU, its frequency, the library,
+  its version and the kernels it chose, and how the run was made, are
+  recorded with every result.
 - **Eight BLAS libraries**: OpenBLAS, BLIS, AMD AOCL-BLAS, Intel MKL,
   NVPL, ArmPL, Netlib, or all those FlexiBLAS can load, from one build.
 - **One page of charts**, `bmb_report`: performance against size with the
