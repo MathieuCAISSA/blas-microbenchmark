@@ -4,8 +4,8 @@
 # AOCL-BLAS's configuration, MKL's code branch, in -V, the text and the
 # JSON, the same in all three; what the library is told to choose, when
 # it can be told (OPENBLAS_CORETYPE on a DYNAMIC_ARCH OpenBLAS,
-# MKL_ENABLE_INSTRUCTIONS on x86), is what is recorded; nothing for a
-# library that does not say (Netlib, NVPL, ArmPL, FlexiBLAS).
+# MKL_ENABLE_INSTRUCTIONS on an Intel CPU), is what is recorded; nothing
+# for a library that does not say (Netlib, NVPL, ArmPL, FlexiBLAS).
 set -e
 
 T=kernels-test.d
@@ -56,7 +56,10 @@ if has HAVE_OPENBLAS_GET_CORENAME && grep -q DYNAMIC_ARCH "$T/v.txt" && [ -n "$c
     test "$k" = "$core" || fail "OPENBLAS_CORETYPE=$core, and the kernels recorded are '$k'"
     echo "ok   OPENBLAS_CORETYPE=$core: $core recorded"
 fi
-if has HAVE_MKL_CBWR_GET_AUTO_BRANCH && [ "$(uname -m)" = x86_64 ]; then
+# MKL dispatches on what the CPU is as well as what it can do: on an AMD
+# EPYC it takes a branch of its own, which MKL_ENABLE_INSTRUCTIONS does
+# not move.
+if has HAVE_MKL_CBWR_GET_AUTO_BRANCH && grep -q '^vendor_id.*GenuineIntel' /proc/cpuinfo 2>/dev/null; then
     k=$(MKL_ENABLE_INSTRUCTIONS=SSE4_2 kernels)
     test "$k" = SSE4_2 || fail "MKL_ENABLE_INSTRUCTIONS=SSE4_2, and the kernels recorded are '$k'"
     echo "ok   MKL_ENABLE_INSTRUCTIONS=SSE4_2: SSE4_2 recorded"

@@ -168,10 +168,14 @@ const char *bmb_build_kernels(void)
 
 /* The branch MKL's dispatch takes on this CPU, under
  * MKL_ENABLE_INSTRUCTIONS if it is set. The constants a release does not
- * have are left out. */
+ * have are left out; a branch none of them names is given by its number,
+ * as MKL 2026.2 gives one on an AMD EPYC. */
 const char *bmb_build_kernels(void)
 {
-    switch (mkl_cbwr_get_auto_branch()) {
+    static char other[32];
+    const int branch = mkl_cbwr_get_auto_branch();
+
+    switch (branch) {
     case MKL_CBWR_COMPATIBLE:
         return "COMPATIBLE";
     case MKL_CBWR_SSE2:
@@ -197,7 +201,8 @@ const char *bmb_build_kernels(void)
         return "AVX10";
 #endif
     default:
-        return "unknown branch";
+        snprintf(other, sizeof(other), "branch %d", branch);
+        return other;
     }
 }
 #endif
