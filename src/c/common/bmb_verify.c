@@ -21,49 +21,92 @@ static inline void bmb_verify_elem(const void *a, int single, int complex_, int 
     *re = single ? (double) ((const float *) a)[k] : ((const double *) a)[k];
 }
 
-/* bmb_verify_matvec for every precision. A real matrix takes its own
- * path, which does exactly the operations it always did. */
-static void bmb_verify_matvec_any(bmb_verify_shape_t shape, int column_major, int complex_,
+/* Element (i, j) of the matrix shape describes, op() included, read from
+ * A where it is stored: 0 when the shape has none there. */
+static int bmb_verify_entry(int shape, int column_major, int complex_, int single,
+                            const void *a, size_t lda, size_t i, size_t j,
+                            double *ar, double *ai)
+{
+    const int base = shape & 0xff;
+    const int t = (shape & (BMB_VERIFY_TRANS | BMB_VERIFY_CONJ_TRANS)) != 0;
+    /* (r, c): the element of the stored triangle op() takes it from. */
+    const size_t r = t ? j : i, c = t ? i : j;
+
+    switch (base) {
+    case BMB_VERIFY_FULL_T:
+        bmb_verify_elem(a, single, complex_, column_major, lda, j, i, ar, ai);
+        return 1;
+    case BMB_VERIFY_FULL_H:
+        bmb_verify_elem(a, single, complex_, column_major, lda, j, i, ar, ai);
+        *ai = -*ai;
+        return 1;
+    case BMB_VERIFY_SYM_UPPER:
+        bmb_verify_elem(a, single, complex_, column_major, lda, j >= i ? i : j, j >= i ? j : i, ar, ai);
+        return 1;
+    case BMB_VERIFY_SYM_LOWER:
+        bmb_verify_elem(a, single, complex_, column_major, lda, j >= i ? j : i, j >= i ? i : j, ar, ai);
+        return 1;
+    case BMB_VERIFY_HERM_UPPER:
+        bmb_verify_elem(a, single, complex_, column_major, lda, j >= i ? i : j, j >= i ? j : i, ar, ai);
+        *ai = (j > i) ? *ai : (j < i) ? -*ai : 0.0;
+        return 1;
+    case BMB_VERIFY_HERM_LOWER:
+        bmb_verify_elem(a, single, complex_, column_major, lda, j >= i ? j : i, j >= i ? i : j, ar, ai);
+        *ai = (i > j) ? *ai : (i < j) ? -*ai : 0.0;
+        return 1;
+    case BMB_VERIFY_UPPER:
+    case BMB_VERIFY_LOWER:
+        if (base == BMB_VERIFY_UPPER ? r > c : r < c) {
+            return 0;
+        }
+        if (r == c && (shape & BMB_VERIFY_UNIT)) {
+            *ar = 1.0;
+            *ai = 0.0;
+            return 1;
+        }
+        bmb_verify_elem(a, single, complex_, column_major, lda, r, c, ar, ai);
+        if (shape & BMB_VERIFY_CONJ_TRANS) {
+            *ai = -*ai;
+        }
+        return 1;
+    case BMB_VERIFY_LOWER_STRICT:
+        if (i <= j) {
+            return 0;
+        }
+        break;
+    case BMB_VERIFY_UPPER_STRICT:
+        if (i >= j) {
+            return 0;
+        }
+        break;
+    default: /* FULL */
+        break;
+    }
+    bmb_verify_elem(a, single, complex_, column_major, lda, i, j, ar, ai);
+    return 1;
+}
+
+/* bmb_verify_matvec for every precision. Each row sums its terms in the
+ * order of j, so that every shape adds what it reads in the order it
+ * always did. */
+static void bmb_verify_matvec_any(int shape, int column_major, int complex_,
                                   int single, size_t m, size_t n, const void *a, size_t lda,
                                   const double *x, const double *xabs, double *y, double *yabs)
 {
-    size_t rows = (shape == BMB_VERIFY_FULL) ? m : n;
+    const int base = shape & 0xff;
+    const int transposed = base == BMB_VERIFY_FULL_T || base == BMB_VERIFY_FULL_H;
+    size_t rows = (base == BMB_VERIFY_FULL) ? m : n;
+    size_t cols = transposed ? m : n;
     size_t i, j;
 
     for (i = 0; i < rows; i++) {
-        size_t lo = 0, hi = n;
         double re = 0.0, im = 0.0, sa = 0.0;
 
-        if (shape == BMB_VERIFY_FULL_T || shape == BMB_VERIFY_FULL_H) {
-            hi = m;
-        } else if (shape == BMB_VERIFY_UPPER) {
-            lo = i;
-        } else if (shape == BMB_VERIFY_LOWER_STRICT) {
-            hi = i;
-        }
-        for (j = lo; j < hi; j++) {
+        for (j = 0; j < cols; j++) {
             double ar, ai;
 
-            switch (shape) {
-            case BMB_VERIFY_FULL_T:
-                bmb_verify_elem(a, single, complex_, column_major, lda, j, i, &ar, &ai);
-                break;
-            case BMB_VERIFY_FULL_H:
-                bmb_verify_elem(a, single, complex_, column_major, lda, j, i, &ar, &ai);
-                ai = -ai;
-                break;
-            case BMB_VERIFY_SYM_UPPER:
-                bmb_verify_elem(a, single, complex_, column_major, lda, j >= i ? i : j,
-                                j >= i ? j : i, &ar, &ai);
-                break;
-            case BMB_VERIFY_HERM_UPPER:
-                bmb_verify_elem(a, single, complex_, column_major, lda, j >= i ? i : j,
-                                j >= i ? j : i, &ar, &ai);
-                ai = (j > i) ? ai : (j < i) ? -ai : 0.0;
-                break;
-            default: /* FULL, UPPER, LOWER_STRICT */
-                bmb_verify_elem(a, single, complex_, column_major, lda, i, j, &ar, &ai);
-                break;
+            if (!bmb_verify_entry(shape, column_major, complex_, single, a, lda, i, j, &ar, &ai)) {
+                continue;
             }
             if (!complex_) {
                 re += ar * x[j];
@@ -86,7 +129,7 @@ static void bmb_verify_matvec_any(bmb_verify_shape_t shape, int column_major, in
     }
 }
 
-void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
+void bmb_verify_matvec(int shape, int column_major, size_t m, size_t n,
                        const double *a, size_t lda,
                        const double *x, const double *xabs,
                        double *y, double *yabs)
@@ -94,7 +137,7 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, siz
     bmb_verify_matvec_any(shape, column_major, 0, 0, m, n, a, lda, x, xabs, y, yabs);
 }
 
-void bmb_verify_matvec_single(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
+void bmb_verify_matvec_single(int shape, int column_major, size_t m, size_t n,
                               const float *a, size_t lda,
                               const double *x, const double *xabs,
                               double *y, double *yabs)
@@ -102,7 +145,7 @@ void bmb_verify_matvec_single(bmb_verify_shape_t shape, int column_major, size_t
     bmb_verify_matvec_any(shape, column_major, 0, 1, m, n, a, lda, x, xabs, y, yabs);
 }
 
-void bmb_verify_matvec_complex(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
+void bmb_verify_matvec_complex(int shape, int column_major, size_t m, size_t n,
                                const double *a, size_t lda,
                                const double *x, const double *xabs,
                                double *y, double *yabs)
@@ -110,7 +153,7 @@ void bmb_verify_matvec_complex(bmb_verify_shape_t shape, int column_major, size_
     bmb_verify_matvec_any(shape, column_major, 1, 0, m, n, a, lda, x, xabs, y, yabs);
 }
 
-void bmb_verify_matvec_complex_single(bmb_verify_shape_t shape, int column_major,
+void bmb_verify_matvec_complex_single(int shape, int column_major,
                                       size_t m, size_t n, const float *a, size_t lda,
                                       const double *x, const double *xabs,
                                       double *y, double *yabs)

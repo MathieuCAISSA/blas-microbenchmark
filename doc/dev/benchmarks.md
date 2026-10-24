@@ -149,7 +149,16 @@ options.
   double. Two shapes are the complex ones' own: `FULL_H`, the conjugate
   transpose, and `HERM_UPPER`, a Hermitian matrix from its upper
   triangle, reading neither the lower one nor the diagonal's imaginary
-  part.
+  part; `HERM_LOWER` is the same from the lower triangle.
+- Every shape has its other triangle (#216): `LOWER`, `SYM_LOWER`,
+  `HERM_LOWER`, `UPPER_STRICT`, for the routines' `--uplo L`. A triangle
+  takes modifiers, OR'ed onto it: `BMB_VERIFY_TRANS` and
+  `BMB_VERIFY_CONJ_TRANS`, its transpose and conjugate transpose, read
+  from where the triangle is stored, and `BMB_VERIFY_UNIT`, a unit
+  diagonal, taken as 1 and not read. Each row sums what it reads in the
+  order of its columns, so every shape that existed adds what it always
+  did, in the same order: the 22 matrix routines' checks gave 1.8.0's
+  values to the digit after the change.
 
 Dimension conventions (only two `--matrix-dim*` options exist, so routines
 with 3 mathematical dimensions reuse one):

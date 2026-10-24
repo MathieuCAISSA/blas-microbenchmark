@@ -31,18 +31,33 @@ typedef enum {
                               below it, the conjugate of the mirror element;
                               on the diagonal, the real part only, as BLAS
                               reads it. SYM_UPPER for a real matrix */
-    BMB_VERIFY_LOWER_STRICT /* n x n, its strictly lower part only: where a
-                               routine that writes the upper triangle must
-                               leave everything as it was */
+    BMB_VERIFY_LOWER_STRICT, /* n x n, its strictly lower part only: where a
+                                routine that writes the upper triangle must
+                                leave everything as it was */
+    /* The same in the other triangle (#216), for --uplo L. */
+    BMB_VERIFY_LOWER,       /* n x n lower triangular, diagonal included */
+    BMB_VERIFY_SYM_LOWER,   /* n x n symmetric, stored in its lower triangle */
+    BMB_VERIFY_HERM_LOWER,  /* n x n Hermitian, stored in its lower triangle */
+    BMB_VERIFY_UPPER_STRICT /* n x n, its strictly upper part only */
 } bmb_verify_shape_t;
+
+/* Modifiers, OR'ed onto UPPER or LOWER (#216): the triangle's transpose,
+ * its conjugate transpose (the transpose for a real one), and a unit
+ * diagonal, taken as 1 and the stored one not read, as BLAS's diag 'U'
+ * does. UPPER | BMB_VERIFY_TRANS is a lower triangular matrix, read from the
+ * upper triangle where it is stored. */
+#define BMB_VERIFY_TRANS 0x100
+#define BMB_VERIFY_CONJ_TRANS 0x200
+#define BMB_VERIFY_UNIT 0x400
 
 /* y = op(A) x, and yabs = |op(A)| xabs, the size of the terms that made
  * each element of y (xabs NULL: |x|). FULL takes x of n elements and gives
- * y of m; FULL_T the other way round; the square shapes ignore m. A is
+ * y of m; FULL_T the other way round; the square shapes ignore m. shape is
+ * a bmb_verify_shape_t, with the modifiers above for UPPER and LOWER. A is
  * read as the benchmark stores it: column_major 0, element (i, j) at
  * a[i * lda + j]; 1, at a[i + j * lda]. The shapes are of the matrix, not
  * of the storage, so "upper" means i <= j either way. */
-void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
+void bmb_verify_matvec(int shape, int column_major, size_t m, size_t n,
                        const double *a, size_t lda,
                        const double *x, const double *xabs,
                        double *y, double *yabs);
@@ -53,15 +68,15 @@ void bmb_verify_matvec(bmb_verify_shape_t shape, int column_major, size_t m, siz
  * lda counts elements, not pairs. xabs and yabs stay real, one per
  * element: |re| + |im|, which bounds the size of the two real products in
  * each part of a complex product. */
-void bmb_verify_matvec_single(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
+void bmb_verify_matvec_single(int shape, int column_major, size_t m, size_t n,
                               const float *a, size_t lda,
                               const double *x, const double *xabs,
                               double *y, double *yabs);
-void bmb_verify_matvec_complex(bmb_verify_shape_t shape, int column_major, size_t m, size_t n,
+void bmb_verify_matvec_complex(int shape, int column_major, size_t m, size_t n,
                                const double *a, size_t lda,
                                const double *x, const double *xabs,
                                double *y, double *yabs);
-void bmb_verify_matvec_complex_single(bmb_verify_shape_t shape, int column_major,
+void bmb_verify_matvec_complex_single(int shape, int column_major,
                                       size_t m, size_t n, const float *a, size_t lda,
                                       const double *x, const double *xabs,
                                       double *y, double *yabs);
