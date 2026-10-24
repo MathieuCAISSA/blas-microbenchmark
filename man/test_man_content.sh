@@ -74,6 +74,16 @@ for r in $built; do
     got2=$(label_of dim2_label "$T/dims.json")
     test "$want1/$want2" = "$got1/$got2" \
         || fail "$r: the page says -m is $want1 and -M is ${want2:-absent}; the benchmark labels them $got1 and ${got2:-absent}"
+    # GEMM's K apart (#215): under -K, the third label is it, and the
+    # first what -m is less K.
+    want3=$(printf '%s\n' "$row" | sed -n 's/.*-K gives \([A-Z]\) apart.*/\1/p')
+    if [ -n "$want3" ]; then
+        "$b" -x 0 -i 1 -m 8 -K 4 -o "$T/dims.json" >/dev/null
+        got1=$(label_of dim1_label "$T/dims.json")
+        got3=$(label_of dim3_label "$T/dims.json")
+        test "${want1%="$want3"}/$want3" = "$got1/$got3" \
+            || fail "$r: the page says -K gives $want3 apart; under -K the benchmark labels -m $got1 and -K ${got3:-absent}"
+    fi
     checked=$((checked + 1))
 done
 ok "the table of dimensions matches the labels of all $checked level 2 and 3 benchmarks"

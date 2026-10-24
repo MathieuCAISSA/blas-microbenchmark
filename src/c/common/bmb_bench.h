@@ -73,6 +73,11 @@ typedef struct {
      * N, or SYRK's K), or NULL if the routine has a single dimension
      * (e.g. a vector length, or a square matrix's N). */
     const char *dim2_label;
+    /* GEMM's K, a third size dimension -K gives apart (#215), or NULL.
+     * Without -K, K is dim1 and the output is as it always was; with it,
+     * dim1's label becomes dim1_label_dim3 ("M" where it was "M=K"). */
+    const char *dim3_label;
+    const char *dim1_label_dim3;
 
     /* 1: dim1 is swept over --vector-size (level 1 routines).
      * 0: dim1 is swept over --matrix-dim1 (level 2 & 3 routines). */
@@ -114,6 +119,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench);
  * matrix stores its operands that way, sets its leading dimensions to
  * match, and passes the order to CBLAS and to bmb_verify_matvec(). */
 int bmb_bench_column_major(void);
+
+/* For setup() and the counts of a routine with a dim3_label: the K of the
+ * point being measured, which is dim1 unless -K gave it apart. */
+size_t bmb_bench_dim3(size_t dim1);
 
 /* For setup(): the bytes of a rows x cols matrix of elements of `size`
  * bytes, or 0 where that would wrap size_t (rows and cols at least 1).

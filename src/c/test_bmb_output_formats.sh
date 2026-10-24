@@ -29,6 +29,26 @@ for field in '"version": "' '"backend": "' '"routine": "dgemm"' '"time_s":' '"gf
     grep -q "$field" fmt.json || fail "json carries no $field field"
 done
 
+# No dim3 without -K: GEMM's output is as it always was (#215).
+if grep -q '"dim3' fmt.json; then
+    fail "dgemm without -K writes a dim3"
+fi
+
+# With -K, GEMM's K is a third dimension, after dim2, in every format,
+# dim1 then M alone; one row per K.
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 -M 6 -K 3,5 -o k.csv -f csv >k.txt || fail "the -K run failed"
+header=`grep -v '^#' k.csv | sed -n 1p`
+want="thread_count,matrix_dim1_m,matrix_dim2_n,matrix_dim3_k,time_s,gflops,calls_per_sample,median_s,q1_s,q3_s,samples"
+test "$header" = "$want" || fail "-K: csv header is '$header', expected '$want'"
+grep -v '^#' k.csv | sed -n '2,$p' | cut -d, -f2-4 >k.dims
+printf '8,6,3\n8,6,5\n' | cmp -s - k.dims || fail "-K: the csv rows' sizes are $(tr '\n' ' ' <k.dims), not 8,6,3 8,6,5"
+grep -q '^Thread count    Matrix dim1 (M)     Matrix dim2 (N)     Matrix dim3 (K)     time' k.txt \
+    || fail "-K: the table has no K column: $(grep '^Thread' k.txt)"
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 -M 6 -K 5 -o k.json >/dev/null || fail "the -K json run failed"
+for field in '"dim1_label": "Matrix dim1 (M)"' '"dim3_label": "Matrix dim3 (K)"' '"dim3": 5,$'; do
+    grep -q "$field" k.json || fail "-K: json carries no $field"
+done
+
 # A single-dimension routine names its one dimension and leaves dim2_label
 # out, the way it leaves dim2 out of every row.
 level1/double/bmb_ddot -x 0 -i 1 -v 8 -o fmt1.json -f json >/dev/null || fail "the ddot json run failed"
@@ -176,5 +196,6 @@ grep -q '^Frequency: governor performance, turbo off$' version.txt \
     || fail "-V did not describe the x86 fixture's frequency: $(cat version.txt)"
 rm -f version.txt
 
-rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json
+rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json \
+    k.csv k.txt k.dims k.json
 echo "ok   output formats"

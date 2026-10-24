@@ -85,11 +85,13 @@ Which dimension is which:
 .\" BEGIN routines (man-sizes): written by src/c/routines.sh
 .TS
 l l.
-sgemv dgemv dger dsymm zhemm dtrmm	\-m is M, \-M is N
-strsm dtrsm ztrsm	\-m is M, \-M is N
-sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N
+sgemv dgemv dger dsymm	\-m is M, \-M is N
+zhemm dtrmm strsm dtrsm	\-m is M, \-M is N
+ztrsm	\-m is M, \-M is N
+sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N; \-K gives K apart
 ssyrk dsyrk zherk dsyr2k	\-m is N, \-M is K
-dsymv dsyr dsyr2 dtrmv dtrsv	\-m is N (square; no \-M)
+dsymv dsyr dsyr2 dtrmv	\-m is N (square; no \-M)
+dtrsv	\-m is N (square; no \-M)
 .TE
 .\" END routines (man-sizes)
 .SH OPTIONS
@@ -167,6 +169,16 @@ Second matrix dimension.
 Without it, matrices are square: the second dimension follows the first at
 every point.
 With it, every combination of the two is measured.
+.TP
+.BI "\-K, \-\-matrix\-dim3 " sweep
+GEMM's K, apart from M.
+Without it, K is M at every point, and the output is as without it ever
+was.
+With it, every combination with the other sizes is measured, and every
+output has a third dimension, K, after the second, the first being M
+alone: the shapes of HPL's updates, a large M and N with a small K, or
+tall and skinny products.
+Other routines ignore it, with a warning.
 .TP
 .BI "\-t, \-\-thread\-count " sweep
 Number of BLAS threads.
@@ -732,15 +744,20 @@ and
 (the variables set, by name);
 .B routine
 and, naming its dimensions,
-.B dim1_label
-and
-.BR dim2_label .
+.BR dim1_label ,
+.B dim2_label
+and, for GEMM under
+.BR \-K ,
+.BR dim3_label .
 Then a
 .B results
 array, one object per point:
 .BR thread_count ,
 .BR dim1 ,
 .BR dim2 ,
+.B dim3
+(GEMM under
+.BR \-K ),
 .BR time_s ,
 .BR gflops ,
 .BR gbytes_per_s ,
@@ -899,6 +916,15 @@ draws as a heatmap):
 .EX
 bmb_dgemm \-m 512:2048                 # 512\(S2, 1024\(S2, 2048\(S2
 bmb_dgemm \-m 512:2048 \-M 512:2048     # all 9 combinations
+.EE
+.RE
+.PP
+GEMM with K apart from M, as HPL's updates are: large M and N, K from
+64 to 512:
+.PP
+.RS
+.EX
+bmb_dgemm \-m 8192 \-M 8192 \-K 64:512 \-o hpl.json
 .EE
 .RE
 .PP

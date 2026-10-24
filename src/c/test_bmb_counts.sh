@@ -7,8 +7,9 @@
 # Written here from the operation, the element's size and whether it is
 # complex (a complex multiply-add is 4 real ones), independently of the
 # sources, so that a family made of several routines (#166) keeps the
-# counts each had. BMB_COUNTS makes a benchmark write each point's counts
-# instead of measuring it: nothing is allocated, and one size is large.
+# counts each had; GEMM's with a K of its own too (-K, #215). BMB_COUNTS
+# makes a benchmark write each point's counts instead of measuring it:
+# nothing is allocated, and one size is large.
 set -e
 
 T=counts-test.d
@@ -84,6 +85,27 @@ while read -r r level prec kind _; do
 done <"$T/routines"
 test "$n" -ge 32 || fail "only $n routines checked"
 echo "ok   the FLOPs, bytes and footprint of all $n routines, at every size"
+
+# GEMM with a K of its own (-K, #215): 2*M*N*K and the bytes of M x K,
+# K x N and M x N, the point saying its K.
+for r in sgemm dgemm cgemm zgemm; do
+    case $r in s*) dir=single e=4 cf=1 ;; d*) dir=double e=8 cf=1 ;; c*) dir=complex e=8 cf=4 ;; z*) dir=complex16 e=16 cf=4 ;; esac
+    BMB_COUNTS=1 "level3/$dir/bmb_$r" -m 30,100000 -M 50,7 -K 3,90,100000 >"$T/$r.out" 2>"$T/$r.err" ||
+        fail "bmb_$r -K failed under BMB_COUNTS: $(cat "$T/$r.err")"
+    grep '^counts: ' "$T/$r.err" >"$T/$r.got" || fail "bmb_$r -K wrote no counts"
+    awk -v r="$r" -v e="$e" -v cf="$cf" '
+        function num(x) { return sprintf("%.17g", x) }
+        {
+            m = $3; n = $4; k = $6
+            want = sprintf("counts: %s %s %s K %s flops %s bytes - footprint %s", r, m, n, k,
+                           num(2 * m * n * k * cf), num(e * (m * k + k * n + m * n)))
+            if ($5 != "K" || $0 != want) { printf "%s:\n  got  %s\n  want %s\n", r, $0, want; bad = 1 }
+            points++
+        }
+        END { if (!bad && points != 12) { print r ": " points " points, not 12"; bad = 1 } exit bad }
+    ' "$T/$r.got" >"$T/$r.diff" || fail "$(cat "$T/$r.diff")"
+done
+echo "ok   GEMM under -K: 2*M*N*K, and the bytes of M x K, K x N and M x N, at every K"
 
 rm -rf "$T"
 echo "all checks passed"

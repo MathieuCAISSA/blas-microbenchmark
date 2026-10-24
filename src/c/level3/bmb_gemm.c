@@ -1,4 +1,5 @@
 #include <cblas.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "bmb_bench.h"
@@ -6,8 +7,8 @@
 #include "bmb_verify.h"
 
 /* sgemm, dgemm, cgemm and zgemm, one per precision (bmb_prec.h).
- * dim1 = M = K, dim2 = N (K is tied to M so the two --matrix-dim options
- * remain sufficient to describe the three GEMM dimensions; see README.md). */
+ * dim1 = M, dim2 = N, and K, which -K gives apart (#215) and is M
+ * otherwise, as it always was. */
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
@@ -27,20 +28,20 @@ typedef struct {
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
-    size_t m = dim1, n = dim2, k = dim1;
+    size_t m = dim1, n = dim2, k = bmb_bench_dim3(dim1);
     const int col = bmb_bench_column_major();
-    /* K is M: A is M x M, B and C both M x N, each stored as its rows, or
-     * its columns with --layout col. */
-    const size_t outa = m, outb = col ? n : m, outc = outb;
-    const size_t lda = bmb_bench_ld(outa, m, BMB_ELEM_BYTES);
-    const size_t ldb = bmb_bench_ld(outb, col ? m : n, BMB_ELEM_BYTES);
-    const size_t ldc = ldb;
+    /* A is M x K, B K x N, C M x N, each stored as its rows, or its
+     * columns with --layout col. */
+    const size_t outa = col ? k : m, outb = col ? n : k, outc = col ? n : m;
+    const size_t lda = bmb_bench_ld(outa, col ? m : k, BMB_ELEM_BYTES);
+    const size_t ldb = bmb_bench_ld(outb, col ? k : n, BMB_ELEM_BYTES);
+    const size_t ldc = bmb_bench_ld(outc, col ? m : n, BMB_ELEM_BYTES);
     size_t i;
 
     (void) thread_count;
 
 #if BMB_ELEM_BYTES > 8
-    if (lda == 0 || ldb == 0) {
+    if (lda == 0 || ldb == 0 || ldc == 0) {
         bmb_bench_too_large();
         return NULL;
     }
@@ -104,17 +105,19 @@ static double flops(size_t dim1, size_t dim2)
 {
     const double d1 = (double) dim1;
     const double d2 = (double) dim2;
+    const double k = (double) bmb_bench_dim3(dim1);
 
-    return BMB_MADD_FLOPS * d1 * d1 * d2;
+    return BMB_MADD_FLOPS * d1 * k * d2;
 }
 
-/* --cache cold: the bytes of A, B and C: M x K (K = M), K x N, M x N. */
+/* --cache cold: the bytes of A, B and C: M x K, K x N, M x N. */
 static double footprint(size_t dim1, size_t dim2)
 {
     const double d1 = (double) dim1;
     const double d2 = (double) dim2;
+    const double k = (double) bmb_bench_dim3(dim1);
 
-    return (d1 * d1 + 2.0 * d1 * d2) * (double) (BMB_ELEM_BYTES);
+    return (d1 * k + k * d2 + d1 * d2) * (double) (BMB_ELEM_BYTES);
 }
 
 /* --verify, by random projection in double: C*r against alpha*A*(B*r), r
@@ -131,9 +134,16 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     const size_t p = BMB_PARTS;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, inner = (size_t) ctx->k, i;
-    double *r = malloc((p * n + (p + 1) * inner + (4 * p + 2) * m) * sizeof(double));
+    double *r;
     int ok;
 
+    /* The call's K is the point's (-K, #215): a setup that kept K = M
+     * would pass the projection, which reads the K the call was given. */
+    if (inner != bmb_bench_dim3(m)) { /* GCOVR_EXCL_BR_LINE: only a setup that ignores -K takes it; seen to, mutated */
+        snprintf(msg, size, "the call's K is %zu, where the point's is %zu", inner, bmb_bench_dim3(m));
+        return 1;
+    }
+    r = malloc((p * n + (p + 1) * inner + (4 * p + 2) * m) * sizeof(double));
     if (r == NULL) {
         return -1;
     }
@@ -167,6 +177,8 @@ int main(int argc, char *argv[])
     bench.routine_name = BMB_ROUTINE(gemm);
     bench.dim1_label = "Matrix dim1 (M=K)";
     bench.dim2_label = "Matrix dim2 (N)";
+    bench.dim3_label = "Matrix dim3 (K)";
+    bench.dim1_label_dim3 = "Matrix dim1 (M)";
     bench.use_vector_range = 0;
     bench.level = 3;
     bench.setup = setup;

@@ -189,6 +189,9 @@ void bmb_print_txt_begin(FILE *out, const bmb_result_set_t *rs)
     if (rs->dim2_label != NULL) {
         fprintf(out, "%-20s", rs->dim2_label);
     }
+    if (rs->dim3_label != NULL) {
+        fprintf(out, "%-20s", rs->dim3_label);
+    }
     fprintf(out, "%-16s", "time [s]");
     if (rs->has_flops) {
         fprintf(out, "%-14s", "GFLOP/s");
@@ -225,6 +228,9 @@ void bmb_print_txt_row(FILE *out, const bmb_result_set_t *rs,
     fprintf(out, "%-20zu", row->dim1);
     if (rs->dim2_label != NULL) {
         fprintf(out, "%-20zu", row->dim2);
+    }
+    if (rs->dim3_label != NULL) {
+        fprintf(out, "%-20zu", row->dim3);
     }
     fprintf(out, "%-16.9f", row->time_s);
     if (rs->has_flops) {
@@ -290,6 +296,10 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, ",");
         bmb_csv_header_label(out, rs->dim2_label);
     }
+    if (rs->dim3_label != NULL) {
+        fprintf(out, ",");
+        bmb_csv_header_label(out, rs->dim3_label);
+    }
     fprintf(out, ",time_s");
     if (rs->has_flops) {
         fprintf(out, ",gflops");
@@ -313,6 +323,9 @@ void bmb_print_csv(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "%zu", row->dim1);
         if (rs->dim2_label != NULL) {
             fprintf(out, ",%zu", row->dim2);
+        }
+        if (rs->dim3_label != NULL) {
+            fprintf(out, ",%zu", row->dim3);
         }
         fprintf(out, ",%.9f", row->time_s);
         if (rs->has_flops) {
@@ -494,13 +507,19 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
      * a reader of the JSON -- bmb_report first of all -- could only title
      * its axes by keeping its own copy of each routine's conventions, which
      * would drift from the C files that define them. dim2_label is omitted
-     * for routines with a single dimension, like dim2 itself. */
+     * for routines with a single dimension, like dim2 itself, and
+     * dim3_label, with dim3, but for GEMM under -K (#215). */
     fprintf(out, "  \"dim1_label\": ");
     bmb_print_json_string(out, rs->dim1_label);
     fprintf(out, ",\n");
     if (rs->dim2_label != NULL) {
         fprintf(out, "  \"dim2_label\": ");
         bmb_print_json_string(out, rs->dim2_label);
+        fprintf(out, ",\n");
+    }
+    if (rs->dim3_label != NULL) {
+        fprintf(out, "  \"dim3_label\": ");
+        bmb_print_json_string(out, rs->dim3_label);
         fprintf(out, ",\n");
     }
 
@@ -513,6 +532,9 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "      \"dim1\": %zu", row->dim1);
         if (rs->dim2_label != NULL) {
             fprintf(out, ",\n      \"dim2\": %zu", row->dim2);
+        }
+        if (rs->dim3_label != NULL) {
+            fprintf(out, ",\n      \"dim3\": %zu", row->dim3);
         }
         fprintf(out, ",\n      \"time_s\": %.9f", row->time_s);
         if (rs->has_flops) {

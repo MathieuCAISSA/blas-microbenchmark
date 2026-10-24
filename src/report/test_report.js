@@ -42,7 +42,8 @@
   }
 
   /* One benchmark's JSON, as the C side writes it. rows: [threads, dim1,
-   * dim2 or null, time_s, gflops or null, gbytes_per_s or null]. */
+   * dim2 or null, time_s, gflops or null, gbytes_per_s or null, and
+   * GEMM's K under -K, dim3, or nothing]. */
   function result(o) {
     var r = {
       version: "1.0.0", backend: o.backend || "openblas",
@@ -55,6 +56,7 @@
         if (x[2] !== null && x[2] !== undefined) { row.dim2 = x[2]; }
         if (x[4] !== null && x[4] !== undefined) { row.gflops = x[4]; }
         if (x[5] !== null && x[5] !== undefined) { row.gbytes_per_s = x[5]; }
+        if (x[6] !== undefined) { row.dim3 = x[6]; }
         return row;
       })
     };
@@ -105,6 +107,24 @@
       eq(R.pointsOf(m.routines[0].seriesOrder[0]).map(function (p) { return p.d1; }).sort(function (a, b) { return a - b; }), [8, 16],
          "decision 1: the merged series has the points of both files");
       eq(m.identities[0].files, ["a.json", "b.json"], "decision 1: the series remembers both files");
+    });
+
+    test("gemm's K", function () {
+      var m = R.buildModel([
+        entry("k.json", gemm({ dim1Label: "Matrix dim1 (M)",
+                               rows: [[1, 64, 96, 1e-5, 10, null, 8], [1, 64, 96, 2e-5, 12, null, 32],
+                                      [1, 128, 96, 3e-5, 14, null, 8]] })),
+        entry("m.json", gemm({ rows: [[1, 64, 96, 1e-5, 11, null]] }))
+      ]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm", "dgemm, K = 8", "dgemm, K = 32"],
+         "#215: a GEMM run with -K gets a section per K, after the one without, in the order of K");
+      eq(m.routines.map(function (rt) { return rt.anchor; }), ["routine-dgemm", "routine-dgemm-k8", "routine-dgemm-k32"],
+         "#215: each section has an anchor of its own");
+      eq(R.pointsOf(m.routines[1].seriesOrder[0]).map(function (p) { return [p.d1, p.d2, p.d3]; })
+           .sort(function (a, b) { return a[0] - b[0]; }), [[64, 96, 8], [128, 96, 8]],
+         "#215: the K = 8 section holds the K = 8 points, with their K");
+      eq(R.pointsOf(m.routines[0].seriesOrder[0])[0].d3, null, "#215: a point without -K has no K");
+      eq(m.identities.length, 1, "#215: K is not part of the series: one library, one series");
     });
 
     test("merge, AOCL-BLAS builds", function () {

@@ -161,7 +161,13 @@ with 3 mathematical dimensions reuse one):
 - Two-real-dimension routines (`dgemv`, `dger`, `dsymm`, `dtrmm`, `dtrsm`):
   `dim1` = M, `dim2` = N.
 - `dsyrk`/`dsyr2k`: `dim1` = N, `dim2` = K.
-- `dgemm`: `dim1` = M = K (K is tied to M), `dim2` = N.
+- `dgemm`: `dim1` = M, `dim2` = N, and K, which `-K` gives apart and is M
+  otherwise (#215). K reaches the family's source through
+  `bmb_bench_dim3(dim1)`, which the driver sets around each point, as
+  `--layout` reaches it through `bmb_bench_column_major()`: no callback
+  takes it as an argument. Without `-K`, GEMM's outputs are what they
+  always were; with it, every row has a `dim3`, the result set a
+  `dim3_label`, and `dim1` is labelled M alone (`dim1_label_dim3`).
 
 For every two-dimension routine, `dim2` follows `dim1` point by point unless
 `-M` was given, so `-m 512:2048` measures three square problems; `-M` turns

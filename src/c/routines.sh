@@ -33,7 +33,7 @@ block() {
             dir["s"] = "single"; dir["d"] = "double"
             dir["c"] = "complex"; dir["z"] = "complex16"
             size["mn"] = "\\-m is M, \\-M is N"
-            size["mkn"] = "\\-m is M and K, \\-M is N"
+            size["mkn"] = "\\-m is M and K, \\-M is N; \\-K gives K apart"
             size["nk"] = "\\-m is N, \\-M is K"
             size["n"] = "\\-m is N (square; no \\-M)"
             size["v"] = ""
@@ -122,7 +122,7 @@ block() {
                         if (sizes[i] == order[j]) { list = list " " name[i] }
                     }
                     if (list == "") { continue }
-                    t = wrap(substr(list, 2), 34, "", "", "")
+                    t = wrap(substr(list, 2), 24, "", "", "")
                     gsub(/\n/, "\t" size[order[j]] "\n", t)
                     printf "%s", t
                 }

@@ -123,6 +123,7 @@ FUZZ_CORPUS = \
 	fuzz/bmb_options/cache \
 	fuzz/bmb_options/ceiling \
 	fuzz/bmb_options/counts \
+	fuzz/bmb_options/gemm-k \
 	fuzz/bmb_options/grid \
 	fuzz/bmb_options/help \
 	fuzz/bmb_options/label \
