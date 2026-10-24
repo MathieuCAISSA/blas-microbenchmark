@@ -145,7 +145,12 @@ U, L, N) when none was given, and passes them to CBLAS through
 is stored the other way round (GEMM's op(A) is M x K, so A is K x M), and
 `verify()` reads it with the shape `BMB_VERIFY_OP()` gives. Counts that
 depend on an argument read it too: GEMV's bytes swap x's and y's lengths
-when A is transposed. The outputs record the arguments a routine takes,
+when A is transposed, and on the right (`--side R`) trmm's, trsm's,
+symm's and hemm's A is N x N, M*N*(N+1) or 2*M*N*N FLOPs. A triangular
+matrix's `verify()` shape is `BMB_VERIFY_TRI(uplo, trans, diag)`, and a
+symmetric routine on the right checks `B*(A*r)` where it checks
+`A*(B*r)` on the left (#222). `test_bmb_verify.sh` runs every
+combination of the arguments a routine takes. The outputs record the arguments a routine takes,
 defaults included; `bmb_report` keeps the series of non-default ones
 apart, so that a file from before them and a run with the defaults are
 one series.

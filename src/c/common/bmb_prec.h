@@ -106,6 +106,12 @@ typedef double bmb_real_t;
  * or conjugate-transposed (bmb_verify.h). */
 #define BMB_VERIFY_OP(c) ((c) == 'N' ? BMB_VERIFY_FULL : (c) == 'T' ? BMB_VERIFY_FULL_T : BMB_VERIFY_FULL_H)
 
+/* And for a triangular one: its triangle, op() and diagonal (#222). */
+#define BMB_VERIFY_TRI(uplo, trans, diag)                                                  \
+    (((uplo) == 'U' ? BMB_VERIFY_UPPER : BMB_VERIFY_LOWER)                                 \
+     | ((trans) == 'T' ? BMB_VERIFY_TRANS : (trans) == 'C' ? BMB_VERIFY_CONJ_TRANS : 0)    \
+     | ((diag) == 'U' ? BMB_VERIFY_UNIT : 0))
+
 /* A complex count is four times the real one: a complex multiply-add is
  * 4 real multiplications and 4 additions, where a real one is 2. */
 #define BMB_FLOP_FACTOR (BMB_COMPLEX ? 4.0 : 1.0)

@@ -18,8 +18,11 @@ releases with the same major version can be compared and read by the same
   draws a section per K. Other routines ignore it, with a warning.
 - `--trans`, `--uplo`, `--side`, `--diag`: the routine's arguments, one
   value per run, as `--layout` (#221). GEMM takes `--trans` (two letters,
-  A's then B's: `NT`, `TN`, ...; C for a complex operand) and GEMV one;
-  the triangular and symmetric routines follow (#222). A routine without
+  A's then B's: `NT`, `TN`, ...; C for a complex operand) and GEMV one,
+  as do the triangular routines and the rank-k updates; `--uplo` the
+  triangular, symmetric and Hermitian ones; `--side` symm, hemm, trmm and
+  trsm, whose counts follow it; `--diag` the triangular ones (#222).
+  `--verify` checks every variant. A routine without
   the argument, or a letter it does not take, is refused with a message.
   Every output records the arguments the routine takes, defaults
   included (`# arguments:`, `arguments` in the JSON's run block), and

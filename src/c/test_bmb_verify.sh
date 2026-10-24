@@ -11,9 +11,13 @@
 # (--layout row and col), each also with its leading dimensions padded
 # (--ld-pad 3, #163), which the check reads through, and say in its output
 # that the results were verified, and in which order. GEMM is run with a
-# K of its own (-K, #215), shorter and longer than M. Every --trans a
-# routine takes is run (#221), in both layouts: GEMM's four (NN, NT, TN,
-# TT) and, complex, two with C; GEMV's N and T, and C for a complex one.
+# K of its own (-K, #215), shorter and longer than M. Every variant of
+# the arguments a routine takes (--trans, --uplo, --side, --diag: #221,
+# #222) is run, each combination of them: GEMM's four transposes, and
+# two with C in complex; every side, triangle, transpose and diagonal of
+# trmm and trsm; and so on. The defaults run in the four layouts, every
+# other variant row-major and column-major padded. Without warm-up
+# (-w 0): a check needs none, and it would cost 0.2 s a run.
 # Tiny sizes only (see AGENTS.md).
 set -e
 
@@ -26,6 +30,29 @@ fail() {
 
 rm -rf "$T"
 mkdir "$T"
+
+# combos --opt=a,b ...: every combination of the options' values, one
+# word each, --opt=a,--opt2=c, the first values first.
+combos() {
+    out=
+    for spec in "$@"; do
+        name=${spec%%=*}
+        new=
+        for val in $(printf '%s\n' "${spec#*=}" | tr ',' ' '); do
+            if [ -z "$out" ]; then
+                new="$new $name=$val"
+            else
+                for o in $out; do
+                    new="$new $o,$name=$val"
+                done
+            fi
+        done
+        out=$new
+    done
+    # Combinations varying the last option slowest: put the defaults
+    # (every first value) first.
+    printf '%s\n' $out
+}
 
 n=0
 for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
@@ -49,16 +76,29 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         level1/*) layouts=none ;;
         *) layouts="row col row:3 col:3" ;;
     esac
+    # The routine's variants, each a word of --option=value joined by
+    # commas, the defaults first.
+    case $r in [cz]*) t3=N,T,C ;; *) t3=N,T ;; esac
     case $r in
-        [sd]gemm) variants="NN NT TN TT" ;;
-        [cz]gemm) variants="NN NT TN TT CN TC" ;;
-        [sd]gemv) variants="N T" ;;
-        [cz]gemv) variants="N T C" ;;
+        [sd]gemm) variants=$(combos --trans=NN,NT,TN,TT) ;;
+        [cz]gemm) variants=$(combos --trans=NN,NT,TN,TT,CN,TC) ;;
+        ?gemv) variants=$(combos --trans=$t3) ;;
+        ?trmm | ?trsm) variants=$(combos --side=L,R --uplo=U,L --trans=$t3 --diag=N,U) ;;
+        ?trmv | ?trsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
+        ?symm | ?hemm) variants=$(combos --side=L,R --uplo=U,L) ;;
+        ?herk) variants=$(combos --uplo=U,L --trans=N,C) ;;
+        ?syrk | ?syr2k) variants=$(combos --uplo=U,L --trans=N,T) ;;
+        ?symv | ?syr | ?syr2) variants=$(combos --uplo=U,L) ;;
         *) variants=default ;;
     esac
+    first=${variants%% *}
     for v in $variants; do
-        case $v in default) tr= ;; *) tr="--trans $v" ;; esac
-        for variant in $layouts; do
+        case $v in default) tr= ;; *) tr=$(printf '%s\n' "$v" | tr ',' ' ') ;; esac
+        # The defaults with two thread counts, in every layout; each other
+        # variant, which changes the call and the check, not the threads,
+        # with one, row-major and column-major padded.
+        case $v in "$first") lays=$layouts threads=1,2 ;; *) lays="row col:3" threads=1 ;; esac
+        for variant in $lays; do
             layout=${variant%%:*}
             pad=${variant#*:}
             if [ "$layout" = none ]; then
@@ -70,7 +110,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
             fi
 
             # Right results: verified, and said so.
-            if ! "$b" -x 0 -i 1 -t 1,2 -c $lo $tr $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
+            if ! "$b" -x 0 -w 0 -i 1 -t $threads -c $lo $tr $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
                 fail "$name $lo $tr --verify failed on a correct library: $(cat "$T/$r.err")"
             fi
             grep -q '^# verified: ' "$T/$r.out" || fail "$name --verify does not say the results were verified"
@@ -85,7 +125,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
 
             # A wrong result: stopped, explained, nothing written.
             set +e
-            BMB_VERIFY_CORRUPT=1 "$b" -x 0 -i 1 -c $lo $tr $sizes -o "$T/$r-bad.json" >"$T/$r-bad.out" 2>"$T/$r-bad.err"
+            BMB_VERIFY_CORRUPT=1 "$b" -x 0 -w 0 -i 1 -c $lo $tr $sizes -o "$T/$r-bad.json" >"$T/$r-bad.out" 2>"$T/$r-bad.err"
             rc=$?
             set -e
             test "$rc" -eq 2 || fail "$name $lo $tr did not exit 2 on a corrupted result (exit $rc)"

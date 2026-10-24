@@ -18,9 +18,10 @@ typedef struct {
     int col;   /* 1 with --layout col */
     int n;
     int lda;
+    char uplo; /* --uplo: the triangle A is stored in */
     bmb_real_t alpha;
     bmb_real_t beta;
-    bmb_real_t *a; /* N x N, in the order of --layout, upper triangle used */
+    bmb_real_t *a; /* N x N, in the order of --layout, the triangle --uplo gives used */
     bmb_real_t *x; /* N */
     bmb_real_t *y; /* N */
 } bmb_ctx_t;
@@ -42,6 +43,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->lda = (int) lda;
+    ctx->uplo = bmb_bench_uplo();
     ctx->alpha = BMB_R(1.0);
     ctx->beta = BMB_R(0.0);
     ctx->col = bmb_bench_column_major();
@@ -70,7 +72,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    BMB_CBLAS(symv)(ctx->order, CblasUpper, ctx->n, ctx->alpha,
+    BMB_CBLAS(symv)(ctx->order, BMB_CBLAS_UPLO(ctx->uplo), ctx->n, ctx->alpha,
                     ctx->a, ctx->lda, ctx->x, 1, ctx->beta, ctx->y, 1);
 }
 
@@ -119,7 +121,8 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_to_double(x, ctx->x, n);
     call(ctx);
     bmb_perturb(&ctx->y[0]);
-    bmb_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->a, (size_t) ctx->lda, x, NULL, t, tabs);
+    bmb_matvec(ctx->uplo == 'U' ? BMB_VERIFY_SYM_UPPER : BMB_VERIFY_SYM_LOWER, ctx->col, n, n, ctx->a,
+               (size_t) ctx->lda, x, NULL, t, tabs);
     bmb_to_double(got, ctx->y, n);
     for (i = 0; i < n; i++) {
         want[i] = alpha * t[i] + beta * y0[i];
@@ -139,6 +142,7 @@ int main(int argc, char *argv[])
     bench.dim2_label = NULL;
     bench.use_vector_range = 0;
     bench.level = 2;
+    bench.args = BMB_ARG_UPLO;
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;
