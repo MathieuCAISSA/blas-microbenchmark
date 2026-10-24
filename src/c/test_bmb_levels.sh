@@ -18,10 +18,16 @@ n=0
 for want in 1 2 3; do
     sed -n 's/^\([a-z0-9_]*\)_SOURCES = \(.*\)$/\1 \2/p' "$S/level$want/Makefile.am" >levels-sources.tmp
     while read -r program f; do
-        # A family that is another's with a flag (bmb_hemm.c, bmb_herk.c)
-        # includes that one's source, where the level is.
-        inc=$(sed -n 's/^#include "\(bmb_[a-z0-9]*\.c\)"$/\1/p' "$S/level$want/$f")
-        src=$S/level$want/${inc:-$f}
+        # A family whose source it shares with another (bmb_symm.c and
+        # bmb_hemm.c) includes it from a header of the level's own
+        # directory, where the level is.
+        src=$S/level$want/$f
+        # Split on purpose: one header name a line, none with a space.
+        for h in $(sed -n 's/^#include "\(bmb_[a-z0-9]*\.h\)"$/\1/p' "$src"); do
+            if [ -f "$S/level$want/$h" ]; then
+                src=$S/level$want/$h
+            fi
+        done
         got=$(sed -n 's/^ *bench\.level = \([0-9]*\);$/\1/p' "$src")
         test "$got" = "$want" || fail "$program's source, $f, declares level '$got', in level$want"
         n=$((n + 1))

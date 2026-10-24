@@ -8,7 +8,7 @@ How a benchmark is written, checked and measured. Start at
 Every routine file follows the same shape (see
 `src/c/level1/double/bmb_dasum.c` for the simplest example,
 `src/c/level2/double/bmb_dtrsv.c` for one with an in-place buffer,
-`src/c/level3/bmb_syrk.c` for a two-real-dimension level 3 routine,
+`src/c/level3/bmb_syrk.h` for a two-real-dimension level 3 routine,
 written once for every precision):
 
 1. A `bmb_ctx_t` struct holding the routine's operands (`malloc`'d in
@@ -107,9 +107,11 @@ precisions BLAS has that the table does not list yet (`ssymm`, `ctrsm`,
 `zsyr2k`, ...) seen to compile, pass `--verify` in both layouts, padded
 or not, and catch a corruption.
 
-The Hermitian routines are their symmetric family's source with
-`BMB_HERM` defined: `bmb_hemm.c` and `bmb_herk.c` are `bmb_symm.c` and
-`bmb_syrk.c` with a Hermitian matrix, `A^H` for `A^T`, and, for herk,
+The Hermitian routines share their symmetric family's source: symm and
+hemm, syrk and herk, each pair from a header (`bmb_symm.h`, `bmb_syrk.h`)
+that its two sources include, `bmb_hemm.c` and `bmb_herk.c` with
+`BMB_HERM` defined (#209: CodeQL takes a source included as such for a
+mistake). That gives a Hermitian matrix, `A^H` for `A^T`, and herk's
 alpha and beta real, as BLAS takes them. A Hermitian A's diagonal has an
 imaginary part, which a Hermitian matrix cannot have and BLAS does not
 read; `--verify` ignores it too, so a library that used it would be

@@ -118,6 +118,10 @@ it comes from in brackets.
   an alert is open there, which a pull request's analysis, covering only
   its diff, does not show (#12 showed none while `main` had four;
   [static analysis](../doc/dev/ci.md#static-analysis)).
+- [ ] Before the merge, the pull request's CodeQL analysis has no alert,
+  notes included: a note passes its check and fails the run on `main`
+  (`gh api 'repos/MathieuCAISSA/blas-microbenchmark/code-scanning/alerts?ref=refs/pull/<N>/merge'`;
+  #208 merged two `cpp/include-non-header`, #209).
 - [ ] No two floating-point values are compared with `==` or `!=`, tests
   included: CodeQL's `cpp/equality-on-floats` is only a note on the pull
   request, and fails the run on `main` (#179). Compare within a

@@ -75,3 +75,7 @@ TESTS = $(ROUTINE_TESTS) \
 	test_bmb_square_default.sh
 
 EXTRA_DIST = $(TESTS)
+
+# The sources symm and hemm, syrk and herk share: each pair of programs
+# includes one, the second with BMB_HERM defined (#209).
+noinst_HEADERS = bmb_symm.h bmb_syrk.h
