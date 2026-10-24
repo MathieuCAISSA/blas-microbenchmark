@@ -139,6 +139,18 @@ static inline void bmb_fill(bmb_real_t *x, size_t count, size_t re, size_t im)
     }
 }
 
+/* bmb_to_double(dst, src, count): count elements of the routine's
+ * precision, as the doubles --verify's references take (BMB_PARTS each);
+ * exact, from a float or a double. */
+static inline void bmb_to_double(double *dst, const bmb_real_t *src, size_t count)
+{
+    size_t i;
+
+    for (i = 0; i < BMB_PARTS * count; i++) {
+        dst[i] = src[i];
+    }
+}
+
 /* bmb_scale(want, al, y, m): want = al * y, m elements of BMB_PARTS
  * reals each, al a scalar of the routine's precision. */
 static inline void bmb_scale(double *want, const bmb_real_t *al, const double *y, size_t m)

@@ -7,7 +7,7 @@ How a benchmark is written, checked and measured. Start at
 
 Every routine file follows the same shape (see
 `src/c/level1/double/bmb_dasum.c` for the simplest example,
-`src/c/level2/double/bmb_dtrsv.c` for one with an in-place buffer,
+`src/c/level2/bmb_trsv.c` for one with an in-place buffer,
 `src/c/level3/bmb_syrk.h` for a two-real-dimension level 3 routine,
 written once for every precision):
 
@@ -99,13 +99,17 @@ What is the operation's stays in its source, with `#if BMB_COMPLEX` or
 `#if BMB_SINGLE` where the precisions differ in substance, as single
 precision's scale in GEMM's check. Adding a precision BLAS has to a
 family is one line of the table, and its `src/c/netlib/` entry point for
-the Netlib build. Every level 3 routine is in a family: GEMM since #200,
-the others since #201, each checked to give exactly what its own file
-did (the corrupted check's values to the digit, the counts, the copies
-`--cache cold` takes, every field the clock does not change), and the
-precisions BLAS has that the table does not list yet (`ssymm`, `ctrsm`,
-`zsyr2k`, ...) seen to compile, pass `--verify` in both layouts, padded
-or not, and catch a corruption.
+the Netlib build. Every level 3 routine is in a family, GEMM since #200,
+the others since #201, and every level 2 one since #202: each checked to
+give exactly what its own file did (the corrupted check's values to the
+digit, the counts, the copies `--cache cold` takes, every field the
+clock does not change), and the precisions BLAS has that the table does
+not list yet (`ssymm`, `ctrsm`, `zsyr2k`, `cgemv`, `strsv`, `sger`, ...)
+seen to compile, pass `--verify` in both layouts, padded or not, and
+catch a corruption. A family BLAS has in real precision only (ger, symv,
+syr, syr2: their complex counterparts, geru and gerc, hemv, her, her2,
+are families of their own) stops at an `#error` if asked for a complex
+one.
 
 The Hermitian routines share their symmetric family's source: symm and
 hemm, syrk and herk, each pair from a header (`bmb_symm.h`, `bmb_syrk.h`)
@@ -117,11 +121,14 @@ imaginary part, which a Hermitian matrix cannot have and BLAS does not
 read; `--verify` ignores it too, so a library that used it would be
 caught.
 
-Levels 1 and 2 are still a file per routine, other precisions the
-double one's with another element type (`saxpy`, `sdot`, `sgemv`), until
-#202 and #203 make families of them. `zdotc` has no real counterpart,
-and follows `ddot` with the first vector conjugated. Their dimensions
-and options are the double ones'.
+A level 2 check is a recomputation in double, so each operand is copied
+into doubles first (`bmb_to_double`), exactly, from either precision.
+
+Level 1 is still a file per routine, other precisions the double one's
+with another element type (`saxpy`, `sdot`), until #203 makes families
+of them. `zdotc` has no real counterpart, and follows `ddot` with the
+first vector conjugated. Their dimensions and options are the double
+ones'.
 
 - `flops`: real operations. A complex multiply-add is 4 multiplications
   and 4 additions, so a complex routine counts four times its real
