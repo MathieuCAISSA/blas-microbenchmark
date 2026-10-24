@@ -11,7 +11,7 @@
 # sizes: what -v, -m and -M are, as the man page gives them:
 #   v    -v is the vector size
 #   mn   -m is M, -M is N
-#   mkn  -m is M and K, -M is N
+#   mkn  -m is M and K, -M is N; -K gives K apart (#215)
 #   nk   -m is N, -M is K
 #   n    -m is N (square; no -M)
 # family: the operation, whose source, src/c/level<level>/bmb_<family>.c,

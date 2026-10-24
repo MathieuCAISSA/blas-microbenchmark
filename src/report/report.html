@@ -286,7 +286,8 @@ details[open] > summary { margin-bottom: 12px; }
       return p < 0 ? [name, 9] : [name.slice(1), p];
     }
     var ka = key(a.name), kb = key(b.name);
-    return (a.level - b.level) || (ka[0] < kb[0] ? -1 : ka[0] > kb[0] ? 1 : ka[1] - kb[1]);
+    return (a.level - b.level) || (ka[0] < kb[0] ? -1 : ka[0] > kb[0] ? 1 : ka[1] - kb[1]) ||
+      ((a.k === null ? -1 : a.k) - (b.k === null ? -1 : b.k));
   }
 
   /* ------------------------------------------------------------------ *
@@ -343,10 +344,28 @@ details[open] > summary { margin-bottom: 12px; }
       return id;
     }
 
+    /* A routine's section: one per K for a GEMM measured with -K (#215),
+     * whose charts are then each an M x N grid at that K, as they are at
+     * K = M without it. */
+    function routineFor(r, k) {
+      var key = r.routine + (k === null ? "" : " K=" + k);
+      var routine = routines[key];
+
+      if (!routine) {
+        routine = routines[key] = {
+          name: r.routine, k: k, level: LEVEL[r.routine] || 0,
+          title: r.routine + (k === null ? "" : ", K = " + k.toLocaleString("en-US")),
+          anchor: "routine-" + r.routine + (k === null ? "" : "-k" + k),
+          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
+          series: {}, seriesOrder: [], duplicates: []
+        };
+      }
+      return routine;
+    }
+
     function addResult(file, r) {
       var id = identityOf(r);
-      var routine = routines[r.routine];
-      var series, i;
+      var i;
 
       id.versions[r.version] = true;
       if (r.date) { id.dates.push(r.date); }
@@ -362,24 +381,18 @@ details[open] > summary { margin-bottom: 12px; }
       var command = commandText(r.run);
       if (command && id.commands.indexOf(command) < 0) { id.commands.push(command); }
 
-      if (!routine) {
-        routine = routines[r.routine] = {
-          name: r.routine, level: LEVEL[r.routine] || 0,
-          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
-          series: {}, seriesOrder: [], duplicates: []
-        };
-      }
-      series = routine.series[id.key];
-      if (!series) {
-        series = routine.series[id.key] = { identity: id, points: {} };
-        routine.seriesOrder.push(series);
-      }
-
       for (i = 0; i < r.results.length; i++) {
         var row = r.results[i];
+        var routine = routineFor(r, (row.dim3 === undefined) ? null : row.dim3);
+        var series = routine.series[id.key];
+        if (!series) {
+          series = routine.series[id.key] = { identity: id, points: {} };
+          routine.seriesOrder.push(series);
+        }
         var p = {
           threads: row.thread_count, d1: row.dim1,
           d2: (row.dim2 === undefined) ? null : row.dim2,
+          d3: (row.dim3 === undefined) ? null : row.dim3,
           time: row.time_s, gflops: row.gflops, gbs: row.gbytes_per_s,
           mean: row.mean_s, stddev: row.stddev_s, max: row.max_s, median: row.median_s,
           q1: row.q1_s, q3: row.q3_s, samples: row.samples,
@@ -1698,7 +1711,7 @@ details[open] > summary { margin-bottom: 12px; }
     });
     if (!best) { return; }
     var tile = el("div", "card tile");
-    tile.appendChild(el("div", "label", rt.name));
+    tile.appendChild(el("div", "label", rt.title));
     var v = el("div", "value", fmtRate(best[field]) + " ");
     v.appendChild(el("small", null, unit));
     tile.appendChild(v);
@@ -1767,9 +1780,9 @@ details[open] > summary { margin-bottom: 12px; }
   /* ---- one section per routine ---- */
   routineOrder.forEach(function (rt) {
     var sec = el("section");
-    sec.id = "routine-" + rt.name;
+    sec.id = rt.anchor;
     var head = el("div", "section-head");
-    head.appendChild(el("h2", null, rt.name));
+    head.appendChild(el("h2", null, rt.title));
     head.appendChild(el("p", "sub", (rt.level ? "Level " + rt.level + " · " : "") + rt.dim1Label + (rt.dim2Label ? " × " + rt.dim2Label : "") +
       " · " + plural(rt.seriesOrder.length, "series")));
     sec.appendChild(head);
@@ -1902,6 +1915,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "Threads", n: true, v: function (r) { return r.p.threads; } },
     { h: "dim1", n: true, v: function (r) { return r.p.d1; } },
     { h: "dim2", n: true, v: function (r) { return r.p.d2; } },
+    { h: "dim3", n: true, v: function (r) { return r.p.d3; } },
     { h: "Time", n: true, v: function (r) { return r.p.time; }, f: fmtTime },
     { h: "GFLOP/s", n: true, v: function (r) { return r.p.gflops; }, f: fmtRate },
     { h: "GB/s", n: true, v: function (r) { return r.p.gbs; }, f: fmtRate },

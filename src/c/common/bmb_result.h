@@ -7,6 +7,7 @@ typedef struct {
     unsigned int thread_count;
     size_t dim1;
     size_t dim2; /* only meaningful when the result set's dim2_label is non-NULL */
+    size_t dim3; /* GEMM's K under -K: only meaningful when dim3_label is non-NULL */
     /* The fastest sample, which is the headline figure: each sample is
      * already a mean over `batch` calls, and the fastest one is the least
      * contaminated by whatever else the machine was doing. */
@@ -32,6 +33,7 @@ typedef struct {
     const char *routine_name;
     const char *dim1_label; /* e.g. "Vector size", "Matrix dim (N)", "Matrix dim1 (M)" */
     const char *dim2_label; /* NULL if the routine has a single size dimension */
+    const char *dim3_label; /* GEMM's K under -K (#215); NULL otherwise */
     const char *label;      /* --label, or NULL; owned by the options */
     int verified;           /* --verify: every point was checked */
     const char *layout;     /* "row" or "col" for routines with a matrix;

@@ -232,6 +232,11 @@ static unsigned int bmb_choose_batch(const bmb_benchmark_t *bench, bmb_operands_
     return bmb_batch_from(bmb_time_batch(bench, ops, batch));
 }
 
+
+/* The point's K under -K (#215), set around each point it applies to; 0
+ * when dim1 stands for it. */
+static size_t bmb_dim3;
+
 /* --verify, for one point: one call on the operands about to be timed,
  * checked against a reference. 0 when the result is right, -2 when it is
  * wrong, -1 when it could not be checked. */
@@ -243,7 +248,11 @@ static int bmb_verify_point(const bmb_benchmark_t *bench, void *ctx,
     char msg[1024];
     int v;
 
-    if (bench->dim2_label != NULL) {
+    if (bmb_dim3 != 0) {
+        snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %s %zu, %u thread%s",
+                 bench->routine_name, bench->dim1_label_dim3, dim1, bench->dim2_label, dim2,
+                 bench->dim3_label, bmb_dim3, thread_count, thread_count == 1 ? "" : "s");
+    } else if (bench->dim2_label != NULL) {
         snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %u thread%s", bench->routine_name,
                  bench->dim1_label, dim1, bench->dim2_label, dim2,
                  thread_count, thread_count == 1 ? "" : "s");
@@ -464,6 +473,7 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     row->thread_count = thread_count;
     row->dim1 = dim1;
     row->dim2 = dim2;
+    row->dim3 = bmb_dim3;
     row->batch = batch;
     bmb_compute_stats(times, n, row);
 
@@ -510,6 +520,9 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
 
     if (bmb_counts_only) {
         fprintf(stderr, "counts: %s %zu %zu", bench->routine_name, dim1, dim2);
+        if (bmb_dim3 != 0) {
+            fprintf(stderr, " K %zu", bmb_dim3);
+        }
         bmb_print_count("flops", bench->flops, dim1, dim2);
         bmb_print_count("bytes", bench->bytes, dim1, dim2);
         bmb_print_count("footprint", bench->footprint, dim1, dim2);
@@ -533,6 +546,31 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     return 0;
 }
 
+/* One (dim1, dim2) point, at every K -K gives for a routine that has
+ * one apart (#215), or once. */
+static int bmb_record_k(const bmb_benchmark_t *bench, const bmb_options_t *opts,
+                        unsigned int thread_count, size_t dim1, size_t dim2,
+                        bmb_result_set_t *rs)
+{
+    size_t i3;
+    int r = 0;
+
+    if (bench->dim3_label == NULL || !opts->matrix_dim3_set) {
+        return bmb_record(bench, opts, thread_count, dim1, dim2, rs);
+    }
+    for (i3 = 0; i3 < opts->matrix_dim3.count && r != -2; i3++) {
+        int r3;
+
+        bmb_dim3 = opts->matrix_dim3.values[i3];
+        r3 = bmb_record(bench, opts, thread_count, dim1, dim2, rs);
+        bmb_dim3 = 0;
+        if (r3 != 0) {
+            r = r3;
+        }
+    }
+    return r;
+}
+
 static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                            unsigned int thread_count, bmb_result_set_t *rs)
 {
@@ -552,13 +590,13 @@ static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opt
              * `-m 512:2048` measure all nine M x N combinations where three
              * were asked for -- N^2 runs for N sizes, most of them shapes
              * nobody requested, while --help promised square matrices. */
-            r = bmb_record(bench, opts, thread_count, d1, d1, rs);
+            r = bmb_record_k(bench, opts, thread_count, d1, d1, rs);
         } else if (bench->dim2_label != NULL) {
             size_t i2;
 
             /* -M given: every combination, the grid a heatmap needs. */
             for (i2 = 0; i2 < range2->count && r != -2; i2++) {
-                int r2 = bmb_record(bench, opts, thread_count, d1, range2->values[i2], rs);
+                int r2 = bmb_record_k(bench, opts, thread_count, d1, range2->values[i2], rs);
 
                 if (r2 != 0) {
                     r = r2;
@@ -588,6 +626,11 @@ static int bmb_column_major;
 int bmb_bench_column_major(void)
 {
     return bmb_column_major;
+}
+
+size_t bmb_bench_dim3(size_t dim1)
+{
+    return bmb_dim3 != 0 ? bmb_dim3 : dim1;
 }
 
 size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size)
@@ -661,6 +704,11 @@ static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_opti
                  bench->routine_name, bench->dim1_label);
         bmb_log_warning(msg);
     }
+    if (opts->matrix_dim3_set && bench->dim3_label == NULL) {
+        snprintf(msg, sizeof(msg), "--matrix-dim3 is ignored for %s: only GEMM has a K apart.",
+                 bench->routine_name);
+        bmb_log_warning(msg);
+    }
 }
 
 int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
@@ -727,6 +775,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
 
     bmb_result_set_init(&rs, bench->routine_name, bench->dim1_label, bench->dim2_label,
                         opts.statistics, bench->flops != NULL, bench->bytes != NULL);
+    if (bench->dim3_label != NULL && opts.matrix_dim3_set) {
+        rs.dim1_label = bench->dim1_label_dim3;
+        rs.dim3_label = bench->dim3_label;
+    }
     rs.label = opts.label;
     rs.verified = opts.verify;
     rs.argc = argc;

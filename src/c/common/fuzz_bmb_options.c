@@ -102,6 +102,7 @@ static void check_options(const bmb_options_t *opts)
     check_range(&opts->vector_size);
     check_range(&opts->matrix_dim1);
     check_range(&opts->matrix_dim2);
+    check_range(&opts->matrix_dim3);
     check_range(&opts->thread_count);
 
     check(opts->iterations >= 1, "no iteration");
@@ -112,7 +113,8 @@ static void check_options(const bmb_options_t *opts)
           "a time out of bounds, or a --min-time past --max-time");
     check(opts->max_spread >= 0.0 && opts->max_spread <= 100.0, "a spread out of bounds");
     check(max_point(&opts->matrix_dim1) + opts->ld_pad <= size_ceiling()
-          && max_point(&opts->matrix_dim2) + opts->ld_pad <= size_ceiling(),
+          && max_point(&opts->matrix_dim2) + opts->ld_pad <= size_ceiling()
+          && max_point(&opts->matrix_dim3) + opts->ld_pad <= size_ceiling(),
           "a matrix size, padded, past the size ceiling");
 
     if (opts->label != NULL) {

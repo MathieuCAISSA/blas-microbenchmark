@@ -10,7 +10,8 @@
 # at another -- in both storage orders for the routines with a matrix
 # (--layout row and col), each also with its leading dimensions padded
 # (--ld-pad 3, #163), which the check reads through, and say in its output
-# that the results were verified, and in which order.
+# that the results were verified, and in which order. GEMM is run with a
+# K of its own (-K, #215), shorter and longer than M.
 # Tiny sizes only (see AGENTS.md).
 set -e
 
@@ -34,7 +35,8 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         level1/*) sizes="-v 7,64,1000" ;;
         *)
             case $r in
-                dgemv | dger | sgemv | dgemm | dsymm | dsyrk | dsyr2k | dtrmm | dtrsm | sgemm | cgemm | zgemm \
+                sgemm | dgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
+                dgemv | dger | sgemv | dsymm | dsyrk | dsyr2k | dtrmm | dtrsm \
                     | strsm | ztrsm | ssyrk | zherk | zhemm) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac

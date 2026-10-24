@@ -50,6 +50,9 @@ typedef struct {
     int matrix_dim2_set;      /* whether -M was given; without it dim2
                                * follows dim1 point by point (square
                                * matrices) and matrix_dim2 is unused */
+    bmb_range_t matrix_dim3;  /* -K, --matrix-dim3    (GEMM's K, #215) */
+    int matrix_dim3_set;      /* whether -K was given; without it K is
+                               * dim1 (M) and matrix_dim3 is unused */
 
     bmb_range_t thread_count; /* -t, --thread-count */
     int thread_count_set;     /* whether -t/--thread-count was given */

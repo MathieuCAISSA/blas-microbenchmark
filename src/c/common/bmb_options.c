@@ -41,6 +41,7 @@ static const struct option bmb_long_options[] = {
     {"vector-size",    required_argument, NULL, 'v'},
     {"matrix-dim1",    required_argument, NULL, 'm'},
     {"matrix-dim2",    required_argument, NULL, 'M'},
+    {"matrix-dim3",    required_argument, NULL, 'K'},
     {"thread-count",   required_argument, NULL, 't'},
     {"statistics",     no_argument,       NULL, 's'},
     {"verify",         no_argument,       NULL, 'c'},
@@ -61,7 +62,7 @@ static const struct option bmb_long_options[] = {
     {NULL, 0, NULL, 0}
 };
 
-static const char *bmb_short_options = "x:i:b:v:m:M:t:scCL:k:a:p:w:T:e:E:l:o:f:hV";
+static const char *bmb_short_options = "x:i:b:v:m:M:K:t:scCL:k:a:p:w:T:e:E:l:o:f:hV";
 
 /* The largest value any size option may take.
  *
@@ -445,6 +446,8 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->matrix_dim1_set = 0;
     bmb_range_set_single(&opts->matrix_dim2, BMB_DEFAULT_LEVEL2_SIZE);
     opts->matrix_dim2_set = 0;
+    bmb_range_set_single(&opts->matrix_dim3, BMB_DEFAULT_LEVEL2_SIZE);
+    opts->matrix_dim3_set = 0;
 
     bmb_range_set_single(&opts->thread_count, BMB_DEFAULT_THREADS);
     opts->thread_count_set = 0;
@@ -529,6 +532,13 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
                 return BMB_OPTIONS_ERROR;
             }
             opts->matrix_dim2_set = 1;
+            break;
+
+        case 'K':
+            if (bmb_option_range(optarg, "--matrix-dim3", &opts->matrix_dim3) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            opts->matrix_dim3_set = 1;
             break;
 
         case 't':
@@ -685,7 +695,8 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
      * matrix of elements of 8 bytes or less then cannot wrap size_t
      * either, so only the routines with larger ones check theirs. */
     if (bmb_range_max(&opts->matrix_dim1) + opts->ld_pad > bmb_max_value()
-        || bmb_range_max(&opts->matrix_dim2) + opts->ld_pad > bmb_max_value()) {
+        || bmb_range_max(&opts->matrix_dim2) + opts->ld_pad > bmb_max_value()
+        || bmb_range_max(&opts->matrix_dim3) + opts->ld_pad > bmb_max_value()) {
         snprintf(errbuf, sizeof(errbuf),
                  "With --ld-pad %u, a matrix size is at most %llu.", opts->ld_pad,
                  bmb_max_value() - opts->ld_pad);
@@ -718,6 +729,8 @@ void bmb_options_print_help(const char *prog_name)
         "  -M, --matrix-dim2 <sweep>     matrix second dimension for level 2 & 3\n"
         "                                 (default: square matrices, dim2 = dim1 at every point;\n"
         "                                 with -M, every dim1 x dim2 combination is measured)\n"
+        "  -K, --matrix-dim3 <sweep>     GEMM's K (default: K = M at every point; with -K,\n"
+        "                                 every combination with the other sizes is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
         "  -s, --statistics              add the mean, stddev and slowest sample, and in the\n"
         "                                 table the batch size (default: off)\n"

@@ -9,6 +9,14 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- `-K` (`--matrix-dim3`): GEMM's K apart from M, a sweep like `-m` and
+  `-M` (#215), for the shapes K = M cannot give: HPL's updates, a large M
+  and N with a small K, or tall and skinny products. Without it, K is M
+  and the outputs are as before; with it, every output has a third
+  dimension, K (`dim3` and `dim3_label` in the JSON), and `bmb_report`
+  draws a section per K. Other routines ignore it, with a warning.
+
 ## [1.8.0] - 2026-10-23
 
 ### Changed

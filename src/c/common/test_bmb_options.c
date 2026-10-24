@@ -193,8 +193,8 @@ static void test_defaults(void)
         fail("defaults", "operands are not aligned to 64 bytes, or leading dimensions are padded");
     } else if (opts.warmup_time != 0.2 || opts.min_time != 0.0 || opts.max_spread != 0.0 || opts.max_time != 10.0) {
         fail("defaults", "not 0.2 s of warm-up, no -T or -e, a --max-time of 10 s");
-    } else if (opts.vector_size_set || opts.matrix_dim1_set
-               || opts.matrix_dim2_set || opts.thread_count_set || opts.layout_set) {
+    } else if (opts.vector_size_set || opts.matrix_dim1_set || opts.matrix_dim2_set
+               || opts.matrix_dim3_set || opts.thread_count_set || opts.layout_set) {
         fail("defaults", "an option is marked as given when none were");
     } else {
         ok("defaults");
@@ -233,6 +233,37 @@ static void test_dim2(void)
         fail("-M given", "dim2 did not take the given range");
     } else {
         ok("-M sets its own range");
+    }
+    bmb_options_free(&opts);
+
+    /* GEMM's K (#215): without -K it is dim1, which bmb_bench.c decides
+     * from matrix_dim3_set; with it, the range given, by either name. */
+    if (parse_args(&opts, "-m", "8", "-M", "16", ARGS_END) != BMB_OPTIONS_OK || opts.matrix_dim3_set) {
+        fail("-m -M without -K", "K is marked as given");
+    } else {
+        ok("-m -M without -K leaves K unset");
+    }
+    bmb_options_free(&opts);
+    if (parse_args(&opts, "-m", "8", "-K", "4:16", ARGS_END) != BMB_OPTIONS_OK) {
+        fail("-K given", "-m 8 -K 4:16 was rejected");
+        return;
+    }
+    format_range(&opts.matrix_dim3, dim2, sizeof(dim2));
+    if (strcmp(dim2, "4,8,16") != 0 || !opts.matrix_dim3_set) {
+        fail("-K given", "K did not take the given range");
+    } else {
+        ok("-K sets its own range");
+    }
+    bmb_options_free(&opts);
+    if (parse_args(&opts, "--matrix-dim3=3,5", ARGS_END) != BMB_OPTIONS_OK) {
+        fail("--matrix-dim3", "--matrix-dim3=3,5 was rejected");
+        return;
+    }
+    format_range(&opts.matrix_dim3, dim2, sizeof(dim2));
+    if (strcmp(dim2, "3,5") != 0 || !opts.matrix_dim3_set) {
+        fail("--matrix-dim3", "K did not take the given list");
+    } else {
+        ok("--matrix-dim3 is -K");
     }
     bmb_options_free(&opts);
 }
@@ -636,6 +667,8 @@ int main(void)
             {"-m", "1518500242", BMB_OPTIONS_ERROR, "-p 8 -m 1518500242 is refused: padded, past it"},
             {"-m", "1518500242,64", BMB_OPTIONS_ERROR, "-p 8 -m 1518500242,64: the largest point, not the last"},
             {"-M", "1518500242", BMB_OPTIONS_ERROR, "-p 8 -M 1518500242 is refused too"},
+            {"-K", "1518500241", BMB_OPTIONS_OK, "-p 8 -K 1518500241: padded, at the ceiling"},
+            {"-K", "1518500242", BMB_OPTIONS_ERROR, "-p 8 -K 1518500242 is refused too"},
         };
         size_t i;
 
@@ -742,7 +775,7 @@ int main(void)
 
     /* ---- every sweep option refuses what -v refuses ---- */
     {
-        static const char *const flags[] = {"-v", "-m", "-M", "-t"};
+        static const char *const flags[] = {"-v", "-m", "-M", "-K", "-t"};
         static const char *const bad[] = {"0", "1518500250", "1:257:1", "64,1518500250"};
         size_t f, b;
 
