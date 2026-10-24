@@ -107,5 +107,22 @@ for r in sgemm dgemm cgemm zgemm; do
 done
 echo "ok   GEMM under -K: 2*M*N*K, and the bytes of M x K, K x N and M x N, at every K"
 
+# GEMV transposed (#221): the same FLOPs, x of M elements read and y of N
+# read and written.
+for r in sgemv dgemv; do
+    case $r in s*) dir=single e=4 ;; *) dir=double e=8 ;; esac
+    BMB_COUNTS=1 "level2/$dir/bmb_$r" -m 30,61 -M 50,7 --trans T >/dev/null 2>"$T/$r.err" ||
+        fail "bmb_$r --trans T failed under BMB_COUNTS: $(cat "$T/$r.err")"
+    grep '^counts: ' "$T/$r.err" >"$T/$r.got" || fail "bmb_$r --trans T wrote no counts"
+    awk -v r="$r" -v e="$e" '
+        { m = $3; n = $4
+          want = sprintf("counts: %s %s %s flops %.17g bytes %.17g footprint -", r, m, n, 2 * m * n, e * (m * n + m + 2 * n))
+          if ($0 != want) { printf "%s:\n  got  %s\n  want %s\n", r, $0, want; bad = 1 }
+          points++ }
+        END { if (!bad && points != 4) { print r ": " points " points, not 4"; bad = 1 } exit bad }
+    ' "$T/$r.got" >"$T/$r.diff" || fail "$(cat "$T/$r.diff")"
+done
+echo "ok   GEMV transposed: x of M elements, y of N"
+
 rm -rf "$T"
 echo "all checks passed"

@@ -319,6 +319,15 @@ details[open] > summary { margin-bottom: 12px; }
     var identityOrder = [];
     var routines = {};
 
+    /* The routine's arguments that differ from the defaults, as "trans
+     * NT, uplo L"; "" for none. */
+    function variantText(args) {
+      var DEFAULT = { trans: /^N+$/, uplo: /^U$/, side: /^L$/, diag: /^N$/ };
+      return ["trans", "uplo", "side", "diag"].filter(function (k) {
+        return args && typeof args[k] === "string" && !DEFAULT[k].test(args[k]);
+      }).map(function (k) { return k + " " + args[k]; }).join(", ");
+    }
+
     function identityOf(r) {
       var machine = r.machine || {};
       /* --layout (#7): a column-major run is a series of its own. Files
@@ -331,12 +340,19 @@ details[open] > summary { margin-bottom: 12px; }
       /* --ld-pad (#163): a storage of its own, as the layout is. Files
        * before it, and vector routines, had none. */
       var pad = (r.run && r.run.ld_pad) || 0;
-      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache, pad].join("\u0001");
+      /* --trans, --uplo, --side, --diag (#221): another computation, so a
+       * series of its own. Only what differs from the defaults counts, so
+       * that a file from before them, which has none, and a run with the
+       * defaults are the same series. */
+      var variant = variantText(r.run && r.run.arguments);
+      var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache, pad,
+                 variant].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
-          cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, pad: pad, machine: machine,
+          cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, pad: pad,
+          variant: variant, machine: machine,
           versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: [], kernels: []
         };
         identityOrder.push(id);
@@ -441,6 +457,7 @@ details[open] > summary { margin-bottom: 12px; }
         if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
         if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
         if (differs(function (o) { return o.pad; }) && id.pad) { parts.push("ld + " + id.pad); }
+        if (differs(function (o) { return o.variant; }) && id.variant) { parts.push(id.variant); }
       }
       id.name = parts.join(" · ");
     });

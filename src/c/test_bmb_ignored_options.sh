@@ -3,7 +3,10 @@
 # never silently: --layout and --ld-pad on a vector routine (#7, #163),
 # --vector-size on a matrix one, --matrix-dim1 on a vector one,
 # --matrix-dim2 on a routine with a single dimension, --matrix-dim3 on
-# any but GEMM (#215). The run still
+# any but GEMM (#215). An argument a routine does not have (--trans,
+# --uplo, --side, --diag, #221), or a letter it does not take, is
+# refused, never ignored: the run stops with a message naming it. The run
+# still
 # succeeds. Where the option does apply, there is no such warning. Tiny
 # sizes only.
 set -e
@@ -45,6 +48,29 @@ if grep -q 'is ignored' "$T/err"; then
     fail "dgemm, which uses -K, warned: $(cat "$T/err")"
 fi
 echo "ok   no warning where the options apply"
+
+# refused <message> <benchmark> <options...>: runs it, which must fail and
+# say <message>, measuring nothing.
+refused() {
+    want=$1
+    shift
+    if "$@" -C -x 0 -i 1 >"$T/out" 2>"$T/err"; then
+        fail "$* was accepted"
+    fi
+    grep -q -- "$want" "$T/err" || fail "$* did not say \"$want\": $(cat "$T/err")"
+    if grep -q '^[0-9]' "$T/out"; then
+        fail "$* measured something before refusing"
+    fi
+}
+refused '--trans: ddot has no matrix to transpose' level1/double/bmb_ddot -v 8 --trans T
+refused '--uplo: dgemm has no triangle to choose' level3/double/bmb_dgemm -m 8 --uplo L
+refused '--side: dgemv has no side to choose' level2/double/bmb_dgemv -m 8 --side R
+refused '--diag: dgemm has no triangular matrix' level3/double/bmb_dgemm -m 8 --diag U
+refused '--trans: dgemm takes two letters' level3/double/bmb_dgemm -m 8 --trans T
+refused '--trans: dgemv takes one letter' level2/double/bmb_dgemv -m 8 --trans NT
+refused '--trans: dgemv takes NT, not C' level2/double/bmb_dgemv -m 8 --trans C
+refused '--trans: dgemm takes NT, not C' level3/double/bmb_dgemm -m 8 --trans NC
+echo "ok   an argument a routine does not have, or a letter it does not take, is refused"
 
 rm -rf "$T"
 echo "all checks passed"

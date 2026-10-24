@@ -49,12 +49,23 @@ for field in '"dim1_label": "Matrix dim1 (M)"' '"dim3_label": "Matrix dim3 (K)"'
     grep -q "$field" k.json || fail "-K: json carries no $field"
 done
 
+# The routine's arguments (#221): those it takes, defaults included, in
+# every format; none for a routine that takes none.
+grep -q '^# arguments: trans NN$' fmt.csv || fail "dgemm's csv does not say trans NN: $(grep '^# arg' fmt.csv)"
+grep -q '^    "arguments": {"trans": "NN"},$' fmt.json || fail "dgemm's json has no arguments object"
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 --trans tn -o args.json >args.txt || fail "the --trans tn run failed"
+grep -q '^# arguments: trans TN$' args.txt || fail "--trans tn: the table does not say trans TN"
+grep -q '"arguments": {"trans": "TN"}' args.json || fail "--trans tn: the json does not say trans TN"
+
 # A single-dimension routine names its one dimension and leaves dim2_label
 # out, the way it leaves dim2 out of every row.
 level1/double/bmb_ddot -x 0 -i 1 -v 8 -o fmt1.json -f json >/dev/null || fail "the ddot json run failed"
 grep -q '"dim1_label": "Vector size"' fmt1.json || fail "ddot json has no dim1_label"
 if grep -q '"dim2_label"' fmt1.json; then
     fail "ddot json carries a dim2_label for a routine with one dimension"
+fi
+if grep -q '"arguments"' fmt1.json; then
+    fail "ddot json carries arguments for a routine that takes none"
 fi
 
 # The machine and the date are recorded in every format (#1, decision 4).
@@ -197,5 +208,5 @@ grep -q '^Frequency: governor performance, turbo off$' version.txt \
 rm -f version.txt
 
 rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json \
-    k.csv k.txt k.dims k.json
+    k.csv k.txt k.dims k.json args.json args.txt
 echo "ok   output formats"

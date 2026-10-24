@@ -3,6 +3,13 @@
 
 #include <stddef.h>
 
+/* The arguments a routine can take (bmb_benchmark_t.args, bmb_result_set_t.args, #221). */
+#define BMB_ARG_TRANS 1u  /* one --trans letter */
+#define BMB_ARG_TRANS2 2u /* two, GEMM's: A's then B's */
+#define BMB_ARG_UPLO 4u
+#define BMB_ARG_SIDE 8u
+#define BMB_ARG_DIAG 16u
+
 typedef struct {
     unsigned int thread_count;
     size_t dim1;
@@ -34,6 +41,13 @@ typedef struct {
     const char *dim1_label; /* e.g. "Vector size", "Matrix dim (N)", "Matrix dim1 (M)" */
     const char *dim2_label; /* NULL if the routine has a single size dimension */
     const char *dim3_label; /* GEMM's K under -K (#215); NULL otherwise */
+    /* The routine's arguments (#221): those it takes (BMB_ARG_*), and
+     * their values, the defaults where none was given. */
+    unsigned int args;
+    char trans[3];
+    char uplo;
+    char side;
+    char diag;
     const char *label;      /* --label, or NULL; owned by the options */
     int verified;           /* --verify: every point was checked */
     const char *layout;     /* "row" or "col" for routines with a matrix;

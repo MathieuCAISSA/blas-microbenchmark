@@ -8,7 +8,9 @@
 
 /* sgemm, dgemm, cgemm and zgemm, one per precision (bmb_prec.h).
  * dim1 = M, dim2 = N, and K, which -K gives apart (#215) and is M
- * otherwise, as it always was. */
+ * otherwise, as it always was. C = alpha * op(A) * op(B), op as --trans
+ * gives it, A's then B's (#221): op(A) is M x K, so a transposed A is
+ * stored K x M; the same for B. */
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
@@ -18,10 +20,13 @@ typedef struct {
     int m;
     int n;
     int k;
+    char ta; /* --trans: N, T or C, A's */
+    char tb; /* B's */
+    int ra, ca, rb, cb; /* A's and B's rows and columns, as stored */
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t beta[BMB_PARTS];
-    bmb_real_t *a; /* M x K */
-    bmb_real_t *b; /* K x N */
+    bmb_real_t *a; /* M x K, or K x M transposed */
+    bmb_real_t *b; /* K x N, or N x K transposed */
     bmb_real_t *c; /* M x N */
 } bmb_ctx_t;
 
@@ -30,11 +35,14 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     bmb_ctx_t *ctx;
     size_t m = dim1, n = dim2, k = bmb_bench_dim3(dim1);
     const int col = bmb_bench_column_major();
-    /* A is M x K, B K x N, C M x N, each stored as its rows, or its
+    const char ta = bmb_bench_trans(0), tb = bmb_bench_trans(1);
+    /* A is ra x ca, B rb x cb, C M x N, each stored as its rows, or its
      * columns with --layout col. */
-    const size_t outa = col ? k : m, outb = col ? n : k, outc = col ? n : m;
-    const size_t lda = bmb_bench_ld(outa, col ? m : k, BMB_ELEM_BYTES);
-    const size_t ldb = bmb_bench_ld(outb, col ? k : n, BMB_ELEM_BYTES);
+    const size_t ra = ta == 'N' ? m : k, ca = ta == 'N' ? k : m;
+    const size_t rb = tb == 'N' ? k : n, cb = tb == 'N' ? n : k;
+    const size_t outa = col ? ca : ra, outb = col ? cb : rb, outc = col ? n : m;
+    const size_t lda = bmb_bench_ld(outa, col ? ra : ca, BMB_ELEM_BYTES);
+    const size_t ldb = bmb_bench_ld(outb, col ? rb : cb, BMB_ELEM_BYTES);
     const size_t ldc = bmb_bench_ld(outc, col ? m : n, BMB_ELEM_BYTES);
     size_t i;
 
@@ -54,6 +62,12 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->m = (int) m;
     ctx->n = (int) n;
     ctx->k = (int) k;
+    ctx->ta = ta;
+    ctx->tb = tb;
+    ctx->ra = (int) ra;
+    ctx->ca = (int) ca;
+    ctx->rb = (int) rb;
+    ctx->cb = (int) cb;
     bmb_set_scalar(ctx->alpha, BMB_R(1.0), BMB_R(0.0));
     bmb_set_scalar(ctx->beta, BMB_R(0.0), BMB_R(0.0)); /* verify() relies on it */
     ctx->col = col;
@@ -85,7 +99,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    BMB_CBLAS(gemm)(ctx->order, CblasNoTrans, CblasNoTrans, ctx->m, ctx->n, ctx->k,
+    BMB_CBLAS(gemm)(ctx->order, BMB_CBLAS_TRANS(ctx->ta), BMB_CBLAS_TRANS(ctx->tb), ctx->m, ctx->n, ctx->k,
                     BMB_SCALAR(ctx->alpha), (const void *) ctx->a, ctx->lda,
                     (const void *) ctx->b, ctx->ldb, BMB_SCALAR(ctx->beta),
                     (void *) ctx->c, ctx->ldc);
@@ -120,7 +134,8 @@ static double footprint(size_t dim1, size_t dim2)
     return (d1 * k + k * d2 + d1 * d2) * (double) (BMB_ELEM_BYTES);
 }
 
-/* --verify, by random projection in double: C*r against alpha*A*(B*r), r
+/* --verify, by random projection in double: C*r against
+ * alpha*op(A)*(op(B)*r), op as --trans gives it, r
  * of the routine's kind, real or complex. beta is 0 (setup), so what C
  * held before the call does not enter. In single precision, the library
  * rounded each element of C through K float multiply-adds, an error of
@@ -155,8 +170,10 @@ static int verify(void *vctx, char *msg, size_t size)
     call(ctx);
     bmb_perturb(&ctx->c[0]);
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
-    bmb_matvec(BMB_VERIFY_FULL, ctx->col, inner, n, ctx->b, (size_t) ctx->ldb, r, NULL, t, tabs);
-    bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, inner, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
+    bmb_matvec(BMB_VERIFY_OP(ctx->tb), ctx->col, (size_t) ctx->rb, (size_t) ctx->cb, ctx->b,
+               (size_t) ctx->ldb, r, NULL, t, tabs);
+    bmb_matvec(BMB_VERIFY_OP(ctx->ta), ctx->col, (size_t) ctx->ra, (size_t) ctx->ca, ctx->a,
+               (size_t) ctx->lda, t, tabs, y2, y2abs);
     bmb_scale(want, ctx->alpha, y2, m);
     for (i = 0; i < p * m; i++) {
         scale[i] = bmb_abs(ctx->alpha) * y2abs[i / p];
@@ -181,6 +198,8 @@ int main(int argc, char *argv[])
     bench.dim1_label_dim3 = "Matrix dim1 (M)";
     bench.use_vector_range = 0;
     bench.level = 3;
+    bench.args = BMB_ARG_TRANS2;
+    bench.trans_letters = BMB_TRANS_LETTERS;
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;

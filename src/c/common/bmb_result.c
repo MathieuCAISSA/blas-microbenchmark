@@ -10,6 +10,11 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->dim1_label = dim1_label;
     rs->dim2_label = dim2_label;
     rs->dim3_label = NULL;
+    rs->args = 0;
+    rs->trans[0] = '\0';
+    rs->uplo = 0;
+    rs->side = 0;
+    rs->diag = 0;
     rs->label = NULL;
     rs->verified = 0;
     rs->layout = NULL;

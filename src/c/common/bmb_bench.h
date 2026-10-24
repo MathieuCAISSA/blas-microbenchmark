@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include "bmb_options.h"
+#include "bmb_result.h"
 
 /* Allocates and fills the routine's inputs for the given size(s) and
  * thread count. Returns an opaque context passed to call()/teardown(),
@@ -87,6 +88,13 @@ typedef struct {
      * when no size is given (#165). */
     int level;
 
+    /* The routine's arguments that --trans, --uplo, --side and --diag
+     * choose (#221): BMB_ARG_* or'ed, 0 for none; the others are refused
+     * with a message. trans_letters: the letters --trans takes, "NT" for
+     * a real routine (C would be T again), "NTC" for a complex one. */
+    unsigned int args;
+    const char *trans_letters;
+
     bmb_bench_setup_fn setup;
     bmb_bench_call_fn call;
     bmb_bench_reset_fn reset; /* optional, may stay NULL */
@@ -123,6 +131,14 @@ int bmb_bench_column_major(void);
 /* For setup() and the counts of a routine with a dim3_label: the K of the
  * point being measured, which is dim1 unless -K gave it apart. */
 size_t bmb_bench_dim3(size_t dim1);
+
+/* For a routine that takes the argument (#221): --trans's letter for
+ * operand i (0, or 1 for GEMM's B), --uplo's, --side's and --diag's, or
+ * the default, N, U, L and N, what every routine measured before. */
+char bmb_bench_trans(int i);
+char bmb_bench_uplo(void);
+char bmb_bench_side(void);
+char bmb_bench_diag(void);
 
 /* For setup(): the bytes of a rows x cols matrix of elements of `size`
  * bytes, or 0 where that would wrap size_t (rows and cols at least 1).

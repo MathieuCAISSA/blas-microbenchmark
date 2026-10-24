@@ -62,6 +62,14 @@ typedef struct {
     int column_major;         /* -L, --layout col: matrices stored and
                                * passed column-major, as Fortran does */
     int layout_set;           /* whether -L/--layout was given */
+    /* The routine's arguments (#221), one value per run; empty or 0 when
+     * not given, the routine's default then. Upper case, whichever case
+     * they were given in. Which a routine takes, and which letters, is
+     * the routine's to say (bmb_benchmark_t.args). */
+    char trans[3];            /* --trans: N, T or C; two for GEMM, A then B */
+    char uplo;                /* --uplo: U or L */
+    char side;                /* --side: L or R */
+    char diag;                /* --diag: N or U */
     int cache_cold;           /* -k, --cache cold: each timed call finds its
                                * operands out of the caches (#160) */
     unsigned int align;       /* -a, --align: the bytes every operand is

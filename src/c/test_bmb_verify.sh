@@ -11,7 +11,9 @@
 # (--layout row and col), each also with its leading dimensions padded
 # (--ld-pad 3, #163), which the check reads through, and say in its output
 # that the results were verified, and in which order. GEMM is run with a
-# K of its own (-K, #215), shorter and longer than M.
+# K of its own (-K, #215), shorter and longer than M. Every --trans a
+# routine takes is run (#221), in both layouts: GEMM's four (NN, NT, TN,
+# TT) and, complex, two with C; GEMV's N and T, and C for a complex one.
 # Tiny sizes only (see AGENTS.md).
 set -e
 
@@ -47,45 +49,55 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         level1/*) layouts=none ;;
         *) layouts="row col row:3 col:3" ;;
     esac
-    for variant in $layouts; do
-        layout=${variant%%:*}
-        pad=${variant#*:}
-        if [ "$layout" = none ]; then
-            lo=
-        elif [ "$pad" = "$variant" ]; then
-            lo="--layout $layout"
-        else
-            lo="--layout $layout --ld-pad $pad"
-        fi
+    case $r in
+        [sd]gemm) variants="NN NT TN TT" ;;
+        [cz]gemm) variants="NN NT TN TT CN TC" ;;
+        [sd]gemv) variants="N T" ;;
+        [cz]gemv) variants="N T C" ;;
+        *) variants=default ;;
+    esac
+    for v in $variants; do
+        case $v in default) tr= ;; *) tr="--trans $v" ;; esac
+        for variant in $layouts; do
+            layout=${variant%%:*}
+            pad=${variant#*:}
+            if [ "$layout" = none ]; then
+                lo=
+            elif [ "$pad" = "$variant" ]; then
+                lo="--layout $layout"
+            else
+                lo="--layout $layout --ld-pad $pad"
+            fi
 
-        # Right results: verified, and said so.
-        if ! "$b" -x 0 -i 1 -t 1,2 -c $lo $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
-            fail "$name $lo --verify failed on a correct library: $(cat "$T/$r.err")"
-        fi
-        grep -q '^# verified: ' "$T/$r.out" || fail "$name --verify does not say the results were verified"
-        grep -q '^  "verified": true,$' "$T/$r.json" || fail "$name --verify: no \"verified\": true in the JSON"
-        case $layout in
-            none) ! grep -q '"layout"' "$T/$r.json" || fail "$name, a vector routine, records a layout" ;;
-            *) grep -q "^  \"layout\": \"$layout\",\$" "$T/$r.json" || fail "$name $lo: no \"layout\": \"$layout\" in the JSON" ;;
-        esac
-        if [ "$pad" != "$variant" ]; then
-            grep -q "^    \"ld_pad\": $pad,\$" "$T/$r.json" || fail "$name $lo: no \"ld_pad\": $pad in the JSON"
-        fi
+            # Right results: verified, and said so.
+            if ! "$b" -x 0 -i 1 -t 1,2 -c $lo $tr $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
+                fail "$name $lo $tr --verify failed on a correct library: $(cat "$T/$r.err")"
+            fi
+            grep -q '^# verified: ' "$T/$r.out" || fail "$name --verify does not say the results were verified"
+            grep -q '^  "verified": true,$' "$T/$r.json" || fail "$name --verify: no \"verified\": true in the JSON"
+            case $layout in
+                none) ! grep -q '"layout"' "$T/$r.json" || fail "$name, a vector routine, records a layout" ;;
+                *) grep -q "^  \"layout\": \"$layout\",\$" "$T/$r.json" || fail "$name $lo: no \"layout\": \"$layout\" in the JSON" ;;
+            esac
+            if [ "$pad" != "$variant" ]; then
+                grep -q "^    \"ld_pad\": $pad,\$" "$T/$r.json" || fail "$name $lo: no \"ld_pad\": $pad in the JSON"
+            fi
 
-        # A wrong result: stopped, explained, nothing written.
-        set +e
-        BMB_VERIFY_CORRUPT=1 "$b" -x 0 -i 1 -c $lo $sizes -o "$T/$r-bad.json" >"$T/$r-bad.out" 2>"$T/$r-bad.err"
-        rc=$?
-        set -e
-        test "$rc" -eq 2 || fail "$name $lo did not exit 2 on a corrupted result (exit $rc)"
-        grep -q '^Wrong result: ' "$T/$r-bad.err" || fail "$name did not say the result was wrong: $(cat "$T/$r-bad.err")"
-        test -e "$T/$r-bad.json" && fail "$name wrote a results file after a wrong result"
+            # A wrong result: stopped, explained, nothing written.
+            set +e
+            BMB_VERIFY_CORRUPT=1 "$b" -x 0 -i 1 -c $lo $tr $sizes -o "$T/$r-bad.json" >"$T/$r-bad.out" 2>"$T/$r-bad.err"
+            rc=$?
+            set -e
+            test "$rc" -eq 2 || fail "$name $lo $tr did not exit 2 on a corrupted result (exit $rc)"
+            grep -q '^Wrong result: ' "$T/$r-bad.err" || fail "$name did not say the result was wrong: $(cat "$T/$r-bad.err")"
+            test -e "$T/$r-bad.json" && fail "$name wrote a results file after a wrong result"
+        done
     done
 
     n=$((n + 1))
 done
 test "$n" -ge 32 || fail "only $n benchmarks found"
-echo "ok   all $n benchmarks pass --verify, in both layouts, padded or not, where they have a matrix, and each one's check catches a corrupted result"
+echo "ok   all $n benchmarks pass --verify, in both layouts, padded or not, where they have a matrix, with every --trans they take, and each one's check catches a corrupted result"
 
 # On by default: no option, and the results are checked.
 level3/double/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"

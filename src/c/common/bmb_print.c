@@ -73,6 +73,59 @@ static int bmb_print_adaptive(const bmb_result_set_t *rs)
 
 /* How the run was made, after where it ran: everything needed to make
  * the same measurement again (#161). */
+/* The routine's arguments (#221), those it takes, defaults included, so
+ * that every result says which variant it measured: "# arguments: trans
+ * NT", or in the JSON's run block an object of them. */
+static void bmb_print_arguments(FILE *out, const bmb_result_set_t *rs)
+{
+    const char *sep = "# arguments: ";
+
+    if (rs->args & (BMB_ARG_TRANS | BMB_ARG_TRANS2)) {
+        fprintf(out, "%strans %s", sep, rs->trans);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_UPLO) {
+        fprintf(out, "%suplo %c", sep, rs->uplo);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_SIDE) {
+        fprintf(out, "%sside %c", sep, rs->side);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_DIAG) {
+        fprintf(out, "%sdiag %c", sep, rs->diag);
+    }
+    if (rs->args != 0) {
+        fputc('\n', out);
+    }
+}
+
+static void bmb_print_json_arguments(FILE *out, const bmb_result_set_t *rs)
+{
+    const char *sep = "";
+
+    if (rs->args == 0) {
+        return;
+    }
+    fprintf(out, "    \"arguments\": {");
+    if (rs->args & (BMB_ARG_TRANS | BMB_ARG_TRANS2)) {
+        fprintf(out, "\"trans\": \"%s\"", rs->trans);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_UPLO) {
+        fprintf(out, "%s\"uplo\": \"%c\"", sep, rs->uplo);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_SIDE) {
+        fprintf(out, "%s\"side\": \"%c\"", sep, rs->side);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_DIAG) {
+        fprintf(out, "%s\"diag\": \"%c\"", sep, rs->diag);
+    }
+    fprintf(out, "},\n");
+}
+
 static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machine_t *m)
 {
     size_t i;
@@ -113,6 +166,7 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
         fprintf(out, ", leading dimensions + %u", rs->ld_pad);
     }
     fputc('\n', out);
+    bmb_print_arguments(out, rs);
     fprintf(out, "# compiler: %s, CFLAGS %s\n", bmb_build_compiler(), bmb_build_cflags());
     for (i = 0; i < BMB_RUN_VARIABLES; i++) {
         const char *value = getenv(bmb_run_variables[i]);
@@ -446,6 +500,7 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
     if (rs->layout != NULL) {
         fprintf(out, "    \"ld_pad\": %u,\n", rs->ld_pad);
     }
+    bmb_print_json_arguments(out, rs);
     fprintf(out, "    \"compiler\": ");
     bmb_print_json_string(out, bmb_build_compiler());
     fprintf(out, ",\n    \"cflags\": ");
