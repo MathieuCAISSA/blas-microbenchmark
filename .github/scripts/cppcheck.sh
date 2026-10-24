@@ -47,6 +47,7 @@ family_sources() {
 
 status=0
 ignore=
+# Split on purpose: one path per line, none with a space.
 for f in $(family_sources); do
     ignore="$ignore -i $f"
 done
