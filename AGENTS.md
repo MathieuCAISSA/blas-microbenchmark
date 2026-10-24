@@ -152,7 +152,7 @@ the test.
 | | `test_bmb_alloc_failures.sh` | every allocation a benchmark makes (setup, `--verify`'s check, the timing buffer, the results), made to fail in turn, `posix_memalign()` included, by a preloaded library (`bmb_failalloc.c`, built for `make check` only): exit 1 and "out of memory", never a crash; SKIPs under AddressSanitizer and outside glibc; dgemm under `--cache cold` too, its list of copies and a copy's setup with the others made |
 | | `test_bmb_colors.sh` | errors in red and warnings in yellow on a terminal (a pseudo-terminal from `script(1)`), plain with `NO_COLOR` set or when stderr is a file; SKIPs without `script` |
 | | `test_bmb_cache.sh` | `--cache cold` on real benchmarks over a generated machine with a 64K last-level cache: the copies ddot, dgemm and dtrsm take, from their bytes or their footprint, 1 once the operands alone are past it, in the table, the CSV and the JSON, dtrsm checked by `--verify`, every benchmark run cold and checked; hot by default, without copies; at most 16384 with one warning, on the x86 fixture; refused where the cache size cannot be read |
-| | `test_bmb_levels.sh` | every benchmark declares the level of its directory, whose default size it takes: read from the sources, nothing run |
+| | `test_bmb_levels.sh` | every benchmark declares the level of its directory, whose default size it takes: read from the source its level's `Makefile.am` builds it from, its own or its family's, nothing run |
 | | `test_bmb_kernels.sh` | the kernels the library's dispatch chose, for the backend built (from `config.h`), the same in `-V`, the text and the JSON; `OPENBLAS_CORETYPE` and `MKL_ENABLE_INSTRUCTIONS` followed where the library takes them; nothing for a library that does not say |
 | | `test_bmb_write_errors.sh` | a run whose results cannot be written fails and says so: a `-o` file that cannot be opened, a full disk (`/dev/full`) under `-o` in JSON and CSV, small or larger than the stream's buffer, or on stdout |
 | | `test_bmb_output_formats.sh` | txt/csv/json output, provenance lines, an escaped label, a CPU name with a quote, a backslash and a control character escaped in the JSON; the frequency line, fields and warning on the fixtures (`BMB_MACHINE_ROOT`); the median and quartiles after `-s`'s columns, against 1, 2 and 3 samples, the IQR in the table; the run lines and block: command, samples, compiler, a variable set, the affinity of a fixture; the operands line and fields, `-a 4096 -p 8` in them; a `-T` run: more samples than `-i`, in a column before the copies |
@@ -218,16 +218,19 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
                  # (thread-count resolution), bmb_build (what this build is),
                  # bmb_machine (what it runs on), bmb_verify (--verify's
-                 # references), bmb_log, bmb_timer; fixtures/machine/, the
+                 # references), bmb_prec.h (what a family's precision
+                 # changes), bmb_log, bmb_timer; fixtures/machine/, the
                  # fake /proc and /sys trees of test_bmb_machine;
                  # fuzz_bmb_options.c, the parser's fuzz target, and fuzz/,
                  # its seed corpus and dictionary
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
 src/c/level<N>/  # a directory per precision (single, double, complex,
-                 # complex16), each routine's source and test in it; the
-                 # level-wide tests beside them (#148). Which routine is
-                 # where: src/c/routines.txt
+                 # complex16), each routine's test in it, and its source
+                 # if it has one of its own (#148); the sources of the
+                 # families (bmb_<family>.c, one for all its precisions,
+                 # #166) and the level-wide tests beside them. Which
+                 # routine is where: src/c/routines.txt
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)

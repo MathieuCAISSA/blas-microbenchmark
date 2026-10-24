@@ -40,9 +40,9 @@ block() {
         }
         /^#/ || NF == 0 { next }
         {
-            if (NF != 4 || $2 !~ /^[123]$/ || !($3 in dir) || !($4 in size) ||
-                $1 !~ /^[a-z][a-z0-9]*$/) {
-                printf "routines.txt:%d: not \"routine level precision sizes\": %s\n", NR, $0 >"/dev/stderr"
+            if (NF != 5 || $2 !~ /^[123]$/ || !($3 in dir) || !($4 in size) ||
+                $1 !~ /^[a-z][a-z0-9]*$/ || $5 !~ /^(-|[a-z][a-z0-9]*)$/) {
+                printf "routines.txt:%d: not \"routine level precision sizes family\": %s\n", NR, $0 >"/dev/stderr"
                 bad = 1
                 exit 1
             }
@@ -53,7 +53,7 @@ block() {
             }
             seen[$1] = 1
             n++
-            name[n] = $1; level[n] = $2; prec[n] = $3; sizes[n] = $4
+            name[n] = $1; level[n] = $2; prec[n] = $3; sizes[n] = $4; family[n] = $5
         }
         # wrap: the words of list, as lines of at most width bytes once
         # first (the first line) or rest (the others) is put before them,
@@ -79,9 +79,16 @@ block() {
                     if (level[i] == l) { printf " \\\n\t%s/bmb_%s", dir[prec[i]], name[i] }
                 }
                 printf "\n\n"
+                # A family source is compiled once per precision, with
+                # flags of its own, so that each program has its object.
                 for (i = 1; i <= n; i++) {
-                    if (level[i] == l) {
-                        printf "%s_bmb_%s_SOURCES = %s/bmb_%s.c\n", dir[prec[i]], name[i], dir[prec[i]], name[i]
+                    if (level[i] != l) { continue }
+                    p = dir[prec[i]] "_bmb_" name[i]
+                    if (family[i] == "-") {
+                        printf "%s_SOURCES = %s/bmb_%s.c\n", p, dir[prec[i]], name[i]
+                    } else {
+                        printf "%s_SOURCES = bmb_%s.c\n", p, family[i]
+                        printf "%s_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_%s\n", p, toupper(prec[i])
                     }
                 }
                 printf "\nROUTINE_TESTS ="

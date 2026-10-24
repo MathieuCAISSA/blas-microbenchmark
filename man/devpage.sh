@@ -24,10 +24,10 @@ summary() {
 }
 
 # The per-routine smoke test of a benchmark that exists: test_bmb_ddot.sh,
-# next to bmb_ddot.c.
+# for ddot, a routine of src/c/routines.txt.
 is_smoke() {
     n=$(basename "$1" .sh)
-    [ -f "$(dirname "$1")/bmb_${n#test_bmb_}.c" ]
+    grep -q "^${n#test_bmb_}[[:space:]]" "$top/src/c/routines.txt"
 }
 
 # The conventions of the source comments, made HTML: `code`, *emphasis*

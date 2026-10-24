@@ -3,7 +3,9 @@
 # (bench.level), which is the default size it takes when no size is given
 # (#165): 10000000 at level 1, 5000 at level 2, 2000 at level 3. A level 2
 # routine declared level 3 would measure 2000 x 2000 by default, where
-# its matrix fits in a cache. Read from the sources, so nothing is run.
+# its matrix fits in a cache. Read from the source each program of the
+# level's Makefile.am is built from, its own or its family's (#166), so
+# nothing is run.
 set -e
 
 fail() {
@@ -13,11 +15,14 @@ fail() {
 
 S=${srcdir:-.}
 n=0
-for f in "$S"/level1/*/bmb_*.c "$S"/level2/*/bmb_*.c "$S"/level3/*/bmb_*.c; do
-    case $f in */level1/*) want=1 ;; */level2/*) want=2 ;; *) want=3 ;; esac
-    got=$(sed -n 's/^ *bench\.level = \([0-9]*\);$/\1/p' "$f")
-    test "$got" = "$want" || fail "$(basename "$f") declares level '$got', in level$want"
-    n=$((n + 1))
+for want in 1 2 3; do
+    sed -n 's/^\([a-z0-9_]*\)_SOURCES = \(.*\)$/\1 \2/p' "$S/level$want/Makefile.am" >levels-sources.tmp
+    while read -r program f; do
+        got=$(sed -n 's/^ *bench\.level = \([0-9]*\);$/\1/p' "$S/level$want/$f")
+        test "$got" = "$want" || fail "$program's source, $f, declares level '$got', in level$want"
+        n=$((n + 1))
+    done <levels-sources.tmp
 done
-test "$n" -ge 32 || fail "only $n benchmark sources found in $S"
+rm -f levels-sources.tmp
+test "$n" -ge 32 || fail "only $n benchmarks found in the levels' Makefile.am"
 echo "ok   all $n benchmarks declare the level of their directory"

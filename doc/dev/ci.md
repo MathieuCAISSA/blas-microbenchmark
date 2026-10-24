@@ -180,7 +180,12 @@ test takes:
   reason in the script. Its first run found pointer arithmetic on a
   `malloc` result before the NULL check in every `verify()`, undefined
   behaviour on the out-of-memory path, and bare `NULL` as the sentinel of
-  a variadic call in the option tests. To run it locally, after
+  a variadic call in the option tests. A family's source
+  (`src/c/level<N>/bmb_<family>.c`) is read once per precision
+  `src/c/routines.txt` gives it, with that precision's `-DBMB_PREC_<P>`:
+  cppcheck, given a `-D`, reads a file in that configuration alone, and
+  with no precision `bmb_prec.h` stops at its `#error`, so a run over the
+  tree would leave the family unread (#200). To run it locally, after
   configure: `.github/scripts/cppcheck.sh build` (`apt install cppcheck`, or
   `pip install cppcheck`).
 - CodeQL (`codeql.yml`, its own workflow) builds the code and runs

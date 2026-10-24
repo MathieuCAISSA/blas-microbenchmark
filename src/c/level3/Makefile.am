@@ -23,10 +23,14 @@ level3_PROGRAMS = \
 	double/bmb_dtrsm \
 	complex16/bmb_ztrsm
 
-single_bmb_sgemm_SOURCES = single/bmb_sgemm.c
-double_bmb_dgemm_SOURCES = double/bmb_dgemm.c
-complex_bmb_cgemm_SOURCES = complex/bmb_cgemm.c
-complex16_bmb_zgemm_SOURCES = complex16/bmb_zgemm.c
+single_bmb_sgemm_SOURCES = bmb_gemm.c
+single_bmb_sgemm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_dgemm_SOURCES = bmb_gemm.c
+double_bmb_dgemm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_cgemm_SOURCES = bmb_gemm.c
+complex_bmb_cgemm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zgemm_SOURCES = bmb_gemm.c
+complex16_bmb_zgemm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 double_bmb_dsymm_SOURCES = double/bmb_dsymm.c
 complex16_bmb_zhemm_SOURCES = complex16/bmb_zhemm.c
 single_bmb_ssyrk_SOURCES = single/bmb_ssyrk.c

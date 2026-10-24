@@ -70,19 +70,48 @@ the order (the triangular routines' `bmb_off_diagonal()`). Each of the
 22 routines was seen to fail `--verify` with its call forced to
 row-major under `--layout col`.
 
-**Other precisions (#6, #67).** `saxpy`, `sdot`, `sgemv`, `sgemm`,
-`strsm`, `ssyrk`, `cgemm`, `zgemm` and `ztrsm` are the double-precision
-file of the same routine with another element type: `float` for s, pairs
-of `float` (c) or `double` (z), real part first, for complex. `zdotc`,
-`zherk` and `zhemm` have no real counterpart, and follow `ddot`, `dsyrk`
-and `dsymm` with conjugates: `zherk`'s alpha and beta are real, as BLAS
-takes them, and `zhemm`'s A has an imaginary part on its diagonal, which
-a Hermitian matrix cannot have and BLAS does not read. A complex scalar or matrix is passed
-as `(const void *)`, which converts to whatever pointer type a library's
-`cblas.h` declares. Their dimensions and options are the double ones'.
-Only the routines where the precision changes the picture most are
-there; another follows the same pattern, and needs its
-`src/c/netlib/` entry point too.
+**Other precisions: families (#6, #67, #166).** The routines of one
+operation in several precisions are a family, written once:
+`src/c/level3/bmb_gemm.c` is sgemm, dgemm, cgemm and zgemm, compiled once
+per precision with `-DBMB_PREC_S`, `_D`, `_C` or `_Z`, which
+`routines.sh` writes into the level's `Makefile.am` from the table's
+`family` column. `src/c/common/bmb_prec.h` holds what the precision
+changes:
+
+- the real type, `bmb_real_t` (`float` for s and c), and the reals per
+  element, `BMB_PARTS` (2 for complex, real part first, the layout of
+  C99's complex types and of every CBLAS);
+- an element's size, `BMB_ELEM_BYTES`, as a number the preprocessor can
+  compare: only a routine of 16-byte elements checks its leading
+  dimensions for itself (below);
+- the CBLAS function and the routine's name, `BMB_CBLAS(gemm)` and
+  `BMB_ROUTINE(gemm)`;
+- scalars, stored as `BMB_PARTS` reals and passed as CBLAS takes them,
+  by value or by address (`BMB_SCALAR`, `bmb_set_scalar`); an array is
+  passed as `(const void *)`, which converts to whatever pointer type a
+  library's `cblas.h` declares;
+- the fill (`bmb_fill`), in the real type, as the one-precision files
+  computed it;
+- `--verify`'s references, tolerance and perturbation for the precision
+  (`bmb_matvec`, `bmb_tolerance`, `bmb_perturb`, `bmb_scale`).
+
+What is the operation's stays in its source, with `#if BMB_COMPLEX` or
+`#if BMB_SINGLE` where the precisions differ in substance, as single
+precision's scale in GEMM's check. Adding a precision BLAS has to a
+family is one line of the table, and its `src/c/netlib/` entry point for
+the Netlib build. #200 made GEMM a family, and checked that the four
+binaries give exactly what the four files did: the corrupted check's
+values to the digit, the counts, the copies `--cache cold` takes, every
+field the clock does not change.
+
+The other routines of a precision other than double are still a file
+each, the double one's with another element type (`saxpy`, `sdot`,
+`sgemv`, `strsm`, `ssyrk`, `ztrsm`), until #201 to #203 make families of
+them. `zdotc`, `zherk` and `zhemm` have no real counterpart, and follow
+`ddot`, `dsyrk` and `dsymm` with conjugates: `zherk`'s alpha and beta are
+real, as BLAS takes them, and `zhemm`'s A has an imaginary part on its
+diagonal, which a Hermitian matrix cannot have and BLAS does not read.
+Their dimensions and options are the double ones'.
 
 - `flops`: real operations. A complex multiply-add is 4 multiplications
   and 4 additions, so a complex routine counts four times its real
@@ -186,14 +215,16 @@ directory), the routine and how many data rows the sweep should produce;
 `chmod +x` it.
 
 Then add the routine to **`src/c/routines.txt`**, one line: its name,
-level, precision and what `-m` and `-M` are (#199). Every list of the
+level, precision, what `-m` and `-M` are (#199), and its family, or `-`
+for a source of its own (see below). Every list of the
 routines is written from that table, between `BEGIN routines (...)` and
 `END routines (...)` lines, by `src/c/routines.sh`, which `./autogen.sh`
 runs before `autoreconf`:
 
 - the level's `Makefile.am`: the program in `level<N>_PROGRAMS`
-  (`<precision>/bmb_<routine>`), its `_SOURCES`, its test in
-  `ROUTINE_TESTS`, which `TESTS` and `EXTRA_DIST` follow;
+  (`<precision>/bmb_<routine>`), its `_SOURCES` (and, for a family, the
+  `_CPPFLAGS` that give its precision), its test in `ROUTINE_TESTS`,
+  which `TESTS` and `EXTRA_DIST` follow;
 - `ROUTINES` in `man/Makefile.am`, which writes the `man bmb_<routine>`
   pages;
 - the NAME line of `man/blas-microbenchmark.1.in`, and its two tables:

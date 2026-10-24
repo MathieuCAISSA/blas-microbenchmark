@@ -37,7 +37,10 @@ it comes from in brackets.
   did it before, #12). A cppcheck finding is fixed, or suppressed where
   it is with the reason, and the author runs `.github/scripts/cppcheck.sh build`
   before pushing rather than leave it to CI (#3 did)
-  ([static analysis](../doc/dev/ci.md#static-analysis)).
+  ([static analysis](../doc/dev/ci.md#static-analysis)). A change to
+  what an analyser reads is seen to still find a bug planted where it
+  applies: suppressing `bmb_prec.h`'s `#error` silenced cppcheck, and
+  left the GEMM family unread (#200).
 - [ ] Every error is checked and reported: a failed allocation, write or
   `fclose` makes the run fail, never pass short (a new allocation is
   failed by `test_bmb_alloc_failures.sh` on its own)
