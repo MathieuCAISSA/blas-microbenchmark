@@ -72,6 +72,32 @@ static void test_matvec(void)
     bmb_verify_matvec(BMB_VERIFY_LOWER_STRICT, 0, 0, 3, square, 4, ones, NULL, y, yabs);
     check(same(y, (double[]) {0, 9, 18}, 3), "LOWER_STRICT: only below the diagonal");
 
+    /* The other triangle, and the triangles transposed or with a unit
+     * diagonal (#216), on the same matrix: [1 2 3; 9 4 5; 9 9 6]. */
+    {
+        static const struct {
+            int shape;
+            const char *what;
+            double y[3];
+        } cases[] = {
+            {BMB_VERIFY_LOWER, "LOWER: the strictly upper part is not read", {1, 13, 24}},
+            {BMB_VERIFY_SYM_LOWER, "SYM_LOWER: the upper half mirrored from the lower", {19, 22, 24}},
+            {BMB_VERIFY_UPPER_STRICT, "UPPER_STRICT: only above the diagonal", {5, 5, 0}},
+            {BMB_VERIFY_UPPER | BMB_VERIFY_TRANS, "UPPER | TRANS: U', from the upper triangle", {1, 6, 14}},
+            {BMB_VERIFY_UPPER | BMB_VERIFY_CONJ_TRANS, "UPPER | CONJ_TRANS: U' for a real U", {1, 6, 14}},
+            {BMB_VERIFY_LOWER | BMB_VERIFY_TRANS, "LOWER | TRANS: L', from the lower triangle", {19, 13, 6}},
+            {BMB_VERIFY_UPPER | BMB_VERIFY_UNIT, "UPPER | UNIT: ones on the diagonal, not read", {6, 6, 1}},
+            {BMB_VERIFY_LOWER | BMB_VERIFY_UNIT, "LOWER | UNIT", {1, 10, 19}},
+            {BMB_VERIFY_UPPER | BMB_VERIFY_TRANS | BMB_VERIFY_UNIT, "UPPER | TRANS | UNIT", {1, 3, 9}},
+        };
+        size_t c;
+
+        for (c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+            bmb_verify_matvec(cases[c].shape, 0, 0, 3, square, 4, ones, NULL, y, yabs);
+            check(same(y, cases[c].y, 3), cases[c].what);
+        }
+    }
+
     /* The size of the terms carries through a product of products. */
     bmb_verify_matvec(BMB_VERIFY_FULL, 0, 2, 3, wide, 4, x3, (double[]) {10, 10, 10}, y, yabs);
     check(same(yabs, (double[]) {60, 150}, 2), "xabs, when given, replaces |x|");
@@ -89,8 +115,11 @@ static void test_matvec_column_major(void)
     double square_c[12], wide_c[9];
     const double x3[3] = {1, -1, 2}, x2[2] = {1, -1};
     double y[3], yabs[3], want[3], wabs[3];
-    const bmb_verify_shape_t shapes[] = {
-        BMB_VERIFY_UPPER, BMB_VERIFY_SYM_UPPER, BMB_VERIFY_LOWER_STRICT
+    const int shapes[] = {
+        BMB_VERIFY_UPPER, BMB_VERIFY_SYM_UPPER, BMB_VERIFY_LOWER_STRICT,
+        BMB_VERIFY_LOWER, BMB_VERIFY_SYM_LOWER, BMB_VERIFY_UPPER_STRICT,
+        BMB_VERIFY_UPPER | BMB_VERIFY_TRANS, BMB_VERIFY_LOWER | BMB_VERIFY_CONJ_TRANS,
+        BMB_VERIFY_UPPER | BMB_VERIFY_UNIT, BMB_VERIFY_LOWER | BMB_VERIFY_TRANS | BMB_VERIFY_UNIT
     };
     size_t i, j, s;
     int same_all = 1;
@@ -123,7 +152,7 @@ static void test_matvec_column_major(void)
         bmb_verify_matvec(shapes[s], 1, 0, 3, square_c, 4, x3, NULL, y, yabs);
         same_all = same_all && same(y, want, 3) && same(yabs, wabs, 3);
     }
-    check(same_all, "column-major UPPER, SYM_UPPER, LOWER_STRICT: the same triangles as row-major");
+    check(same_all, "column-major: every triangle, symmetric half, transpose and unit diagonal the same as row-major");
 }
 
 /* The other precisions (#6): a float matrix, and complex ones, row- and
@@ -192,7 +221,7 @@ static void test_matvec_complex_shapes(void)
     };
     const double cx[4] = {1, 1, 2, -1};
     struct {
-        bmb_verify_shape_t shape;
+        int shape;
         const char *what;
         double y[4], yabs[2];
     } cases[] = {
@@ -205,6 +234,21 @@ static void test_matvec_complex_shapes(void)
         /* [1  3-i; 3+i  2] times x: 6-4i, 6+2i */
         {BMB_VERIFY_HERM_UPPER, "HERM_UPPER, ignoring the lower element and the diagonal's imaginary part",
          {6, -4, 6, 2}, {14, 14}},
+        /* #216: (1+2i)(1+i) = -1+3i; i(1+i) + 2(2-i) = 3-i */
+        {BMB_VERIFY_LOWER, "LOWER", {-1, 3, 3, -1}, {6, 8}},
+        /* (3-i)(2-i) = 5-5i; nothing */
+        {BMB_VERIFY_UPPER_STRICT, "UPPER_STRICT", {5, -5, 0, 0}, {12, 0}},
+        /* [1+2i  0; 3-i  2]: -1+3i; (3-i)(1+i) + 2(2-i) = 8 */
+        {BMB_VERIFY_UPPER | BMB_VERIFY_TRANS, "UPPER | TRANS, not conjugated", {-1, 3, 8, 0}, {6, 14}},
+        /* [1-2i  0; 3+i  2]: 3-i; (3+i)(1+i) + 2(2-i) = 6+2i */
+        {BMB_VERIFY_UPPER | BMB_VERIFY_CONJ_TRANS, "UPPER | CONJ_TRANS", {3, -1, 6, 2}, {6, 14}},
+        /* [1+2i  i; i  2]: -1+3i + i(2-i) = 5i; 3-i */
+        {BMB_VERIFY_SYM_LOWER, "SYM_LOWER, not conjugated", {0, 5, 3, -1}, {9, 8}},
+        /* [1  -i; i  2]: (1+i) - i(2-i) = -i; 3-i */
+        {BMB_VERIFY_HERM_LOWER, "HERM_LOWER, ignoring the upper element and the diagonal's imaginary part",
+         {0, -1, 3, -1}, {5, 8}},
+        /* [1  0; i  1]: 1+i; i(1+i) + (2-i) = 1 */
+        {BMB_VERIFY_LOWER | BMB_VERIFY_UNIT, "LOWER | UNIT", {1, 1, 1, 0}, {2, 5}},
     };
     double y[4], yabs[2];
     size_t i;
@@ -225,8 +269,9 @@ static void test_matvec_complex_shapes(void)
 /* The square shapes in single precision give what they give in double. */
 static void test_matvec_single_shapes(void)
 {
-    const bmb_verify_shape_t shapes[] = {
-        BMB_VERIFY_UPPER, BMB_VERIFY_SYM_UPPER, BMB_VERIFY_LOWER_STRICT, BMB_VERIFY_FULL_T
+    const int shapes[] = {
+        BMB_VERIFY_UPPER, BMB_VERIFY_SYM_UPPER, BMB_VERIFY_LOWER_STRICT, BMB_VERIFY_FULL_T,
+        BMB_VERIFY_LOWER | BMB_VERIFY_TRANS | BMB_VERIFY_UNIT, BMB_VERIFY_SYM_LOWER
     };
     const double x3[3] = {1, -1, 2};
     float square_f[12];
@@ -242,7 +287,7 @@ static void test_matvec_single_shapes(void)
         bmb_verify_matvec_single(shapes[s], 0, 3, 3, square_f, 4, x3, NULL, y, yabs);
         ok = ok && same(y, want, 3) && same(yabs, wabs, 3);
     }
-    check(ok, "single UPPER, SYM_UPPER, LOWER_STRICT, FULL_T: the same as in double");
+    check(ok, "single: every shape tried the same as in double");
 }
 
 static void test_close(void)
