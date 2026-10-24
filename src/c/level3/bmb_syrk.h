@@ -1,6 +1,9 @@
 /* The source of syrk and of herk, which bmb_syrk.c and bmb_herk.c
  * compile, the second with BMB_HERM defined (#209): a header, so that
  * the two programs share it without one source including another. */
+#ifndef BMB_SYRK_H
+#define BMB_SYRK_H
+
 #include <cblas.h>
 #include <stdlib.h>
 
@@ -194,3 +197,5 @@ int main(int argc, char *argv[])
 
     return bmb_benchmark_main(argc, argv, &bench);
 }
+
+#endif /* BMB_SYRK_H */

@@ -1,6 +1,9 @@
 /* The source of symm and of hemm, which bmb_symm.c and bmb_hemm.c
  * compile, the second with BMB_HERM defined (#209): a header, so that
  * the two programs share it without one source including another. */
+#ifndef BMB_SYMM_H
+#define BMB_SYMM_H
+
 #include <cblas.h>
 #include <stdlib.h>
 
@@ -183,3 +186,5 @@ int main(int argc, char *argv[])
 
     return bmb_benchmark_main(argc, argv, &bench);
 }
+
+#endif /* BMB_SYMM_H */
