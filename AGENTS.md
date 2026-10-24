@@ -53,9 +53,9 @@ installs it (sudo, several GB). AOCL-BLAS (`=aocl`) has no package: build
 AMD's sources as the `aocl` job does, then `AOCL_ROOT=<its prefix>
 ../configure --with-blas-backend=aocl`.
 
-After changing any `configure.ac` or `Makefile.am`, re-run `./autogen.sh`
-before `../configure`/`make` — stale generated `Makefile`s will otherwise
-silently ignore your edits.
+After changing any `configure.ac`, `Makefile.am` or `src/c/routines.txt`,
+re-run `./autogen.sh` before `../configure`/`make` — stale generated
+`Makefile`s will otherwise silently ignore your edits.
 
 `make distcheck` (from the build directory) validates the dist tarball and a
 clean VPATH build; run it before anything that touches `configure.ac`,
@@ -168,6 +168,7 @@ the test.
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
 | | `test_configure_paths.sh` | `--with-blas-incpath`/`--with-blas-libpath` come first in the search, ahead of a module's variables and of the directories `configure` probes in a distribution's install (#58): `configure` run per backend, its flags read from `config.log` |
 | | `test_coverage_exclusions.sh` | every coverage exclusion in the C code (`GCOVR_EXCL_*`) gives its reason on its line, and every `START` has its `STOP` |
+| | `test_routines.sh` | every list of the routines (the levels' and the man pages' `Makefile.am`, the man page's NAME and tables, the README's, the report's `LEVEL`, ReFrame's `ROUTINES`) is what `src/c/routines.sh` writes from `src/c/routines.txt`; on a copy, a routine added to the table alone makes the 8 lists it belongs in stale, and a malformed line, a duplicate or a missing marker is refused |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
@@ -210,7 +211,9 @@ Three rules the existing tests follow, and new ones should too:
 ```
 src/c/           # the tests across every benchmark (test_bmb_*.sh), the
                  # helper the per-routine tests share (test_helper.sh),
-                 # and bmb_failalloc.c, the allocation-failure library
+                 # bmb_failalloc.c, the allocation-failure library, and
+                 # routines.txt, the table of routines, with routines.sh,
+                 # which writes every list of them from it
 src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # bmb_result + bmb_print (txt/csv/json), bmb_threads
                  # (thread-count resolution), bmb_build (what this build is),
@@ -221,15 +224,10 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # its seed corpus and dictionary
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
-src/c/level<N>/  # a directory per precision, each routine's source and
-                 # test in it; the level-wide tests beside them (#148)
-src/c/level1/    # single/ saxpy sdot; double/ dasum daxpy dcopy ddot
-                 # dnrm2 dscal dswap; complex16/ zdotc
-src/c/level2/    # single/ sgemv; double/ dgemv dger dsymv dsyr dsyr2
-                 # dtrmv dtrsv
-src/c/level3/    # single/ sgemm strsm ssyrk; double/ dgemm dsymm dsyrk
-                 # dsyr2k dtrmm dtrsm; complex/ cgemm; complex16/ zgemm
-                 # ztrsm zherk zhemm
+src/c/level<N>/  # a directory per precision (single, double, complex,
+                 # complex16), each routine's source and test in it; the
+                 # level-wide tests beside them (#148). Which routine is
+                 # where: src/c/routines.txt
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
@@ -242,7 +240,8 @@ doc/             # the report's chart images, which the README and the
 doc/dev/         # the rest of this guide, one file per part (see above)
 tests/           # the project's own tests: the release files, the
                  # editor settings, the documentation's links, the pins,
-                 # configure's search order, the coverage exclusions
+                 # configure's search order, the coverage exclusions, the
+                 # lists of routines
 .clusterfuzzlite/
                  # how ClusterFuzzLite builds the fuzz targets (its
                  # Dockerfile, build.sh and project.yaml), for the fuzz

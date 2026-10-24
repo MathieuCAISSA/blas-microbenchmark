@@ -50,7 +50,8 @@ How the man pages are built, and why:
   `$(mandir)/man1`, so they follow `--prefix` like everything else.
 - `make install` also writes one alias page per benchmark
   (`bmb_dgemm.1`: `.so man1/blas-microbenchmark.1`), so that `man
-  bmb_dgemm` works; `ROUTINES` in `man/Makefile.am` is the list.
+  bmb_dgemm` works; `ROUTINES` in `man/Makefile.am` is the list, which
+  `src/c/routines.sh` writes from `src/c/routines.txt`.
 - **Every hyphen a reader might paste is written `\-`** — in options,
   paths, commands, `.EX` examples. groff 1.23 renders a plain `-` as a
   typographic hyphen (U+2010) on most systems, which no shell accepts.

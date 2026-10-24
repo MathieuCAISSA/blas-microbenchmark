@@ -13,10 +13,11 @@ CLEANFILES = $(man1_MANS)
 # page. Written at install time: 32 one-line files are not worth
 # keeping in the tree. test_man_content.sh checks this list against the
 # benchmarks actually built.
-ROUTINES = dasum daxpy dcopy ddot dnrm2 dscal dswap saxpy sdot zdotc \
-	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv sgemv \
-	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm sgemm cgemm zgemm \
-	strsm ztrsm ssyrk zherk zhemm
+# BEGIN routines (man-makefile): written by src/c/routines.sh
+ROUTINES = dasum saxpy daxpy dcopy sdot ddot zdotc dnrm2 dscal dswap \
+	sgemv dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv sgemm dgemm cgemm zgemm \
+	dsymm zhemm ssyrk dsyrk zherk dsyr2k dtrmm strsm dtrsm ztrsm
+# END routines (man-makefile)
 
 SUBST = v=$$(printf '%s' '$(PACKAGE_VERSION)' | sed 's/-/\\\\-/g') && \
 	d=$$(printf '%s' '$(pkglibexecdir)' | sed -e 's/-/\\\\-/g' -e 's|/|/\\\\:|g') && \

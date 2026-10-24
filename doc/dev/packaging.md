@@ -238,8 +238,9 @@ the benchmarks; the man page's FILES and EXAMPLES point there. What is
 not obvious in it:
 
 - **The routine list** (`ROUTINES`, with each routine's level) is the
-  test's parameter, so ReFrame needs it before anything is installed. A
-  routine added to the benchmarks goes there too; CI fails until it does.
+  test's parameter, so ReFrame needs it before anything is installed.
+  `src/c/routines.sh` writes it from `src/c/routines.txt`, the table of
+  routines, as it writes the other lists of them (#199).
 - **One size, one point, per test.** A ReFrame performance variable is
   one number, so a test runs a single size (per level, set with `-S`)
   and a single thread count, and reads its rates from `result.json`.

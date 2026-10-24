@@ -10,12 +10,14 @@
 .ds AD l
 .ad l
 .SH NAME
-blas-microbenchmark, bmb_dasum, bmb_daxpy, bmb_dcopy, bmb_ddot, bmb_dnrm2,
-bmb_dscal, bmb_dswap, bmb_saxpy, bmb_sdot, bmb_zdotc, bmb_dgemv, bmb_dger,
-bmb_dsymv, bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemv, bmb_dgemm,
-bmb_dsymm, bmb_dsyrk, bmb_dsyr2k, bmb_dtrmm, bmb_dtrsm, bmb_sgemm, bmb_cgemm,
-bmb_zgemm, bmb_strsm, bmb_ztrsm, bmb_ssyrk, bmb_zherk,
-bmb_zhemm \- microbenchmarks for BLAS routines
+.\" BEGIN routines (man-name): written by src/c/routines.sh
+blas-microbenchmark, bmb_dasum, bmb_saxpy, bmb_daxpy, bmb_dcopy, bmb_sdot,
+bmb_ddot, bmb_zdotc, bmb_dnrm2, bmb_dscal, bmb_dswap, bmb_sgemv, bmb_dgemv,
+bmb_dger, bmb_dsymv, bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemm,
+bmb_dgemm, bmb_cgemm, bmb_zgemm, bmb_dsymm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk,
+bmb_zherk, bmb_dsyr2k, bmb_dtrmm, bmb_strsm, bmb_dtrsm,
+bmb_ztrsm \- microbenchmarks for BLAS routines
+.\" END routines (man-name)
 .SH SYNOPSIS
 .B bmb_\c
 .I routine
@@ -45,15 +47,15 @@ the command under each library; then turn the results into charts with
 Level 1 routines work on vectors, level 2 on a matrix and a vector,
 level 3 on matrices:
 .PP
+.\" BEGIN routines (man-routines): written by src/c/routines.sh
 .TS
 l l.
-Level 1	dasum daxpy dcopy ddot dnrm2 dscal dswap
-\&	saxpy sdot zdotc
-Level 2	dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv
-\&	sgemv
-Level 3	dgemm dsymm dsyrk dsyr2k dtrmm dtrsm
-\&	sgemm cgemm zgemm strsm ztrsm ssyrk zherk zhemm
+Level 1	dasum saxpy daxpy dcopy sdot ddot zdotc dnrm2 dscal dswap
+Level 2	sgemv dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv
+Level 3	sgemm dgemm cgemm zgemm dsymm zhemm ssyrk dsyrk zherk dsyr2k
+\&	dtrmm strsm dtrsm ztrsm
 .TE
+.\" END routines (man-routines)
 .PP
 The first letter is the precision, as in BLAS:
 .B s
@@ -80,14 +82,16 @@ and, for those with two dimensions,
 .BR \-M .
 Which dimension is which:
 .PP
+.\" BEGIN routines (man-sizes): written by src/c/routines.sh
 .TS
 l l.
-dgemv sgemv dger dsymm zhemm	\-m is M, \-M is N
-dtrmm dtrsm strsm ztrsm	\-m is M, \-M is N
-dgemm sgemm cgemm zgemm	\-m is M and K, \-M is N
-dsyrk ssyrk zherk dsyr2k	\-m is N, \-M is K
+sgemv dgemv dger dsymm zhemm dtrmm	\-m is M, \-M is N
+strsm dtrsm ztrsm	\-m is M, \-M is N
+sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N
+ssyrk dsyrk zherk dsyr2k	\-m is N, \-M is K
 dsymv dsyr dsyr2 dtrmv dtrsv	\-m is N (square; no \-M)
 .TE
+.\" END routines (man-sizes)
 .SH OPTIONS
 .TP
 .BI "\-x, \-\-warmup " n

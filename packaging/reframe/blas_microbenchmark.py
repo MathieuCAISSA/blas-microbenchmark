@@ -17,15 +17,17 @@ from reframe.core.builtins import (fixture, parameter, performance_function,
 # Every benchmark and its BLAS level, which picks its size option (-v or
 # -m) and its directory under libexec. CI checks this against the
 # benchmarks a build installs.
+# BEGIN routines (reframe): written by src/c/routines.sh
 ROUTINES = {
-    'dasum': 1, 'daxpy': 1, 'dcopy': 1, 'ddot': 1, 'dnrm2': 1, 'dscal': 1,
-    'dswap': 1, 'saxpy': 1, 'sdot': 1, 'zdotc': 1,
-    'dgemv': 2, 'dger': 2, 'dsymv': 2, 'dsyr': 2, 'dsyr2': 2, 'dtrmv': 2,
-    'dtrsv': 2, 'sgemv': 2,
-    'dgemm': 3, 'dsymm': 3, 'dsyrk': 3, 'dsyr2k': 3, 'dtrmm': 3, 'dtrsm': 3,
-    'sgemm': 3, 'cgemm': 3, 'zgemm': 3, 'strsm': 3, 'ztrsm': 3, 'ssyrk': 3,
-    'zherk': 3, 'zhemm': 3,
+    'dasum': 1, 'saxpy': 1, 'daxpy': 1, 'dcopy': 1, 'sdot': 1, 'ddot': 1,
+    'zdotc': 1, 'dnrm2': 1, 'dscal': 1, 'dswap': 1,
+    'sgemv': 2, 'dgemv': 2, 'dger': 2, 'dsymv': 2, 'dsyr': 2, 'dsyr2': 2,
+    'dtrmv': 2, 'dtrsv': 2,
+    'sgemm': 3, 'dgemm': 3, 'cgemm': 3, 'zgemm': 3, 'dsymm': 3, 'zhemm': 3,
+    'ssyrk': 3, 'dsyrk': 3, 'zherk': 3, 'dsyr2k': 3, 'dtrmm': 3, 'strsm': 3,
+    'dtrsm': 3, 'ztrsm': 3,
 }
+# END routines (reframe)
 
 #: The directory each precision's benchmarks are built in (#148), by the
 #: first letter of the routine's name, which is its precision for every

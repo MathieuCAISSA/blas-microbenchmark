@@ -1,0 +1,50 @@
+# The routines the package benchmarks, one per line. src/c/routines.sh
+# writes every list of them from this table: the levels' Makefile.am,
+# man/Makefile.am, the man page's tables, the README's, the report's
+# LEVEL and the ReFrame tests' ROUTINES (#199). Edit the table, then run
+# src/c/routines.sh (./autogen.sh does); make check fails until the lists
+# agree with it.
+#
+# precision: s single, d double, c single complex, z double complex; the
+# directory the routine's source and test are in (single, double,
+# complex, complex16), under src/c/level<level>.
+# sizes: what -v, -m and -M are, as the man page gives them:
+#   v    -v is the vector size
+#   mn   -m is M, -M is N
+#   mkn  -m is M and K, -M is N
+#   nk   -m is N, -M is K
+#   n    -m is N (square; no -M)
+#
+# routine  level  precision  sizes
+dasum      1      d          v
+saxpy      1      s          v
+daxpy      1      d          v
+dcopy      1      d          v
+sdot       1      s          v
+ddot       1      d          v
+zdotc      1      z          v
+dnrm2      1      d          v
+dscal      1      d          v
+dswap      1      d          v
+sgemv      2      s          mn
+dgemv      2      d          mn
+dger       2      d          mn
+dsymv      2      d          n
+dsyr       2      d          n
+dsyr2      2      d          n
+dtrmv      2      d          n
+dtrsv      2      d          n
+sgemm      3      s          mkn
+dgemm      3      d          mkn
+cgemm      3      c          mkn
+zgemm      3      z          mkn
+dsymm      3      d          mn
+zhemm      3      z          mn
+ssyrk      3      s          nk
+dsyrk      3      d          nk
+zherk      3      z          nk
+dsyr2k     3      d          nk
+dtrmm      3      d          mn
+strsm      3      s          mn
+dtrsm      3      d          mn
+ztrsm      3      z          mn

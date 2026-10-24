@@ -6,6 +6,7 @@ LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 # installed (see level1/Makefile.am).
 level2dir = $(pkglibexecdir)/level2
 
+# BEGIN routines (make2): written by src/c/routines.sh from src/c/routines.txt
 level2_PROGRAMS = \
 	single/bmb_sgemv \
 	double/bmb_dgemv \
@@ -25,8 +26,7 @@ double_bmb_dsyr2_SOURCES = double/bmb_dsyr2.c
 double_bmb_dtrmv_SOURCES = double/bmb_dtrmv.c
 double_bmb_dtrsv_SOURCES = double/bmb_dtrsv.c
 
-# Minimalistic smoke tests (small matrices, 1 warmup + 2 timed iterations).
-TESTS = \
+ROUTINE_TESTS = \
 	single/test_bmb_sgemv.sh \
 	double/test_bmb_dgemv.sh \
 	double/test_bmb_dger.sh \
@@ -35,5 +35,9 @@ TESTS = \
 	double/test_bmb_dsyr2.sh \
 	double/test_bmb_dtrmv.sh \
 	double/test_bmb_dtrsv.sh
+# END routines (make2)
+
+# Minimalistic smoke tests (small matrices, 1 warmup + 2 timed iterations).
+TESTS = $(ROUTINE_TESTS)
 
 EXTRA_DIST = $(TESTS)
