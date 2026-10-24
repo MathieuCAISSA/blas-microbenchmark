@@ -88,6 +88,24 @@ typedef double bmb_real_t;
 #define BMB_SCALAR(s) ((s)[0])
 #endif
 
+/* The CBLAS value of a routine's argument (#221), from the letter
+ * bmb_bench_trans() and the others give; kept in an int, as the order is,
+ * since the enums' names differ between libraries. BMB_TRANS_LETTERS: the
+ * letters --trans takes in this precision, C only for a complex one. */
+#define BMB_CBLAS_TRANS(c) ((c) == 'N' ? CblasNoTrans : (c) == 'T' ? CblasTrans : CblasConjTrans)
+#define BMB_CBLAS_UPLO(c) ((c) == 'U' ? CblasUpper : CblasLower)
+#define BMB_CBLAS_SIDE(c) ((c) == 'L' ? CblasLeft : CblasRight)
+#define BMB_CBLAS_DIAG(c) ((c) == 'N' ? CblasNonUnit : CblasUnit)
+#if BMB_COMPLEX
+#define BMB_TRANS_LETTERS "NTC"
+#else
+#define BMB_TRANS_LETTERS "NT"
+#endif
+
+/* --verify's shape for a full matrix op() takes: as it is, transposed
+ * or conjugate-transposed (bmb_verify.h). */
+#define BMB_VERIFY_OP(c) ((c) == 'N' ? BMB_VERIFY_FULL : (c) == 'T' ? BMB_VERIFY_FULL_T : BMB_VERIFY_FULL_H)
+
 /* A complex count is four times the real one: a complex multiply-add is
  * 4 real multiplications and 4 additions, where a real one is 2. */
 #define BMB_FLOP_FACTOR (BMB_COMPLEX ? 4.0 : 1.0)

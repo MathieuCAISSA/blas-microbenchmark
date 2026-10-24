@@ -208,6 +208,57 @@ static void test_defaults(void)
  * So what the parser must get right is that flag -- and with -M, the range
  * it was given. The pairing itself is checked end to end by
  * test_bmb_square_default.sh. */
+/* The routine's arguments (#221): the letters each takes, in either
+ * case, stored in upper case; anything else refused. Which a routine
+ * takes is the driver's to check (test_bmb_ignored_options.sh). */
+static void test_arguments(void)
+{
+    static const struct {
+        const char *opt, *val;
+        int ok;
+        const char *want;
+    } cases[] = {
+        {"--trans", "N", 1, "N"}, {"--trans", "t", 1, "T"}, {"--trans", "cN", 1, "CN"},
+        {"--trans", "TT", 1, "TT"}, {"--trans", "", 0, ""}, {"--trans", "NTN", 0, ""},
+        {"--trans", "X", 0, ""}, {"--trans", "U", 0, ""},
+        {"--uplo", "l", 1, "L"}, {"--uplo", "U", 1, "U"}, {"--uplo", "UL", 0, ""}, {"--uplo", "N", 0, ""},
+        {"--side", "R", 1, "R"}, {"--side", "U", 0, ""},
+        {"--diag", "u", 1, "U"}, {"--diag", "L", 0, ""},
+    };
+    bmb_options_t opts;
+    size_t i;
+
+    if (parse_args(&opts, ARGS_END) != BMB_OPTIONS_OK || opts.trans[0] != '\0' || opts.uplo != 0
+        || opts.side != 0 || opts.diag != 0) {
+        fail("arguments", "one is set when none was given");
+    } else {
+        ok("no argument given: none set, the routine's defaults apply");
+    }
+    bmb_options_free(&opts);
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        char what[96], got[3] = "";
+        bmb_options_status_t st = parse_args(&opts, cases[i].opt, cases[i].val, ARGS_END);
+
+        snprintf(what, sizeof(what), "%s '%s' %s", cases[i].opt, cases[i].val,
+                 cases[i].ok ? "taken" : "refused");
+        if (st == BMB_OPTIONS_OK) {
+            if (strcmp(cases[i].opt, "--trans") == 0) {
+                snprintf(got, sizeof(got), "%s", opts.trans);
+            } else {
+                got[0] = strcmp(cases[i].opt, "--uplo") == 0 ? opts.uplo
+                         : strcmp(cases[i].opt, "--side") == 0 ? opts.side : opts.diag;
+                got[1] = '\0';
+            }
+            bmb_options_free(&opts);
+        }
+        if ((st == BMB_OPTIONS_OK) != cases[i].ok || (cases[i].ok && strcmp(got, cases[i].want) != 0)) {
+            fail(what, "got the wrong status or value");
+        } else {
+            ok(what);
+        }
+    }
+}
+
 static void test_dim2(void)
 {
     bmb_options_t opts;
@@ -308,6 +359,7 @@ int main(void)
 
     test_defaults();
     test_dim2();
+    test_arguments();
     test_output_format();
 
     /* ---- the four sweep forms ---- */

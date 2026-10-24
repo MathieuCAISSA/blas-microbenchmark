@@ -2,6 +2,7 @@
 
 #include <config.h>
 
+#include <ctype.h>
 #include <errno.h>
 #include <getopt.h>
 #include <limits.h>
@@ -34,6 +35,33 @@
 #define BMB_DEFAULT_MAX_TIME     10.0
 #define BMB_MAX_SECONDS          3600.0
 
+/* The routine's arguments (#221) have no short option: past the
+ * characters, so that getopt_long tells them apart. */
+enum { BMB_OPT_TRANS = 256, BMB_OPT_UPLO, BMB_OPT_SIDE, BMB_OPT_DIAG };
+
+/* bmb_option_letters(arg, name, allowed, max, dst): arg, one to max of
+ * the letters in allowed, in either case, into dst in upper case. */
+static int bmb_option_letters(const char *arg, const char *name, const char *allowed,
+                              size_t max, char *dst)
+{
+    char errbuf[160];
+    size_t i, n = strlen(arg);
+    int ok = n >= 1 && n <= max;
+
+    for (i = 0; ok && i < n; i++) {
+        dst[i] = (char) toupper((unsigned char) arg[i]);
+        ok = strchr(allowed, dst[i]) != NULL;
+    }
+    if (!ok) {
+        snprintf(errbuf, sizeof(errbuf), "Invalid value for %s (expected %s%s).", name,
+                 max > 1 ? "one or two of " : "one of ", allowed);
+        bmb_log_error(errbuf);
+        return -1;
+    }
+    dst[n] = '\0';
+    return 0;
+}
+
 static const struct option bmb_long_options[] = {
     {"warmup",         required_argument, NULL, 'x'},
     {"iterations",     required_argument, NULL, 'i'},
@@ -47,6 +75,10 @@ static const struct option bmb_long_options[] = {
     {"verify",         no_argument,       NULL, 'c'},
     {"no-verify",      no_argument,       NULL, 'C'},
     {"layout",         required_argument, NULL, 'L'},
+    {"trans",          required_argument, NULL, BMB_OPT_TRANS},
+    {"uplo",           required_argument, NULL, BMB_OPT_UPLO},
+    {"side",           required_argument, NULL, BMB_OPT_SIDE},
+    {"diag",           required_argument, NULL, BMB_OPT_DIAG},
     {"cache",          required_argument, NULL, 'k'},
     {"align",          required_argument, NULL, 'a'},
     {"ld-pad",         required_argument, NULL, 'p'},
@@ -459,6 +491,10 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->verify = 1;
     opts->column_major = 0;
     opts->layout_set = 0;
+    opts->trans[0] = '\0';
+    opts->uplo = 0;
+    opts->side = 0;
+    opts->diag = 0;
     opts->cache_cold = 0;
     opts->align = BMB_DEFAULT_ALIGN;
     opts->ld_pad = 0;
@@ -571,6 +607,26 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             }
             opts->layout_set = 1;
             break;
+
+        case BMB_OPT_TRANS:
+            if (bmb_option_letters(optarg, "--trans", "NTC", 2, opts->trans) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
+        case BMB_OPT_UPLO:
+        case BMB_OPT_SIDE:
+        case BMB_OPT_DIAG: {
+            char v[2];
+            const char *name = (c == BMB_OPT_UPLO) ? "--uplo" : (c == BMB_OPT_SIDE) ? "--side" : "--diag";
+            const char *allowed = (c == BMB_OPT_UPLO) ? "UL" : (c == BMB_OPT_SIDE) ? "LR" : "NU";
+
+            if (bmb_option_letters(optarg, name, allowed, 1, v) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            *((c == BMB_OPT_UPLO) ? &opts->uplo : (c == BMB_OPT_SIDE) ? &opts->side : &opts->diag) = v[0];
+            break;
+        }
 
         case 'k':
             if (strcmp(optarg, "hot") == 0) {
@@ -738,6 +794,13 @@ void bmb_options_print_help(const char *prog_name)
         "                                 timing it; stop, exit 2, if it is wrong (default: on)\n"
         "  -C, --no-verify               do not check the results\n"
         "  -L, --layout <order>          matrix storage order, row or col (default: row)\n"
+        "      --trans <op>              N, T or C: the matrix as it is, transposed or\n"
+        "                                 conjugate-transposed; GEMM takes two, A's then B's\n"
+        "                                 (default: N, NN for GEMM)\n"
+        "      --uplo <triangle>         U or L: the triangle a routine reads (default: U)\n"
+        "      --side <side>             L or R: which side the matrix multiplies (default: L)\n"
+        "      --diag <diagonal>         N or U: a unit diagonal, not read (default: N)\n"
+        "                                 Each only for the routines that have the argument.\n"
         "  -k, --cache <state>           hot: operands reused from call to call, as in cache;\n"
         "                                 cold: rotated over copies beyond the last-level cache\n"
         "                                 (default: hot)\n"

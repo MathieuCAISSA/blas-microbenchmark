@@ -16,6 +16,15 @@ releases with the same major version can be compared and read by the same
   and the outputs are as before; with it, every output has a third
   dimension, K (`dim3` and `dim3_label` in the JSON), and `bmb_report`
   draws a section per K. Other routines ignore it, with a warning.
+- `--trans`, `--uplo`, `--side`, `--diag`: the routine's arguments, one
+  value per run, as `--layout` (#221). GEMM takes `--trans` (two letters,
+  A's then B's: `NT`, `TN`, ...; C for a complex operand) and GEMV one;
+  the triangular and symmetric routines follow (#222). A routine without
+  the argument, or a letter it does not take, is refused with a message.
+  Every output records the arguments the routine takes, defaults
+  included (`# arguments:`, `arguments` in the JSON's run block), and
+  `bmb_report` keeps variants apart. The defaults are what every routine
+  measured before.
 
 ## [1.8.0] - 2026-10-23
 

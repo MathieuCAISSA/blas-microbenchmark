@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bmb_bench.h"
 #include "bmb_log.h"
@@ -633,6 +634,87 @@ size_t bmb_bench_dim3(size_t dim1)
     return bmb_dim3 != 0 ? bmb_dim3 : dim1;
 }
 
+/* The run's arguments (#221), the defaults filled in by
+ * bmb_check_args(). */
+static char bmb_trans[3] = "NN";
+static char bmb_uplo = 'U';
+static char bmb_side = 'L';
+static char bmb_diag = 'N';
+
+char bmb_bench_trans(int i)
+{
+    return bmb_trans[i];
+}
+
+char bmb_bench_uplo(void)
+{
+    return bmb_uplo;
+}
+
+char bmb_bench_side(void)
+{
+    return bmb_side;
+}
+
+char bmb_bench_diag(void)
+{
+    return bmb_diag;
+}
+
+/* An argument the routine does not have is refused, never ignored: a
+ * --uplo L that changed nothing would be read as the lower triangle's
+ * number. */
+static int bmb_check_args(const bmb_benchmark_t *bench, const bmb_options_t *opts)
+{
+    const size_t want = (bench->args & BMB_ARG_TRANS2) ? 2 : 1;
+    char msg[256];
+    size_t i;
+
+    if (opts->trans[0] != '\0') {
+        if (!(bench->args & (BMB_ARG_TRANS | BMB_ARG_TRANS2))) {
+            snprintf(msg, sizeof(msg), "--trans: %s has no matrix to transpose.", bench->routine_name);
+            bmb_log_error(msg);
+            return -1;
+        }
+        if (strlen(opts->trans) != want) {
+            snprintf(msg, sizeof(msg), "--trans: %s takes %s.", bench->routine_name,
+                     want == 2 ? "two letters, A's then B's (NT, TN, ...)" : "one letter");
+            bmb_log_error(msg);
+            return -1;
+        }
+        for (i = 0; i < want; i++) {
+            if (strchr(bench->trans_letters, opts->trans[i]) == NULL) {
+                snprintf(msg, sizeof(msg), "--trans: %s takes %s, not %c%s.", bench->routine_name,
+                         bench->trans_letters, opts->trans[i],
+                         opts->trans[i] == 'C' ? " (a real matrix's conjugate transpose is T)" : "");
+                bmb_log_error(msg);
+                return -1;
+            }
+        }
+        memcpy(bmb_trans, opts->trans, want);
+    }
+    if (opts->uplo != 0 && !(bench->args & BMB_ARG_UPLO)) {
+        snprintf(msg, sizeof(msg), "--uplo: %s has no triangle to choose.", bench->routine_name);
+        bmb_log_error(msg);
+        return -1;
+    }
+    if (opts->side != 0 && !(bench->args & BMB_ARG_SIDE)) {
+        snprintf(msg, sizeof(msg), "--side: %s has no side to choose.", bench->routine_name);
+        bmb_log_error(msg);
+        return -1;
+    }
+    if (opts->diag != 0 && !(bench->args & BMB_ARG_DIAG)) {
+        snprintf(msg, sizeof(msg), "--diag: %s has no triangular matrix to give a unit diagonal.",
+                 bench->routine_name);
+        bmb_log_error(msg);
+        return -1;
+    }
+    bmb_uplo = opts->uplo != 0 ? opts->uplo : 'U';
+    bmb_side = opts->side != 0 ? opts->side : 'L';
+    bmb_diag = opts->diag != 0 ? opts->diag : 'N';
+    return 0;
+}
+
 size_t bmb_bench_matrix_bytes(size_t rows, size_t cols, size_t size)
 {
     if (rows > SIZE_MAX / size / cols) {
@@ -742,6 +824,10 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     bmb_counts_only = counts != NULL && counts[0] != '\0' && counts[0] != '0';
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
+    if (bmb_check_args(bench, &opts) != 0) {
+        bmb_options_free(&opts);
+        return EXIT_FAILURE;
+    }
     if (opts.verify && bench->verify == NULL) {
         bmb_log_error("--verify: this benchmark has no check of its result.");
         bmb_options_free(&opts);
@@ -779,6 +865,14 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         rs.dim1_label = bench->dim1_label_dim3;
         rs.dim3_label = bench->dim3_label;
     }
+    rs.args = bench->args;
+    memcpy(rs.trans, bmb_trans, sizeof(rs.trans));
+    if (!(bench->args & BMB_ARG_TRANS2)) {
+        rs.trans[1] = '\0';
+    }
+    rs.uplo = bmb_uplo;
+    rs.side = bmb_side;
+    rs.diag = bmb_diag;
     rs.label = opts.label;
     rs.verified = opts.verify;
     rs.argc = argc;

@@ -132,6 +132,24 @@ into doubles first (`bmb_to_double`), exactly, from either precision.
 Whatever its precision, a routine has its family's dimensions and
 options.
 
+**Arguments (#221).** A family that has a BLAS argument --trans, --uplo,
+--side or --diag can choose says so in `main()`: `bench.args`, the
+`BMB_ARG_*` it takes (`BMB_ARG_TRANS2` for GEMM's two transposes), and
+`bench.trans_letters`, `BMB_TRANS_LETTERS` (C only in complex, where it
+is not T again). The driver refuses an argument the routine does not
+take, or a letter it does not, before anything runs; `setup()` reads
+the run's with `bmb_bench_trans(i)`, `bmb_bench_uplo()`,
+`bmb_bench_side()` and `bmb_bench_diag()`, which give the defaults (N,
+U, L, N) when none was given, and passes them to CBLAS through
+`BMB_CBLAS_TRANS()` and the others (`bmb_prec.h`). A transposed operand
+is stored the other way round (GEMM's op(A) is M x K, so A is K x M), and
+`verify()` reads it with the shape `BMB_VERIFY_OP()` gives. Counts that
+depend on an argument read it too: GEMV's bytes swap x's and y's lengths
+when A is transposed. The outputs record the arguments a routine takes,
+defaults included; `bmb_report` keeps the series of non-default ones
+apart, so that a file from before them and a run with the defaults are
+one series.
+
 - `flops`: real operations. A complex multiply-add is 4 multiplications
   and 4 additions, so a complex routine counts four times its real
   counterpart (`cgemm`/`zgemm` `8*M*N*K` where `dgemm` counts `2*M*N*K`,

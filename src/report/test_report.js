@@ -109,6 +109,18 @@
       eq(m.identities[0].files, ["a.json", "b.json"], "decision 1: the series remembers both files");
     });
 
+    test("arguments", function () {
+      function run(trans) { return { cache: "hot", arguments: { trans: trans } }; }
+      var m = R.buildModel([
+        entry("nn.json", gemm({ run: run("NN"), rows: [[1, 64, 64, 1e-5, 10, null]] })),
+        entry("old.json", gemm({ rows: [[1, 128, 128, 1e-5, 10, null]] })),
+        entry("nt.json", gemm({ run: run("NT"), rows: [[1, 64, 64, 1e-5, 9, null]] }))
+      ]);
+      eq(m.identities.length, 2, "#221: --trans NT is a series of its own; NN and a file from before --trans are one");
+      eq(names(m.identities), ["openblas", "openblas · trans NT"],
+         "#221: the series that differs is named by its arguments, the defaults' by nothing");
+    });
+
     test("gemm's K", function () {
       var m = R.buildModel([
         entry("k.json", gemm({ dim1Label: "Matrix dim1 (M)",

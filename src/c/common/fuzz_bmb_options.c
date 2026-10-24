@@ -106,6 +106,11 @@ static void check_options(const bmb_options_t *opts)
     check_range(&opts->thread_count);
 
     check(opts->iterations >= 1, "no iteration");
+    check(strspn(opts->trans, "NTC") == strlen(opts->trans) && strlen(opts->trans) <= 2
+          && (opts->uplo == 0 || opts->uplo == 'U' || opts->uplo == 'L')
+          && (opts->side == 0 || opts->side == 'L' || opts->side == 'R')
+          && (opts->diag == 0 || opts->diag == 'N' || opts->diag == 'U'),
+          "an argument letter a routine cannot be given");
     check(opts->align >= sizeof(void *) && (opts->align & (opts->align - 1)) == 0,
           "an alignment posix_memalign() refuses");
     check(opts->warmup_time >= 0.0 && opts->warmup_time <= 3600.0 && opts->min_time >= 0.0

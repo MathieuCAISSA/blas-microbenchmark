@@ -221,6 +221,62 @@ no transpose); only its storage changes.
 Ignored, with a warning, by the vector routines.
 Default: row.
 .TP
+.BI "\-\-trans " op
+Which matrix the routine is given:
+.B N
+as it is,
+.B T
+transposed,
+.B C
+conjugate-transposed (complex routines only: for a real one it is
+.BR T ).
+GEMM takes two letters, A's then B's
+.RB ( NT ,
+.BR TN ,
+\&...);
+GEMV one.
+The routines without a matrix to transpose refuse it.
+Default:
+.B N
+.RB ( NN
+for GEMM), what every routine always measured.
+.TP
+.BI "\-\-uplo " triangle
+The triangle of a triangular, symmetric or Hermitian matrix the routine
+reads:
+.B U
+or
+.BR L .
+Refused by the routines without one.
+Default:
+.BR U .
+.TP
+.BI "\-\-side " side
+Which side the matrix multiplies:
+.B L
+or
+.BR R .
+Refused by the routines without one.
+Default:
+.BR L .
+.TP
+.BI "\-\-diag " diagonal
+A triangular matrix's diagonal:
+.B N
+as stored, or
+.B U
+a unit diagonal, not read.
+Refused by the routines without one.
+Default:
+.BR N .
+.IP
+One value of each per run, as
+.BR \-\-layout :
+run once per variant to compare them.
+Every output records the ones the routine takes, defaults included, and
+.BR bmb_report (1)
+keeps the variants apart.
+.TP
 .BI "\-k, \-\-cache " state
 Where the operands of each timed call are:
 .B hot
@@ -589,6 +645,7 @@ Every result starts with where it came from:
 # command: bmb_dgemm \-m 512:2048 \-o dgemm.json
 # run: 0.2 s and 1 call of warm\-up, 10 samples, batch size chosen per point, hot cache
 # operands: aligned to 64 bytes, leading dimensions + 0
+# arguments: trans NN
 # compiler: gcc 13.3.0, CFLAGS \-g \-O2 \-fopenmp
 # environment: OMP_PROC_BIND=close
 # routine: dgemm
@@ -638,6 +695,9 @@ and the cache
 the operands' alignment and, for the routines with a matrix, the padding
 of their leading dimensions
 .RB ( \-a ", " \-p );
+the routine's arguments, those it takes
+.RB ( \-\-trans ", " \-\-uplo ", " \-\-side ", " \-\-diag ),
+defaults included;
 the compiler and the CFLAGS the benchmarks were built with (not the BLAS
 library's own);
 and the variables set among those that change what a BLAS library does:
@@ -732,6 +792,14 @@ with
 .BR align ,
 .B ld_pad
 (for the routines with a matrix),
+.B arguments
+(for the routines that have them: an object of
+.BR trans ,
+.BR uplo ,
+.B side
+and
+.BR diag ,
+those the routine takes),
 .B batch
 (when every point used the same:
 .B \-b
