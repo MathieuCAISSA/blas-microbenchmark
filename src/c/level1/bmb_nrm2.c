@@ -3,18 +3,21 @@
 #include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_prec.h"
 #include "bmb_verify.h"
 
+/* snrm2, dnrm2, scnrm2 and dznrm2, one per precision (bmb_prec.h): the Euclidean norm of x.
+ * The result is real for a complex vector too, which BLAS names for both
+ * precisions (BMB_CBLAS_REAL). */
 typedef struct {
     int n;
-    double *x;
-    volatile double sink;
+    bmb_real_t *x;
+    volatile bmb_real_t sink;
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
-    size_t i;
 
     (void) dim2;
     (void) thread_count;
@@ -25,15 +28,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     }
 
     ctx->n = (int) dim1;
-    ctx->x = bmb_bench_alloc(dim1 * sizeof(double));
+    ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     if (ctx->x == NULL) {
         free(ctx);
         return NULL;
     }
 
-    for (i = 0; i < dim1; i++) {
-        ctx->x[i] = (double) (i % 100) * 0.01 - 0.5;
-    }
+    bmb_fill(ctx->x, dim1, 0, 31);
 
     return ctx;
 }
@@ -42,7 +43,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    ctx->sink = cblas_dasum(ctx->n, ctx->x, 1);
+    ctx->sink = BMB_CBLAS_REAL(nrm2)(ctx->n, (const void *) ctx->x, 1);
 }
 
 static void teardown(void *vctx)
@@ -58,8 +59,7 @@ static double flops(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return d1;
+    return 2.0 * BMB_PARTS * d1;
 }
 
 static double bytes(size_t dim1, size_t dim2)
@@ -67,32 +67,42 @@ static double bytes(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return 8.0 * d1;
+    return (double) BMB_ELEM_BYTES * d1;
 }
 
-/* --verify: the sum of |x|, recomputed. */
+/* --verify: norm, recomputed in double. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
-    double got, want = 0.0;
+    bmb_real_t result;
+    double got, want, sum = 0.0;
     int i;
 
     call(ctx);
-    got = ctx->sink;
-    bmb_verify_perturb(&got);
+    result = ctx->sink;
+    bmb_perturb(&result);
+    got = result;
     for (i = 0; i < ctx->n; i++) {
-        want += fabs(ctx->x[i]);
+#if BMB_COMPLEX
+        const double re = ctx->x[2 * i], im = ctx->x[2 * i + 1];
+
+        sum += re * re + im * im;
+#else
+        const double xi = ctx->x[i];
+
+        sum += xi * xi;
+#endif
     }
-    return !bmb_verify_close("the sum", &got, &want, &want, 1,
-                             bmb_verify_tolerance((size_t) ctx->n), msg, size);
+    want = sqrt(sum);
+    return !bmb_verify_close("the norm", &got, &want, &want, 1,
+                             bmb_tolerance((size_t) ctx->n), msg, size);
 }
 
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
 
-    bench.routine_name = "dasum";
+    bench.routine_name = BMB_ROUTINE_REAL(nrm2);
     bench.dim1_label = "Vector size";
     bench.dim2_label = NULL;
     bench.use_vector_range = 1;

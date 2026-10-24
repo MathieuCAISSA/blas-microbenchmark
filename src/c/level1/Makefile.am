@@ -23,16 +23,26 @@ level1_PROGRAMS = \
 	double/bmb_dscal \
 	double/bmb_dswap
 
-double_bmb_dasum_SOURCES = double/bmb_dasum.c
-single_bmb_saxpy_SOURCES = single/bmb_saxpy.c
-double_bmb_daxpy_SOURCES = double/bmb_daxpy.c
-double_bmb_dcopy_SOURCES = double/bmb_dcopy.c
-single_bmb_sdot_SOURCES = single/bmb_sdot.c
-double_bmb_ddot_SOURCES = double/bmb_ddot.c
-complex16_bmb_zdotc_SOURCES = complex16/bmb_zdotc.c
-double_bmb_dnrm2_SOURCES = double/bmb_dnrm2.c
-double_bmb_dscal_SOURCES = double/bmb_dscal.c
-double_bmb_dswap_SOURCES = double/bmb_dswap.c
+double_bmb_dasum_SOURCES = bmb_asum.c
+double_bmb_dasum_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+single_bmb_saxpy_SOURCES = bmb_axpy.c
+single_bmb_saxpy_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_daxpy_SOURCES = bmb_axpy.c
+double_bmb_daxpy_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dcopy_SOURCES = bmb_copy.c
+double_bmb_dcopy_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+single_bmb_sdot_SOURCES = bmb_dot.c
+single_bmb_sdot_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_ddot_SOURCES = bmb_dot.c
+double_bmb_ddot_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex16_bmb_zdotc_SOURCES = bmb_dotc.c
+complex16_bmb_zdotc_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+double_bmb_dnrm2_SOURCES = bmb_nrm2.c
+double_bmb_dnrm2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dscal_SOURCES = bmb_scal.c
+double_bmb_dscal_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dswap_SOURCES = bmb_swap.c
+double_bmb_dswap_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
 
 ROUTINE_TESTS = \
 	double/test_bmb_dasum.sh \

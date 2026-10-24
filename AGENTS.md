@@ -226,12 +226,12 @@ src/c/common/    # bmb_options (CLI parsing), bmb_bench (sweep/timing driver),
                  # its seed corpus and dictionary
 src/c/netlib/    # the CBLAS shim over Netlib's Fortran BLAS, and its test
 src/c/mkl/       # the cblas.h MKL lacks, over its mkl_cblas.h
-src/c/level<N>/  # a directory per precision (single, double, complex,
-                 # complex16), each routine's test in it, and its source
-                 # if it has one of its own (#148); the sources of the
-                 # families (bmb_<family>.c, one for all its precisions,
-                 # #166) and the level-wide tests beside them. Which
-                 # routine is where: src/c/routines.txt
+src/c/level<N>/  # the sources of the families (bmb_<family>.c, one for
+                 # all its precisions, #166) and the level-wide tests; a
+                 # directory per precision (single, double, complex,
+                 # complex16) with each routine's test, where its program
+                 # is built (#148). Which routine is what:
+                 # src/c/routines.txt
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)

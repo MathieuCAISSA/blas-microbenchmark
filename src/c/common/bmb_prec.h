@@ -30,6 +30,8 @@ typedef float bmb_real_t;
 #define BMB_R(x) x##f
 #define BMB_CBLAS_(f) cblas_s##f
 #define BMB_ROUTINE_(f) "s" #f
+#define BMB_CBLAS_REAL_(f) cblas_s##f
+#define BMB_ROUTINE_REAL_(f) "s" #f
 #elif defined(BMB_PREC_D)
 typedef double bmb_real_t;
 #define BMB_COMPLEX 0
@@ -38,6 +40,8 @@ typedef double bmb_real_t;
 #define BMB_R(x) x
 #define BMB_CBLAS_(f) cblas_d##f
 #define BMB_ROUTINE_(f) "d" #f
+#define BMB_CBLAS_REAL_(f) cblas_d##f
+#define BMB_ROUTINE_REAL_(f) "d" #f
 #elif defined(BMB_PREC_C)
 typedef float bmb_real_t;
 #define BMB_COMPLEX 1
@@ -46,6 +50,8 @@ typedef float bmb_real_t;
 #define BMB_R(x) x##f
 #define BMB_CBLAS_(f) cblas_c##f
 #define BMB_ROUTINE_(f) "c" #f
+#define BMB_CBLAS_REAL_(f) cblas_sc##f
+#define BMB_ROUTINE_REAL_(f) "sc" #f
 #elif defined(BMB_PREC_Z)
 typedef double bmb_real_t;
 #define BMB_COMPLEX 1
@@ -54,6 +60,8 @@ typedef double bmb_real_t;
 #define BMB_R(x) x
 #define BMB_CBLAS_(f) cblas_z##f
 #define BMB_ROUTINE_(f) "z" #f
+#define BMB_CBLAS_REAL_(f) cblas_dz##f
+#define BMB_ROUTINE_REAL_(f) "dz" #f
 #else
 #error "define one of BMB_PREC_S, BMB_PREC_D, BMB_PREC_C, BMB_PREC_Z"
 #endif
@@ -64,6 +72,11 @@ typedef double bmb_real_t;
  * it is pasted: BMB_CBLAS(BMB_OP), with BMB_OP defined as symm or hemm. */
 #define BMB_CBLAS(f) BMB_CBLAS_(f)
 #define BMB_ROUTINE(f) BMB_ROUTINE_(f)
+/* The same for the routines that return a real from a complex vector,
+ * named for both precisions: scasum and dznrm2, where the real ones are
+ * sasum and dnrm2. */
+#define BMB_CBLAS_REAL(f) BMB_CBLAS_REAL_(f)
+#define BMB_ROUTINE_REAL(f) BMB_ROUTINE_REAL_(f)
 
 /* A scalar is stored as BMB_PARTS reals; BMB_SCALAR passes it as CBLAS
  * takes it: a real one by value, a complex one by its address. An array
