@@ -21,44 +21,49 @@
  * larger elements checks its leading dimensions for itself. BMB_R(x): the
  * literal x in the real type, so that a fill computes in that type, as
  * the one-precision sources did. BMB_CBLAS(f): the CBLAS function of
- * family f; BMB_ROUTINE(f): its name. */
+ * family f; BMB_ROUTINE(f): its name (both defined below). */
 #if defined(BMB_PREC_S)
 typedef float bmb_real_t;
 #define BMB_COMPLEX 0
 #define BMB_SINGLE 1
 #define BMB_ELEM_BYTES 4
 #define BMB_R(x) x##f
-#define BMB_CBLAS(f) cblas_s##f
-#define BMB_ROUTINE(f) "s" #f
+#define BMB_CBLAS_(f) cblas_s##f
+#define BMB_ROUTINE_(f) "s" #f
 #elif defined(BMB_PREC_D)
 typedef double bmb_real_t;
 #define BMB_COMPLEX 0
 #define BMB_SINGLE 0
 #define BMB_ELEM_BYTES 8
 #define BMB_R(x) x
-#define BMB_CBLAS(f) cblas_d##f
-#define BMB_ROUTINE(f) "d" #f
+#define BMB_CBLAS_(f) cblas_d##f
+#define BMB_ROUTINE_(f) "d" #f
 #elif defined(BMB_PREC_C)
 typedef float bmb_real_t;
 #define BMB_COMPLEX 1
 #define BMB_SINGLE 1
 #define BMB_ELEM_BYTES 8
 #define BMB_R(x) x##f
-#define BMB_CBLAS(f) cblas_c##f
-#define BMB_ROUTINE(f) "c" #f
+#define BMB_CBLAS_(f) cblas_c##f
+#define BMB_ROUTINE_(f) "c" #f
 #elif defined(BMB_PREC_Z)
 typedef double bmb_real_t;
 #define BMB_COMPLEX 1
 #define BMB_SINGLE 0
 #define BMB_ELEM_BYTES 16
 #define BMB_R(x) x
-#define BMB_CBLAS(f) cblas_z##f
-#define BMB_ROUTINE(f) "z" #f
+#define BMB_CBLAS_(f) cblas_z##f
+#define BMB_ROUTINE_(f) "z" #f
 #else
 #error "define one of BMB_PREC_S, BMB_PREC_D, BMB_PREC_C, BMB_PREC_Z"
 #endif
 
 #define BMB_PARTS (BMB_COMPLEX ? 2 : 1)
+
+/* Through one more macro, so that a family's argument is expanded before
+ * it is pasted: BMB_CBLAS(BMB_OP), with BMB_OP defined as symm or hemm. */
+#define BMB_CBLAS(f) BMB_CBLAS_(f)
+#define BMB_ROUTINE(f) BMB_ROUTINE_(f)
 
 /* A scalar is stored as BMB_PARTS reals; BMB_SCALAR passes it as CBLAS
  * takes it: a real one by value, a complex one by its address. An array
@@ -70,9 +75,10 @@ typedef double bmb_real_t;
 #define BMB_SCALAR(s) ((s)[0])
 #endif
 
-/* The FLOPs of one multiply-add: a complex one is 4 real multiplications
- * and 4 additions. */
-#define BMB_MADD_FLOPS (BMB_COMPLEX ? 8.0 : 2.0)
+/* A complex count is four times the real one: a complex multiply-add is
+ * 4 real multiplications and 4 additions, where a real one is 2. */
+#define BMB_FLOP_FACTOR (BMB_COMPLEX ? 4.0 : 1.0)
+#define BMB_MADD_FLOPS (2.0 * BMB_FLOP_FACTOR)
 
 /* --verify's references and tolerance for this precision, still computed
  * in double (bmb_verify.h). A single-precision result's tolerance counts
