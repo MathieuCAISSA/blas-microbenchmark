@@ -8,6 +8,8 @@ if [ -f configure ]; then
     echo "configure already exists; regenerating it."
 fi
 
+# The lists of routines first: the levels' Makefile.am are among them.
+sh src/c/routines.sh
 autoreconf -fi
 
 echo

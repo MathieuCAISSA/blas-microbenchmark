@@ -10,7 +10,9 @@ TESTS = test_bmb_verify.sh test_bmb_threads_env.sh test_bmb_batch.sh \
 AM_TESTS_ENVIRONMENT = top_builddir='$(top_builddir)'; export top_builddir;
 
 # test_helper.sh is sourced by every per-routine smoke test in level{1,2,3}.
-EXTRA_DIST = test_helper.sh bmb_failalloc.c $(TESTS)
+# routines.txt is the table of routines, routines.sh what writes their
+# lists from it (tests/test_routines.sh checks them).
+EXTRA_DIST = test_helper.sh bmb_failalloc.c routines.txt routines.sh $(TESTS)
 
 # The fault-injection library test_bmb_alloc_failures.sh preloads: built
 # for make check only and never installed, and without the build's CFLAGS,

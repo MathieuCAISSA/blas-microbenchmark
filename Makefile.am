@@ -17,5 +17,5 @@ EXTRA_DIST = README.md AGENTS.md LICENSE autogen.sh \
 
 TESTS = tests/test_release_files.sh tests/test_editorconfig.sh \
 	tests/test_doc_links.sh tests/test_actions_pinned.sh tests/test_configure_paths.sh \
-	tests/test_coverage_exclusions.sh
+	tests/test_coverage_exclusions.sh tests/test_routines.sh
 AM_TESTS_ENVIRONMENT = PACKAGE_VERSION='$(PACKAGE_VERSION)'; export PACKAGE_VERSION;

@@ -115,11 +115,13 @@ noise. `man bmb_report` has the details.
 
 ## The benchmarks
 
+<!-- BEGIN routines (readme): written by src/c/routines.sh -->
 | Level | Double | Single | Complex |
 | --- | --- | --- | --- |
 | **1** — vectors | `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap` | `saxpy` `sdot` | `zdotc` |
 | **2** — matrix × vector | `dgemv` `dger` `dsymv` `dsyr` `dsyr2` `dtrmv` `dtrsv` | `sgemv` | |
-| **3** — matrix × matrix | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `ssyrk` `strsm` | `cgemm` `zgemm` `ztrsm` `zherk` `zhemm` |
+| **3** — matrix × matrix | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `ssyrk` `strsm` | `cgemm` `zgemm` `zhemm` `zherk` `ztrsm` |
+<!-- END routines (readme) -->
 
 Each is `bmb_<routine>`. Level 1 and 2 report GFLOP/s and GB/s, level 3
 GFLOP/s.

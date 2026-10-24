@@ -183,17 +183,31 @@ with a `test_bmb_<routine>.sh` smoke test beside it: copy one from the
 same directory, a single `bmb_check_run` call naming the binary
 (`./<precision>/bmb_<routine>`, since tests run from the level's build
 directory), the routine and how many data rows the sweep should produce;
-`chmod +x` it. Wire both into the level's `Makefile.am`: the program in
-the `level<N>_PROGRAMS` list (`<precision>/bmb_<routine>`), its
-`<precision>_bmb_<routine>_SOURCES`, and the test in `TESTS`, which
-`EXTRA_DIST` follows. Add the routine to `ROUTINES` in `man/Makefile.am`
-and to the NAME line and the routine tables of
-`man/blas-microbenchmark.1.in` (`test_man_content.sh` fails until all
-three are done), to the `LEVEL` table of `src/report/report.html`, which
-orders the report's sections and names each routine's level
-(`test_bmb_report.sh` fails until it is there), and to `ROUTINES` in
-`packaging/reframe/blas_microbenchmark.py`. Then `autoreconf -fi` and
-rebuild.
+`chmod +x` it.
+
+Then add the routine to **`src/c/routines.txt`**, one line: its name,
+level, precision and what `-m` and `-M` are (#199). Every list of the
+routines is written from that table, between `BEGIN routines (...)` and
+`END routines (...)` lines, by `src/c/routines.sh`, which `./autogen.sh`
+runs before `autoreconf`:
+
+- the level's `Makefile.am`: the program in `level<N>_PROGRAMS`
+  (`<precision>/bmb_<routine>`), its `_SOURCES`, its test in
+  `ROUTINE_TESTS`, which `TESTS` and `EXTRA_DIST` follow;
+- `ROUTINES` in `man/Makefile.am`, which writes the `man bmb_<routine>`
+  pages;
+- the NAME line of `man/blas-microbenchmark.1.in`, and its two tables:
+  the routines by level, and which dimension `-m` and `-M` are;
+- the README's table of the benchmarks;
+- the `LEVEL` table of `src/report/report.html`, which orders the
+  report's sections and names each routine's level;
+- `ROUTINES` in `packaging/reframe/blas_microbenchmark.py`.
+
+Edit the table, never a list: `make check` fails while a list is not
+what the table gives (`tests/test_routines.sh`), and the next run of
+`routines.sh` would put it back. What is said about the routines in
+prose, in the man page and here, is still written by hand. Then
+`./autogen.sh` and rebuild.
 
 **Keep the sizes in those scripts tiny.** They run on every `make check`,
 and a benchmark asked for a big size allocates it for real: a test that

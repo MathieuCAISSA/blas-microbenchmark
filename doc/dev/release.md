@@ -59,9 +59,10 @@ routine waits for the next minor.
      `configure`'s `--with-blas-backend`, the README, the man page
      (DESCRIPTION, THREADS, ENVIRONMENT), [backends](backends.md),
      [CI](ci.md), the site's `backends.html` and `install.html` (with
-     the Spack providers, the image tags and the cosign identity). Routines: AGENTS.md's layout, the man page's table,
-     the report's `LEVEL`, ReFrame's `ROUTINES`. CI jobs: [CI](ci.md),
-     each with its comment. Tests: AGENTS.md's table. The layout:
+     the Spack providers, the image tags and the cosign identity).
+     Routines: `src/c/routines.txt`, whose lists `test_routines.sh`
+     checks, and what the man page and [benchmarks](benchmarks.md) say
+     of them in prose. CI jobs: [CI](ci.md), each with its comment. Tests: AGENTS.md's table. The layout:
      AGENTS.md's.
    - [ ] `CHANGELOG.md`'s `[Unreleased]` says everything a user would
      notice.
