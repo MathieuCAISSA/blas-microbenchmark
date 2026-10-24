@@ -5,11 +5,13 @@ How a benchmark is written, checked and measured. Start at
 
 ## Adding a new BLAS routine benchmark
 
-Every routine file follows the same shape (see
-`src/c/level1/double/bmb_dasum.c` for the simplest example,
+A routine is a precision of a family, and a family is one source,
+`src/c/level<N>/bmb_<family>.c`, compiled once for each precision the
+table gives it (see *Other precisions: families*, below). Every source
+follows the same shape (see
+`src/c/level1/bmb_asum.c` for the simplest example,
 `src/c/level2/bmb_trsv.c` for one with an in-place buffer,
-`src/c/level3/bmb_syrk.h` for a two-real-dimension level 3 routine,
-written once for every precision):
+`src/c/level3/bmb_syrk.h` for a two-real-dimension level 3 routine):
 
 1. A `bmb_ctx_t` struct holding the routine's operands (`malloc`'d in
    `setup()`, freed in `teardown()`).
@@ -85,7 +87,9 @@ changes:
   compare: only a routine of 16-byte elements checks its leading
   dimensions for itself (below);
 - the CBLAS function and the routine's name, `BMB_CBLAS(gemm)` and
-  `BMB_ROUTINE(gemm)`;
+  `BMB_ROUTINE(gemm)`, and for a routine that returns a real from a
+  complex vector, which BLAS names for both precisions (scasum, dznrm2),
+  `BMB_CBLAS_REAL(asum)` and `BMB_ROUTINE_REAL(asum)`;
 - scalars, stored as `BMB_PARTS` reals and passed as CBLAS takes them,
   by value or by address (`BMB_SCALAR`, `bmb_set_scalar`); an array is
   passed as `(const void *)`, which converts to whatever pointer type a
@@ -99,17 +103,18 @@ What is the operation's stays in its source, with `#if BMB_COMPLEX` or
 `#if BMB_SINGLE` where the precisions differ in substance, as single
 precision's scale in GEMM's check. Adding a precision BLAS has to a
 family is one line of the table, and its `src/c/netlib/` entry point for
-the Netlib build. Every level 3 routine is in a family, GEMM since #200,
-the others since #201, and every level 2 one since #202: each checked to
-give exactly what its own file did (the corrupted check's values to the
+the Netlib build. Every routine is in a family: GEMM since #200, the
+rest of level 3 since #201, level 2 since #202, level 1 since #203, each
+checked to give exactly what its own file did (the corrupted check's values to the
 digit, the counts, the copies `--cache cold` takes, every field the
 clock does not change), and the precisions BLAS has that the table does
-not list yet (`ssymm`, `ctrsm`, `zsyr2k`, `cgemv`, `strsv`, `sger`, ...)
-seen to compile, pass `--verify` in both layouts, padded or not, and
-catch a corruption. A family BLAS has in real precision only (ger, symv,
-syr, syr2: their complex counterparts, geru and gerc, hemv, her, her2,
-are families of their own) stops at an `#error` if asked for a complex
-one.
+not list yet (`ssymm`, `ctrsm`, `zsyr2k`, `cgemv`, `strsv`, `sger`,
+`scasum`, `zaxpy`, `cdotc`, ...) seen to compile, pass `--verify` in both
+layouts, padded or not, and catch a corruption. A family BLAS has in one
+kind of precision only stops at an `#error` if asked for the other: ger,
+symv, syr, syr2 and dot are real (their complex counterparts, geru and
+gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc
+complex.
 
 The Hermitian routines share their symmetric family's source: symm and
 hemm, syrk and herk, each pair from a header (`bmb_symm.h`, `bmb_syrk.h`)
@@ -124,11 +129,8 @@ caught.
 A level 2 check is a recomputation in double, so each operand is copied
 into doubles first (`bmb_to_double`), exactly, from either precision.
 
-Level 1 is still a file per routine, other precisions the double one's
-with another element type (`saxpy`, `sdot`), until #203 makes families
-of them. `zdotc` has no real counterpart, and follows `ddot` with the
-first vector conjugated. Their dimensions and options are the double
-ones'.
+Whatever its precision, a routine has its family's dimensions and
+options.
 
 - `flops`: real operations. A complex multiply-add is 4 multiplications
   and 4 additions, so a complex routine counts four times its real
@@ -236,17 +238,20 @@ machine's peak) and every level 2 routine on roughly the same GB/s. A
 formula off by a factor of two shows up immediately as one routine
 beating the rest.
 
-Then put the file in its level's directory for its precision (`single`,
-`double`, `complex` or `complex16`, which is double-precision complex),
-with a `test_bmb_<routine>.sh` smoke test beside it: copy one from the
+A new family's source goes in its level's directory
+(`src/c/level<N>/bmb_<family>.c`). Each routine has a smoke test,
+`test_bmb_<routine>.sh`, in the level's directory for its precision
+(`single`, `double`, `complex` or `complex16`, which is double-precision
+complex), where its program is built: copy one from the
 same directory, a single `bmb_check_run` call naming the binary
 (`./<precision>/bmb_<routine>`, since tests run from the level's build
 directory), the routine and how many data rows the sweep should produce;
 `chmod +x` it.
 
 Then add the routine to **`src/c/routines.txt`**, one line: its name,
-level, precision, what `-m` and `-M` are (#199), and its family, or `-`
-for a source of its own (see below). Every list of the
+level, precision, what `-m` and `-M` are (#199), and its family (see
+below). A new precision of an existing family is that line, its smoke
+test and its Netlib entry point; no source. Every list of the
 routines is written from that table, between `BEGIN routines (...)` and
 `END routines (...)` lines, by `src/c/routines.sh`, which `./autogen.sh`
 runs before `autoreconf`:

@@ -3,19 +3,25 @@
 #include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_prec.h"
 #include "bmb_verify.h"
+
+/* sdot and ddot, one per precision (bmb_prec.h): x' * y. The complex
+ * ones, dotc and dotu, are families of their own. */
+#if BMB_COMPLEX
+#error "dot is real: the complex ones are dotc and dotu"
+#endif
 
 typedef struct {
     int n;
-    double *x;
-    double *y;
-    volatile double sink;
+    bmb_real_t *x;
+    bmb_real_t *y;
+    volatile bmb_real_t sink;
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
-    size_t i;
 
     (void) dim2;
     (void) thread_count;
@@ -26,8 +32,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     }
 
     ctx->n = (int) dim1;
-    ctx->x = bmb_bench_alloc(dim1 * sizeof(double));
-    ctx->y = bmb_bench_alloc(dim1 * sizeof(double));
+    ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
+    ctx->y = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     if (ctx->x == NULL || ctx->y == NULL) {
         free(ctx->x);
         free(ctx->y);
@@ -35,10 +41,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < dim1; i++) {
-        ctx->x[i] = (double) (i % 100) * 0.01 - 0.5;
-        ctx->y[i] = (double) ((i + 7) % 100) * 0.01 - 0.5;
-    }
+    bmb_fill(ctx->x, dim1, 0, 31);
+    bmb_fill(ctx->y, dim1, 7, 53);
 
     return ctx;
 }
@@ -47,7 +51,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    ctx->sink = cblas_ddot(ctx->n, ctx->x, 1, ctx->y, 1);
+    ctx->sink = BMB_CBLAS(dot)(ctx->n, ctx->x, 1, ctx->y, 1);
 }
 
 static void teardown(void *vctx)
@@ -64,8 +68,7 @@ static double flops(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return 2.0 * d1;
+    return BMB_MADD_FLOPS * d1;
 }
 
 static double bytes(size_t dim1, size_t dim2)
@@ -73,33 +76,36 @@ static double bytes(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return 16.0 * d1;
+    return 2.0 * BMB_ELEM_BYTES * d1;
 }
 
-/* --verify: the dot product, recomputed. */
+/* --verify: the dot product, recomputed in double. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
+    bmb_real_t result;
     double got, want = 0.0, scale = 0.0;
     int i;
 
     call(ctx);
-    got = ctx->sink;
-    bmb_verify_perturb(&got);
+    result = ctx->sink;
+    bmb_perturb(&result);
+    got = result;
     for (i = 0; i < ctx->n; i++) {
-        want += ctx->x[i] * ctx->y[i];
-        scale += fabs(ctx->x[i] * ctx->y[i]);
+        const double p = (double) ctx->x[i] * ctx->y[i];
+
+        want += p;
+        scale += fabs(p);
     }
     return !bmb_verify_close("the dot product", &got, &want, &scale, 1,
-                             bmb_verify_tolerance((size_t) ctx->n), msg, size);
+                             bmb_tolerance((size_t) ctx->n), msg, size);
 }
 
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
 
-    bench.routine_name = "ddot";
+    bench.routine_name = BMB_ROUTINE(dot);
     bench.dim1_label = "Vector size";
     bench.dim2_label = NULL;
     bench.use_vector_range = 1;

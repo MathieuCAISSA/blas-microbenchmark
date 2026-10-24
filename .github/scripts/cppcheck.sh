@@ -40,7 +40,7 @@ run() {
 # the tree, and read in one run per precision, with that precision's.
 # family_sources [P]: the family sources, of precision P's routines only.
 family_sources() {
-    awk -v p="$1" '!/^#/ && NF == 5 && $5 != "-" && (p == "" || $3 == p) {
+    awk -v p="$1" '!/^#/ && NF == 5 && (p == "" || $3 == p) {
         print "src/c/level" $2 "/bmb_" $5 ".c"
     }' src/c/routines.txt | sort -u
 }

@@ -1,14 +1,15 @@
 #include <cblas.h>
 #include <stdlib.h>
-#include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_prec.h"
 #include "bmb_verify.h"
 
+/* scopy, dcopy, ccopy and zcopy, one per precision (bmb_prec.h): y = x. */
 typedef struct {
     int n;
-    double *x;
-    volatile double sink;
+    bmb_real_t *x;
+    bmb_real_t *y;
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
@@ -25,14 +26,18 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     }
 
     ctx->n = (int) dim1;
-    ctx->x = bmb_bench_alloc(dim1 * sizeof(double));
-    if (ctx->x == NULL) {
+    ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
+    ctx->y = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
+    if (ctx->x == NULL || ctx->y == NULL) {
+        free(ctx->x);
+        free(ctx->y);
         free(ctx);
         return NULL;
     }
 
-    for (i = 0; i < dim1; i++) {
-        ctx->x[i] = (double) (i % 100) * 0.01 - 0.5;
+    bmb_fill(ctx->x, dim1, 0, 31);
+    for (i = 0; i < BMB_PARTS * dim1; i++) {
+        ctx->y[i] = BMB_R(0.0);
     }
 
     return ctx;
@@ -42,7 +47,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    ctx->sink = cblas_dnrm2(ctx->n, ctx->x, 1);
+    BMB_CBLAS(copy)(ctx->n, (const void *) ctx->x, 1, (void *) ctx->y, 1);
 }
 
 static void teardown(void *vctx)
@@ -50,16 +55,8 @@ static void teardown(void *vctx)
     bmb_ctx_t *ctx = vctx;
 
     free(ctx->x);
+    free(ctx->y);
     free(ctx);
-}
-
-static double flops(size_t dim1, size_t dim2)
-{
-    const double d1 = (double) dim1;
-
-    (void) dim2;
-
-    return 2.0 * d1;
 }
 
 static double bytes(size_t dim1, size_t dim2)
@@ -67,33 +64,37 @@ static double bytes(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return 8.0 * d1;
+    return 2.0 * BMB_ELEM_BYTES * d1;
 }
 
-/* --verify: the norm, recomputed. */
+/* --verify: y is now exactly x. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
-    double got, want, sum = 0.0;
-    int i;
+    const size_t p = BMB_PARTS;
+    size_t n = (size_t) ctx->n;
+    double *got = malloc(2 * p * n * sizeof(double));
+    int ok;
+
+    if (got == NULL) {
+        return -1;
+    }
+    double *x = got + p * n;
 
     call(ctx);
-    got = ctx->sink;
-    bmb_verify_perturb(&got);
-    for (i = 0; i < ctx->n; i++) {
-        sum += ctx->x[i] * ctx->x[i];
-    }
-    want = sqrt(sum);
-    return !bmb_verify_close("the norm", &got, &want, &want, 1,
-                             bmb_verify_tolerance((size_t) ctx->n), msg, size);
+    bmb_perturb(&ctx->y[0]);
+    bmb_to_double(got, ctx->y, n);
+    bmb_to_double(x, ctx->x, n);
+    ok = bmb_verify_close("y" BMB_PARTS_NOTE, got, x, NULL, p * n, 0.0, msg, size);
+    free(got);
+    return !ok;
 }
 
 int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
 
-    bench.routine_name = "dnrm2";
+    bench.routine_name = BMB_ROUTINE(copy);
     bench.dim1_label = "Vector size";
     bench.dim2_label = NULL;
     bench.use_vector_range = 1;
@@ -102,7 +103,6 @@ int main(int argc, char *argv[])
     bench.call = call;
     bench.teardown = teardown;
     bench.verify = verify;
-    bench.flops = flops;
     bench.bytes = bytes;
 
     return bmb_benchmark_main(argc, argv, &bench);

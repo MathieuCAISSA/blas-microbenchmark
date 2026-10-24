@@ -16,20 +16,19 @@
 #   n    -m is N (square; no -M)
 # family: the operation, whose source, src/c/level<level>/bmb_<family>.c,
 # is compiled once for each of its precisions (#166, src/c/common/
-# bmb_prec.h); - for a routine still in a source of its own,
-# <precision directory>/bmb_<routine>.c.
+# bmb_prec.h).
 #
 # routine  level  precision  sizes  family
-dasum      1      d          v      -
-saxpy      1      s          v      -
-daxpy      1      d          v      -
-dcopy      1      d          v      -
-sdot       1      s          v      -
-ddot       1      d          v      -
-zdotc      1      z          v      -
-dnrm2      1      d          v      -
-dscal      1      d          v      -
-dswap      1      d          v      -
+dasum      1      d          v      asum
+saxpy      1      s          v      axpy
+daxpy      1      d          v      axpy
+dcopy      1      d          v      copy
+sdot       1      s          v      dot
+ddot       1      d          v      dot
+zdotc      1      z          v      dotc
+dnrm2      1      d          v      nrm2
+dscal      1      d          v      scal
+dswap      1      d          v      swap
 sgemv      2      s          mn     gemv
 dgemv      2      d          mn     gemv
 dger       2      d          mn     ger

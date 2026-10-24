@@ -41,7 +41,7 @@ block() {
         /^#/ || NF == 0 { next }
         {
             if (NF != 5 || $2 !~ /^[123]$/ || !($3 in dir) || !($4 in size) ||
-                $1 !~ /^[a-z][a-z0-9]*$/ || $5 !~ /^(-|[a-z][a-z0-9]*)$/) {
+                $1 !~ /^[a-z][a-z0-9]*$/ || $5 !~ /^[a-z][a-z0-9]*$/) {
                 printf "routines.txt:%d: not \"routine level precision sizes family\": %s\n", NR, $0 >"/dev/stderr"
                 bad = 1
                 exit 1
@@ -84,12 +84,8 @@ block() {
                 for (i = 1; i <= n; i++) {
                     if (level[i] != l) { continue }
                     p = dir[prec[i]] "_bmb_" name[i]
-                    if (family[i] == "-") {
-                        printf "%s_SOURCES = %s/bmb_%s.c\n", p, dir[prec[i]], name[i]
-                    } else {
-                        printf "%s_SOURCES = bmb_%s.c\n", p, family[i]
-                        printf "%s_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_%s\n", p, toupper(prec[i])
-                    }
+                    printf "%s_SOURCES = bmb_%s.c\n", p, family[i]
+                    printf "%s_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_%s\n", p, toupper(prec[i])
                 }
                 printf "\nROUTINE_TESTS ="
                 for (i = 1; i <= n; i++) {
