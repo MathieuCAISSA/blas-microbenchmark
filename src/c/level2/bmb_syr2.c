@@ -3,27 +3,33 @@
 #include <math.h>
 
 #include "bmb_bench.h"
+#include "bmb_prec.h"
 #include "bmb_verify.h"
 
-/* Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
+/* ssyr2 and dsyr2, one per precision (bmb_prec.h); the complex one,
+ * her2, is a family of its own.
+ * Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
  * A (N x N, upper triangle) is updated in place: A += alpha*(x*y^T + y*x^T). */
+#if BMB_COMPLEX
+#error "syr2 is real: the complex one is her2"
+#endif
+
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
     int n;
     int lda;
-    double alpha;
-    double *a;
-    double *x;
-    double *y;
+    bmb_real_t alpha;
+    bmb_real_t *a;
+    bmb_real_t *x;
+    bmb_real_t *y;
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t n = dim1;
-    const size_t lda = bmb_bench_ld(n, n, sizeof(double));
-    size_t i;
+    const size_t lda = bmb_bench_ld(n, n, BMB_ELEM_BYTES);
 
     (void) dim2;
     (void) thread_count;
@@ -35,12 +41,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->lda = (int) lda;
-    ctx->alpha = 1.0e-6;
+    /* Small alpha: A accumulates rank-1 updates across iterations. */
+    ctx->alpha = BMB_R(1.0e-6);
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->a = bmb_bench_alloc(n * lda * sizeof(double));
-    ctx->x = bmb_bench_alloc(n * sizeof(double));
-    ctx->y = bmb_bench_alloc(n * sizeof(double));
+    ctx->a = bmb_bench_alloc(n * lda * BMB_ELEM_BYTES);
+    ctx->x = bmb_bench_alloc(n * BMB_ELEM_BYTES);
+    ctx->y = bmb_bench_alloc(n * BMB_ELEM_BYTES);
     if (ctx->a == NULL || ctx->x == NULL || ctx->y == NULL) {
         free(ctx->a);
         free(ctx->x);
@@ -49,13 +56,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < n * lda; i++) {
-        ctx->a[i] = (double) (i % 100) * 0.01 - 0.5;
-    }
-    for (i = 0; i < n; i++) {
-        ctx->x[i] = (double) (i % 100) * 0.01 - 0.5;
-        ctx->y[i] = (double) ((i + 7) % 100) * 0.01 - 0.5;
-    }
+    bmb_fill(ctx->a, n * lda, 0, 0);
+    bmb_fill(ctx->x, n, 0, 0);
+    bmb_fill(ctx->y, n, 7, 0);
 
     return ctx;
 }
@@ -64,7 +67,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsyr2(ctx->order, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1, ctx->a, ctx->lda);
+    BMB_CBLAS(syr2)(ctx->order, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1,
+                    ctx->a, ctx->lda);
 }
 
 static void teardown(void *vctx)
@@ -82,7 +86,6 @@ static double flops(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
     return 2.0 * d1 * (d1 + 1.0);
 }
 
@@ -91,18 +94,19 @@ static double bytes(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return 8.0 * (d1 * (d1 + 1.0) + 2.0 * d1);
+    return (double) BMB_ELEM_BYTES * (d1 * (d1 + 1.0) + 2.0 * d1);
 }
 
-/* --verify, by random projection: A*r against A0*r plus the update's
- * upper triangle times r, the strictly lower part having to stay as it
- * was -- which the projection of the whole matrix also checks. */
+/* --verify, by random projection in double: A*r against A0*r plus the
+ * update's upper triangle times r, the strictly lower part having to
+ * stay as it was -- which the projection of the whole matrix also
+ * checks. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i;
     double *r = malloc((n + 6 * m) * sizeof(double));
+    const double alpha = ctx->alpha;
     double s1 = 0.0, s1abs = 0.0, s2 = 0.0, s2abs = 0.0;
     int ok;
 
@@ -113,20 +117,21 @@ static int verify(void *vctx, char *msg, size_t size)
     double *want = p0 + 4 * m, *scale = p0 + 5 * m;
 
     bmb_verify_probe(r, n);
-
-    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p0, p0abs);
+    bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p0, p0abs);
     call(ctx);
-    bmb_verify_perturb(&ctx->a[0]);
-    bmb_verify_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
+    bmb_perturb(&ctx->a[0]);
+    bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
     for (i = m; i-- > 0;) {
-        s1 += ctx->y[i] * r[i];
-        s1abs += fabs(ctx->y[i] * r[i]);
-        s2 += ctx->x[i] * r[i];
-        s2abs += fabs(ctx->x[i] * r[i]);
-        want[i] = p0[i] + ctx->alpha * (ctx->x[i] * s1 + ctx->y[i] * s2);
-        scale[i] = pabs[i] + p0abs[i] + fabs(ctx->alpha) * (fabs(ctx->x[i]) * s1abs + fabs(ctx->y[i]) * s2abs);
+        const double xi = ctx->x[i], yi = ctx->y[i];
+
+        s1 += yi * r[i];
+        s1abs += fabs(yi * r[i]);
+        s2 += xi * r[i];
+        s2abs += fabs(xi * r[i]);
+        want[i] = p0[i] + alpha * (xi * s1 + yi * s2);
+        scale[i] = pabs[i] + p0abs[i] + fabs(alpha) * (fabs(xi) * s1abs + fabs(yi) * s2abs);
     }
-    ok = bmb_verify_close("A*r, for a random vector r", p, want, scale, m, bmb_verify_tolerance(n), msg, size);
+    ok = bmb_verify_close("A*r, for a random vector r", p, want, scale, m, bmb_tolerance(n), msg, size);
     free(r);
     return !ok;
 }
@@ -135,7 +140,7 @@ int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
 
-    bench.routine_name = "dsyr2";
+    bench.routine_name = BMB_ROUTINE(syr2);
     bench.dim1_label = "Matrix dim (N)";
     bench.dim2_label = NULL;
     bench.use_vector_range = 0;

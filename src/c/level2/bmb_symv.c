@@ -1,29 +1,35 @@
 #include <cblas.h>
 #include <stdlib.h>
 #include <math.h>
-#include <string.h>
 
 #include "bmb_bench.h"
+#include "bmb_prec.h"
 #include "bmb_verify.h"
 
-/* Square routine: only dim1 (= N) is used, swept via --matrix-dim1. */
+/* ssymv and dsymv, one per precision (bmb_prec.h); the complex one,
+ * hemv, is a family of its own.
+ * Square routine: only dim1 (= N) is used, swept via --matrix-dim1. */
+#if BMB_COMPLEX
+#error "symv is real: the complex one is hemv"
+#endif
+
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
     int n;
     int lda;
-    double alpha;
-    double beta;
-    double *a; /* N x N, in the order of --layout, upper triangle used */
-    double *x; /* N */
-    double *y; /* N */
+    bmb_real_t alpha;
+    bmb_real_t beta;
+    bmb_real_t *a; /* N x N, in the order of --layout, upper triangle used */
+    bmb_real_t *x; /* N */
+    bmb_real_t *y; /* N */
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
     size_t n = dim1;
-    const size_t lda = bmb_bench_ld(n, n, sizeof(double));
+    const size_t lda = bmb_bench_ld(n, n, BMB_ELEM_BYTES);
     size_t i;
 
     (void) dim2;
@@ -36,13 +42,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->lda = (int) lda;
-    ctx->alpha = 1.0;
-    ctx->beta = 0.0;
+    ctx->alpha = BMB_R(1.0);
+    ctx->beta = BMB_R(0.0);
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->a = bmb_bench_alloc(n * lda * sizeof(double));
-    ctx->x = bmb_bench_alloc(n * sizeof(double));
-    ctx->y = bmb_bench_alloc(n * sizeof(double));
+    ctx->a = bmb_bench_alloc(n * lda * BMB_ELEM_BYTES);
+    ctx->x = bmb_bench_alloc(n * BMB_ELEM_BYTES);
+    ctx->y = bmb_bench_alloc(n * BMB_ELEM_BYTES);
     if (ctx->a == NULL || ctx->x == NULL || ctx->y == NULL) {
         free(ctx->a);
         free(ctx->x);
@@ -51,12 +57,10 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    for (i = 0; i < n * lda; i++) {
-        ctx->a[i] = (double) (i % 100) * 0.01 - 0.5;
-    }
+    bmb_fill(ctx->a, n * lda, 0, 0);
+    bmb_fill(ctx->x, n, 0, 0);
     for (i = 0; i < n; i++) {
-        ctx->x[i] = (double) (i % 100) * 0.01 - 0.5;
-        ctx->y[i] = 0.0;
+        ctx->y[i] = BMB_R(0.0);
     }
 
     return ctx;
@@ -66,8 +70,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    cblas_dsymv(ctx->order, CblasUpper, ctx->n, ctx->alpha,
-                ctx->a, ctx->lda, ctx->x, 1, ctx->beta, ctx->y, 1);
+    BMB_CBLAS(symv)(ctx->order, CblasUpper, ctx->n, ctx->alpha,
+                    ctx->a, ctx->lda, ctx->x, 1, ctx->beta, ctx->y, 1);
 }
 
 static void teardown(void *vctx)
@@ -85,7 +89,6 @@ static double flops(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
     return 2.0 * d1 * d1;
 }
 
@@ -94,32 +97,35 @@ static double bytes(size_t dim1, size_t dim2)
     const double d1 = (double) dim1;
 
     (void) dim2;
-
-    return 8.0 * (d1 * (d1 + 1.0) / 2.0 + 3.0 * d1);
+    return (double) BMB_ELEM_BYTES * (d1 * (d1 + 1.0) / 2.0 + 3.0 * d1);
 }
 
-/* --verify: alpha * A * x + beta * y0, recomputed. */
+/* --verify: alpha * A * x + beta * y0, recomputed in double. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
-    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i;
-    double *y0 = malloc(5 * m * sizeof(double));
+    size_t n = (size_t) ctx->n, i;
+    double *y0 = malloc(7 * n * sizeof(double));
+    const double alpha = ctx->alpha, beta = ctx->beta;
     int ok;
 
     if (y0 == NULL) {
         return -1;
     }
-    double *t = y0 + m, *tabs = y0 + 2 * m, *want = y0 + 3 * m, *scale = y0 + 4 * m;
+    double *t = y0 + n, *tabs = y0 + 2 * n, *want = y0 + 3 * n, *scale = y0 + 4 * n;
+    double *got = y0 + 5 * n, *x = y0 + 6 * n;
 
-    memcpy(y0, ctx->y, m * sizeof(double));
+    bmb_to_double(y0, ctx->y, n);
+    bmb_to_double(x, ctx->x, n);
     call(ctx);
-    bmb_verify_perturb(&ctx->y[0]);
-    bmb_verify_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, m, n, ctx->a, (size_t) ctx->lda, ctx->x, NULL, t, tabs);
-    for (i = 0; i < m; i++) {
-        want[i] = ctx->alpha * t[i] + ctx->beta * y0[i];
-        scale[i] = fabs(ctx->alpha) * tabs[i] + fabs(ctx->beta * y0[i]);
+    bmb_perturb(&ctx->y[0]);
+    bmb_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->a, (size_t) ctx->lda, x, NULL, t, tabs);
+    bmb_to_double(got, ctx->y, n);
+    for (i = 0; i < n; i++) {
+        want[i] = alpha * t[i] + beta * y0[i];
+        scale[i] = fabs(alpha) * tabs[i] + fabs(beta * y0[i]);
     }
-    ok = bmb_verify_close("y", ctx->y, want, scale, m, bmb_verify_tolerance(n), msg, size);
+    ok = bmb_verify_close("y", got, want, scale, n, bmb_tolerance(n), msg, size);
     free(y0);
     return !ok;
 }
@@ -128,7 +134,7 @@ int main(int argc, char *argv[])
 {
     bmb_benchmark_t bench = {0};
 
-    bench.routine_name = "dsymv";
+    bench.routine_name = BMB_ROUTINE(symv);
     bench.dim1_label = "Matrix dim (N)";
     bench.dim2_label = NULL;
     bench.use_vector_range = 0;

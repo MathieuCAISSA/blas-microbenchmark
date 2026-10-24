@@ -17,14 +17,22 @@ level2_PROGRAMS = \
 	double/bmb_dtrmv \
 	double/bmb_dtrsv
 
-single_bmb_sgemv_SOURCES = single/bmb_sgemv.c
-double_bmb_dgemv_SOURCES = double/bmb_dgemv.c
-double_bmb_dger_SOURCES = double/bmb_dger.c
-double_bmb_dsymv_SOURCES = double/bmb_dsymv.c
-double_bmb_dsyr_SOURCES = double/bmb_dsyr.c
-double_bmb_dsyr2_SOURCES = double/bmb_dsyr2.c
-double_bmb_dtrmv_SOURCES = double/bmb_dtrmv.c
-double_bmb_dtrsv_SOURCES = double/bmb_dtrsv.c
+single_bmb_sgemv_SOURCES = bmb_gemv.c
+single_bmb_sgemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_dgemv_SOURCES = bmb_gemv.c
+double_bmb_dgemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dger_SOURCES = bmb_ger.c
+double_bmb_dger_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dsymv_SOURCES = bmb_symv.c
+double_bmb_dsymv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dsyr_SOURCES = bmb_syr.c
+double_bmb_dsyr_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dsyr2_SOURCES = bmb_syr2.c
+double_bmb_dsyr2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dtrmv_SOURCES = bmb_trmv.c
+double_bmb_dtrmv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+double_bmb_dtrsv_SOURCES = bmb_trsv.c
+double_bmb_dtrsv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
 
 ROUTINE_TESTS = \
 	single/test_bmb_sgemv.sh \
