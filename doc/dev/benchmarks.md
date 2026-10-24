@@ -199,6 +199,19 @@ cost back into every measurement, which is the whole point of batching.
   since `bytes` counts an operand at most twice. A routine with neither
   is refused under `--cache cold`.
 
+`src/c/test_bmb_counts.sh` holds every routine of `src/c/routines.txt` to
+these conventions, to the unit, at odd sizes and one large one (#205):
+its FLOPs, its bytes or footprint, and the absence of what it must not
+declare. The formulas there are written from the operation, the
+element's size and whether it is complex, not copied from the sources,
+so that turning routines into a family (#166) cannot change a count
+unseen. A routine of a new operation needs its formula there; the test
+fails for it until it has one. It reads the counts with
+**`BMB_COUNTS=1`**, a testing aid like `BMB_VERIFY_CORRUPT`: each point's
+`flops`, `bytes` and `footprint`, as the routine declares them (`-` for
+none), are written to stderr instead of being measured, so nothing is
+allocated whatever the size.
+
 Sanity-check a new formula by comparing across routines rather than
 eyeballing it: at a size large enough to leave the startup noise behind,
 every level 3 routine should land on roughly the same GFLOP/s (the

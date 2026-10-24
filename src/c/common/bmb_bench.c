@@ -485,6 +485,22 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     return 0;
 }
 
+/* BMB_COUNTS, a testing aid as BMB_VERIFY_CORRUPT is: each point's
+ * counts, as the routine declares them, written to stderr in place of
+ * measuring it, so that nothing is allocated whatever the size.
+ * test_bmb_counts.sh holds them to the BLAS conventions (#205). */
+static int bmb_counts_only;
+
+static void bmb_print_count(const char *name, double (*count)(size_t, size_t),
+                            size_t dim1, size_t dim2)
+{
+    if (count != NULL) {
+        fprintf(stderr, " %s %.17g", name, count(dim1, dim2));
+    } else {
+        fprintf(stderr, " %s -", name);
+    }
+}
+
 static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                        unsigned int thread_count, size_t dim1, size_t dim2,
                        bmb_result_set_t *rs)
@@ -492,6 +508,14 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     bmb_result_row_t row;
     int r;
 
+    if (bmb_counts_only) {
+        fprintf(stderr, "counts: %s %zu %zu", bench->routine_name, dim1, dim2);
+        bmb_print_count("flops", bench->flops, dim1, dim2);
+        bmb_print_count("bytes", bench->bytes, dim1, dim2);
+        bmb_print_count("footprint", bench->footprint, dim1, dim2);
+        fputc('\n', stderr);
+        return 0;
+    }
     r = bmb_run_one(bench, opts, thread_count, dim1, dim2, &row);
     if (r != 0) {
         return r;
@@ -646,6 +670,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     size_t ti;
     int status = EXIT_SUCCESS;
     char advice[512];
+    const char *counts = getenv("BMB_COUNTS");
 
     /* Freed on the early exits too: -o may already have been parsed by the
      * time -h, -V or a bad option is reached, and leaving it allocated makes
@@ -666,6 +691,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     if (bench->level == 3 && !opts.matrix_dim1_set) {
         bmb_range_set_single(&opts.matrix_dim1, BMB_DEFAULT_LEVEL3_SIZE);
     }
+    bmb_counts_only = counts != NULL && counts[0] != '\0' && counts[0] != '0';
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
     if (opts.verify && bench->verify == NULL) {

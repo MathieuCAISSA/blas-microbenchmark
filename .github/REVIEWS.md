@@ -138,6 +138,8 @@ What makes a benchmark wrong without making it fail.
   reset often enough, and `reset_every_call` is set only when needed.
 - [ ] Rates use the conventional BLAS counts; level 3 declares no GB/s
   ([which rate](../doc/dev/benchmarks.md#which-rate-a-routine-declares)).
+  A new operation has its formula in `test_bmb_counts.sh`, written from
+  the convention, not copied from its source (#205).
 - [ ] `verify()` calls `bmb_verify_perturb()`, and its tolerance was not
   widened to make a failure go away
   ([checking results](../doc/dev/benchmarks.md#checking-results---verify)).
