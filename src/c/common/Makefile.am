@@ -13,7 +13,8 @@ libbmbcommon_a_SOURCES = \
 	bmb_print.c bmb_print.h \
 	bmb_threads.c bmb_threads.h \
 	bmb_bench.c bmb_bench.h \
-	bmb_verify.c bmb_verify.h
+	bmb_verify.c bmb_verify.h \
+	bmb_prec.h
 
 # The option layer decides which sizes get measured and rejects the ones
 # that cannot be, so its mistakes are silent: a sweep that drops its

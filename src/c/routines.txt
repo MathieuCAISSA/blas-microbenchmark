@@ -14,37 +14,41 @@
 #   mkn  -m is M and K, -M is N
 #   nk   -m is N, -M is K
 #   n    -m is N (square; no -M)
+# family: the operation, whose source, src/c/level<level>/bmb_<family>.c,
+# is compiled once for each of its precisions (#166, src/c/common/
+# bmb_prec.h); - for a routine still in a source of its own,
+# <precision directory>/bmb_<routine>.c.
 #
-# routine  level  precision  sizes
-dasum      1      d          v
-saxpy      1      s          v
-daxpy      1      d          v
-dcopy      1      d          v
-sdot       1      s          v
-ddot       1      d          v
-zdotc      1      z          v
-dnrm2      1      d          v
-dscal      1      d          v
-dswap      1      d          v
-sgemv      2      s          mn
-dgemv      2      d          mn
-dger       2      d          mn
-dsymv      2      d          n
-dsyr       2      d          n
-dsyr2      2      d          n
-dtrmv      2      d          n
-dtrsv      2      d          n
-sgemm      3      s          mkn
-dgemm      3      d          mkn
-cgemm      3      c          mkn
-zgemm      3      z          mkn
-dsymm      3      d          mn
-zhemm      3      z          mn
-ssyrk      3      s          nk
-dsyrk      3      d          nk
-zherk      3      z          nk
-dsyr2k     3      d          nk
-dtrmm      3      d          mn
-strsm      3      s          mn
-dtrsm      3      d          mn
-ztrsm      3      z          mn
+# routine  level  precision  sizes  family
+dasum      1      d          v      -
+saxpy      1      s          v      -
+daxpy      1      d          v      -
+dcopy      1      d          v      -
+sdot       1      s          v      -
+ddot       1      d          v      -
+zdotc      1      z          v      -
+dnrm2      1      d          v      -
+dscal      1      d          v      -
+dswap      1      d          v      -
+sgemv      2      s          mn     -
+dgemv      2      d          mn     -
+dger       2      d          mn     -
+dsymv      2      d          n      -
+dsyr       2      d          n      -
+dsyr2      2      d          n      -
+dtrmv      2      d          n      -
+dtrsv      2      d          n      -
+sgemm      3      s          mkn    gemm
+dgemm      3      d          mkn    gemm
+cgemm      3      c          mkn    gemm
+zgemm      3      z          mkn    gemm
+dsymm      3      d          mn     -
+zhemm      3      z          mn     -
+ssyrk      3      s          nk     -
+dsyrk      3      d          nk     -
+zherk      3      z          nk     -
+dsyr2k     3      d          nk     -
+dtrmm      3      d          mn     -
+strsm      3      s          mn     -
+dtrsm      3      d          mn     -
+ztrsm      3      z          mn     -

@@ -36,7 +36,7 @@ fresh() {
 }
 
 fresh
-echo 'zsymm      3      z          mn' >>"$T/src/c/routines.txt"
+echo 'zsymm      3      z          mn     symm' >>"$T/src/c/routines.txt"
 if sh "$T/src/c/routines.sh" --check "$T" >"$T/out" 2>&1; then
     fail "--check passed with zsymm in the table alone"
 fi
@@ -53,8 +53,10 @@ sh "$T/src/c/routines.sh" --check "$T" >"$T/out" 2>&1 ||
     fail "--check failed on what routines.sh wrote: $(cat "$T/out")"
 grep -q "zsymm: 3$" "$T/src/report/report.html" || fail "zsymm not in the report's LEVEL"
 grep -q "'zsymm': 3,$" "$T/packaging/reframe/blas_microbenchmark.py" || fail "zsymm not in ReFrame's ROUTINES"
-grep -q '^complex16_bmb_zsymm_SOURCES = complex16/bmb_zsymm.c$' "$T/src/c/level3/Makefile.am" ||
-    fail "zsymm has no sources in level 3's Makefile.am"
+grep -q '^complex16_bmb_zsymm_SOURCES = bmb_symm.c$' "$T/src/c/level3/Makefile.am" ||
+    fail "zsymm is not built from its family's source in level 3's Makefile.am"
+grep -q '^complex16_bmb_zsymm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z$' "$T/src/c/level3/Makefile.am" ||
+    fail "zsymm's source is not compiled for double complex in level 3's Makefile.am"
 grep -q '`ztrsm` `zsymm` |$' "$T/README.md" || fail "zsymm not in the README's complex column"
 grep -q 'zsymm	\\-m is M, \\-M is N$' "$T/man/blas-microbenchmark.1.in" ||
     fail "zsymm not in the man page's table of dimensions"
@@ -73,11 +75,12 @@ refused() {
     grep -q "$2" "$T/out" || fail "'$1': no '$2' in: $(cat "$T/out")"
     cmp -s "$top/README.md" "$T/README.md" || fail "'$1' was refused after changing the README"
 }
-refused 'zaxpy 1 z' 'not "routine level precision sizes"'
-refused 'zaxpy 4 z v' 'not "routine level precision sizes"'
-refused 'zaxpy 1 q v' 'not "routine level precision sizes"'
-refused 'zaxpy 1 z mk' 'not "routine level precision sizes"'
-refused 'ddot 1 d v' 'ddot listed twice'
+refused 'zaxpy 1 z v' 'not "routine level precision sizes family"'
+refused 'zaxpy 4 z v axpy' 'not "routine level precision sizes family"'
+refused 'zaxpy 1 q v axpy' 'not "routine level precision sizes family"'
+refused 'zaxpy 1 z mk axpy' 'not "routine level precision sizes family"'
+refused 'zaxpy 1 z v Axpy' 'not "routine level precision sizes family"'
+refused 'ddot 1 d v -' 'ddot listed twice'
 echo "ok   a malformed line, a routine listed twice: refused"
 
 fresh
