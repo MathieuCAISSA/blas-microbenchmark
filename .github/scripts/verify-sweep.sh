@@ -26,7 +26,7 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
         */level1/*) sizes="-v 1000,100000,1000000" ;;
         */level2/*)
             case $name in
-                bmb_?gemv | bmb_?ger) sizes="-m 100,1000,2000 -M 37,1000" ;;
+                bmb_?gemv | bmb_?ger | bmb_?geru | bmb_?gerc) sizes="-m 100,1000,2000 -M 37,1000" ;;
                 *) sizes="-m 100,1000,2000" ;;
             esac
             ;;

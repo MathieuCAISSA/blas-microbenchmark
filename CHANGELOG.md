@@ -28,6 +28,9 @@ releases with the same major version can be compared and read by the same
 - `isamax`, `idamax`, `icamax`, `izamax` and `srot`, `drot` (#234): the
   index of the largest element, GB/s only, and the plane rotation, 6N
   FLOPs. 82 benchmarks.
+- `cdotu`, `zdotu`, `cgeru`, `zgeru`, `cgerc` and `zgerc` (#236): the
+  unconjugated complex dot product and the complex rank-1 updates, with
+  the counts and `--verify` of `cdotc` and `dger`. 88 benchmarks.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,
