@@ -86,6 +86,42 @@ extern void dtrsv_(const char *uplo, const char *trans, const char *diag, const 
 extern void sgemv_(const char *trans, const int *m, const int *n, const float *alpha,
                    const float *a, const int *lda, const float *x, const int *incx,
                    const float *beta, float *y, const int *incy, size_t trans_len);
+/* The other precisions (#228). */
+extern void cgemv_(const char *trans, const int *m, const int *n, const void *alpha,
+                   const void *a, const int *lda, const void *x, const int *incx,
+                   const void *beta, void *y, const int *incy, size_t trans_len);
+extern void zgemv_(const char *trans, const int *m, const int *n, const void *alpha,
+                   const void *a, const int *lda, const void *x, const int *incx,
+                   const void *beta, void *y, const int *incy, size_t trans_len);
+extern void sger_(const int *m, const int *n, const float *alpha,
+                  const float *x, const int *incx, const float *y, const int *incy,
+                  float *a, const int *lda);
+extern void ssymv_(const char *uplo, const int *n, const float *alpha,
+                   const float *a, const int *lda, const float *x, const int *incx,
+                   const float *beta, float *y, const int *incy, size_t uplo_len);
+extern void ssyr_(const char *uplo, const int *n, const float *alpha,
+                  const float *x, const int *incx, float *a, const int *lda, size_t uplo_len);
+extern void ssyr2_(const char *uplo, const int *n, const float *alpha,
+                   const float *x, const int *incx, const float *y, const int *incy,
+                   float *a, const int *lda, size_t uplo_len);
+extern void strmv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const float *a, const int *lda, float *x, const int *incx,
+                   size_t uplo_len, size_t trans_len, size_t diag_len);
+extern void ctrmv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const void *a, const int *lda, void *x, const int *incx,
+                   size_t uplo_len, size_t trans_len, size_t diag_len);
+extern void ztrmv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const void *a, const int *lda, void *x, const int *incx,
+                   size_t uplo_len, size_t trans_len, size_t diag_len);
+extern void strsv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const float *a, const int *lda, float *x, const int *incx,
+                   size_t uplo_len, size_t trans_len, size_t diag_len);
+extern void ctrsv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const void *a, const int *lda, void *x, const int *incx,
+                   size_t uplo_len, size_t trans_len, size_t diag_len);
+extern void ztrsv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const void *a, const int *lda, void *x, const int *incx,
+                   size_t uplo_len, size_t trans_len, size_t diag_len);
 
 extern void dgemm_(const char *transa, const char *transb, const int *m, const int *n,
                    const int *k, const double *alpha, const double *a, const int *lda,
@@ -181,6 +217,28 @@ static char bmb_side(const CBLAS_SIDE s)
 static char bmb_side_flipped(const CBLAS_SIDE s)
 {
     return (s == CblasLeft) ? 'R' : 'L';
+}
+
+/* Negates the imaginary parts of a complex vector of n elements, in
+ * place: twice gives it back exactly. */
+static void bmb_conj_f(float *x, const int n, const int inc)
+{
+    const size_t step = 2 * (size_t) (inc < 0 ? -inc : inc);
+    int i;
+
+    for (i = 0; i < n; i++) {
+        x[(size_t) i * step + 1] = -x[(size_t) i * step + 1];
+    }
+}
+
+static void bmb_conj_d(double *x, const int n, const int inc)
+{
+    const size_t step = 2 * (size_t) (inc < 0 ? -inc : inc);
+    int i;
+
+    for (i = 0; i < n; i++) {
+        x[(size_t) i * step + 1] = -x[(size_t) i * step + 1];
+    }
 }
 
 /* Level 1: no storage order involved, straight forwarding. */
@@ -447,6 +505,200 @@ void cblas_dtrsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRA
     }
 
     dtrsv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+}
+
+/* The other precisions (#228). A complex matrix asked for row-major
+ * with its conjugate transpose is the one case the flip cannot make: the
+ * buffer read column-major is B = A^T, and A^H = conj(B), which Fortran
+ * has no flag for. conj(A^H x) = B conj(x), so the vectors are
+ * conjugated, the call made with 'N' and the result conjugated back, as
+ * reference CBLAS does. It conjugates a copy of x; here x is conjugated
+ * in place and back, exactly, so as to allocate nothing in a timed call:
+ * the benchmarks' x is their own buffer, never read-only memory. */
+
+void cblas_cgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
+                 const int M, const int N, const void *alpha, const void *A, const int lda,
+                 const void *X, const int incX, const void *beta, void *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char trans = bmb_trans(TransA);
+
+        cgemv_(&trans, &M, &N, alpha, A, &lda, X, &incX, beta, Y, &incY, 1);
+    } else if (TransA != CblasConjTrans) {
+        const char trans = bmb_trans_flipped(TransA);
+
+        cgemv_(&trans, &N, &M, alpha, A, &lda, X, &incX, beta, Y, &incY, 1);
+    } else {
+        /* y = alpha A^H x + beta y: conj(y) = conj(alpha) B conj(x) +
+         * conj(beta) conj(y), x of M elements, y of N. */
+        const float *al = alpha, *be = beta;
+        const float calpha[2] = { al[0], -al[1] }, cbeta[2] = { be[0], -be[1] };
+        const char trans = 'N';
+
+        bmb_conj_f((float *) X, M, incX);
+        bmb_conj_f(Y, N, incY);
+        cgemv_(&trans, &N, &M, calpha, A, &lda, X, &incX, cbeta, Y, &incY, 1);
+        bmb_conj_f(Y, N, incY);
+        bmb_conj_f((float *) X, M, incX);
+    }
+}
+
+void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
+                 const int M, const int N, const void *alpha, const void *A, const int lda,
+                 const void *X, const int incX, const void *beta, void *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char trans = bmb_trans(TransA);
+
+        zgemv_(&trans, &M, &N, alpha, A, &lda, X, &incX, beta, Y, &incY, 1);
+    } else if (TransA != CblasConjTrans) {
+        const char trans = bmb_trans_flipped(TransA);
+
+        zgemv_(&trans, &N, &M, alpha, A, &lda, X, &incX, beta, Y, &incY, 1);
+    } else {
+        const double *al = alpha, *be = beta;
+        const double calpha[2] = { al[0], -al[1] }, cbeta[2] = { be[0], -be[1] };
+        const char trans = 'N';
+
+        bmb_conj_d((double *) X, M, incX);
+        bmb_conj_d(Y, N, incY);
+        zgemv_(&trans, &N, &M, calpha, A, &lda, X, &incX, cbeta, Y, &incY, 1);
+        bmb_conj_d(Y, N, incY);
+        bmb_conj_d((double *) X, M, incX);
+    }
+}
+
+void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
+                const float *X, const int incX, const float *Y, const int incY,
+                float *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        sger_(&M, &N, &alpha, X, &incX, Y, &incY, A, &lda);
+    } else {
+        sger_(&N, &M, &alpha, Y, &incY, X, &incX, A, &lda);
+    }
+}
+
+void cblas_ssymv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
+                 const float alpha, const float *A, const int lda,
+                 const float *X, const int incX, const float beta, float *Y, const int incY)
+{
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+
+    ssymv_(&uplo, &N, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+}
+
+void cblas_ssyr(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                const float *X, const int incX, float *A, const int lda)
+{
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+
+    ssyr_(&uplo, &N, &alpha, X, &incX, A, &lda, 1);
+}
+
+void cblas_ssyr2(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                 const float *X, const int incX, const float *Y, const int incY,
+                 float *A, const int lda)
+{
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+
+    ssyr2_(&uplo, &N, &alpha, X, &incX, Y, &incY, A, &lda, 1);
+}
+
+void cblas_strmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const float *A, const int lda,
+                 float *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+
+    strmv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+}
+
+/* x = A^H x row-major: conj(x) = B conj(x), as for gemv. */
+void cblas_ctrmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+    const int conj = order == CblasRowMajor && TransA == CblasConjTrans;
+
+    if (conj) {
+        bmb_conj_f(X, N, incX);
+    }
+    ctrmv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+    if (conj) {
+        bmb_conj_f(X, N, incX);
+    }
+}
+
+void cblas_ztrmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+    const int conj = order == CblasRowMajor && TransA == CblasConjTrans;
+
+    if (conj) {
+        bmb_conj_d(X, N, incX);
+    }
+    ztrmv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+    if (conj) {
+        bmb_conj_d(X, N, incX);
+    }
+}
+
+void cblas_strsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const float *A, const int lda,
+                 float *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+
+    strsv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+}
+
+/* Solving A^H x' = x row-major: B conj(x') = conj(x). */
+void cblas_ctrsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+    const int conj = order == CblasRowMajor && TransA == CblasConjTrans;
+
+    if (conj) {
+        bmb_conj_f(X, N, incX);
+    }
+    ctrsv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+    if (conj) {
+        bmb_conj_f(X, N, incX);
+    }
+}
+
+void cblas_ztrsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+    const int conj = order == CblasRowMajor && TransA == CblasConjTrans;
+
+    if (conj) {
+        bmb_conj_d(X, N, incX);
+    }
+    ztrsv_(&uplo, &trans, &diag, &N, A, &lda, X, &incX, 1, 1, 1);
+    if (conj) {
+        bmb_conj_d(X, N, incX);
+    }
 }
 
 /* Level 3 */

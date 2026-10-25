@@ -519,7 +519,7 @@ rm -f "$out/development.body"
             'ddot with OpenBLAS and BLIS, the caches marked: one of the charts <a href="compare.html">bmb_report</a> draws.'
     fi
     echo '<ul class="features">'
-    echo '  <li><b>50 benchmarks</b>, one executable per BLAS routine, levels 1 to 3, in single, double and complex precision; the same options for all.</li>'
+    echo '  <li><b>62 benchmarks</b>, one executable per BLAS routine, levels 1 to 3, in single, double and complex precision; the same options for all.</li>'
     echo '  <li><b>Numbers you can trust</b>: every point checked against a reference before it is timed; the CPU, its frequency, the library and its version recorded with it.</li>'
     echo '  <li><b>Eight BLAS libraries</b>: OpenBLAS, BLIS, AMD AOCL-BLAS, Intel MKL, NVPL, ArmPL, Netlib, or all those FlexiBLAS loads, from one build.</li>'
     echo '  <li><b>Made for HPC sites</b>: a Spack package, a Docker image that Apptainer runs, and ReFrame tests.</li>'

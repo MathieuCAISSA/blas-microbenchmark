@@ -142,6 +142,13 @@ Two things that backend gets wrong easily:
   has been confirmed to fail when deliberately broken, so treat a failure
   there as real. Add a case for any routine you add to the shim; a mapping
   with no test is a mapping nobody has checked.
+- A complex matrix asked for row-major with its conjugate transpose
+  (`--trans C` on gemv, trmv and trsv) has no Fortran flag once flipped:
+  the buffer read column-major is `A^T`, and `A^H` is its conjugate. The
+  shim conjugates the vectors around a call with `N`, as reference CBLAS
+  does, but in place rather than on a copy, so that the timed call
+  allocates nothing (#228). Level 3 needs none of it: swapping the
+  operands keeps each one's flag (the comment above `cblas_cgemm`).
 - The shim declares the hidden `CHARACTER` length arguments the *GNU*
   Fortran ABI appends. A netlib built with ifort/ifx uses a different
   convention, so that combination is untested — if someone reports it, this

@@ -82,6 +82,43 @@ void cblas_sgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
                  const int M, const int N, const float alpha, const float *A, const int lda,
                  const float *X, const int incX, const float beta, float *Y, const int incY);
 
+/* The other precisions of the same operations (#228). */
+void cblas_cgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
+                 const int M, const int N, const void *alpha, const void *A, const int lda,
+                 const void *X, const int incX, const void *beta, void *Y, const int incY);
+void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
+                 const int M, const int N, const void *alpha, const void *A, const int lda,
+                 const void *X, const int incX, const void *beta, void *Y, const int incY);
+void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
+                const float *X, const int incX, const float *Y, const int incY,
+                float *A, const int lda);
+void cblas_ssymv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
+                 const float alpha, const float *A, const int lda,
+                 const float *X, const int incX, const float beta, float *Y, const int incY);
+void cblas_ssyr(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                const float *X, const int incX, float *A, const int lda);
+void cblas_ssyr2(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                 const float *X, const int incX, const float *Y, const int incY,
+                 float *A, const int lda);
+void cblas_strmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const float *A, const int lda,
+                 float *X, const int incX);
+void cblas_ctrmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX);
+void cblas_ztrmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX);
+void cblas_strsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const float *A, const int lda,
+                 float *X, const int incX);
+void cblas_ctrsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX);
+void cblas_ztrsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const void *A, const int lda,
+                 void *X, const int incX);
+
 /* Level 3 */
 void cblas_dgemm(const CBLAS_ORDER Order, const CBLAS_TRANSPOSE TransA, const CBLAS_TRANSPOSE TransB,
                  const int M, const int N, const int K, const double alpha,

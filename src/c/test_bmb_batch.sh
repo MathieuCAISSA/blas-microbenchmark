@@ -1,8 +1,8 @@
 #!/bin/sh
 # Checks that -b cannot batch the routines whose operand is restored before
-# every call (dtrmv, dtrsv, dtrmm, dtrsm, strsm, ztrsm): N calls in a row would run on an
-# operand drifting towards infinity or denormals, and the timing would stop
-# meaning anything (#48). They stay at one call per sample, which the JSON gives
+# every call (the trmv, trsv, trmm and trsm families, every precision the
+# table lists): N calls in a row would run on an operand drifting towards
+# infinity or denormals, and the timing would stop meaning anything (#48). They stay at one call per sample, which the JSON gives
 # as calls_per_sample and as the run block's batch, with a warning; another
 # routine keeps the batch it was given, without one. Tiny sizes only.
 set -e
@@ -22,8 +22,13 @@ calls() {
     sed -n 's/^ *"calls_per_sample": \([0-9]*\),$/\1/p' "$1"
 }
 
-for b in level2/double/bmb_dtrmv level2/double/bmb_dtrsv level3/double/bmb_dtrmm level3/double/bmb_dtrsm level3/single/bmb_strsm level3/complex16/bmb_ztrsm; do
-    name=$(basename "$b")
+grep -v '^#' "${srcdir:-.}/routines.txt" | awk '$5 ~ /^(trmv|trsv|trmm|trsm)$/ { print $1, $2, $3 }' >"$T/reset" ||
+    fail "no triangular routines in routines.txt"
+n=0
+while read -r r level prec; do
+    case $prec in s) dir=single ;; d) dir=double ;; c) dir=complex ;; z) dir=complex16 ;; esac
+    b=level$level/$dir/bmb_$r
+    name=bmb_$r
     "$b" -C -x 0 -i 2 -b 50 -s -m 8,16 -o "$T/$name.json" >/dev/null 2>"$T/$name.err" \
         || fail "$name -b 50 failed: $(cat "$T/$name.err")"
     test "$(calls "$T/$name.json" | sort -u)" = 1 \
@@ -32,8 +37,10 @@ for b in level2/double/bmb_dtrmv level2/double/bmb_dtrsv level3/double/bmb_dtrmm
         || fail "$name -b 50 did not say -b was ignored: $(cat "$T/$name.err")"
     grep -q '^    "batch": 1,$' "$T/$name.json" \
         || fail "$name -b 50: the run block does not give the batch size used, 1"
-done
-echo "ok   -b 50: dtrmv, dtrsv, dtrmm, dtrsm, strsm and ztrsm stay at one call per sample, say so, and record it"
+    n=$((n + 1))
+done <"$T/reset"
+test "$n" -ge 12 || fail "only $n triangular routines found"
+echo "ok   -b 50: the $n triangular multiplies and solves stay at one call per sample, say so, and record it"
 
 level2/double/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \
     || fail "dgemv -b 50 failed: $(cat "$T/dgemv.err")"

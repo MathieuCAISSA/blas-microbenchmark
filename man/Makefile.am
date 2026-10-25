@@ -16,8 +16,9 @@ CLEANFILES = $(man1_MANS)
 # BEGIN routines (man-makefile): written by src/c/routines.sh
 ROUTINES = sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy \
 	dcopy ccopy zcopy sdot ddot cdotc zdotc snrm2 dnrm2 scnrm2 dznrm2 \
-	sscal dscal cscal zscal sswap dswap cswap zswap sgemv dgemv dger \
-	dsymv dsyr dsyr2 dtrmv dtrsv sgemm dgemm cgemm zgemm dsymm zhemm \
+	sscal dscal cscal zscal sswap dswap cswap zswap sgemv dgemv cgemv \
+	zgemv sger dger ssymv dsymv ssyr dsyr ssyr2 dsyr2 strmv dtrmv ctrmv \
+	ztrmv strsv dtrsv ctrsv ztrsv sgemm dgemm cgemm zgemm dsymm zhemm \
 	ssyrk dsyrk zherk dsyr2k dtrmm strsm dtrsm ztrsm
 # END routines (man-makefile)
 
