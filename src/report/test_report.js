@@ -121,6 +121,17 @@
          "#221: the series that differs is named by its arguments, the defaults' by nothing");
     });
 
+    test("batches", function () {
+      function run(count, mode) { return { cache: "hot", arguments: { trans: "NN", batch_count: count, batch_mode: mode } }; }
+      var m = R.buildModel([
+        entry("one.json", gemm({ run: run(1, "loop"), rows: [[1, 64, 64, 1e-5, 10, null]] })),
+        entry("loop.json", gemm({ run: run(64, "loop"), rows: [[1, 64, 64, 1e-3, 9, null]] })),
+        entry("group.json", gemm({ run: run(64, "group"), rows: [[1, 64, 64, 1e-3, 11, null]] }))
+      ]);
+      eq(names(m.identities), ["openblas", "openblas · batch count 64", "openblas · batch count 64, batch mode group"],
+         "#159: a batch is a series of its own, its count and mode in its name; one matrix in a loop is the plain call");
+    });
+
     test("gemm's K", function () {
       var m = R.buildModel([
         entry("k.json", gemm({ dim1Label: "Matrix dim1 (M)",

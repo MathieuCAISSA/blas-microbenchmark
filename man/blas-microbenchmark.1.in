@@ -274,6 +274,39 @@ a unit diagonal, not read.
 Refused by the routines without one.
 Default:
 .BR N .
+.TP
+.BI "\-\-batch\-count " n
+GEMM only: how many matrices one call computes, from 1 to 1000000, each
+with its own A, B and C, of the sizes
+.BR \-m ,
+.B \-M
+and
+.B \-K
+give.
+The operation count and the footprint are the batch's: the time is of
+the whole batch, and GFLOP/s the batch's rate.
+Default: 1.
+.TP
+.BI "\-\-batch\-mode " mode
+GEMM only: how the batch is passed to the library.
+.B loop
+calls the routine once per matrix, which every library can do, and is
+the baseline;
+.B group
+makes one
+.B cblas_?gemm_batch
+call of one group;
+.B strided
+one
+.B cblas_?gemm_batch_strided
+call, the matrices one after the other in memory.
+MKL, NVPL and OpenBLAS (from 0.3.28, strided from 0.3.31) have both;
+BLIS and AOCL-BLAS
+.B group
+only; Netlib neither.
+A mode the library does not have exits 77 without measuring anything.
+Default:
+.BR loop .
 .IP
 One value of each per run, as
 .BR \-\-layout :
@@ -801,9 +834,11 @@ with
 (for the routines that have them: an object of
 .BR trans ,
 .BR uplo ,
-.B side
-and
+.BR side ,
 .BR diag ,
+.B batch_count
+and
+.BR batch_mode ,
 those the routine takes),
 .B batch
 (when every point used the same:
@@ -866,7 +901,13 @@ pass for a complete one;
 .BR "CHECKING RESULTS" ),
 in which case nothing is written to the
 .B \-o
-file.
+file;
+77 when
+.B \-\-batch\-mode
+asks for a call the library does not have, which is said on standard
+error: nothing is measured (77 is what
+.BR "make check" 's
+test driver takes for a test skipped).
 .SH ENVIRONMENT
 The thread-count variables the library reads, in the order it reads them:
 .TP
@@ -998,6 +1039,15 @@ GEMM with K apart from M, as HPL's updates are: large M and N, K from
 .RS
 .EX
 bmb_dgemm \-m 8192 \-M 8192 \-K 64:512 \-o hpl.json
+.EE
+.RE
+.PP
+Many small GEMMs: a loop of calls, against the library's batched call:
+.PP
+.RS
+.EX
+bmb_dgemm \-m 16:128 \-\-batch\-count 10000 \-o loop.json
+bmb_dgemm \-m 16:128 \-\-batch\-count 10000 \-\-batch\-mode group \-o group.json
 .EE
 .RE
 .PP

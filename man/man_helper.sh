@@ -73,10 +73,12 @@ bin_of() {
     done
 }
 
-# A program's options, from its --help: "-x --long" and, for one that
-# takes a value, "<" after them.
+# A program's options, from its --help: "-x --long", or "none --long" for
+# one with no short form (#221), and, for one that takes a value, "<"
+# after them.
 options_of() {
-    "$1" --help | sed -n 's/^  \(-[a-zA-Z]\), \(--[a-z0-9-]*\)\( <\)\{0,1\}.*/\1 \2 \3/p'
+    "$1" --help | sed -n -e 's/^  \(-[a-zA-Z]\), \(--[a-z0-9-]*\)\( <\)\{0,1\}.*/\1 \2 \3/p' \
+        -e 's/^      \(--[a-z0-9-]*\)\( <\)\{0,1\}.*/none \1 \2/p'
 }
 
 # check_commands FILE: every command in FILE, one per line, that runs a

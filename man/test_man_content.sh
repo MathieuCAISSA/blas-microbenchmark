@@ -179,7 +179,14 @@ fi
 section $PAGE "EXIT STATUS" | grep -q '^2 when' || fail "blas-microbenchmark(1) EXIT STATUS does not give 2"
 test "$(BMB_VERIFY_CORRUPT=1 status "$DDOT" -x 0 -i 1 -v 8)" -eq 2 || fail "a wrong result did not exit 2 with the check on by default"
 test "$(BMB_VERIFY_CORRUPT=1 status "$DDOT" -x 0 -i 1 -v 8 -C)" -eq 0 || fail "-C did not turn the check off"
-ok "the benchmarks exit 0, 1 or 2 when blas-microbenchmark(1) says"
+DGEMM=$(bin_of dgemm)
+rc=$(status "$DGEMM" -x 0 -w 0 -i 1 -m 8 --batch-count 2 --batch-mode strided)
+case $rc in
+    0) ;;
+    77) section $PAGE "EXIT STATUS" | grep -q '^77 when' || fail "a batch mode the library has not exited 77, which EXIT STATUS does not give" ;;
+    *) fail "--batch-mode strided exited $rc, neither 0 nor 77" ;;
+esac
+ok "the benchmarks exit 0, 1, 2 or 77 when blas-microbenchmark(1) says"
 
 "$DDOT" -x 0 -i 1 -v 8 -o "$T/r.json" >/dev/null
 test "$(status "$REPORT" "$T/r.json")" -eq 0 || fail "bmb_report on a valid result did not exit 0"

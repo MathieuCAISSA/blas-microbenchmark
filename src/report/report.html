@@ -322,10 +322,12 @@ details[open] > summary { margin-bottom: 12px; }
     /* The routine's arguments that differ from the defaults, as "trans
      * NT, uplo L"; "" for none. */
     function variantText(args) {
-      var DEFAULT = { trans: /^N+$/, uplo: /^U$/, side: /^L$/, diag: /^N$/ };
-      return ["trans", "uplo", "side", "diag"].filter(function (k) {
-        return args && typeof args[k] === "string" && !DEFAULT[k].test(args[k]);
-      }).map(function (k) { return k + " " + args[k]; }).join(", ");
+      var DEFAULT = { trans: /^N+$/, uplo: /^U$/, side: /^L$/, diag: /^N$/, batch_count: /^1$/,
+                      batch_mode: /^loop$/ };
+      return ["trans", "uplo", "side", "diag", "batch_count", "batch_mode"].filter(function (k) {
+        return args && (typeof args[k] === "string" || typeof args[k] === "number") &&
+          !DEFAULT[k].test(String(args[k]));
+      }).map(function (k) { return k.replace("_", " ") + " " + args[k]; }).join(", ");
     }
 
     function identityOf(r) {

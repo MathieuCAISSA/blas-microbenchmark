@@ -111,6 +111,8 @@ static void check_options(const bmb_options_t *opts)
           && (opts->side == 0 || opts->side == 'L' || opts->side == 'R')
           && (opts->diag == 0 || opts->diag == 'N' || opts->diag == 'U'),
           "an argument letter a routine cannot be given");
+    check(opts->batch_count <= BMB_MAX_BATCH_COUNT && opts->batch_mode >= -1 && opts->batch_mode <= BMB_BATCH_STRIDED,
+          "a batch count or mode out of bounds");
     check(opts->align >= sizeof(void *) && (opts->align & (opts->align - 1)) == 0,
           "an alignment posix_memalign() refuses");
     check(opts->warmup_time >= 0.0 && opts->warmup_time <= 3600.0 && opts->min_time >= 0.0

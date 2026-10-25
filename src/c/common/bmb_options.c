@@ -37,7 +37,15 @@
 
 /* The routine's arguments (#221) have no short option: past the
  * characters, so that getopt_long tells them apart. */
-enum { BMB_OPT_TRANS = 256, BMB_OPT_UPLO, BMB_OPT_SIDE, BMB_OPT_DIAG };
+enum { BMB_OPT_TRANS = 256, BMB_OPT_UPLO, BMB_OPT_SIDE, BMB_OPT_DIAG, BMB_OPT_BATCH_COUNT,
+       BMB_OPT_BATCH_MODE };
+
+const char *bmb_batch_mode_name(int mode)
+{
+    static const char *const names[] = {"loop", "group", "strided"};
+
+    return names[mode];
+}
 
 /* bmb_option_letters(arg, name, allowed, max, dst): arg, one to max of
  * the letters in allowed, in either case, into dst in upper case. */
@@ -79,6 +87,8 @@ static const struct option bmb_long_options[] = {
     {"uplo",           required_argument, NULL, BMB_OPT_UPLO},
     {"side",           required_argument, NULL, BMB_OPT_SIDE},
     {"diag",           required_argument, NULL, BMB_OPT_DIAG},
+    {"batch-count",    required_argument, NULL, BMB_OPT_BATCH_COUNT},
+    {"batch-mode",     required_argument, NULL, BMB_OPT_BATCH_MODE},
     {"cache",          required_argument, NULL, 'k'},
     {"align",          required_argument, NULL, 'a'},
     {"ld-pad",         required_argument, NULL, 'p'},
@@ -495,6 +505,8 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->uplo = 0;
     opts->side = 0;
     opts->diag = 0;
+    opts->batch_count = 0;
+    opts->batch_mode = -1;
     opts->cache_cold = 0;
     opts->align = BMB_DEFAULT_ALIGN;
     opts->ld_pad = 0;
@@ -627,6 +639,29 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             *((c == BMB_OPT_UPLO) ? &opts->uplo : (c == BMB_OPT_SIDE) ? &opts->side : &opts->diag) = v[0];
             break;
         }
+
+        case BMB_OPT_BATCH_COUNT: {
+            unsigned long long v;
+
+            if (bmb_parse_uint(optarg, BMB_MAX_BATCH_COUNT, &v) != BMB_PARSE_OK || v < 1) {
+                bmb_log_error("Invalid value for --batch-count (expected an integer between 1 and 1000000).");
+                return BMB_OPTIONS_ERROR;
+            }
+            opts->batch_count = (unsigned int) v;
+            break;
+        }
+
+        case BMB_OPT_BATCH_MODE:
+            for (opts->batch_mode = BMB_BATCH_LOOP; opts->batch_mode <= BMB_BATCH_STRIDED; opts->batch_mode++) {
+                if (strcmp(optarg, bmb_batch_mode_name(opts->batch_mode)) == 0) {
+                    break;
+                }
+            }
+            if (opts->batch_mode > BMB_BATCH_STRIDED) {
+                bmb_log_error("Invalid value for --batch-mode (expected loop, group or strided).");
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
 
         case 'k':
             if (strcmp(optarg, "hot") == 0) {
@@ -801,6 +836,10 @@ void bmb_options_print_help(const char *prog_name)
         "      --side <side>             L or R: which side the matrix multiplies (default: L)\n"
         "      --diag <diagonal>         N or U: a unit diagonal, not read (default: N)\n"
         "                                 Each only for the routines that have the argument.\n"
+        "      --batch-count <n>         matrices per batched call, 1 to 1000000 (default: 1;\n"
+        "                                 GEMM only)\n"
+        "      --batch-mode <mode>       loop: a call per matrix; group: cblas_?gemm_batch;\n"
+        "                                 strided: cblas_?gemm_batch_strided (default: loop)\n"
         "  -k, --cache <state>           hot: operands reused from call to call, as in cache;\n"
         "                                 cold: rotated over copies beyond the last-level cache\n"
         "                                 (default: hot)\n"

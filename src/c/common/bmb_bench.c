@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "bmb_bench.h"
+#include "bmb_build.h"
 #include "bmb_log.h"
 #include "bmb_machine.h"
 #include "bmb_print.h"
@@ -661,6 +662,19 @@ char bmb_bench_diag(void)
     return bmb_diag;
 }
 
+static unsigned int bmb_batch_count = 1;
+static int bmb_batch_mode = BMB_BATCH_LOOP;
+
+unsigned int bmb_bench_batch_count(void)
+{
+    return bmb_batch_count;
+}
+
+int bmb_bench_batch_mode(void)
+{
+    return bmb_batch_mode;
+}
+
 /* An argument the routine does not have is refused, never ignored: a
  * --uplo L that changed nothing would be read as the lower triangle's
  * number. */
@@ -712,6 +726,21 @@ static int bmb_check_args(const bmb_benchmark_t *bench, const bmb_options_t *opt
     bmb_uplo = opts->uplo != 0 ? opts->uplo : 'U';
     bmb_side = opts->side != 0 ? opts->side : 'L';
     bmb_diag = opts->diag != 0 ? opts->diag : 'N';
+    if ((opts->batch_count != 0 || opts->batch_mode >= 0) && !(bench->args & BMB_ARG_BATCH)) {
+        snprintf(msg, sizeof(msg), "--batch-count, --batch-mode: %s has no batched form; GEMM has.",
+                 bench->routine_name);
+        bmb_log_error(msg);
+        return -1;
+    }
+    bmb_batch_count = opts->batch_count != 0 ? opts->batch_count : 1;
+    bmb_batch_mode = opts->batch_mode >= 0 ? opts->batch_mode : BMB_BATCH_LOOP;
+    if ((bench->args & BMB_ARG_BATCH) && !(bench->batch_modes & (1u << bmb_batch_mode))) {
+        snprintf(msg, sizeof(msg), "--batch-mode %s: this build's %s has no %s call; nothing measured.",
+                 bmb_batch_mode_name(bmb_batch_mode), bmb_build_backend(),
+                 bmb_batch_mode == BMB_BATCH_GROUP ? "cblas_?gemm_batch" : "cblas_?gemm_batch_strided");
+        bmb_log_warning(msg);
+        return BMB_EXIT_SKIPPED;
+    }
     return 0;
 }
 
@@ -824,9 +853,13 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     bmb_counts_only = counts != NULL && counts[0] != '\0' && counts[0] != '0';
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
-    if (bmb_check_args(bench, &opts) != 0) {
-        bmb_options_free(&opts);
-        return EXIT_FAILURE;
+    {
+        int checked = bmb_check_args(bench, &opts);
+
+        if (checked != 0) {
+            bmb_options_free(&opts);
+            return checked == BMB_EXIT_SKIPPED ? BMB_EXIT_SKIPPED : EXIT_FAILURE;
+        }
     }
     if (opts.verify && bench->verify == NULL) {
         bmb_log_error("--verify: this benchmark has no check of its result.");
@@ -873,6 +906,8 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.uplo = bmb_uplo;
     rs.side = bmb_side;
     rs.diag = bmb_diag;
+    rs.batch_count = bmb_batch_count;
+    rs.batch_mode = bmb_batch_mode;
     rs.label = opts.label;
     rs.verified = opts.verify;
     rs.argc = argc;

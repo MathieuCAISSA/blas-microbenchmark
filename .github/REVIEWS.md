@@ -158,7 +158,9 @@ What makes a benchmark wrong without making it fail.
 
 - [ ] A new option, output field, environment variable or exit status is
   in the man page, with the same default as `--help`
-  ([documentation](../doc/dev/documentation.md)).
+  ([documentation](../doc/dev/documentation.md)). The man tests read
+  long-only options too (`--trans`, `--batch-count`): until #159 they saw
+  only `-x, --name`, and #221's four went unchecked.
 - [ ] A man page change passes `BMB_MAN_STRICT=1 make -C man check` with
   mandoc installed, as the `man` job runs it: mandoc's lint refuses a
   text line over 80 bytes, which groff renders without a word (#67's

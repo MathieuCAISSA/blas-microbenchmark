@@ -15,6 +15,18 @@ typedef enum {
  * 1:1000000:1 asking for a million measurements. */
 #define BMB_MAX_SWEEP_POINTS 256
 
+/* --batch-mode (#159): a call per matrix, every BLAS has it; one
+ * cblas_?gemm_batch call of one group; one cblas_?gemm_batch_strided call. */
+typedef enum { BMB_BATCH_LOOP, BMB_BATCH_GROUP, BMB_BATCH_STRIDED } bmb_batch_mode_t;
+
+/* The largest --batch-count: past it, the arrays of a group call are
+ * the larger part of what is measured. */
+#define BMB_MAX_BATCH_COUNT 1000000
+
+/* A bmb_batch_mode_t's name, as --batch-mode takes it and the results
+ * record it. */
+const char *bmb_batch_mode_name(int mode);
+
 typedef struct {
     size_t values[BMB_MAX_SWEEP_POINTS]; /* measured in this order */
     size_t count;
@@ -70,6 +82,10 @@ typedef struct {
     char uplo;                /* --uplo: U or L */
     char side;                /* --side: L or R */
     char diag;                /* --diag: N or U */
+    /* Batched calls (#159): how many matrices, 0 when not given (1, one
+     * call), and how they are passed, -1 when not given (loop). */
+    unsigned int batch_count; /* --batch-count */
+    int batch_mode;           /* --batch-mode: a bmb_batch_mode_t */
     int cache_cold;           /* -k, --cache cold: each timed call finds its
                                * operands out of the caches (#160) */
     unsigned int align;       /* -a, --align: the bytes every operand is

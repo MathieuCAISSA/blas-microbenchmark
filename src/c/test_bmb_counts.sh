@@ -107,6 +107,14 @@ for r in sgemm dgemm cgemm zgemm; do
 done
 echo "ok   GEMM under -K: 2*M*N*K, and the bytes of M x K, K x N and M x N, at every K"
 
+# A batch (#159): the call's counts are the batch's, its count times one
+# matrix's, whichever mode passes them.
+BMB_COUNTS=1 level3/double/bmb_dgemm -m 30 -M 50 -K 7 --batch-count 5 >/dev/null 2>"$T/batch.err" ||
+    fail "dgemm --batch-count 5 failed under BMB_COUNTS: $(cat "$T/batch.err")"
+grep -q '^counts: dgemm 30 50 K 7 flops 105000 bytes - footprint 82400$' "$T/batch.err" ||
+    fail "dgemm --batch-count 5: $(grep '^counts' "$T/batch.err"), not 5 times 2*30*50*7 and (30*7 + 7*50 + 30*50)*8"
+echo "ok   a batch of five: five times one matrix's counts"
+
 # GEMV transposed (#221): the same FLOPs, x of M elements read and y of N
 # read and written.
 for r in sgemv dgemv; do

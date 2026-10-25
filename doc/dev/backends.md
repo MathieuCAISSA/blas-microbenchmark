@@ -42,6 +42,18 @@ benchmark cannot reach it. Debian's BLIS 0.9 aborts with any
 `BLIS_ARCH_TYPE` set, so only OpenBLAS's and MKL's overrides are tested
 (`test_bmb_kernels.sh`).
 
+Batched GEMM (#159) is MKL's signature everywhere it exists:
+`cblas_?gemm_batch` (MKL, BLIS, AOCL-BLAS, NVPL, OpenBLAS from 0.3.28)
+and `cblas_?gemm_batch_strided` (MKL, NVPL, OpenBLAS from 0.3.31).
+`configure` defines `HAVE_CBLAS_GEMM_BATCH` and
+`HAVE_CBLAS_GEMM_BATCH_STRIDED` when the CBLAS header declares the four
+precisions' calls and the library links them: a call taking arrays must
+not go through an implicit declaration. BLIS's prototypes differ from
+MKL's in their constness and integer type, so `bmb_gemm.c` passes the
+arrays as `void *`. Netlib has neither, and a build without one skips
+the mode (exit 77) rather than measure something else; the `mkl` job is
+where `strided` runs, the `blis` job `group` (`test_bmb_gemm_batch.sh`).
+
 The machine side of the provenance lives in `bmb_machine.c`, probed once per
 run: CPU model, logical CPUs, NUMA nodes, cpu0's caches, the CPU frequency
 governor and turbo, `uname`, and the date. Three rules there:

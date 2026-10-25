@@ -9,6 +9,7 @@
 #define BMB_ARG_UPLO 4u
 #define BMB_ARG_SIDE 8u
 #define BMB_ARG_DIAG 16u
+#define BMB_ARG_BATCH 32u /* --batch-count and --batch-mode (#159) */
 
 typedef struct {
     unsigned int thread_count;
@@ -48,6 +49,8 @@ typedef struct {
     char uplo;
     char side;
     char diag;
+    unsigned int batch_count; /* matrices per call, under BMB_ARG_BATCH */
+    int batch_mode;           /* a bmb_batch_mode_t */
     const char *label;      /* --label, or NULL; owned by the options */
     int verified;           /* --verify: every point was checked */
     const char *layout;     /* "row" or "col" for routines with a matrix;
