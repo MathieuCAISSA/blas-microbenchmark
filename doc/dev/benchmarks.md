@@ -112,7 +112,12 @@ of each family since #226, #228 and #230. A family BLAS has in one
 kind of precision only stops at an `#error` if asked for the other: ger,
 symv, syr, syr2 and dot are real (their complex counterparts, geru and
 gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc,
-dotu, geru and gerc complex.
+dotu, geru, gerc, hemv, her and her2 complex. hemv, her and her2 have
+sources of their own (#238): their real counterparts' checks are
+written in real arithmetic. her and her2 set the imaginary parts of A's
+diagonal to zero, as BLAS does; their checks read A through the
+Hermitian shapes, which ignore those parts, and check the other
+triangle unchanged apart, as herk's does.
 
 The Hermitian routines share their symmetric family's source: symm and
 hemm, syrk and herk, each pair from a header (`bmb_symm.h`, `bmb_syrk.h`)

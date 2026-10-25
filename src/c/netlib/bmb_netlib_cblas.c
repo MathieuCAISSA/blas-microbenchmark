@@ -53,6 +53,23 @@ extern void ccopy_(const int *n, const void *x, const int *incx, void *y, const 
 extern void zcopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
 extern float complex cdotc_(const int *n, const void *x, const int *incx,
                             const void *y, const int *incy);
+/* hemv, her and her2 (#238). */
+extern void chemv_(const char *uplo, const int *n, const void *alpha, const void *a,
+                   const int *lda, const void *x, const int *incx, const void *beta, void *y,
+                   const int *incy, size_t uplo_len);
+extern void cher_(const char *uplo, const int *n, const float *alpha, const void *x, const int *incx,
+                  void *a, const int *lda, size_t uplo_len);
+extern void cher2_(const char *uplo, const int *n, const void *alpha, const void *x,
+                   const int *incx, const void *y, const int *incy, void *a, const int *lda,
+                   size_t uplo_len);
+extern void zhemv_(const char *uplo, const int *n, const void *alpha, const void *a,
+                   const int *lda, const void *x, const int *incx, const void *beta, void *y,
+                   const int *incy, size_t uplo_len);
+extern void zher_(const char *uplo, const int *n, const double *alpha, const void *x, const int *incx,
+                  void *a, const int *lda, size_t uplo_len);
+extern void zher2_(const char *uplo, const int *n, const void *alpha, const void *x,
+                   const int *incx, const void *y, const int *incy, void *a, const int *lda,
+                   size_t uplo_len);
 /* dotu, geru and gerc (#236). */
 extern float complex cdotu_(const int *n, const void *x, const int *incx,
                             const void *y, const int *incy);
@@ -698,6 +715,130 @@ void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float a
         sger_(&M, &N, &alpha, X, &incX, Y, &incY, A, &lda);
     } else {
         sger_(&N, &M, &alpha, Y, &incY, X, &incX, A, &lda);
+    }
+}
+
+/* The Hermitian level 2 routines (#238). Row-major, the buffer read
+ * column-major is A^T, which for a Hermitian A is conj(A), Hermitian too
+ * and stored in the other triangle. So each call is the column-major one
+ * with the triangle flipped and the vectors conjugated, as reference
+ * CBLAS makes it: conj(y) = conj(alpha) A^T conj(x) + conj(beta) conj(y)
+ * for hemv; her on conj(x); her2 on conj(x) and conj(y), with
+ * conj(alpha). The vectors are conjugated in place and back (#228). */
+
+void cblas_chemv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
+                 const void *alpha, const void *A, const int lda, const void *X, const int incX,
+                 const void *beta, void *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+
+        chemv_(&uplo, &N, alpha, A, &lda, X, &incX, beta, Y, &incY, 1);
+    } else {
+        const float *al = alpha, *be = beta;
+        const float calpha[2] = { al[0], -al[1] }, cbeta[2] = { be[0], -be[1] };
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        bmb_conj_f((float *) X, N, incX);
+        bmb_conj_f(Y, N, incY);
+        chemv_(&uplo, &N, calpha, A, &lda, X, &incX, cbeta, Y, &incY, 1);
+        bmb_conj_f(Y, N, incY);
+        bmb_conj_f((float *) X, N, incX);
+    }
+}
+
+void cblas_cher(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                const void *X, const int incX, void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+
+        cher_(&uplo, &N, &alpha, X, &incX, A, &lda, 1);
+    } else {
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        bmb_conj_f((float *) X, N, incX);
+        cher_(&uplo, &N, &alpha, X, &incX, A, &lda, 1);
+        bmb_conj_f((float *) X, N, incX);
+    }
+}
+
+void cblas_cher2(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+
+        cher2_(&uplo, &N, alpha, X, &incX, Y, &incY, A, &lda, 1);
+    } else {
+        const float *al = alpha;
+        const float calpha[2] = { al[0], -al[1] };
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        bmb_conj_f((float *) X, N, incX);
+        bmb_conj_f((float *) Y, N, incY);
+        cher2_(&uplo, &N, calpha, X, &incX, Y, &incY, A, &lda, 1);
+        bmb_conj_f((float *) Y, N, incY);
+        bmb_conj_f((float *) X, N, incX);
+    }
+}
+
+void cblas_zhemv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
+                 const void *alpha, const void *A, const int lda, const void *X, const int incX,
+                 const void *beta, void *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+
+        zhemv_(&uplo, &N, alpha, A, &lda, X, &incX, beta, Y, &incY, 1);
+    } else {
+        const double *al = alpha, *be = beta;
+        const double calpha[2] = { al[0], -al[1] }, cbeta[2] = { be[0], -be[1] };
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        bmb_conj_d((double *) X, N, incX);
+        bmb_conj_d(Y, N, incY);
+        zhemv_(&uplo, &N, calpha, A, &lda, X, &incX, cbeta, Y, &incY, 1);
+        bmb_conj_d(Y, N, incY);
+        bmb_conj_d((double *) X, N, incX);
+    }
+}
+
+void cblas_zher(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const double alpha,
+                const void *X, const int incX, void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+
+        zher_(&uplo, &N, &alpha, X, &incX, A, &lda, 1);
+    } else {
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        bmb_conj_d((double *) X, N, incX);
+        zher_(&uplo, &N, &alpha, X, &incX, A, &lda, 1);
+        bmb_conj_d((double *) X, N, incX);
+    }
+}
+
+void cblas_zher2(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+
+        zher2_(&uplo, &N, alpha, X, &incX, Y, &incY, A, &lda, 1);
+    } else {
+        const double *al = alpha;
+        const double calpha[2] = { al[0], -al[1] };
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        bmb_conj_d((double *) X, N, incX);
+        bmb_conj_d((double *) Y, N, incY);
+        zher2_(&uplo, &N, calpha, X, &incX, Y, &incY, A, &lda, 1);
+        bmb_conj_d((double *) Y, N, incY);
+        bmb_conj_d((double *) X, N, incX);
     }
 }
 

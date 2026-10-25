@@ -88,7 +88,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         ?symm | ?hemm) variants=$(combos --side=L,R --uplo=U,L) ;;
         ?herk) variants=$(combos --uplo=U,L --trans=N,C) ;;
         ?syrk | ?syr2k) variants=$(combos --uplo=U,L --trans=N,T) ;;
-        ?symv | ?syr | ?syr2) variants=$(combos --uplo=U,L) ;;
+        ?symv | ?syr | ?syr2 | ?hemv | ?her | ?her2) variants=$(combos --uplo=U,L) ;;
         *) variants=default ;;
     esac
     first=${variants%% *}

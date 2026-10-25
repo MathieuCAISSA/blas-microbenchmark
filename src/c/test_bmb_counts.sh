@@ -71,6 +71,9 @@ while read -r r level prec kind family; do
             else if (op == "symv") { f = num(2 * m * m); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
             else if (op == "syr") { f = num(m * (m + 1)); b = num(e * (m * (m + 1) + m)) }
             else if (op == "syr2") { f = num(2 * m * (m + 1)); b = num(e * (m * (m + 1) + 2 * m)) }
+            else if (op == "hemv") { f = num(2 * m * m * cf); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
+            else if (op == "her") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) + m)) }
+            else if (op == "her2") { f = num(2 * m * (m + 1) * cf); b = num(e * (m * (m + 1) + 2 * m)) }
             else if (op == "trmv" || op == "trsv") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) / 2 + 2 * m)) }
             else if (op == "gemm" || op == "symm" || op == "hemm") { f = num(2 * m * m * n * cf); p = num(e * (m * m + 2 * m * n)) }
             else if (op == "syrk" || op == "herk") { f = num(n * m * (m + 1) * cf); p = num(e * (m * n + m * m)) }
