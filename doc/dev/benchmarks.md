@@ -107,9 +107,8 @@ the Netlib build. Every routine is in a family: GEMM since #200, the
 rest of level 3 since #201, level 2 since #202, level 1 since #203, each
 checked to give exactly what its own file did (the corrupted check's values to the
 digit, the counts, the copies `--cache cold` takes, every field the
-clock does not change), and the precisions BLAS has that the table does
-not list yet (`ssymm`, `ctrsm`, `zsyr2k`, ...) seen to compile, pass
-`--verify` in both layouts, padded or not, and catch a corruption. A family BLAS has in one
+clock does not change). The table has listed every precision BLAS has
+of each family since #226, #228 and #230. A family BLAS has in one
 kind of precision only stops at an `#error` if asked for the other: ger,
 symv, syr, syr2 and dot are real (their complex counterparts, geru and
 gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc
@@ -237,10 +236,10 @@ Then decide how often that reset has to run. Calls are timed in batches
 so the operand drifts across the calls inside one. Ask what that drift
 does over a few thousand calls:
 
-- `dtrmv`/`dtrmm` multiply the operand by A every time and `dtrsv`/`dtrsm`
-  (and `strsm`/`ztrsm`) divide by it, so it reaches infinity or denormals well inside a single
-  batch — and denormals are where the hardware slows down and the timing
-  stops meaning anything. They set `reset_every_call = 1`, which pins the
+- trmv and trmm multiply the operand by A every time and trsv and trsm
+  divide by it, in every precision, so it reaches infinity or denormals
+  well inside a single batch — and denormals are where the hardware
+  slows down and the timing stops meaning anything. They set `reset_every_call = 1`, which pins the
   batch to 1 call, even under an explicit `-b` (ignored with a warning;
   it used to apply, and timed dtrmv 1.5× too fast, #48).
 - `dscal` shrinks its vector by `0.999999` per call, which needs about

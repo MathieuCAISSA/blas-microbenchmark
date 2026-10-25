@@ -20,6 +20,11 @@ releases with the same major version can be compared and read by the same
   and `ztrsv`, 12 more. Under Netlib, a complex one row-major with
   `--trans C` conjugates its vectors around the call, as reference CBLAS
   does, but in place: nothing is allocated in the timed call.
+- Level 3 in every precision BLAS has (#230): `ssymm`, `csymm`, `zsymm`,
+  `chemm`, `csyrk`, `zsyrk`, `cherk`, `ssyr2k`, `csyr2k`, `zsyr2k`,
+  `strmm`, `ctrmm`, `ztrmm` and `ctrsm`, 14 more: every operation the
+  suite measures now comes in each precision BLAS defines it in, 76
+  benchmarks.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,

@@ -174,4 +174,48 @@ void cblas_zhemm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPL
                  const void *A, const int lda, const void *B, const int ldb,
                  const void *beta, void *C, const int ldc);
 
+/* The other precisions of the same operations (#230). */
+void cblas_ssymm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const float alpha, const float *A, const int lda, const float *B,
+                 const int ldb, const float beta, float *C, const int ldc);
+void cblas_csymm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const void *alpha, const void *A, const int lda, const void *B,
+                 const int ldb, const void *beta, void *C, const int ldc);
+void cblas_zsymm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const void *alpha, const void *A, const int lda, const void *B,
+                 const int ldb, const void *beta, void *C, const int ldc);
+void cblas_chemm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const void *alpha, const void *A, const int lda, const void *B,
+                 const int ldb, const void *beta, void *C, const int ldc);
+void cblas_csyrk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const void *alpha, const void *A, const int lda,
+                 const void *beta, void *C, const int ldc);
+void cblas_zsyrk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const void *alpha, const void *A, const int lda,
+                 const void *beta, void *C, const int ldc);
+void cblas_cherk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const float alpha, const void *A, const int lda,
+                 const float beta, void *C, const int ldc);
+void cblas_ssyr2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const float alpha, const float *A, const int lda,
+                  const float *B, const int ldb, const float beta, float *C, const int ldc);
+void cblas_csyr2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const void *beta, void *C, const int ldc);
+void cblas_zsyr2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const void *beta, void *C, const int ldc);
+void cblas_strmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const float alpha, const float *A, const int lda, float *B, const int ldb);
+void cblas_ctrmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb);
+void cblas_ztrmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb);
+void cblas_ctrsm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb);
+
 #endif /* BMB_NETLIB_CBLAS_H */
