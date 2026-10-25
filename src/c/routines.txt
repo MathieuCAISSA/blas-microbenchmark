@@ -47,6 +47,12 @@ sswap      1      s          v      swap
 dswap      1      d          v      swap
 cswap      1      c          v      swap
 zswap      1      z          v      swap
+isamax     1      s          v      iamax
+idamax     1      d          v      iamax
+icamax     1      c          v      iamax
+izamax     1      z          v      iamax
+srot       1      s          v      rot
+drot       1      d          v      rot
 sgemv      2      s          mn     gemv
 dgemv      2      d          mn     gemv
 cgemv      2      c          mn     gemv

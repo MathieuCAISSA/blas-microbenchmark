@@ -15,7 +15,8 @@ blas-microbenchmark, bmb_sasum, bmb_dasum, bmb_scasum, bmb_dzasum,
 bmb_saxpy, bmb_daxpy, bmb_caxpy, bmb_zaxpy, bmb_scopy, bmb_dcopy, bmb_ccopy,
 bmb_zcopy, bmb_sdot, bmb_ddot, bmb_cdotc, bmb_zdotc, bmb_snrm2, bmb_dnrm2,
 bmb_scnrm2, bmb_dznrm2, bmb_sscal, bmb_dscal, bmb_cscal, bmb_zscal,
-bmb_sswap, bmb_dswap, bmb_cswap, bmb_zswap, bmb_sgemv, bmb_dgemv, bmb_cgemv,
+bmb_sswap, bmb_dswap, bmb_cswap, bmb_zswap, bmb_isamax, bmb_idamax,
+bmb_icamax, bmb_izamax, bmb_srot, bmb_drot, bmb_sgemv, bmb_dgemv, bmb_cgemv,
 bmb_zgemv, bmb_sger, bmb_dger, bmb_ssymv, bmb_dsymv, bmb_ssyr, bmb_dsyr,
 bmb_ssyr2, bmb_dsyr2, bmb_strmv, bmb_dtrmv, bmb_ctrmv, bmb_ztrmv, bmb_strsv,
 bmb_dtrsv, bmb_ctrsv, bmb_ztrsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm,
@@ -60,6 +61,7 @@ l l.
 Level 1	sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy
 \&	dcopy ccopy zcopy sdot ddot cdotc zdotc snrm2 dnrm2 scnrm2
 \&	dznrm2 sscal dscal cscal zscal sswap dswap cswap zswap
+\&	isamax idamax icamax izamax srot drot
 Level 2	sgemv dgemv cgemv zgemv sger dger ssymv dsymv ssyr dsyr
 \&	ssyr2 dsyr2 strmv dtrmv ctrmv ztrmv strsv dtrsv ctrsv
 \&	ztrsv
@@ -86,6 +88,9 @@ arithmetic of a real one on twice the data.
 Two letters name a routine that returns a real from a complex vector:
 scasum and dzasum, the sum of the absolute values of the real and
 imaginary parts, scnrm2 and dznrm2, the norm.
+The one that returns an index has an i before the precision: isamax,
+idamax, icamax and izamax, the first element of largest absolute value,
+counted from 0 as in C.
 Some exist for complex numbers only: cdotc and zdotc, the dot product
 with the first vector conjugated, and chemm, zhemm, cherk and zherk,
 the Hermitian counterparts of symm and syrk.
@@ -473,7 +478,8 @@ Two rates are derived from that time:
 .B GFLOP/s
 the conventional operation count of the routine (2\(muM\(muN\(muK for
 dgemm, K\(muN\(mu(N+1) for dsyrk, ...) divided by the time.
-Not shown for the copy and swap routines, which do no arithmetic.
+Not shown for the copy and swap routines, which do no arithmetic, nor
+for isamax, idamax, icamax and izamax, which search.
 Complex routines count real operations: a complex multiply\-add is four
 real multiplications and four additions, so each counts four times its
 real counterpart's operations (cgemm and zgemm 8\(muM\(muN\(muK where
