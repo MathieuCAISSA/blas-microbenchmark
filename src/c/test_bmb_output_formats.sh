@@ -56,6 +56,11 @@ grep -q '^    "arguments": {"trans": "NN"},$' fmt.json || fail "dgemm's json has
 level3/double/bmb_dgemm -x 0 -i 1 -m 8 --trans tn -o args.json >args.txt || fail "the --trans tn run failed"
 grep -q '^# arguments: trans TN$' args.txt || fail "--trans tn: the table does not say trans TN"
 grep -q '"arguments": {"trans": "TN"}' args.json || fail "--trans tn: the json does not say trans TN"
+level3/double/bmb_dtrsm -x 0 -i 1 -m 8 -M 4 --side R --diag U -o args.json >args.txt || fail "the dtrsm run failed"
+grep -q '^# arguments: trans N, uplo U, side R, diag U$' args.txt \
+    || fail "dtrsm: the table does not give its four arguments: $(grep '^# arg' args.txt)"
+grep -q '"arguments": {"trans": "N", "uplo": "U", "side": "R", "diag": "U"}' args.json \
+    || fail "dtrsm: the json does not give its four arguments"
 
 # A single-dimension routine names its one dimension and leaves dim2_label
 # out, the way it leaves dim2 out of every row.

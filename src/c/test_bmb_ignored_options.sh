@@ -70,7 +70,20 @@ refused '--trans: dgemm takes two letters' level3/double/bmb_dgemm -m 8 --trans 
 refused '--trans: dgemv takes one letter' level2/double/bmb_dgemv -m 8 --trans NT
 refused '--trans: dgemv takes NT, not C' level2/double/bmb_dgemv -m 8 --trans C
 refused '--trans: dgemm takes NT, not C' level3/double/bmb_dgemm -m 8 --trans NC
-echo "ok   an argument a routine does not have, or a letter it does not take, is refused"
+refused '--trans: zherk takes NC, not T' level3/complex16/bmb_zherk -m 8 --trans T
+refused '--side: dsyrk has no side to choose' level3/double/bmb_dsyrk -m 8 --side R
+refused '--diag: dsymv has no triangular matrix' level2/double/bmb_dsymv -m 8 --diag U
+refused '--trans: dsymv has no matrix to transpose' level2/double/bmb_dsymv -m 8 --trans T
+for args in "level3/double/bmb_dtrsm --side R --uplo L --trans T --diag U" "level3/double/bmb_dsymm --side R --uplo L" \
+            "level3/double/bmb_dsyrk --uplo L --trans T" "level2/double/bmb_dtrsv --uplo L --trans T --diag U" \
+            "level2/double/bmb_dsyr --uplo L"; do
+    # shellcheck disable=SC2086 # the program and its options, split on purpose
+    set -- $args
+    b=$1
+    shift
+    "$b" -m 8 "$@" -C -x 0 -i 1 >/dev/null 2>"$T/err" || fail "$b $* was refused: $(cat "$T/err")"
+done
+echo "ok   an argument a routine does not have, or a letter it does not take, is refused; those it has are taken"
 
 rm -rf "$T"
 echo "all checks passed"

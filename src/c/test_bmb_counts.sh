@@ -124,5 +124,29 @@ for r in sgemv dgemv; do
 done
 echo "ok   GEMV transposed: x of M elements, y of N"
 
+# On the right side (#222), A is N x N: trmm's and trsm's M*N*(N+1),
+# symm's and hemm's 2*M*N*N, and A's N*N bytes in the footprint.
+grep -v '^#' "${srcdir:-.}/routines.txt" | awk '$5 ~ /^(trmm|trsm|symm|hemm)$/ { print $1, $3, $5 }' >"$T/right" ||
+    fail "no right-side routines in routines.txt"
+n=0
+while read -r r prec family; do
+    case $prec in s) dir=single e=4 cf=1 ;; d) dir=double e=8 cf=1 ;; c) dir=complex e=8 cf=4 ;; z) dir=complex16 e=16 cf=4 ;; esac
+    BMB_COUNTS=1 "level3/$dir/bmb_$r" -m 30,61,100000 -M 50,7 --side R >/dev/null 2>"$T/$r.err" ||
+        fail "bmb_$r --side R failed under BMB_COUNTS: $(cat "$T/$r.err")"
+    grep '^counts: ' "$T/$r.err" >"$T/$r.got" || fail "bmb_$r --side R wrote no counts"
+    awk -v r="$r" -v e="$e" -v cf="$cf" -v family="$family" '
+        { m = $3; n = $4
+          if (family == "trmm" || family == "trsm") { f = m * n * (n + 1) * cf; p = e * (n * n + m * n) }
+          else { f = 2 * m * n * n * cf; p = e * (n * n + 2 * m * n) }
+          want = sprintf("counts: %s %s %s flops %.17g bytes - footprint %.17g", r, m, n, f, p)
+          if ($0 != want) { printf "%s:\n  got  %s\n  want %s\n", r, $0, want; bad = 1 }
+          points++ }
+        END { if (!bad && points != 6) { print r ": " points " points, not 6"; bad = 1 } exit bad }
+    ' "$T/$r.got" >"$T/$r.diff" || fail "$(cat "$T/$r.diff")"
+    n=$((n + 1))
+done <"$T/right"
+test "$n" -ge 6 || fail "only $n right-side routines checked"
+echo "ok   the $n routines with a side, on the right: A N x N"
+
 rm -rf "$T"
 echo "all checks passed"

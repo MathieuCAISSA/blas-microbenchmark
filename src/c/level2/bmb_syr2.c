@@ -9,7 +9,7 @@
 /* ssyr2 and dsyr2, one per precision (bmb_prec.h); the complex one,
  * her2, is a family of its own.
  * Square routine: only dim1 (= N) is used, swept via --matrix-dim1.
- * A (N x N, upper triangle) is updated in place: A += alpha*(x*y^T + y*x^T). */
+ * A (N x N, the triangle --uplo gives) is updated in place: A += alpha*(x*y^T + y*x^T). */
 #if BMB_COMPLEX
 #error "syr2 is real: the complex one is her2"
 #endif
@@ -19,6 +19,7 @@ typedef struct {
     int col;   /* 1 with --layout col */
     int n;
     int lda;
+    char uplo; /* --uplo: the triangle updated */
     bmb_real_t alpha;
     bmb_real_t *a;
     bmb_real_t *x;
@@ -41,6 +42,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->lda = (int) lda;
+    ctx->uplo = bmb_bench_uplo();
     /* Small alpha: A accumulates rank-1 updates across iterations. */
     ctx->alpha = BMB_R(1.0e-6);
     ctx->col = bmb_bench_column_major();
@@ -67,7 +69,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    BMB_CBLAS(syr2)(ctx->order, CblasUpper, ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1,
+    BMB_CBLAS(syr2)(ctx->order, BMB_CBLAS_UPLO(ctx->uplo), ctx->n, ctx->alpha, ctx->x, 1, ctx->y, 1,
                     ctx->a, ctx->lda);
 }
 
@@ -104,7 +106,7 @@ static double bytes(size_t dim1, size_t dim2)
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
-    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i;
+    size_t m = (size_t) ctx->n, n = (size_t) ctx->n, i, k;
     double *r = malloc((n + 6 * m) * sizeof(double));
     const double alpha = ctx->alpha;
     double s1 = 0.0, s1abs = 0.0, s2 = 0.0, s2abs = 0.0;
@@ -121,7 +123,12 @@ static int verify(void *vctx, char *msg, size_t size)
     call(ctx);
     bmb_perturb(&ctx->a[0]);
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
-    for (i = m; i-- > 0;) {
+    /* Row i of the update's triangle, times r: x_i (or y_i) times the
+     * sums of x_j r_j (y_j r_j) over the columns the triangle has in that
+     * row, j >= i in the upper one, j <= i in the lower, gathered row by
+     * row from the end of the triangle the sums start at. */
+    for (k = 0; k < m; k++) {
+        i = ctx->uplo == 'U' ? m - 1 - k : k;
         const double xi = ctx->x[i], yi = ctx->y[i];
 
         s1 += yi * r[i];
@@ -145,6 +152,7 @@ int main(int argc, char *argv[])
     bench.dim2_label = NULL;
     bench.use_vector_range = 0;
     bench.level = 2;
+    bench.args = BMB_ARG_UPLO;
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;

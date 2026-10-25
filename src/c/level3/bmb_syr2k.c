@@ -7,7 +7,8 @@
 
 /* ssyr2k, dsyr2k, csyr2k and zsyr2k, one per precision (bmb_prec.h): C
  * (N x N, symmetric) = alpha * (A * B^T + B * A^T) + beta * C, A and B
- * are N x K. dim1 = N, dim2 = K. */
+ * N x K, or with --trans T alpha * (A^T * B + B^T * A), A and B K x N
+ * (#222); C's triangle as --uplo gives. dim1 = N, dim2 = K. */
 
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
@@ -16,11 +17,12 @@ typedef struct {
     int ldc;
     int n;
     int k;
+    char uplo, trans;
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t beta[BMB_PARTS];
-    bmb_real_t *a; /* N x K */
-    bmb_real_t *b; /* N x K */
-    bmb_real_t *c; /* N x N, upper triangle used */
+    bmb_real_t *a; /* N x K, or K x N transposed */
+    bmb_real_t *b; /* the same */
+    bmb_real_t *c; /* N x N, the triangle --uplo gives used */
 } bmb_ctx_t;
 
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
@@ -28,9 +30,12 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     bmb_ctx_t *ctx;
     size_t n = dim1, k = dim2;
     const int col = bmb_bench_column_major();
-    /* A as stored: its rows, or its columns with --layout col. */
-    const size_t outa = col ? k : n;
-    const size_t lda = bmb_bench_ld(outa, col ? n : k, BMB_ELEM_BYTES);
+    /* A and B, ra x ca, as stored: their rows, or their columns with
+     * --layout col. */
+    const char trans = bmb_bench_trans(0);
+    const size_t ra = trans == 'N' ? n : k, ca = trans == 'N' ? k : n;
+    const size_t outa = col ? ca : ra;
+    const size_t lda = bmb_bench_ld(outa, col ? ra : ca, BMB_ELEM_BYTES);
     const size_t ldc = bmb_bench_ld(n, n, BMB_ELEM_BYTES);
     size_t i;
 
@@ -49,6 +54,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->k = (int) k;
+    ctx->uplo = bmb_bench_uplo();
+    ctx->trans = trans;
     bmb_set_scalar(ctx->alpha, BMB_R(1.0), BMB_R(0.0));
     bmb_set_scalar(ctx->beta, BMB_R(0.0), BMB_R(0.0)); /* verify() relies on it */
     ctx->col = col;
@@ -79,7 +86,7 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    BMB_CBLAS(syr2k)(ctx->order, CblasUpper, CblasNoTrans, ctx->n, ctx->k,
+    BMB_CBLAS(syr2k)(ctx->order, BMB_CBLAS_UPLO(ctx->uplo), BMB_CBLAS_TRANS(ctx->trans), ctx->n, ctx->k,
                      BMB_SCALAR(ctx->alpha), (const void *) ctx->a, ctx->lda,
                      (const void *) ctx->b, ctx->lda, BMB_SCALAR(ctx->beta),
                      (void *) ctx->c, ctx->ldc);
@@ -113,18 +120,20 @@ static double footprint(size_t dim1, size_t dim2)
 }
 
 /* --verify, by random projection in double: C*r against
- * alpha*(A*(B^T*r) + B*(A^T*r)), r of the routine's kind, C standing for
- * the symmetric matrix its upper triangle gives; beta is 0 (setup), so
+ * alpha*(A*(B^T*r) + B*(A^T*r)), or alpha*(A^T*(B*r) + B^T*(A*r))
+ * transposed, r of the routine's kind, C standing for the symmetric
+ * matrix its triangle gives; beta is 0 (setup), so
  * what C held before the call does not enter. In single precision, the
  * scale leaves out |C||r|, and the tolerance counts the library's 2K
- * terms alone, as for ssyrk. The strictly lower part, which the routine
- * must not touch, is projected before and after the call, and must come
+ * terms alone, as for ssyrk. The other triangle's strict part, which the
+ * routine must not touch, is projected before and after the call, and must come
  * out the same to the bit. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     const size_t p = BMB_PARTS;
     size_t n = (size_t) ctx->n, k = (size_t) ctx->k, i;
+    const int strict = ctx->uplo == 'U' ? BMB_VERIFY_LOWER_STRICT : BMB_VERIFY_UPPER_STRICT;
     double *r = malloc(((8 * p + 4) * n + (p + 1) * k) * sizeof(double));
     int ok;
 
@@ -137,14 +146,22 @@ static int verify(void *vctx, char *msg, size_t size)
     double *want = labs + n, *scale = want + p * n;
 
     bmb_verify_probe(r, p * n);
-    bmb_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, l0, labs);
+    bmb_matvec(strict, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, l0, labs);
     call(ctx);
     bmb_perturb(&ctx->c[0]);
-    bmb_matvec(BMB_VERIFY_SYM_UPPER, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
-    bmb_matvec(BMB_VERIFY_FULL_T, ctx->col, n, k, ctx->b, (size_t) ctx->lda, r, NULL, t, tabs);
-    bmb_matvec(BMB_VERIFY_FULL, ctx->col, n, k, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
-    bmb_matvec(BMB_VERIFY_FULL_T, ctx->col, n, k, ctx->a, (size_t) ctx->lda, r, NULL, t, tabs);
-    bmb_matvec(BMB_VERIFY_FULL, ctx->col, n, k, ctx->b, (size_t) ctx->lda, t, tabs, u, uabs);
+    bmb_matvec(ctx->uplo == 'U' ? BMB_VERIFY_SYM_UPPER : BMB_VERIFY_SYM_LOWER, ctx->col, n, n, ctx->c,
+               (size_t) ctx->ldc, r, NULL, y1, y1abs);
+    if (ctx->trans == 'N') {
+        bmb_matvec(BMB_VERIFY_FULL_T, ctx->col, n, k, ctx->b, (size_t) ctx->lda, r, NULL, t, tabs);
+        bmb_matvec(BMB_VERIFY_FULL, ctx->col, n, k, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
+        bmb_matvec(BMB_VERIFY_FULL_T, ctx->col, n, k, ctx->a, (size_t) ctx->lda, r, NULL, t, tabs);
+        bmb_matvec(BMB_VERIFY_FULL, ctx->col, n, k, ctx->b, (size_t) ctx->lda, t, tabs, u, uabs);
+    } else {
+        bmb_matvec(BMB_VERIFY_FULL, ctx->col, k, n, ctx->b, (size_t) ctx->lda, r, NULL, t, tabs);
+        bmb_matvec(BMB_VERIFY_FULL_T, ctx->col, k, n, ctx->a, (size_t) ctx->lda, t, tabs, y2, y2abs);
+        bmb_matvec(BMB_VERIFY_FULL, ctx->col, k, n, ctx->a, (size_t) ctx->lda, r, NULL, t, tabs);
+        bmb_matvec(BMB_VERIFY_FULL_T, ctx->col, k, n, ctx->b, (size_t) ctx->lda, t, tabs, u, uabs);
+    }
     for (i = 0; i < p * n; i++) {
         y2[i] += u[i];
     }
@@ -161,8 +178,10 @@ static int verify(void *vctx, char *msg, size_t size)
     ok = bmb_verify_close("C*r, for a random vector r" BMB_PARTS_NOTE, y1, want, scale, p * n,
                           bmb_tolerance(BMB_SINGLE ? 2 * k : k + n), msg, size);
     if (ok) {
-        bmb_matvec(BMB_VERIFY_LOWER_STRICT, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, l, labs);
-        ok = bmb_verify_close("the strictly lower part of C, times r, which the call must not change",
+        bmb_matvec(strict, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, l, labs);
+        ok = bmb_verify_close(ctx->uplo == 'U'
+                                  ? "the strictly lower part of C, times r, which the call must not change"
+                                  : "the strictly upper part of C, times r, which the call must not change",
                               l, l0, NULL, p * n, 0.0, msg, size);
     }
     free(r);
@@ -178,6 +197,8 @@ int main(int argc, char *argv[])
     bench.dim2_label = "Matrix dim2 (K)";
     bench.use_vector_range = 0;
     bench.level = 3;
+    bench.args = BMB_ARG_UPLO | BMB_ARG_TRANS;
+    bench.trans_letters = "NT";
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;

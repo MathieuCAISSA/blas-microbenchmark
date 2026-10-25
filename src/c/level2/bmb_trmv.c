@@ -15,7 +15,8 @@ typedef struct {
     int col;   /* 1 with --layout col */
     int n;
     int lda;
-    bmb_real_t *a;  /* N x N, in the order of --layout, upper triangle used */
+    char uplo, trans, diag; /* --uplo, --trans, --diag */
+    bmb_real_t *a;  /* N x N, in the order of --layout, the triangle --uplo gives used */
     bmb_real_t *x0; /* template */
     bmb_real_t *x;  /* working buffer, restored by reset() before each call */
 } bmb_ctx_t;
@@ -53,6 +54,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (int) n;
     ctx->lda = (int) lda;
+    ctx->uplo = bmb_bench_uplo();
+    ctx->trans = bmb_bench_trans(0);
+    ctx->diag = bmb_bench_diag();
     ctx->col = bmb_bench_column_major();
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
     ctx->a = bmb_bench_alloc(n * lda * BMB_ELEM_BYTES);
@@ -93,7 +97,8 @@ static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
-    BMB_CBLAS(trmv)(ctx->order, CblasUpper, CblasNoTrans, CblasNonUnit, ctx->n,
+    BMB_CBLAS(trmv)(ctx->order, BMB_CBLAS_UPLO(ctx->uplo), BMB_CBLAS_TRANS(ctx->trans),
+                    BMB_CBLAS_DIAG(ctx->diag), ctx->n,
                     (const void *) ctx->a, ctx->lda, (void *) ctx->x, 1);
 }
 
@@ -130,8 +135,9 @@ static double bytes(size_t dim1, size_t dim2)
     return (double) BMB_ELEM_BYTES * (d1 * (d1 + 1.0) / 2.0 + 2.0 * d1);
 }
 
-/* --verify: U times the template, recomputed in double. The driver has
- * just restored x from it. */
+/* --verify: op(A) times the template, recomputed in double, op(A) the
+ * triangle --uplo gives with --trans and --diag. The driver has just
+ * restored x from it. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
@@ -149,7 +155,8 @@ static int verify(void *vctx, char *msg, size_t size)
     call(ctx);
     bmb_perturb(&ctx->x[0]);
     bmb_to_double(got, ctx->x, n);
-    bmb_matvec(BMB_VERIFY_UPPER, ctx->col, n, n, ctx->a, (size_t) ctx->lda, x0, NULL, want, scale);
+    bmb_matvec(BMB_VERIFY_TRI(ctx->uplo, ctx->trans, ctx->diag), ctx->col, n, n, ctx->a,
+               (size_t) ctx->lda, x0, NULL, want, scale);
 #if BMB_COMPLEX
     {
         size_t i;
@@ -174,6 +181,8 @@ int main(int argc, char *argv[])
     bench.dim2_label = NULL;
     bench.use_vector_range = 0;
     bench.level = 2;
+    bench.args = BMB_ARG_UPLO | BMB_ARG_TRANS | BMB_ARG_DIAG;
+    bench.trans_letters = BMB_TRANS_LETTERS;
     bench.setup = setup;
     bench.call = call;
     bench.reset = reset;

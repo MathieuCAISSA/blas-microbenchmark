@@ -234,7 +234,8 @@ GEMM takes two letters, A's then B's
 .RB ( NT ,
 .BR TN ,
 \&...);
-GEMV one.
+GEMV, the triangular routines (trmv, trsv, trmm, trsm) and the rank-k
+updates (syrk, syr2k: N or T; herk: N or C) one.
 The routines without a matrix to transpose refuse it.
 Default:
 .B N
@@ -243,7 +244,8 @@ for GEMM), what every routine always measured.
 .TP
 .BI "\-\-uplo " triangle
 The triangle of a triangular, symmetric or Hermitian matrix the routine
-reads:
+reads or writes (trmv, trsv, trmm, trsm, symv, syr, syr2, symm, hemm,
+syrk, herk, syr2k):
 .B U
 or
 .BR L .
@@ -252,16 +254,19 @@ Default:
 .BR U .
 .TP
 .BI "\-\-side " side
-Which side the matrix multiplies:
+Which side the matrix multiplies (symm, hemm, trmm, trsm):
 .B L
 or
 .BR R .
+On the right, A is N by N where it is M by M on the left, and the
+operation count follows: M*N*(N+1) for trsm on the right, N*M*(M+1) on
+the left.
 Refused by the routines without one.
 Default:
 .BR L .
 .TP
 .BI "\-\-diag " diagonal
-A triangular matrix's diagonal:
+A triangular matrix's diagonal (trmv, trsv, trmm, trsm):
 .B N
 as stored, or
 .B U
