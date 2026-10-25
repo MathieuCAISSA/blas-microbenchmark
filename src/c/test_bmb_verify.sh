@@ -65,7 +65,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         *)
             case $r in
                 sgemm | dgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
-                ?gemv | ?ger | ?symm | ?hemm | ?syrk | ?herk | ?syr2k | ?trmm \
+                ?gemv | ?ger | ?geru | ?gerc | ?symm | ?hemm | ?syrk | ?herk | ?syr2k | ?trmm \
                     | ?trsm) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac

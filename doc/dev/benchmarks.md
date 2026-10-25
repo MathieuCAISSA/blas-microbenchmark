@@ -111,8 +111,8 @@ clock does not change). The table has listed every precision BLAS has
 of each family since #226, #228 and #230. A family BLAS has in one
 kind of precision only stops at an `#error` if asked for the other: ger,
 symv, syr, syr2 and dot are real (their complex counterparts, geru and
-gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc
-complex.
+gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc,
+dotu, geru and gerc complex.
 
 The Hermitian routines share their symmetric family's source: symm and
 hemm, syrk and herk, each pair from a header (`bmb_symm.h`, `bmb_syrk.h`)
@@ -123,6 +123,11 @@ alpha and beta real, as BLAS takes them. A Hermitian A's diagonal has an
 imaginary part, which a Hermitian matrix cannot have and BLAS does not
 read; `--verify` ignores it too, so a library that used it would be
 caught.
+
+The conjugated and unconjugated complex routines share theirs the same
+way (#236): dotc and dotu from `bmb_dotc.h`, `bmb_dotu.c` with
+`BMB_UNCONJ` defined; geru and gerc from `bmb_geru.h`, `bmb_gerc.c` with
+`BMB_CONJ` defined.
 
 A level 2 check is a recomputation in double, so each operand is copied
 into doubles first (`bmb_to_double`), exactly, from either precision.

@@ -871,6 +871,69 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #236: cdotu and zdotu; geru and gerc row-major, through the
+     * flip, gerc's y conjugated around the call and given back ---- */
+    {
+        double zx[2 * M], zy[2 * M], zy0[2 * M], za[2 * M * N], zw[2 * M * N], got[2 * M * N];
+        float cx[2 * M], cy[2 * M], ca[2 * M * N];
+        const double alpha[2] = { 0.5, 0.25 };
+        const float falpha[2] = { 0.5f, 0.25f };
+        double d2[2];
+        float f2[2];
+        int pass;
+
+        fill(zx, 2 * M);
+        fill_off(zy, 2 * M, 3);
+        to_f(cx, zx, 2 * M);
+        to_f(cy, zy, 2 * M);
+        zw[0] = zw[1] = 0.0;
+        for (i = 0; i < M; i++) {
+            cmac(zw, zx[2 * i], zx[2 * i + 1], zy[2 * i], zy[2 * i + 1]);
+        }
+        cblas_zdotu_sub(M, zx, 1, zy, 1, d2);
+        check("zdotu", d2, zw, 2);
+        cblas_cdotu_sub(M, cx, 1, cy, 1, f2);
+        got[0] = f2[0];
+        got[1] = f2[1];
+        check("cdotu", got, zw, 2);
+
+        for (pass = 0; pass < 2; pass++) {
+            /* A += alpha x y^T, or x y^H (pass 1): A M x N, x of M, y of N */
+            fill(za, 2 * M * N);
+            fill_off(zx, 2 * M, 3);
+            fill_off(zy0, 2 * N, 5);
+            memcpy(zy, zy0, sizeof(double) * 2 * N);
+            for (i = 0; i < M; i++) {
+                double t[2] = { 0.0, 0.0 };
+
+                cmac(t, alpha[0], alpha[1], zx[2 * i], zx[2 * i + 1]);
+                for (j = 0; j < N; j++) {
+                    const double yi = pass == 0 ? zy[2 * j + 1] : -zy[2 * j + 1];
+
+                    zw[2 * (i * N + j)] = za[2 * (i * N + j)];
+                    zw[2 * (i * N + j) + 1] = za[2 * (i * N + j) + 1];
+                    cmac(&zw[2 * (i * N + j)], t[0], t[1], zy[2 * j], yi);
+                }
+            }
+            to_f(ca, za, 2 * M * N);
+            to_f(cx, zx, 2 * M);
+            to_f(cy, zy, 2 * N);
+            if (pass == 0) {
+                cblas_zgeru(CblasRowMajor, M, N, alpha, zx, 1, zy, 1, za, N);
+                cblas_cgeru(CblasRowMajor, M, N, falpha, cx, 1, cy, 1, ca, N);
+            } else {
+                cblas_zgerc(CblasRowMajor, M, N, alpha, zx, 1, zy, 1, za, N);
+                cblas_cgerc(CblasRowMajor, M, N, falpha, cx, 1, cy, 1, ca, N);
+            }
+            check(pass == 0 ? "zgeru" : "zgerc", za, zw, 2 * M * N);
+            to_d(got, ca, 2 * M * N);
+            check(pass == 0 ? "cgeru" : "cgerc", got, zw, 2 * M * N);
+            check(pass == 0 ? "zgeru y" : "zgerc y", zy, zy0, 2 * N);
+            to_d(got, cy, 2 * N);
+            check(pass == 0 ? "cgeru y" : "cgerc y", got, zy0, 2 * N);
+        }
+    }
+
     /* ---- #234: i?amax, against the first of two tied largest values
      * (index 1, not 3), 0-based, and 0 for an empty vector; srot and drot
      * against a reference ---- */

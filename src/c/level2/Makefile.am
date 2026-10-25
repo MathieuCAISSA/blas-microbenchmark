@@ -14,6 +14,10 @@ level2_PROGRAMS = \
 	complex16/bmb_zgemv \
 	single/bmb_sger \
 	double/bmb_dger \
+	complex/bmb_cgeru \
+	complex16/bmb_zgeru \
+	complex/bmb_cgerc \
+	complex16/bmb_zgerc \
 	single/bmb_ssymv \
 	double/bmb_dsymv \
 	single/bmb_ssyr \
@@ -41,6 +45,14 @@ single_bmb_sger_SOURCES = bmb_ger.c
 single_bmb_sger_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dger_SOURCES = bmb_ger.c
 double_bmb_dger_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_cgeru_SOURCES = bmb_geru.c
+complex_bmb_cgeru_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zgeru_SOURCES = bmb_geru.c
+complex16_bmb_zgeru_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+complex_bmb_cgerc_SOURCES = bmb_gerc.c
+complex_bmb_cgerc_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zgerc_SOURCES = bmb_gerc.c
+complex16_bmb_zgerc_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_ssymv_SOURCES = bmb_symv.c
 single_bmb_ssymv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dsymv_SOURCES = bmb_symv.c
@@ -77,6 +89,10 @@ ROUTINE_TESTS = \
 	complex16/test_bmb_zgemv.sh \
 	single/test_bmb_sger.sh \
 	double/test_bmb_dger.sh \
+	complex/test_bmb_cgeru.sh \
+	complex16/test_bmb_zgeru.sh \
+	complex/test_bmb_cgerc.sh \
+	complex16/test_bmb_zgerc.sh \
 	single/test_bmb_ssymv.sh \
 	double/test_bmb_dsymv.sh \
 	single/test_bmb_ssyr.sh \
@@ -97,3 +113,7 @@ ROUTINE_TESTS = \
 TESTS = $(ROUTINE_TESTS)
 
 EXTRA_DIST = $(TESTS)
+
+# The source geru and gerc share: each program includes it, the second
+# with BMB_CONJ defined (#236).
+noinst_HEADERS = bmb_geru.h

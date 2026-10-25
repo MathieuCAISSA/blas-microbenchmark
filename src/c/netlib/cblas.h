@@ -49,6 +49,10 @@ void cblas_ccopy(const int N, const void *X, const int incX, void *Y, const int 
 void cblas_zcopy(const int N, const void *X, const int incX, void *Y, const int incY);
 void cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
                      void *dotc);
+void cblas_cdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotu);
+void cblas_zdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotu);
 float cblas_snrm2(const int N, const float *X, const int incX);
 float cblas_scnrm2(const int N, const void *X, const int incX);
 double cblas_dznrm2(const int N, const void *X, const int incX);
@@ -104,6 +108,19 @@ void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
 void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
                 const float *X, const int incX, const float *Y, const int incY,
                 float *A, const int lda);
+/* The complex rank-1 updates (#236). */
+void cblas_cgeru(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda);
+void cblas_zgeru(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda);
+void cblas_cgerc(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda);
+void cblas_zgerc(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda);
 void cblas_ssymv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
                  const float alpha, const float *A, const int lda,
                  const float *X, const int incX, const float beta, float *Y, const int incY);

@@ -28,6 +28,8 @@ level1_PROGRAMS = \
 	double/bmb_ddot \
 	complex/bmb_cdotc \
 	complex16/bmb_zdotc \
+	complex/bmb_cdotu \
+	complex16/bmb_zdotu \
 	single/bmb_snrm2 \
 	double/bmb_dnrm2 \
 	complex/bmb_scnrm2 \
@@ -79,6 +81,10 @@ complex_bmb_cdotc_SOURCES = bmb_dotc.c
 complex_bmb_cdotc_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_zdotc_SOURCES = bmb_dotc.c
 complex16_bmb_zdotc_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+complex_bmb_cdotu_SOURCES = bmb_dotu.c
+complex_bmb_cdotu_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zdotu_SOURCES = bmb_dotu.c
+complex16_bmb_zdotu_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_snrm2_SOURCES = bmb_nrm2.c
 single_bmb_snrm2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dnrm2_SOURCES = bmb_nrm2.c
@@ -133,6 +139,8 @@ ROUTINE_TESTS = \
 	double/test_bmb_ddot.sh \
 	complex/test_bmb_cdotc.sh \
 	complex16/test_bmb_zdotc.sh \
+	complex/test_bmb_cdotu.sh \
+	complex16/test_bmb_zdotu.sh \
 	single/test_bmb_snrm2.sh \
 	double/test_bmb_dnrm2.sh \
 	complex/test_bmb_scnrm2.sh \
@@ -159,3 +167,7 @@ TESTS = $(ROUTINE_TESTS) \
 	test_bmb_size_limits.sh
 
 EXTRA_DIST = $(TESTS)
+
+# The source dotc and dotu share: each program includes it, the second
+# with BMB_UNCONJ defined (#236).
+noinst_HEADERS = bmb_dotc.h

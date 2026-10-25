@@ -67,6 +67,7 @@ while read -r r level prec kind family; do
             else if (op == "rot") { f = num(6 * m); b = num(4 * e * m) }
             else if (op == "gemv") { f = num(2 * m * n * cf); b = num(e * (m * n + n + 2 * m)) }
             else if (op == "ger") { f = num(2 * m * n); b = num(e * (2 * m * n + m + n)) }
+            else if (op == "geru" || op == "gerc") { f = num(2 * m * n * cf); b = num(e * (2 * m * n + m + n)) }
             else if (op == "symv") { f = num(2 * m * m); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
             else if (op == "syr") { f = num(m * (m + 1)); b = num(e * (m * (m + 1) + m)) }
             else if (op == "syr2") { f = num(2 * m * (m + 1)); b = num(e * (m * (m + 1) + 2 * m)) }

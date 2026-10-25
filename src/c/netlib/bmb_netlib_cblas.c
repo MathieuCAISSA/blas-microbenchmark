@@ -53,6 +53,19 @@ extern void ccopy_(const int *n, const void *x, const int *incx, void *y, const 
 extern void zcopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
 extern float complex cdotc_(const int *n, const void *x, const int *incx,
                             const void *y, const int *incy);
+/* dotu, geru and gerc (#236). */
+extern float complex cdotu_(const int *n, const void *x, const int *incx,
+                            const void *y, const int *incy);
+extern double complex zdotu_(const int *n, const void *x, const int *incx,
+                             const void *y, const int *incy);
+extern void cgeru_(const int *m, const int *n, const void *alpha, const void *x, const int *incx,
+                   const void *y, const int *incy, void *a, const int *lda);
+extern void zgeru_(const int *m, const int *n, const void *alpha, const void *x, const int *incx,
+                   const void *y, const int *incy, void *a, const int *lda);
+extern void cgerc_(const int *m, const int *n, const void *alpha, const void *x, const int *incx,
+                   const void *y, const int *incy, void *a, const int *lda);
+extern void zgerc_(const int *m, const int *n, const void *alpha, const void *x, const int *incx,
+                   const void *y, const int *incy, void *a, const int *lda);
 extern float snrm2_(const int *n, const float *x, const int *incx);
 extern float scnrm2_(const int *n, const void *x, const int *incx);
 extern double dznrm2_(const int *n, const void *x, const int *incx);
@@ -402,6 +415,24 @@ void cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, 
     ((float *) dotc)[1] = cimagf(d);
 }
 
+void cblas_cdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotu)
+{
+    float complex d = cdotu_(&N, X, &incX, Y, &incY);
+
+    ((float *) dotu)[0] = crealf(d);
+    ((float *) dotu)[1] = cimagf(d);
+}
+
+void cblas_zdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotu)
+{
+    double complex d = zdotu_(&N, X, &incX, Y, &incY);
+
+    ((double *) dotu)[0] = creal(d);
+    ((double *) dotu)[1] = cimag(d);
+}
+
 float cblas_snrm2(const int N, const float *X, const int incX)
 {
     return snrm2_(&N, X, &incX);
@@ -667,6 +698,59 @@ void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float a
         sger_(&M, &N, &alpha, X, &incX, Y, &incY, A, &lda);
     } else {
         sger_(&N, &M, &alpha, Y, &incY, X, &incX, A, &lda);
+    }
+}
+
+/* The complex rank-1 updates (#236). Row-major, the buffer read
+ * column-major is A^T, and (x y^T)^T = y x^T: geru with x and y swapped,
+ * as dger. gerc's (x y^H)^T = conj(y) x^T is a geru on conj(y), which
+ * Fortran has no call for: y is conjugated in place and back, as gemv's
+ * x (#228), where reference CBLAS conjugates a copy. */
+void cblas_cgeru(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        cgeru_(&M, &N, alpha, X, &incX, Y, &incY, A, &lda);
+    } else {
+        cgeru_(&N, &M, alpha, Y, &incY, X, &incX, A, &lda);
+    }
+}
+
+void cblas_zgeru(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        zgeru_(&M, &N, alpha, X, &incX, Y, &incY, A, &lda);
+    } else {
+        zgeru_(&N, &M, alpha, Y, &incY, X, &incX, A, &lda);
+    }
+}
+
+void cblas_cgerc(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        cgerc_(&M, &N, alpha, X, &incX, Y, &incY, A, &lda);
+    } else {
+        bmb_conj_f((float *) Y, N, incY);
+        cgeru_(&N, &M, alpha, Y, &incY, X, &incX, A, &lda);
+        bmb_conj_f((float *) Y, N, incY);
+    }
+}
+
+void cblas_zgerc(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda)
+{
+    if (order == CblasColMajor) {
+        zgerc_(&M, &N, alpha, X, &incX, Y, &incY, A, &lda);
+    } else {
+        bmb_conj_d((double *) Y, N, incY);
+        zgeru_(&N, &M, alpha, Y, &incY, X, &incX, A, &lda);
+        bmb_conj_d((double *) Y, N, incY);
     }
 }
 
