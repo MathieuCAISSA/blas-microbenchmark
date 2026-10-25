@@ -119,14 +119,14 @@ echo "ok   a batch of five: five times one matrix's counts"
 
 # GEMV transposed (#221): the same FLOPs, x of M elements read and y of N
 # read and written.
-for r in sgemv dgemv; do
-    case $r in s*) dir=single e=4 ;; *) dir=double e=8 ;; esac
+for r in sgemv dgemv cgemv zgemv; do
+    case $r in s*) dir=single e=4 cf=1 ;; d*) dir=double e=8 cf=1 ;; c*) dir=complex e=8 cf=4 ;; z*) dir=complex16 e=16 cf=4 ;; esac
     BMB_COUNTS=1 "level2/$dir/bmb_$r" -m 30,61 -M 50,7 --trans T >/dev/null 2>"$T/$r.err" ||
         fail "bmb_$r --trans T failed under BMB_COUNTS: $(cat "$T/$r.err")"
     grep '^counts: ' "$T/$r.err" >"$T/$r.got" || fail "bmb_$r --trans T wrote no counts"
-    awk -v r="$r" -v e="$e" '
+    awk -v r="$r" -v e="$e" -v cf="$cf" '
         { m = $3; n = $4
-          want = sprintf("counts: %s %s %s flops %.17g bytes %.17g footprint -", r, m, n, 2 * m * n, e * (m * n + m + 2 * n))
+          want = sprintf("counts: %s %s %s flops %.17g bytes %.17g footprint -", r, m, n, 2 * m * n * cf, e * (m * n + m + 2 * n))
           if ($0 != want) { printf "%s:\n  got  %s\n  want %s\n", r, $0, want; bad = 1 }
           points++ }
         END { if (!bad && points != 4) { print r ": " points " points, not 4"; bad = 1 } exit bad }

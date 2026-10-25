@@ -15,6 +15,11 @@ releases with the same major version can be compared and read by the same
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,
   `cswap` and `zswap`, 18 more benchmarks, with the options, counts and
   `--verify` of their double-precision counterparts.
+- Level 2 in every precision BLAS has (#228): `cgemv`, `zgemv`, `sger`,
+  `ssymv`, `ssyr`, `ssyr2`, `strmv`, `ctrmv`, `ztrmv`, `strsv`, `ctrsv`
+  and `ztrsv`, 12 more. Under Netlib, a complex one row-major with
+  `--trans C` conjugates its vectors around the call, as reference CBLAS
+  does, but in place: nothing is allocated in the timed call.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,

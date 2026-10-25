@@ -103,6 +103,43 @@ static void cmac(double *acc, double ar, double ai, double br, double bi)
     acc[1] += ar * bi + ai * br;
 }
 
+/* Copies between double and float arrays, for the single-precision
+ * routines checked against their double one. */
+static void to_f(float *f, const double *d, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++) {
+        f[i] = (float) d[i];
+    }
+}
+
+static void to_d(double *d, const float *f, int n)
+{
+    int i;
+
+    for (i = 0; i < n; i++) {
+        d[i] = f[i];
+    }
+}
+
+/* A complex upper-triangular M x M matrix, row-major: dominant diagonal,
+ * an imaginary part everywhere, and in the lower triangle values BLAS
+ * must not read, as fill_tri(). */
+static void fill_ctri(double *a)
+{
+    double re[M * M];
+    int i, j;
+
+    fill_tri(re, M, 1);
+    for (i = 0; i < M; i++) {
+        for (j = 0; j < M; j++) {
+            a[2 * (i * M + j)] = re[i * M + j];
+            a[2 * (i * M + j) + 1] = (i == j) ? 0.5 : 0.25 * ((i + 2 * j) % 3 - 1);
+        }
+    }
+}
+
 /* As check(), within a relative tol: a triangular solve in single
  * precision is not exact. */
 static void check_tol(const char *name, const double *got, const double *want, int n, double tol)
@@ -832,6 +869,135 @@ int main(void)
         cblas_zherk(CblasRowMajor, CblasLower, CblasNoTrans, N, K, 0.5, za, K, 0.25, want3, N);
         cblas_zherk(CblasColMajor, CblasUpper, CblasConjTrans, N, K, 0.5, za, K, 0.25, zc, N);
         check("zherk.col.UC", zc, want3, 2 * N * N);
+    }
+
+    /* ---- #228: level 2 in its other precisions. Each single-precision
+     * real routine against its double one, checked above, on the same
+     * values, row-major, so through the flip; the values are multiples
+     * of 0.25, exact in float. The complex ones row-major with a
+     * conjugate transpose, which the shim makes by conjugating the
+     * vectors (cgemv, zgemv, ctrmv, ztrmv, ctrsv, ztrsv), against a naive
+     * reference, and x given back as it was. ---- */
+    {
+        float fa[64], fx[16], fy[16];
+        double got[64];
+
+        fill(a, M * N);
+        fill(x, M);
+        fill_off(y, N, 3);
+        to_f(fa, a, M * N);
+        to_f(fx, x, M);
+        to_f(fy, y, N);
+        cblas_dger(CblasRowMajor, M, N, 0.5, x, 1, y, 1, a, N);
+        cblas_sger(CblasRowMajor, M, N, 0.5f, fx, 1, fy, 1, fa, N);
+        to_d(got, fa, M * N);
+        check("sger", got, a, M * N);
+
+        fill(a, M * M);
+        fill(x, M);
+        fill_off(y, M, 3);
+        to_f(fa, a, M * M);
+        to_f(fx, x, M);
+        to_f(fy, y, M);
+        cblas_dsymv(CblasRowMajor, CblasLower, M, 0.5, a, M, x, 1, 0.25, y, 1);
+        cblas_ssymv(CblasRowMajor, CblasLower, M, 0.5f, fa, M, fx, 1, 0.25f, fy, 1);
+        to_d(got, fy, M);
+        check("ssymv.L", got, y, M);
+
+        cblas_dsyr(CblasRowMajor, CblasLower, M, 0.5, x, 1, a, M);
+        cblas_ssyr(CblasRowMajor, CblasLower, M, 0.5f, fx, 1, fa, M);
+        to_d(got, fa, M * M);
+        check("ssyr.L", got, a, M * M);
+
+        cblas_dsyr2(CblasRowMajor, CblasLower, M, 0.5, x, 1, y, 1, a, M);
+        cblas_ssyr2(CblasRowMajor, CblasLower, M, 0.5f, fx, 1, fy, 1, fa, M);
+        to_d(got, fa, M * M);
+        check("ssyr2.L", got, a, M * M);
+
+        fill_tri(a, M, 0);
+        fill(x, M);
+        to_f(fa, a, M * M);
+        to_f(fx, x, M);
+        cblas_dtrmv(CblasRowMajor, CblasLower, CblasTrans, CblasNonUnit, M, a, M, x, 1);
+        cblas_strmv(CblasRowMajor, CblasLower, CblasTrans, CblasNonUnit, M, fa, M, fx, 1);
+        to_d(got, fx, M);
+        check("strmv.LT", got, x, M);
+
+        fill(x, M);
+        to_f(fx, x, M);
+        cblas_dtrsv(CblasRowMajor, CblasLower, CblasTrans, CblasNonUnit, M, a, M, x, 1);
+        cblas_strsv(CblasRowMajor, CblasLower, CblasTrans, CblasNonUnit, M, fa, M, fx, 1);
+        to_d(got, fx, M);
+        check_tol("strsv.LT", got, x, M, 1e-6);
+    }
+    {
+        double za[2 * M * M], zx[2 * M], zx0[2 * M], zy[2 * M], want2[2 * M], got[2 * M];
+        float ca[2 * M * M], cx[2 * M], cy[2 * M];
+        const double alpha[2] = { 0.5, 0.25 }, beta[2] = { 0.25, -0.5 };
+        const float falpha[2] = { 0.5f, 0.25f }, fbeta[2] = { 0.25f, -0.5f };
+
+        /* gemv, y = alpha A^H x + beta y: A M x N, x of M, y of N */
+        fill(za, 2 * M * N);
+        fill_off(zx, 2 * M, 3);
+        fill_off(zy, 2 * N, 5);
+        memcpy(zx0, zx, sizeof(zx));
+        for (j = 0; j < N; j++) {
+            double t[2] = { 0.0, 0.0 };
+
+            for (i = 0; i < M; i++) {
+                cmac(t, za[2 * (i * N + j)], -za[2 * (i * N + j) + 1], zx[2 * i], zx[2 * i + 1]);
+            }
+            want2[2 * j] = want2[2 * j + 1] = 0.0;
+            cmac(&want2[2 * j], alpha[0], alpha[1], t[0], t[1]);
+            cmac(&want2[2 * j], beta[0], beta[1], zy[2 * j], zy[2 * j + 1]);
+        }
+        to_f(ca, za, 2 * M * N);
+        to_f(cx, zx, 2 * M);
+        to_f(cy, zy, 2 * N);
+        cblas_zgemv(CblasRowMajor, CblasConjTrans, M, N, alpha, za, N, zx, 1, beta, zy, 1);
+        check("zgemv.C", zy, want2, 2 * N);
+        check("zgemv.C x", zx, zx0, 2 * M);
+        cblas_cgemv(CblasRowMajor, CblasConjTrans, M, N, falpha, ca, N, cx, 1, fbeta, cy, 1);
+        to_d(got, cy, 2 * N);
+        check("cgemv.C", got, want2, 2 * N);
+        to_d(got, cx, 2 * M);
+        check("cgemv.C x", got, zx0, 2 * M);
+
+        /* trmv, x = A^H x, A upper: x'_j = sum over i <= j of conj(A_ij) x_i */
+        fill_ctri(za);
+        fill_off(zx, 2 * M, 3);
+        for (j = 0; j < M; j++) {
+            want2[2 * j] = want2[2 * j + 1] = 0.0;
+            for (i = 0; i <= j; i++) {
+                cmac(&want2[2 * j], za[2 * (i * M + j)], -za[2 * (i * M + j) + 1], zx[2 * i], zx[2 * i + 1]);
+            }
+        }
+        to_f(ca, za, 2 * M * M);
+        to_f(cx, zx, 2 * M);
+        cblas_ztrmv(CblasRowMajor, CblasUpper, CblasConjTrans, CblasNonUnit, M, za, M, zx, 1);
+        check("ztrmv.UC", zx, want2, 2 * M);
+        cblas_ctrmv(CblasRowMajor, CblasUpper, CblasConjTrans, CblasNonUnit, M, ca, M, cx, 1);
+        to_d(got, cx, 2 * M);
+        check("ctrmv.UC", got, want2, 2 * M);
+
+        /* trsv, A^H x' = x: x' multiplied back by A^H */
+        fill_off(zx0, 2 * M, 3);
+        memcpy(zx, zx0, sizeof(zx));
+        to_f(cx, zx0, 2 * M);
+        cblas_ztrsv(CblasRowMajor, CblasUpper, CblasConjTrans, CblasNonUnit, M, za, M, zx, 1);
+        cblas_ctrsv(CblasRowMajor, CblasUpper, CblasConjTrans, CblasNonUnit, M, ca, M, cx, 1);
+        for (l = 0; l < 2; l++) {
+            if (l == 1) {
+                to_d(zx, cx, 2 * M);
+            }
+            for (j = 0; j < M; j++) {
+                got[2 * j] = got[2 * j + 1] = 0.0;
+                for (i = 0; i <= j; i++) {
+                    cmac(&got[2 * j], za[2 * (i * M + j)], -za[2 * (i * M + j) + 1], zx[2 * i], zx[2 * i + 1]);
+                }
+            }
+            check_tol(l == 0 ? "ztrsv.UC" : "ctrsv.UC", got, zx0, 2 * M, l == 0 ? 1e-12 : 1e-5);
+        }
     }
 
     /* ---- #226: level 1 in its other precisions. A REAL or COMPLEX

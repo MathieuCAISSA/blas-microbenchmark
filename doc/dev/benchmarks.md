@@ -108,9 +108,8 @@ rest of level 3 since #201, level 2 since #202, level 1 since #203, each
 checked to give exactly what its own file did (the corrupted check's values to the
 digit, the counts, the copies `--cache cold` takes, every field the
 clock does not change), and the precisions BLAS has that the table does
-not list yet (`ssymm`, `ctrsm`, `zsyr2k`, `cgemv`, `strsv`, `sger`,
-...) seen to compile, pass `--verify` in both layouts, padded or not,
-and catch a corruption. A family BLAS has in one
+not list yet (`ssymm`, `ctrsm`, `zsyr2k`, ...) seen to compile, pass
+`--verify` in both layouts, padded or not, and catch a corruption. A family BLAS has in one
 kind of precision only stops at an `#error` if asked for the other: ger,
 symv, syr, syr2 and dot are real (their complex counterparts, geru and
 gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc
