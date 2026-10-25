@@ -110,7 +110,7 @@ block() {
                     for (i = 1; i <= n; i++) {
                         if (level[i] == l) { list = list " " name[i] }
                     }
-                    printf "%s", wrap(substr(list, 2), 72, "Level " l "\t", "\\&\t", "")
+                    printf "%s", wrap(substr(list, 2), 66, "Level " l "\t", "\\&\t", "")
                 }
                 printf ".TE\n"
             } else if (kind == "man-sizes") {

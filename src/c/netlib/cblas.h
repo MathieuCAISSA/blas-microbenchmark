@@ -34,6 +34,29 @@ float cblas_sdot(const int N, const float *X, const int incX, const float *Y, co
 void cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
                      void *dotc);
 
+/* The other precisions of the same operations (#226). */
+float cblas_sasum(const int N, const float *X, const int incX);
+float cblas_scasum(const int N, const void *X, const int incX);
+double cblas_dzasum(const int N, const void *X, const int incX);
+void cblas_caxpy(const int N, const void *alpha, const void *X, const int incX,
+                 void *Y, const int incY);
+void cblas_zaxpy(const int N, const void *alpha, const void *X, const int incX,
+                 void *Y, const int incY);
+void cblas_scopy(const int N, const float *X, const int incX, float *Y, const int incY);
+void cblas_ccopy(const int N, const void *X, const int incX, void *Y, const int incY);
+void cblas_zcopy(const int N, const void *X, const int incX, void *Y, const int incY);
+void cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotc);
+float cblas_snrm2(const int N, const float *X, const int incX);
+float cblas_scnrm2(const int N, const void *X, const int incX);
+double cblas_dznrm2(const int N, const void *X, const int incX);
+void cblas_sscal(const int N, const float alpha, float *X, const int incX);
+void cblas_cscal(const int N, const void *alpha, void *X, const int incX);
+void cblas_zscal(const int N, const void *alpha, void *X, const int incX);
+void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY);
+void cblas_cswap(const int N, void *X, const int incX, void *Y, const int incY);
+void cblas_zswap(const int N, void *X, const int incX, void *Y, const int incY);
+
 /* Level 2 */
 void cblas_dgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
                  const int M, const int N, const double alpha, const double *A, const int lda,

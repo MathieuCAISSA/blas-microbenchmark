@@ -834,6 +834,132 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #226: level 1 in its other precisions. A REAL or COMPLEX
+     * function's value (sasum, scasum, snrm2, scnrm2, cdotc) is where a
+     * wrong return type would show, a complex alpha (caxpy, cscal) where
+     * one passed by value would. The values are multiples of 0.25, and
+     * alpha's of 0.25: exact in float but for the norms. ---- */
+    {
+        float sx[16], sy[16], cx[16], cy[16], d[2];
+        double zx[16], zy[16], got[16], want4[16], sum = 0.0, nrm = 0.0;
+        const float calpha[2] = { 0.5f, -0.25f };
+        const double zalpha[2] = { 0.5, -0.25 };
+
+        for (i = 0; i < 16; i++) {
+            sx[i] = cx[i] = (float) val(i);
+            sy[i] = cy[i] = (float) val(i + 3);
+            zx[i] = val(i);
+            zy[i] = val(i + 3);
+        }
+
+        for (i = 0; i < 8; i++) {
+            sum += fabs(sx[i]);
+            nrm += (double) sx[i] * sx[i];
+        }
+        want4[0] = sum;  got[0] = cblas_sasum(8, sx, 1);   check("sasum", got, want4, 1);
+        want4[0] = sqrt(nrm);
+        got[0] = cblas_snrm2(8, sx, 1);
+        check_tol("snrm2", got, want4, 1, 1e-6);
+        sum = nrm = 0.0;
+        for (i = 0; i < 16; i++) {
+            sum += fabs(zx[i]);
+            nrm += zx[i] * zx[i];
+        }
+        want4[0] = sum;  got[0] = cblas_scasum(8, cx, 1);  check("scasum", got, want4, 1);
+        got[0] = cblas_dzasum(8, zx, 1);  check("dzasum", got, want4, 1);
+        want4[0] = sqrt(nrm);
+        got[0] = cblas_scnrm2(8, cx, 1);
+        check_tol("scnrm2", got, want4, 1, 1e-6);
+        got[0] = cblas_dznrm2(8, zx, 1);
+        check("dznrm2", got, want4, 1);
+
+        want4[0] = want4[1] = 0.0;
+        for (i = 0; i < 4; i++) {
+            cmac(want4, cx[2 * i], -cx[2 * i + 1], cy[2 * i], cy[2 * i + 1]);
+        }
+        cblas_cdotc_sub(4, cx, 1, cy, 1, d);
+        got[0] = d[0];
+        got[1] = d[1];
+        check("cdotc", got, want4, 2);
+
+        /* y += alpha*x, then x *= alpha, over 8 complex elements */
+        for (i = 0; i < 8; i++) {
+            want4[2 * i] = zy[2 * i];
+            want4[2 * i + 1] = zy[2 * i + 1];
+            cmac(&want4[2 * i], zalpha[0], zalpha[1], zx[2 * i], zx[2 * i + 1]);
+        }
+        cblas_zaxpy(8, zalpha, zx, 1, zy, 1);
+        check("zaxpy", zy, want4, 16);
+        cblas_caxpy(8, calpha, cx, 1, cy, 1);
+        for (i = 0; i < 16; i++) {
+            got[i] = cy[i];
+        }
+        check("caxpy", got, want4, 16);
+        for (i = 0; i < 8; i++) {
+            want4[2 * i] = want4[2 * i + 1] = 0.0;
+            cmac(&want4[2 * i], zalpha[0], zalpha[1], zx[2 * i], zx[2 * i + 1]);
+        }
+        cblas_zscal(8, zalpha, zx, 1);
+        check("zscal", zx, want4, 16);
+        cblas_cscal(8, calpha, cx, 1);
+        for (i = 0; i < 16; i++) {
+            got[i] = cx[i];
+        }
+        check("cscal", got, want4, 16);
+        for (i = 0; i < 8; i++) {
+            want4[i] = 0.75 * sx[i];
+        }
+        cblas_sscal(8, 0.75f, sx, 1);
+        for (i = 0; i < 8; i++) {
+            got[i] = sx[i];
+        }
+        check("sscal", got, want4, 8);
+
+        /* Copies and swaps: x and y differ in every element. */
+        for (i = 0; i < 16; i++) {
+            want4[i] = zy[i];
+            got[i] = zx[i];
+        }
+        cblas_zswap(8, zx, 1, zy, 1);
+        check("zswap.x", zx, want4, 16);
+        check("zswap.y", zy, got, 16);
+        cblas_zcopy(8, zx, 1, zy, 1);
+        check("zcopy", zy, want4, 16);
+        for (i = 0; i < 16; i++) {
+            want4[i] = cy[i];
+            tmp[i] = cx[i];
+        }
+        cblas_cswap(8, cx, 1, cy, 1);
+        for (i = 0; i < 16; i++) {
+            got[i] = cx[i];
+        }
+        check("cswap.x", got, want4, 16);
+        for (i = 0; i < 16; i++) {
+            got[i] = cy[i];
+        }
+        check("cswap.y", got, tmp, 16);
+        cblas_ccopy(8, cx, 1, cy, 1);
+        for (i = 0; i < 16; i++) {
+            got[i] = cy[i];
+        }
+        check("ccopy", got, want4, 16);
+        for (i = 0; i < 8; i++) {
+            want4[i] = sy[i];
+            want4[8 + i] = sx[i];
+        }
+        cblas_sswap(8, sx, 1, sy, 1);
+        for (i = 0; i < 8; i++) {
+            got[i] = sx[i];
+            got[8 + i] = sy[i];
+        }
+        check("sswap", got, want4, 16);
+        cblas_scopy(8, sy, 1, sx, 1);
+        for (i = 0; i < 8; i++) {
+            got[i] = sx[i];
+        }
+        check("scopy", got, want4 + 8, 8);
+    }
+
     if (failures != 0) {
         printf("%d check(s) failed\n", failures);
         return 1;

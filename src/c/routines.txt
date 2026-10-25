@@ -19,16 +19,34 @@
 # bmb_prec.h).
 #
 # routine  level  precision  sizes  family
+sasum      1      s          v      asum
 dasum      1      d          v      asum
+scasum     1      c          v      asum
+dzasum     1      z          v      asum
 saxpy      1      s          v      axpy
 daxpy      1      d          v      axpy
+caxpy      1      c          v      axpy
+zaxpy      1      z          v      axpy
+scopy      1      s          v      copy
 dcopy      1      d          v      copy
+ccopy      1      c          v      copy
+zcopy      1      z          v      copy
 sdot       1      s          v      dot
 ddot       1      d          v      dot
+cdotc      1      c          v      dotc
 zdotc      1      z          v      dotc
+snrm2      1      s          v      nrm2
 dnrm2      1      d          v      nrm2
+scnrm2     1      c          v      nrm2
+dznrm2     1      z          v      nrm2
+sscal      1      s          v      scal
 dscal      1      d          v      scal
+cscal      1      c          v      scal
+zscal      1      z          v      scal
+sswap      1      s          v      swap
 dswap      1      d          v      swap
+cswap      1      c          v      swap
+zswap      1      z          v      swap
 sgemv      2      s          mn     gemv
 dgemv      2      d          mn     gemv
 dger       2      d          mn     ger

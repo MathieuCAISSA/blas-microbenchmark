@@ -11,11 +11,14 @@
 .ad l
 .SH NAME
 .\" BEGIN routines (man-name): written by src/c/routines.sh
-blas-microbenchmark, bmb_dasum, bmb_saxpy, bmb_daxpy, bmb_dcopy, bmb_sdot,
-bmb_ddot, bmb_zdotc, bmb_dnrm2, bmb_dscal, bmb_dswap, bmb_sgemv, bmb_dgemv,
-bmb_dger, bmb_dsymv, bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemm,
-bmb_dgemm, bmb_cgemm, bmb_zgemm, bmb_dsymm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk,
-bmb_zherk, bmb_dsyr2k, bmb_dtrmm, bmb_strsm, bmb_dtrsm,
+blas-microbenchmark, bmb_sasum, bmb_dasum, bmb_scasum, bmb_dzasum,
+bmb_saxpy, bmb_daxpy, bmb_caxpy, bmb_zaxpy, bmb_scopy, bmb_dcopy, bmb_ccopy,
+bmb_zcopy, bmb_sdot, bmb_ddot, bmb_cdotc, bmb_zdotc, bmb_snrm2, bmb_dnrm2,
+bmb_scnrm2, bmb_dznrm2, bmb_sscal, bmb_dscal, bmb_cscal, bmb_zscal,
+bmb_sswap, bmb_dswap, bmb_cswap, bmb_zswap, bmb_sgemv, bmb_dgemv, bmb_dger,
+bmb_dsymv, bmb_dsyr, bmb_dsyr2, bmb_dtrmv, bmb_dtrsv, bmb_sgemm, bmb_dgemm,
+bmb_cgemm, bmb_zgemm, bmb_dsymm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk, bmb_zherk,
+bmb_dsyr2k, bmb_dtrmm, bmb_strsm, bmb_dtrsm,
 bmb_ztrsm \- microbenchmarks for BLAS routines
 .\" END routines (man-name)
 .SH SYNOPSIS
@@ -50,10 +53,12 @@ level 3 on matrices:
 .\" BEGIN routines (man-routines): written by src/c/routines.sh
 .TS
 l l.
-Level 1	dasum saxpy daxpy dcopy sdot ddot zdotc dnrm2 dscal dswap
+Level 1	sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy
+\&	dcopy ccopy zcopy sdot ddot cdotc zdotc snrm2 dnrm2 scnrm2
+\&	dznrm2 sscal dscal cscal zscal sswap dswap cswap zswap
 Level 2	sgemv dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv
-Level 3	sgemm dgemm cgemm zgemm dsymm zhemm ssyrk dsyrk zherk dsyr2k
-\&	dtrmm strsm dtrsm ztrsm
+Level 3	sgemm dgemm cgemm zgemm dsymm zhemm ssyrk dsyrk zherk
+\&	dsyr2k dtrmm strsm dtrsm ztrsm
 .TE
 .\" END routines (man-routines)
 .PP
@@ -66,13 +71,17 @@ double,
 single complex,
 .B z
 double complex.
-Every operation is measured in double precision, and the most used ones
-in the others too: single precision moves half the bytes and fits twice
-as many numbers in a vector register, and a complex multiply\-add does
-four times the arithmetic of a real one on twice the data.
-Three exist for complex numbers only: zdotc, the dot product with the
-first vector conjugated, and zherk and zhemm, the Hermitian counterparts
-of dsyrk and dsymm.
+Every operation is measured in double precision; those of level 1, and
+the most used of the others, in every precision BLAS has: single
+precision moves half the bytes and fits twice as many numbers in a
+vector register, and a complex multiply\-add does four times the
+arithmetic of a real one on twice the data.
+Two letters name a routine that returns a real from a complex vector:
+scasum and dzasum, the sum of the absolute values of the real and
+imaginary parts, scnrm2 and dznrm2, the norm.
+Some exist for complex numbers only: cdotc and zdotc, the dot product
+with the first vector conjugated, and zherk and zhemm, the Hermitian
+counterparts of dsyrk and dsymm.
 .PP
 Level 1 routines are sized with
 .BR \-v .
@@ -450,17 +459,21 @@ Two rates are derived from that time:
 .B GFLOP/s
 the conventional operation count of the routine (2\(muM\(muN\(muK for
 dgemm, K\(muN\(mu(N+1) for dsyrk, ...) divided by the time.
-Not shown for dcopy and dswap, which do no arithmetic.
+Not shown for the copy and swap routines, which do no arithmetic.
 Complex routines count real operations: a complex multiply\-add is four
 real multiplications and four additions, so each counts four times its
 real counterpart's operations (cgemm and zgemm 8\(muM\(muN\(muK where
 dgemm counts 2\(muM\(muN\(muK; zherk four times dsyrk's), and their
 GFLOP/s compare with the real routine's.
+Those that are not multiply\-adds count each real part: scasum and
+dzasum twice dasum's N, scnrm2 and dznrm2 twice dnrm2's 2\(muN, and
+cscal and zscal 6\(muN, a complex product.
 .TP
 .B GB/s
 the bytes the routine must move \(em each operand read once, each result
 written once, counted the way STREAM counts them, 4 bytes an element in
-single precision and 8 in double \(em divided by the time.
+single precision, 8 in double and in single complex, 16 in double
+complex \(em divided by the time.
 Levels 1 and 2 only: level 3 routines reuse their operands from cache, so
 a rate built from that traffic would not measure bandwidth.
 The comparison with STREAM holds for operands out of the caches: past the
@@ -532,8 +545,8 @@ and the element that differs; nothing more is measured, and no
 .B \-o
 file is written.
 The check needs memory for a few vectors the size of the result, and
-for daxpy, saxpy, dswap, dgemv, sgemv and dsymv a copy of the vector
-they write.
+for the axpy and swap routines, dgemv, sgemv and dsymv a copy of the
+vector they write.
 .PP
 The check is on by default, as it is in STREAM and HPL: a number from a
 library that computes the wrong thing is worth less than none.

@@ -39,6 +39,29 @@ extern float sdot_(const int *n, const float *x, const int *incx,
  * complex. */
 extern double complex zdotc_(const int *n, const void *x, const int *incx,
                              const void *y, const int *incy);
+/* The other precisions (#226). A REAL function returns a float, as
+ * sdot_ does, and a COMPLEX one C's float complex. */
+extern float sasum_(const int *n, const float *x, const int *incx);
+extern float scasum_(const int *n, const void *x, const int *incx);
+extern double dzasum_(const int *n, const void *x, const int *incx);
+extern void caxpy_(const int *n, const void *alpha, const void *x, const int *incx,
+                   void *y, const int *incy);
+extern void zaxpy_(const int *n, const void *alpha, const void *x, const int *incx,
+                   void *y, const int *incy);
+extern void scopy_(const int *n, const float *x, const int *incx, float *y, const int *incy);
+extern void ccopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
+extern void zcopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
+extern float complex cdotc_(const int *n, const void *x, const int *incx,
+                            const void *y, const int *incy);
+extern float snrm2_(const int *n, const float *x, const int *incx);
+extern float scnrm2_(const int *n, const void *x, const int *incx);
+extern double dznrm2_(const int *n, const void *x, const int *incx);
+extern void sscal_(const int *n, const float *alpha, float *x, const int *incx);
+extern void cscal_(const int *n, const void *alpha, void *x, const int *incx);
+extern void zscal_(const int *n, const void *alpha, void *x, const int *incx);
+extern void sswap_(const int *n, float *x, const int *incx, float *y, const int *incy);
+extern void cswap_(const int *n, void *x, const int *incx, void *y, const int *incy);
+extern void zswap_(const int *n, void *x, const int *incx, void *y, const int *incy);
 
 extern void dgemv_(const char *trans, const int *m, const int *n, const double *alpha,
                    const double *a, const int *lda, const double *x, const int *incx,
@@ -216,6 +239,102 @@ void cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, 
 
     ((double *) dotc)[0] = creal(d);
     ((double *) dotc)[1] = cimag(d);
+}
+
+float cblas_sasum(const int N, const float *X, const int incX)
+{
+    return sasum_(&N, X, &incX);
+}
+
+float cblas_scasum(const int N, const void *X, const int incX)
+{
+    return scasum_(&N, X, &incX);
+}
+
+double cblas_dzasum(const int N, const void *X, const int incX)
+{
+    return dzasum_(&N, X, &incX);
+}
+
+void cblas_caxpy(const int N, const void *alpha, const void *X, const int incX,
+                 void *Y, const int incY)
+{
+    caxpy_(&N, alpha, X, &incX, Y, &incY);
+}
+
+void cblas_zaxpy(const int N, const void *alpha, const void *X, const int incX,
+                 void *Y, const int incY)
+{
+    zaxpy_(&N, alpha, X, &incX, Y, &incY);
+}
+
+void cblas_scopy(const int N, const float *X, const int incX, float *Y, const int incY)
+{
+    scopy_(&N, X, &incX, Y, &incY);
+}
+
+void cblas_ccopy(const int N, const void *X, const int incX, void *Y, const int incY)
+{
+    ccopy_(&N, X, &incX, Y, &incY);
+}
+
+void cblas_zcopy(const int N, const void *X, const int incX, void *Y, const int incY)
+{
+    zcopy_(&N, X, &incX, Y, &incY);
+}
+
+void cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY,
+                     void *dotc)
+{
+    float complex d = cdotc_(&N, X, &incX, Y, &incY);
+
+    ((float *) dotc)[0] = crealf(d);
+    ((float *) dotc)[1] = cimagf(d);
+}
+
+float cblas_snrm2(const int N, const float *X, const int incX)
+{
+    return snrm2_(&N, X, &incX);
+}
+
+float cblas_scnrm2(const int N, const void *X, const int incX)
+{
+    return scnrm2_(&N, X, &incX);
+}
+
+double cblas_dznrm2(const int N, const void *X, const int incX)
+{
+    return dznrm2_(&N, X, &incX);
+}
+
+void cblas_sscal(const int N, const float alpha, float *X, const int incX)
+{
+    sscal_(&N, &alpha, X, &incX);
+}
+
+void cblas_cscal(const int N, const void *alpha, void *X, const int incX)
+{
+    cscal_(&N, alpha, X, &incX);
+}
+
+void cblas_zscal(const int N, const void *alpha, void *X, const int incX)
+{
+    zscal_(&N, alpha, X, &incX);
+}
+
+void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY)
+{
+    sswap_(&N, X, &incX, Y, &incY);
+}
+
+void cblas_cswap(const int N, void *X, const int incX, void *Y, const int incY)
+{
+    cswap_(&N, X, &incX, Y, &incY);
+}
+
+void cblas_zswap(const int N, void *X, const int incX, void *Y, const int incY)
+{
+    zswap_(&N, X, &incX, Y, &incY);
 }
 
 /* Level 2 */
