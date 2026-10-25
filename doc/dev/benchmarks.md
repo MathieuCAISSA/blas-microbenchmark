@@ -150,7 +150,20 @@ symm's and hemm's A is N x N, M*N*(N+1) or 2*M*N*N FLOPs. A triangular
 matrix's `verify()` shape is `BMB_VERIFY_TRI(uplo, trans, diag)`, and a
 symmetric routine on the right checks `B*(A*r)` where it checks
 `A*(B*r)` on the left (#222). `test_bmb_verify.sh` runs every
-combination of the arguments a routine takes. The outputs record the arguments a routine takes,
+combination of the arguments a routine takes.
+
+**Batches (#159).** A family with a batched form declares `BMB_ARG_BATCH`
+and, in `bench.batch_modes`, the `--batch-mode`s this build can call
+(`loop` always, the others as `configure` found them); the driver skips
+the run (exit 77) for one it cannot, and refuses the options for a
+routine without the bit. GEMM keeps the batch's matrices one after the
+other in one block, the same for every mode, so that the modes measure
+the same data; each matrix has a fill of its own (its index added to the
+fill's offsets), so that a library mixing them up is caught, and
+`verify()` checks every matrix after the one call. Its counts are the
+batch's (`bmb_bench_batch_count()` times one matrix's); a batch whose
+matrices together would wrap `size_t` is refused in `setup()`. One
+matrix in a loop is the plain call, to the digit. The outputs record the arguments a routine takes,
 defaults included; `bmb_report` keeps the series of non-default ones
 apart, so that a file from before them and a run with the defaults are
 one series.

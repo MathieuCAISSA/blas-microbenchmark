@@ -94,6 +94,10 @@ typedef struct {
      * a real routine (C would be T again), "NTC" for a complex one. */
     unsigned int args;
     const char *trans_letters;
+    /* With BMB_ARG_BATCH (#159): the --batch-mode values this build can
+     * run, 1u << each bmb_batch_mode_t; a mode the library has no call
+     * for is skipped (exit 77), never measured as something else. */
+    unsigned int batch_modes;
 
     bmb_bench_setup_fn setup;
     bmb_bench_call_fn call;
@@ -139,6 +143,16 @@ char bmb_bench_trans(int i);
 char bmb_bench_uplo(void);
 char bmb_bench_side(void);
 char bmb_bench_diag(void);
+
+/* For a routine with BMB_ARG_BATCH (#159): the matrices per call
+ * (--batch-count, 1 by default) and how they are passed (--batch-mode, a
+ * bmb_batch_mode_t, BMB_BATCH_LOOP by default). */
+unsigned int bmb_bench_batch_count(void);
+int bmb_bench_batch_mode(void);
+
+/* The exit status of a run --batch-mode asked of a library that has no
+ * such call: Automake's SKIP, so that make check says so. */
+#define BMB_EXIT_SKIPPED 77
 
 /* For setup(): the bytes of a rows x cols matrix of elements of `size`
  * bytes, or 0 where that would wrap size_t (rows and cols at least 1).

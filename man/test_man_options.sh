@@ -5,15 +5,16 @@
 set -e
 . "${srcdir:-.}/man_helper.sh"
 
-# "-x, --warmup", one per line, from --help...
+# "-x, --warmup", or "--trans" for an option with no short form (#221),
+# one per line, from --help...
 help_options() {
-    "$1" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+' | sed 's/^  //' | sort
+    "$1" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+|^      --[a-z0-9-]+' | sed 's/^ *//' | sort
 }
 # ...and from the tags of the page's OPTIONS section (the line after .TP).
 man_options() {
     section "$1" OPTIONS | sed 's/\\-/-/g' \
         | awk 'tag { print; tag = 0 } /^\.TP/ { tag = 1 }' \
-        | grep -oE -- '-[a-zA-Z], --[a-z0-9-]+' | sort
+        | grep -oE -- '(-[a-zA-Z], )?--[a-z0-9-]+' | sort
 }
 
 # "-x, --warmup=1" for every option whose default is a number: from --help,
@@ -21,6 +22,7 @@ man_options() {
 help_defaults() {
     "$1" --help | awk '
         /^  -[a-zA-Z], --/ { flush(); match($0, /-[a-zA-Z], --[a-z0-9-]+/); key = substr($0, RSTART, RLENGTH); text = $0; next }
+        /^      --[a-z]/ { flush(); match($0, /--[a-z0-9-]+/); key = substr($0, RSTART, RLENGTH); text = $0; next }
         /^      / && key != "" { text = text " " $0; next }
         { flush() }
         END { flush() }
@@ -35,7 +37,7 @@ help_defaults() {
 man_defaults() {
     section "$1" OPTIONS | sed 's/\\-/-/g' | awk '
         /^\.TP/ { flush(); tag = 1; next }
-        tag { match($0, /-[a-zA-Z], --[a-z0-9-]+/); key = substr($0, RSTART, RLENGTH); tag = 0; text = ""; next }
+        tag { match($0, /(-[a-zA-Z], )?--[a-z0-9-]+/); key = substr($0, RSTART, RLENGTH); tag = 0; text = ""; next }
         /^\.S[SH]/ { flush(); next }
         { text = text " " $0 }
         END { flush() }

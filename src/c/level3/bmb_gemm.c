@@ -1,4 +1,7 @@
+#include <config.h>
+
 #include <cblas.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -10,7 +13,13 @@
  * dim1 = M, dim2 = N, and K, which -K gives apart (#215) and is M
  * otherwise, as it always was. C = alpha * op(A) * op(B), op as --trans
  * gives it, A's then B's (#221): op(A) is M x K, so a transposed A is
- * stored K x M; the same for B. */
+ * stored K x M; the same for B.
+ * --batch-count matrices of each (#159), one after the other in one
+ * block, whichever --batch-mode passes them: a call per matrix (loop),
+ * one cblas_?gemm_batch call of one group (group), or one
+ * cblas_?gemm_batch_strided call (strided). Each matrix has a fill of
+ * its own, so that a library mixing them up is caught. One matrix in a
+ * loop is the plain call. */
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
@@ -23,6 +32,18 @@ typedef struct {
     char ta; /* --trans: N, T or C, A's */
     char tb; /* B's */
     int ra, ca, rb, cb; /* A's and B's rows and columns, as stored */
+    int count;          /* --batch-count */
+    int mode;           /* --batch-mode, a bmb_batch_mode_t */
+    size_t sa, sb, sc;  /* the elements from one matrix to the next */
+    /* A group call's arrays, one group: its arguments, and a pointer per
+     * matrix. CBLAS declares the transposes as an array of its enum,
+     * whose name differs between libraries: they are ints here, as the
+     * order is, which every ABI makes the size of the enum, and passed
+     * as void *. */
+    int ta_arr[1], tb_arr[1], m_arr[1], n_arr[1], k_arr[1];
+    int lda_arr[1], ldb_arr[1], ldc_arr[1], size_arr[1];
+    const bmb_real_t **pa, **pb;
+    bmb_real_t **pc;
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t beta[BMB_PARTS];
     bmb_real_t *a; /* M x K, or K x M transposed */
@@ -44,6 +65,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     const size_t lda = bmb_bench_ld(outa, col ? ra : ca, BMB_ELEM_BYTES);
     const size_t ldb = bmb_bench_ld(outb, col ? rb : cb, BMB_ELEM_BYTES);
     const size_t ldc = bmb_bench_ld(outc, col ? m : n, BMB_ELEM_BYTES);
+    const size_t count = bmb_bench_batch_count();
+    const int mode = bmb_bench_batch_mode();
     size_t i;
 
     (void) thread_count;
@@ -54,6 +77,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 #endif
+    /* Each matrix fits size_t (the parser's ceiling, or the check above);
+     * a batch of them may not. */
+    if (count > SIZE_MAX / BMB_ELEM_BYTES / (outa * lda) || count > SIZE_MAX / BMB_ELEM_BYTES / (outb * ldb)
+        || count > SIZE_MAX / BMB_ELEM_BYTES / (outc * ldc)) {
+        bmb_bench_too_large();
+        return NULL;
+    }
     ctx = malloc(sizeof(*ctx));
     if (ctx == NULL) {
         return NULL;
@@ -68,6 +98,14 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->ca = (int) ca;
     ctx->rb = (int) rb;
     ctx->cb = (int) cb;
+    ctx->count = (int) count;
+    ctx->mode = mode;
+    ctx->sa = outa * lda;
+    ctx->sb = outb * ldb;
+    ctx->sc = outc * ldc;
+    ctx->pa = NULL;
+    ctx->pb = NULL;
+    ctx->pc = NULL;
     bmb_set_scalar(ctx->alpha, BMB_R(1.0), BMB_R(0.0));
     bmb_set_scalar(ctx->beta, BMB_R(0.0), BMB_R(0.0)); /* verify() relies on it */
     ctx->col = col;
@@ -75,9 +113,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->lda = (int) lda;
     ctx->ldb = (int) ldb;
     ctx->ldc = (int) ldc;
-    ctx->a = bmb_bench_alloc(outa * lda * BMB_ELEM_BYTES);
-    ctx->b = bmb_bench_alloc(outb * ldb * BMB_ELEM_BYTES);
-    ctx->c = bmb_bench_alloc(outc * ldc * BMB_ELEM_BYTES);
+    ctx->a = bmb_bench_alloc(count * ctx->sa * BMB_ELEM_BYTES);
+    ctx->b = bmb_bench_alloc(count * ctx->sb * BMB_ELEM_BYTES);
+    ctx->c = bmb_bench_alloc(count * ctx->sc * BMB_ELEM_BYTES);
     if (ctx->a == NULL || ctx->b == NULL || ctx->c == NULL) {
         free(ctx->a);
         free(ctx->b);
@@ -85,10 +123,41 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         free(ctx);
         return NULL;
     }
+    if (mode == BMB_BATCH_GROUP) {
+        ctx->pa = malloc(count * sizeof(*ctx->pa));
+        ctx->pb = malloc(count * sizeof(*ctx->pb));
+        ctx->pc = malloc(count * sizeof(*ctx->pc));
+        if (ctx->pa == NULL || ctx->pb == NULL || ctx->pc == NULL) {
+            free(ctx->pa);
+            free(ctx->pb);
+            free(ctx->pc);
+            free(ctx->a);
+            free(ctx->b);
+            free(ctx->c);
+            free(ctx);
+            return NULL;
+        }
+        for (i = 0; i < count; i++) {
+            ctx->pa[i] = ctx->a + BMB_PARTS * i * ctx->sa;
+            ctx->pb[i] = ctx->b + BMB_PARTS * i * ctx->sb;
+            ctx->pc[i] = ctx->c + BMB_PARTS * i * ctx->sc;
+        }
+        ctx->ta_arr[0] = BMB_CBLAS_TRANS(ta);
+        ctx->tb_arr[0] = BMB_CBLAS_TRANS(tb);
+        ctx->m_arr[0] = (int) m;
+        ctx->n_arr[0] = (int) n;
+        ctx->k_arr[0] = (int) k;
+        ctx->lda_arr[0] = (int) lda;
+        ctx->ldb_arr[0] = (int) ldb;
+        ctx->ldc_arr[0] = (int) ldc;
+        ctx->size_arr[0] = (int) count;
+    }
 
-    bmb_fill(ctx->a, outa * lda, 0, 31);
-    bmb_fill(ctx->b, outb * ldb, 7, 53);
-    for (i = 0; i < BMB_PARTS * outc * ldc; i++) {
+    for (i = 0; i < count; i++) {
+        bmb_fill(ctx->a + BMB_PARTS * i * ctx->sa, ctx->sa, i, 31 + i);
+        bmb_fill(ctx->b + BMB_PARTS * i * ctx->sb, ctx->sb, 7 + i, 53 + i);
+    }
+    for (i = 0; i < BMB_PARTS * count * ctx->sc; i++) {
         ctx->c[i] = BMB_R(0.0);
     }
 
@@ -98,40 +167,68 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 static void call(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
+    size_t i;
 
-    BMB_CBLAS(gemm)(ctx->order, BMB_CBLAS_TRANS(ctx->ta), BMB_CBLAS_TRANS(ctx->tb), ctx->m, ctx->n, ctx->k,
-                    BMB_SCALAR(ctx->alpha), (const void *) ctx->a, ctx->lda,
-                    (const void *) ctx->b, ctx->ldb, BMB_SCALAR(ctx->beta),
-                    (void *) ctx->c, ctx->ldc);
+#if HAVE_CBLAS_GEMM_BATCH
+    if (ctx->mode == BMB_BATCH_GROUP) {
+        BMB_CBLAS(gemm_batch)(ctx->order, (void *) ctx->ta_arr, (void *) ctx->tb_arr, ctx->m_arr,
+                              ctx->n_arr, ctx->k_arr, (const void *) ctx->alpha, (void *) ctx->pa,
+                              ctx->lda_arr, (void *) ctx->pb, ctx->ldb_arr, (const void *) ctx->beta,
+                              (void *) ctx->pc, ctx->ldc_arr, 1, ctx->size_arr);
+        return;
+    }
+#endif
+#if HAVE_CBLAS_GEMM_BATCH_STRIDED
+    if (ctx->mode == BMB_BATCH_STRIDED) {
+        BMB_CBLAS(gemm_batch_strided)(ctx->order, BMB_CBLAS_TRANS(ctx->ta), BMB_CBLAS_TRANS(ctx->tb),
+                                      ctx->m, ctx->n, ctx->k, BMB_SCALAR(ctx->alpha),
+                                      (const void *) ctx->a, ctx->lda, (int) ctx->sa,
+                                      (const void *) ctx->b, ctx->ldb, (int) ctx->sb,
+                                      BMB_SCALAR(ctx->beta), (void *) ctx->c, ctx->ldc, (int) ctx->sc,
+                                      ctx->count);
+        return;
+    }
+#endif
+    for (i = 0; i < (size_t) ctx->count; i++) {
+        BMB_CBLAS(gemm)(ctx->order, BMB_CBLAS_TRANS(ctx->ta), BMB_CBLAS_TRANS(ctx->tb), ctx->m, ctx->n,
+                        ctx->k, BMB_SCALAR(ctx->alpha), (const void *) (ctx->a + BMB_PARTS * i * ctx->sa),
+                        ctx->lda, (const void *) (ctx->b + BMB_PARTS * i * ctx->sb), ctx->ldb,
+                        BMB_SCALAR(ctx->beta), (void *) (ctx->c + BMB_PARTS * i * ctx->sc), ctx->ldc);
+    }
 }
 
 static void teardown(void *vctx)
 {
     bmb_ctx_t *ctx = vctx;
 
+    free(ctx->pa);
+    free(ctx->pb);
+    free(ctx->pc);
     free(ctx->a);
     free(ctx->b);
     free(ctx->c);
     free(ctx);
 }
 
+/* Per call, the batch's: --batch-count times one matrix's. */
 static double flops(size_t dim1, size_t dim2)
 {
     const double d1 = (double) dim1;
     const double d2 = (double) dim2;
     const double k = (double) bmb_bench_dim3(dim1);
 
-    return BMB_MADD_FLOPS * d1 * k * d2;
+    return (double) bmb_bench_batch_count() * (BMB_MADD_FLOPS * d1 * k * d2);
 }
 
-/* --cache cold: the bytes of A, B and C: M x K, K x N, M x N. */
+/* --cache cold: the bytes of A, B and C: M x K, K x N, M x N, as many of
+ * each as the batch has. */
 static double footprint(size_t dim1, size_t dim2)
 {
     const double d1 = (double) dim1;
     const double d2 = (double) dim2;
     const double k = (double) bmb_bench_dim3(dim1);
 
-    return (d1 * k + k * d2 + d1 * d2) * (double) (BMB_ELEM_BYTES);
+    return (double) bmb_bench_batch_count() * ((d1 * k + k * d2 + d1 * d2) * (double) (BMB_ELEM_BYTES));
 }
 
 /* --verify, by random projection in double: C*r against
@@ -143,7 +240,8 @@ static double footprint(size_t dim1, size_t dim2)
  * tolerance times |alpha||A|(|B||r|) on C*r: the scale leaves out
  * |C||r|, which double precision's has, and the tolerance counts the
  * library's terms alone. The reference's own rounding, in double, is
- * 2^-29 of that. */
+ * 2^-29 of that. Every matrix of a batch is checked, after the one call
+ * that computed them all. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
@@ -165,24 +263,36 @@ static int verify(void *vctx, char *msg, size_t size)
     double *t = r + p * n, *tabs = t + p * inner;
     double *y1 = tabs + inner, *y1abs = y1 + p * m, *y2 = y1abs + m, *y2abs = y2 + p * m;
     double *want = y2abs + m, *scale = want + p * m;
+    size_t b;
 
     bmb_verify_probe(r, p * n);
     call(ctx);
     bmb_perturb(&ctx->c[0]);
-    bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
-    bmb_matvec(BMB_VERIFY_OP(ctx->tb), ctx->col, (size_t) ctx->rb, (size_t) ctx->cb, ctx->b,
-               (size_t) ctx->ldb, r, NULL, t, tabs);
-    bmb_matvec(BMB_VERIFY_OP(ctx->ta), ctx->col, (size_t) ctx->ra, (size_t) ctx->ca, ctx->a,
-               (size_t) ctx->lda, t, tabs, y2, y2abs);
-    bmb_scale(want, ctx->alpha, y2, m);
-    for (i = 0; i < p * m; i++) {
-        scale[i] = bmb_abs(ctx->alpha) * y2abs[i / p];
+    ok = 1;
+    for (b = 0; ok && b < (size_t) ctx->count; b++) {
+        char what[128];
+
+        bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->c + p * b * ctx->sc, (size_t) ctx->ldc, r,
+                   NULL, y1, y1abs);
+        bmb_matvec(BMB_VERIFY_OP(ctx->tb), ctx->col, (size_t) ctx->rb, (size_t) ctx->cb,
+                   ctx->b + p * b * ctx->sb, (size_t) ctx->ldb, r, NULL, t, tabs);
+        bmb_matvec(BMB_VERIFY_OP(ctx->ta), ctx->col, (size_t) ctx->ra, (size_t) ctx->ca,
+                   ctx->a + p * b * ctx->sa, (size_t) ctx->lda, t, tabs, y2, y2abs);
+        bmb_scale(want, ctx->alpha, y2, m);
+        for (i = 0; i < p * m; i++) {
+            scale[i] = bmb_abs(ctx->alpha) * y2abs[i / p];
 #if !BMB_SINGLE
-        scale[i] += y1abs[i / p];
+            scale[i] += y1abs[i / p];
 #endif
+        }
+        if (ctx->count == 1) {
+            snprintf(what, sizeof(what), "C*r, for a random vector r" BMB_PARTS_NOTE);
+        } else {
+            snprintf(what, sizeof(what), "C*r of matrix %zu of the batch, for a random vector r" BMB_PARTS_NOTE, b);
+        }
+        ok = bmb_verify_close(what, y1, want, scale, p * m, bmb_tolerance(BMB_SINGLE ? inner : inner + n),
+                              msg, size);
     }
-    ok = bmb_verify_close("C*r, for a random vector r" BMB_PARTS_NOTE, y1, want, scale, p * m,
-                          bmb_tolerance(BMB_SINGLE ? inner : inner + n), msg, size);
     free(r);
     return !ok;
 }
@@ -198,8 +308,15 @@ int main(int argc, char *argv[])
     bench.dim1_label_dim3 = "Matrix dim1 (M)";
     bench.use_vector_range = 0;
     bench.level = 3;
-    bench.args = BMB_ARG_TRANS2;
+    bench.args = BMB_ARG_TRANS2 | BMB_ARG_BATCH;
     bench.trans_letters = BMB_TRANS_LETTERS;
+    bench.batch_modes = 1u << BMB_BATCH_LOOP;
+#if HAVE_CBLAS_GEMM_BATCH
+    bench.batch_modes |= 1u << BMB_BATCH_GROUP;
+#endif
+#if HAVE_CBLAS_GEMM_BATCH_STRIDED
+    bench.batch_modes |= 1u << BMB_BATCH_STRIDED;
+#endif
     bench.setup = setup;
     bench.call = call;
     bench.teardown = teardown;

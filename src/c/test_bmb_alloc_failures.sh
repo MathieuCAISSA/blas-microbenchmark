@@ -7,7 +7,9 @@
 # libbmb_failalloc.so (bmb_failalloc.c), preloaded; dgemm once more under
 # --cache cold, on a machine whose last-level cache takes it 3 copies of
 # its operands: the list of copies, and a copy's setup with the others
-# already made. SKIPs where it cannot be preloaded: under
+# already made; and, where the library has cblas_?gemm_batch, a batch of
+# dgemm in a group call, whose arrays of pointers are allocations too
+# (#159). SKIPs where it cannot be preloaded: under
 # AddressSanitizer, whose allocator must come first, and outside glibc.
 set -e
 
@@ -90,6 +92,12 @@ unset BMB_MACHINE_ROOT
 test "$count" -ge 13 || fail "dgemm -k cold: $count allocations, not the list and 3 copies of 4"
 cold=$((runs - cold))
 
+batch=$runs
+if grep -q '^#define HAVE_CBLAS_GEMM_BATCH 1$' "${top_builddir:?top_builddir is not set}/config.h"; then
+    each_allocation level3/double/bmb_dgemm -x 0 -i 1 -m 8 --batch-count 3 --batch-mode group
+fi
+batch=$((runs - batch))
+
 test "$n" -ge 32 || fail "only $n benchmarks found"
 rm -rf "$T"
-echo "ok   $n benchmarks, and dgemm under --cache cold ($cold), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"
+echo "ok   $n benchmarks, and dgemm under --cache cold ($cold) and in a group call ($batch), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"

@@ -51,11 +51,13 @@ done
 
 # The routine's arguments (#221): those it takes, defaults included, in
 # every format; none for a routine that takes none.
-grep -q '^# arguments: trans NN$' fmt.csv || fail "dgemm's csv does not say trans NN: $(grep '^# arg' fmt.csv)"
-grep -q '^    "arguments": {"trans": "NN"},$' fmt.json || fail "dgemm's json has no arguments object"
+grep -q '^# arguments: trans NN, batch_count 1, batch_mode loop$' fmt.csv \
+    || fail "dgemm's csv does not say trans NN and one matrix in a loop: $(grep '^# arg' fmt.csv)"
+grep -q '^    "arguments": {"trans": "NN", "batch_count": 1, "batch_mode": "loop"},$' fmt.json \
+    || fail "dgemm's json has no arguments object"
 level3/double/bmb_dgemm -x 0 -i 1 -m 8 --trans tn -o args.json >args.txt || fail "the --trans tn run failed"
-grep -q '^# arguments: trans TN$' args.txt || fail "--trans tn: the table does not say trans TN"
-grep -q '"arguments": {"trans": "TN"}' args.json || fail "--trans tn: the json does not say trans TN"
+grep -q '^# arguments: trans TN, ' args.txt || fail "--trans tn: the table does not say trans TN"
+grep -q '"arguments": {"trans": "TN", ' args.json || fail "--trans tn: the json does not say trans TN"
 level3/double/bmb_dtrsm -x 0 -i 1 -m 8 -M 4 --side R --diag U -o args.json >args.txt || fail "the dtrsm run failed"
 grep -q '^# arguments: trans N, uplo U, side R, diag U$' args.txt \
     || fail "dtrsm: the table does not give its four arguments: $(grep '^# arg' args.txt)"

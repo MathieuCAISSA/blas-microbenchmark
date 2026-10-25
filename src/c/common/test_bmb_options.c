@@ -259,6 +259,49 @@ static void test_arguments(void)
     }
 }
 
+/* Batched calls (#159): a count from 1 to 1000000, strictly; a mode by
+ * its name. Neither set when not given. */
+static void test_batch(void)
+{
+    static const struct {
+        const char *opt, *val;
+        int ok, want;
+    } cases[] = {
+        {"--batch-count", "1", 1, 1}, {"--batch-count", "1000000", 1, 1000000},
+        {"--batch-count", "0", 0, 0}, {"--batch-count", "1000001", 0, 0}, {"--batch-count", "-2", 0, 0},
+        {"--batch-count", "3x", 0, 0}, {"--batch-count", "", 0, 0},
+        {"--batch-mode", "loop", 1, BMB_BATCH_LOOP}, {"--batch-mode", "group", 1, BMB_BATCH_GROUP},
+        {"--batch-mode", "strided", 1, BMB_BATCH_STRIDED}, {"--batch-mode", "Group", 0, 0},
+        {"--batch-mode", "batch", 0, 0},
+    };
+    bmb_options_t opts;
+    size_t i;
+
+    if (parse_args(&opts, ARGS_END) != BMB_OPTIONS_OK || opts.batch_count != 0 || opts.batch_mode != -1) {
+        fail("batch", "set when not given");
+    } else {
+        ok("no --batch-count or --batch-mode: neither set");
+    }
+    bmb_options_free(&opts);
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        char what[96];
+        int got = -1;
+        bmb_options_status_t st = parse_args(&opts, cases[i].opt, cases[i].val, ARGS_END);
+
+        snprintf(what, sizeof(what), "%s '%s' %s", cases[i].opt, cases[i].val,
+                 cases[i].ok ? "taken" : "refused");
+        if (st == BMB_OPTIONS_OK) {
+            got = strcmp(cases[i].opt, "--batch-count") == 0 ? (int) opts.batch_count : opts.batch_mode;
+            bmb_options_free(&opts);
+        }
+        if ((st == BMB_OPTIONS_OK) != cases[i].ok || (cases[i].ok && got != cases[i].want)) {
+            fail(what, "got the wrong status or value");
+        } else {
+            ok(what);
+        }
+    }
+}
+
 static void test_dim2(void)
 {
     bmb_options_t opts;
@@ -360,6 +403,7 @@ int main(void)
     test_defaults();
     test_dim2();
     test_arguments();
+    test_batch();
     test_output_format();
 
     /* ---- the four sweep forms ---- */

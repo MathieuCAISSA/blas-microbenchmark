@@ -66,3 +66,7 @@
 "--uplo="
 "--side="
 "--diag="
+"--batch-count="
+"--batch-mode="
+"group"
+"strided"

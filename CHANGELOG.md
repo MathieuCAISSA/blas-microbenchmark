@@ -10,6 +10,14 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Batched GEMM (#159): `--batch-count` matrices per call, passed as
+  `--batch-mode` says: `loop`, a call per matrix, every library's
+  baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,
+  NVPL, OpenBLAS from 0.3.28); `strided`, one `cblas_?gemm_batch_strided`
+  call (MKL, NVPL, OpenBLAS from 0.3.31). `configure` finds which the
+  library has; a mode it has not exits 77, measuring nothing. The counts
+  are the batch's, `--verify` checks every matrix, the outputs record the
+  count and the mode, and `bmb_report` keeps batches apart.
 - `-K` (`--matrix-dim3`): GEMM's K apart from M, a sweep like `-m` and
   `-M` (#215), for the shapes K = M cannot give: HPL's updates, a large M
   and N with a small K, or tall and skinny products. Without it, K is M

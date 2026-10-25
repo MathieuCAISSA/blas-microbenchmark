@@ -511,6 +511,33 @@ AS_CASE(["$bmb_blas_backend"],
   [BMB_CBLAS_CPPFLAGS=])
 AC_SUBST([BMB_CBLAS_CPPFLAGS])
 
+dnl Batched GEMM (#159): MKL's signature, which BLIS, AOCL-BLAS, NVPL and
+dnl OpenBLAS (from 0.3.28, strided from 0.3.31) have too. The header has to
+dnl declare it as well as the library define it: the call takes arrays,
+dnl which an implicit declaration would get wrong. Netlib's has none.
+AS_CASE(["$bmb_blas_backend"],
+  [netlib], [bmb_batch_header=],
+  [mkl], [bmb_batch_header=mkl_cblas.h],
+  [bmb_batch_header=cblas.h])
+AS_IF([test -n "$bmb_batch_header"], [
+  AC_CACHE_CHECK([for cblas_?gemm_batch], [bmb_cv_gemm_batch],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
+      [[(void) &cblas_sgemm_batch; (void) &cblas_dgemm_batch;
+        (void) &cblas_cgemm_batch; (void) &cblas_zgemm_batch;]])],
+      [bmb_cv_gemm_batch=yes], [bmb_cv_gemm_batch=no])])
+  AC_CACHE_CHECK([for cblas_?gemm_batch_strided], [bmb_cv_gemm_batch_strided],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
+      [[(void) &cblas_sgemm_batch_strided; (void) &cblas_dgemm_batch_strided;
+        (void) &cblas_cgemm_batch_strided; (void) &cblas_zgemm_batch_strided;]])],
+      [bmb_cv_gemm_batch_strided=yes], [bmb_cv_gemm_batch_strided=no])])
+  AS_IF([test "x$bmb_cv_gemm_batch" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_GEMM_BATCH], [1],
+      [Define to 1 if the CBLAS declares and defines cblas_?gemm_batch.])])
+  AS_IF([test "x$bmb_cv_gemm_batch_strided" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_GEMM_BATCH_STRIDED], [1],
+      [Define to 1 if the CBLAS declares and defines cblas_?gemm_batch_strided.])])
+])
+
 dnl The flags the benchmarks are compiled with, which the results record
 dnl (#161). On one line, since the text and the CSV write them on a
 dnl comment line, and escaped for a C string; AC_DEFINE_UNQUOTED inserts

@@ -15,6 +15,8 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->uplo = 0;
     rs->side = 0;
     rs->diag = 0;
+    rs->batch_count = 1;
+    rs->batch_mode = 0;
     rs->label = NULL;
     rs->verified = 0;
     rs->layout = NULL;

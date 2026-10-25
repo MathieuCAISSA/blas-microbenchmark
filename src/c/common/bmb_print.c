@@ -94,6 +94,11 @@ static void bmb_print_arguments(FILE *out, const bmb_result_set_t *rs)
     }
     if (rs->args & BMB_ARG_DIAG) {
         fprintf(out, "%sdiag %c", sep, rs->diag);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_BATCH) {
+        fprintf(out, "%sbatch_count %u, batch_mode %s", sep, rs->batch_count,
+                bmb_batch_mode_name(rs->batch_mode));
     }
     if (rs->args != 0) {
         fputc('\n', out);
@@ -122,6 +127,11 @@ static void bmb_print_json_arguments(FILE *out, const bmb_result_set_t *rs)
     }
     if (rs->args & BMB_ARG_DIAG) {
         fprintf(out, "%s\"diag\": \"%c\"", sep, rs->diag);
+        sep = ", ";
+    }
+    if (rs->args & BMB_ARG_BATCH) {
+        fprintf(out, "%s\"batch_count\": %u, \"batch_mode\": \"%s\"", sep, rs->batch_count,
+                bmb_batch_mode_name(rs->batch_mode));
     }
     fprintf(out, "},\n");
 }

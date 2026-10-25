@@ -70,8 +70,10 @@ Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s 
 
 Every benchmark takes the same options: the sizes to sweep (`-v` for
 vectors, `-m` and `-M` for matrices), thread counts (`-t 1:8`), a file to
-save to (`-o results.json`, or `.csv`). `bmb_dgemm --help` lists them;
-**`man blas-microbenchmark`** explains everything else.
+save to (`-o results.json`, or `.csv`). GEMM also takes a batch of small
+matrices per call (`--batch-count 10000 --batch-mode group`), to compare
+a loop of calls with the library's batched one. `bmb_dgemm --help` lists
+them; **`man blas-microbenchmark`** explains everything else.
 
 ## Compare libraries: `bmb_report`
 
