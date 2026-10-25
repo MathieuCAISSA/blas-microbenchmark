@@ -14,7 +14,7 @@
 
 # Both stages start from the same base, pinned by digest as the actions
 # are by commit (#13); Dependabot moves both.
-FROM ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7 AS build
+FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944 AS build
 ARG BLAS_BACKEND=openblas
 
 # The distribution's packages are whatever its archive holds that day: the
@@ -66,7 +66,7 @@ RUN /src/configure --with-blas-backend="$BLAS_BACKEND" \
     fi
 
 
-FROM ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
 ARG BLAS_BACKEND=openblas
 
 LABEL org.opencontainers.image.title="blas-microbenchmark" \
