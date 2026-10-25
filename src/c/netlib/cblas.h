@@ -108,6 +108,23 @@ void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
 void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
                 const float *X, const int incX, const float *Y, const int incY,
                 float *A, const int lda);
+/* The Hermitian level 2 routines (#238). */
+void cblas_chemv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
+                 const void *alpha, const void *A, const int lda, const void *X, const int incX,
+                 const void *beta, void *Y, const int incY);
+void cblas_cher(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                const void *X, const int incX, void *A, const int lda);
+void cblas_cher2(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda);
+void cblas_zhemv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
+                 const void *alpha, const void *A, const int lda, const void *X, const int incX,
+                 const void *beta, void *Y, const int incY);
+void cblas_zher(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const double alpha,
+                const void *X, const int incX, void *A, const int lda);
+void cblas_zher2(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const void *alpha,
+                 const void *X, const int incX, const void *Y, const int incY,
+                 void *A, const int lda);
 /* The complex rank-1 updates (#236). */
 void cblas_cgeru(const CBLAS_ORDER order, const int M, const int N, const void *alpha,
                  const void *X, const int incX, const void *Y, const int incY,

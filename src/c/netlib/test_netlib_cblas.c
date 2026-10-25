@@ -871,6 +871,103 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #238: hemv, her and her2, row-major, Upper: through the flip
+     * to the other triangle and the conjugated vectors, against a naive
+     * reference; the strictly lower part as it was, the diagonal's
+     * imaginary parts zeroed by her and her2, x and y given back ---- */
+    {
+        double za[2 * M * M], zw[2 * M * M], zx[2 * M], zx0[2 * M], zy[2 * M], zy0[2 * M];
+        double got[2 * M * M];
+        float ca[2 * M * M], cx[2 * M], cy[2 * M];
+        const double alpha[2] = { 0.5, 0.25 }, beta[2] = { 0.25, -0.5 };
+        const float falpha[2] = { 0.5f, 0.25f }, fbeta[2] = { 0.25f, -0.5f };
+        int pass;
+
+        /* hemv: y = alpha A x + beta y */
+        fill(za, 2 * M * M);
+        fill_off(zx0, 2 * M, 3);
+        fill_off(zy0, 2 * M, 5);
+        memcpy(zx, zx0, sizeof(zx));
+        memcpy(zy, zy0, sizeof(zy));
+        for (i = 0; i < M; i++) {
+            double t[2] = { 0.0, 0.0 };
+
+            for (j = 0; j < M; j++) {
+                double re, im;
+
+                herm(za, M, i, j, &re, &im);
+                cmac(t, re, im, zx[2 * j], zx[2 * j + 1]);
+            }
+            zw[2 * i] = zw[2 * i + 1] = 0.0;
+            cmac(&zw[2 * i], alpha[0], alpha[1], t[0], t[1]);
+            cmac(&zw[2 * i], beta[0], beta[1], zy[2 * i], zy[2 * i + 1]);
+        }
+        to_f(ca, za, 2 * M * M);
+        to_f(cx, zx, 2 * M);
+        to_f(cy, zy, 2 * M);
+        cblas_zhemv(CblasRowMajor, CblasUpper, M, alpha, za, M, zx, 1, beta, zy, 1);
+        check("zhemv.U", zy, zw, 2 * M);
+        check("zhemv.U x", zx, zx0, 2 * M);
+        cblas_chemv(CblasRowMajor, CblasUpper, M, falpha, ca, M, cx, 1, fbeta, cy, 1);
+        to_d(got, cy, 2 * M);
+        check("chemv.U", got, zw, 2 * M);
+        to_d(got, cx, 2 * M);
+        check("chemv.U x", got, zx0, 2 * M);
+
+        /* her (pass 0), A += 0.5 x x^H, and her2 (pass 1), A += alpha x
+         * y^H + conj(alpha) y x^H: the upper triangle only */
+        for (pass = 0; pass < 2; pass++) {
+            fill(za, 2 * M * M);
+            memcpy(zw, za, sizeof(za));
+            memcpy(zx, zx0, sizeof(zx));
+            memcpy(zy, zy0, sizeof(zy));
+            for (i = 0; i < M; i++) {
+                for (j = i; j < M; j++) {
+                    double *w = &zw[2 * (i * M + j)];
+
+                    if (pass == 0) {
+                        double t[2] = { 0.0, 0.0 };
+
+                        cmac(t, zx[2 * i], zx[2 * i + 1], zx[2 * j], -zx[2 * j + 1]);
+                        w[0] += 0.5 * t[0];
+                        w[1] += 0.5 * t[1];
+                    } else {
+                        double t[2] = { 0.0, 0.0 }, u[2] = { 0.0, 0.0 };
+
+                        cmac(t, zx[2 * i], zx[2 * i + 1], zy[2 * j], -zy[2 * j + 1]);
+                        cmac(u, zy[2 * i], zy[2 * i + 1], zx[2 * j], -zx[2 * j + 1]);
+                        cmac(w, alpha[0], alpha[1], t[0], t[1]);
+                        cmac(w, alpha[0], -alpha[1], u[0], u[1]);
+                    }
+                    if (i == j) {
+                        w[1] = 0.0;
+                    }
+                }
+            }
+            to_f(ca, za, 2 * M * M);
+            to_f(cx, zx, 2 * M);
+            to_f(cy, zy, 2 * M);
+            if (pass == 0) {
+                cblas_zher(CblasRowMajor, CblasUpper, M, 0.5, zx, 1, za, M);
+                cblas_cher(CblasRowMajor, CblasUpper, M, 0.5f, cx, 1, ca, M);
+            } else {
+                cblas_zher2(CblasRowMajor, CblasUpper, M, alpha, zx, 1, zy, 1, za, M);
+                cblas_cher2(CblasRowMajor, CblasUpper, M, falpha, cx, 1, cy, 1, ca, M);
+            }
+            check(pass == 0 ? "zher.U" : "zher2.U", za, zw, 2 * M * M);
+            to_d(got, ca, 2 * M * M);
+            check(pass == 0 ? "cher.U" : "cher2.U", got, zw, 2 * M * M);
+            check(pass == 0 ? "zher.U x" : "zher2.U x", zx, zx0, 2 * M);
+            to_d(got, cx, 2 * M);
+            check(pass == 0 ? "cher.U x" : "cher2.U x", got, zx0, 2 * M);
+            if (pass == 1) {
+                check("zher2.U y", zy, zy0, 2 * M);
+                to_d(got, cy, 2 * M);
+                check("cher2.U y", got, zy0, 2 * M);
+            }
+        }
+    }
+
     /* ---- #236: cdotu and zdotu; geru and gerc row-major, through the
      * flip, gerc's y conjugated around the call and given back ---- */
     {

@@ -31,6 +31,9 @@ releases with the same major version can be compared and read by the same
 - `cdotu`, `zdotu`, `cgeru`, `zgeru`, `cgerc` and `zgerc` (#236): the
   unconjugated complex dot product and the complex rank-1 updates, with
   the counts and `--verify` of `cdotc` and `dger`. 88 benchmarks.
+- `chemv`, `zhemv`, `cher`, `zher`, `cher2` and `zher2` (#238): the
+  Hermitian level 2 routines, with `--uplo` as their real counterparts.
+  94 benchmarks.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,

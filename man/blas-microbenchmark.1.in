@@ -18,13 +18,14 @@ bmb_snrm2, bmb_dnrm2, bmb_scnrm2, bmb_dznrm2, bmb_sscal, bmb_dscal,
 bmb_cscal, bmb_zscal, bmb_sswap, bmb_dswap, bmb_cswap, bmb_zswap,
 bmb_isamax, bmb_idamax, bmb_icamax, bmb_izamax, bmb_srot, bmb_drot,
 bmb_sgemv, bmb_dgemv, bmb_cgemv, bmb_zgemv, bmb_sger, bmb_dger, bmb_cgeru,
-bmb_zgeru, bmb_cgerc, bmb_zgerc, bmb_ssymv, bmb_dsymv, bmb_ssyr, bmb_dsyr,
-bmb_ssyr2, bmb_dsyr2, bmb_strmv, bmb_dtrmv, bmb_ctrmv, bmb_ztrmv, bmb_strsv,
-bmb_dtrsv, bmb_ctrsv, bmb_ztrsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm,
-bmb_ssymm, bmb_dsymm, bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk,
-bmb_dsyrk, bmb_csyrk, bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k,
-bmb_dsyr2k, bmb_csyr2k, bmb_zsyr2k, bmb_strmm, bmb_dtrmm, bmb_ctrmm,
-bmb_ztrmm, bmb_strsm, bmb_dtrsm, bmb_ctrsm,
+bmb_zgeru, bmb_cgerc, bmb_zgerc, bmb_ssymv, bmb_dsymv, bmb_chemv, bmb_zhemv,
+bmb_ssyr, bmb_dsyr, bmb_cher, bmb_zher, bmb_ssyr2, bmb_dsyr2, bmb_cher2,
+bmb_zher2, bmb_strmv, bmb_dtrmv, bmb_ctrmv, bmb_ztrmv, bmb_strsv, bmb_dtrsv,
+bmb_ctrsv, bmb_ztrsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm, bmb_ssymm,
+bmb_dsymm, bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk,
+bmb_csyrk, bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k, bmb_dsyr2k,
+bmb_csyr2k, bmb_zsyr2k, bmb_strmm, bmb_dtrmm, bmb_ctrmm, bmb_ztrmm,
+bmb_strsm, bmb_dtrsm, bmb_ctrsm,
 bmb_ztrsm \- microbenchmarks for BLAS routines
 .\" END routines (man-name)
 .SH SYNOPSIS
@@ -64,8 +65,9 @@ Level 1	sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy
 \&	dnrm2 scnrm2 dznrm2 sscal dscal cscal zscal sswap dswap
 \&	cswap zswap isamax idamax icamax izamax srot drot
 Level 2	sgemv dgemv cgemv zgemv sger dger cgeru zgeru cgerc zgerc
-\&	ssymv dsymv ssyr dsyr ssyr2 dsyr2 strmv dtrmv ctrmv ztrmv
-\&	strsv dtrsv ctrsv ztrsv
+\&	ssymv dsymv chemv zhemv ssyr dsyr cher zher ssyr2 dsyr2
+\&	cher2 zher2 strmv dtrmv ctrmv ztrmv strsv dtrsv ctrsv
+\&	ztrsv
 Level 3	sgemm dgemm cgemm zgemm ssymm dsymm csymm zsymm chemm
 \&	zhemm ssyrk dsyrk csyrk zsyrk cherk zherk ssyr2k dsyr2k
 \&	csyr2k zsyr2k strmm dtrmm ctrmm ztrmm strsm dtrsm ctrsm
@@ -95,8 +97,8 @@ counted from 0 as in C.
 Some exist for complex numbers only: cdotc and zdotc, the dot product
 with the first vector conjugated, and cdotu and zdotu, without; cgeru,
 zgeru, cgerc and zgerc, the rank\-1 updates, with y conjugated in gerc;
-and chemm, zhemm, cherk and zherk, the Hermitian counterparts of symm
-and syrk.
+and the Hermitian counterparts of symv, syr, syr2, symm and syrk:
+chemv, zhemv, cher, zher, cher2, zher2, chemm, zhemm, cherk and zherk.
 .PP
 Level 1 routines are sized with
 .BR \-v .
@@ -119,10 +121,11 @@ sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N; \-K gives K apart
 ssyrk dsyrk csyrk zsyrk	\-m is N, \-M is K
 cherk zherk ssyr2k	\-m is N, \-M is K
 dsyr2k csyr2k zsyr2k	\-m is N, \-M is K
-ssymv dsymv ssyr dsyr	\-m is N (square; no \-M)
-ssyr2 dsyr2 strmv dtrmv	\-m is N (square; no \-M)
-ctrmv ztrmv strsv dtrsv	\-m is N (square; no \-M)
-ctrsv ztrsv	\-m is N (square; no \-M)
+ssymv dsymv chemv zhemv	\-m is N (square; no \-M)
+ssyr dsyr cher zher	\-m is N (square; no \-M)
+ssyr2 dsyr2 cher2 zher2	\-m is N (square; no \-M)
+strmv dtrmv ctrmv ztrmv	\-m is N (square; no \-M)
+strsv dtrsv ctrsv ztrsv	\-m is N (square; no \-M)
 .TE
 .\" END routines (man-sizes)
 .SH OPTIONS

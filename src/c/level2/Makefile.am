@@ -20,10 +20,16 @@ level2_PROGRAMS = \
 	complex16/bmb_zgerc \
 	single/bmb_ssymv \
 	double/bmb_dsymv \
+	complex/bmb_chemv \
+	complex16/bmb_zhemv \
 	single/bmb_ssyr \
 	double/bmb_dsyr \
+	complex/bmb_cher \
+	complex16/bmb_zher \
 	single/bmb_ssyr2 \
 	double/bmb_dsyr2 \
+	complex/bmb_cher2 \
+	complex16/bmb_zher2 \
 	single/bmb_strmv \
 	double/bmb_dtrmv \
 	complex/bmb_ctrmv \
@@ -57,14 +63,26 @@ single_bmb_ssymv_SOURCES = bmb_symv.c
 single_bmb_ssymv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dsymv_SOURCES = bmb_symv.c
 double_bmb_dsymv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_chemv_SOURCES = bmb_hemv.c
+complex_bmb_chemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zhemv_SOURCES = bmb_hemv.c
+complex16_bmb_zhemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_ssyr_SOURCES = bmb_syr.c
 single_bmb_ssyr_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dsyr_SOURCES = bmb_syr.c
 double_bmb_dsyr_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_cher_SOURCES = bmb_her.c
+complex_bmb_cher_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zher_SOURCES = bmb_her.c
+complex16_bmb_zher_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_ssyr2_SOURCES = bmb_syr2.c
 single_bmb_ssyr2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dsyr2_SOURCES = bmb_syr2.c
 double_bmb_dsyr2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_cher2_SOURCES = bmb_her2.c
+complex_bmb_cher2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zher2_SOURCES = bmb_her2.c
+complex16_bmb_zher2_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_strmv_SOURCES = bmb_trmv.c
 single_bmb_strmv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dtrmv_SOURCES = bmb_trmv.c
@@ -95,10 +113,16 @@ ROUTINE_TESTS = \
 	complex16/test_bmb_zgerc.sh \
 	single/test_bmb_ssymv.sh \
 	double/test_bmb_dsymv.sh \
+	complex/test_bmb_chemv.sh \
+	complex16/test_bmb_zhemv.sh \
 	single/test_bmb_ssyr.sh \
 	double/test_bmb_dsyr.sh \
+	complex/test_bmb_cher.sh \
+	complex16/test_bmb_zher.sh \
 	single/test_bmb_ssyr2.sh \
 	double/test_bmb_dsyr2.sh \
+	complex/test_bmb_cher2.sh \
+	complex16/test_bmb_zher2.sh \
 	single/test_bmb_strmv.sh \
 	double/test_bmb_dtrmv.sh \
 	complex/test_bmb_ctrmv.sh \
