@@ -281,7 +281,7 @@ executable named `bmb_<routine>`, in the build tree beside its source
 (`build/src/c/level3/double/bmb_dgemm`).
 
 Those go to `$(libexecdir)/blas-microbenchmark/level<N>`, the layout
-osu-micro-benchmarks uses, rather than to `bin` — 32 executables named
+osu-micro-benchmarks uses, rather than to `bin` — dozens of executables named
 `bmb_*` have no business sitting in `$PATH`. Each level's `Makefile.am`
 declares it with a custom Automake directory variable:
 
@@ -302,7 +302,7 @@ This is a **deliberate** departure from the GNU standards, which reserve
 users" and would put these in `bindir`. It was weighed against two
 alternatives and kept on purpose, so don't "fix" it:
 
-- *32 binaries flat in `bin`* is what the standards actually call for, and
+- *Dozens of binaries flat in `bin`* is what the standards actually call for, and
   what most projects do. It was rejected because the level grouping was
   asked for explicitly.
 - *A `bmb` launcher in `bin` running the level binaries from `libexec`*,

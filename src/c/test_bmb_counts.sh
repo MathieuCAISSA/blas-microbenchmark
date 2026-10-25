@@ -5,11 +5,13 @@
 # bytes of its operands), and none of those a routine must not declare:
 # no FLOPs for copy and swap, no bytes at level 3, no footprint below it.
 # Written here from the operation, the element's size and whether it is
-# complex (a complex multiply-add is 4 real ones), independently of the
+# complex (a complex multiply-add is 4 real ones, a complex alpha times
+# an element 6; asum and nrm2 count each real part), independently of the
 # sources, so that a family made of several routines (#166) keeps the
-# counts each had; GEMM's with a K of its own too (-K, #215). BMB_COUNTS
-# makes a benchmark write each point's counts instead of measuring it:
-# nothing is allocated, and one size is large.
+# counts each had; GEMM's with a K of its own too (-K, #215). The
+# operation is the routine's family, from the table: scasum is asum.
+# BMB_COUNTS makes a benchmark write each point's counts instead of
+# measuring it: nothing is allocated, and one size is large.
 set -e
 
 T=counts-test.d
@@ -35,7 +37,7 @@ sizes() {
 
 grep -v '^#' "${srcdir:-.}/routines.txt" >"$T/routines" || fail "no routines in routines.txt"
 n=0
-while read -r r level prec kind _; do
+while read -r r level prec kind family; do
     [ -n "$r" ] || continue
     case $prec in s) dir=single ;; d) dir=double ;; c) dir=complex ;; z) dir=complex16 ;; esac
     # shellcheck disable=SC2046 # the size options, split on purpose
@@ -45,21 +47,21 @@ while read -r r level prec kind _; do
     if grep -q '^[0-9]' "$T/$r.out"; then
         fail "bmb_$r measured something under BMB_COUNTS: $(cat "$T/$r.out")"
     fi
-    awk -v r="$r" -v prec="$prec" '
+    awk -v r="$r" -v prec="$prec" -v op="$family" '
         BEGIN {
-            op = substr(r, 2)
             e = prec == "s" ? 4 : prec == "z" ? 16 : 8
             cf = (prec == "c" || prec == "z") ? 4 : 1
+            parts = cf == 4 ? 2 : 1
         }
         function num(x) { return sprintf("%.17g", x) }
         {
             m = $3; n = $4; f = "-"; b = "-"; p = "-"
-            if (op == "asum") { f = num(m); b = num(e * m) }
+            if (op == "asum") { f = num(m * parts); b = num(e * m) }
             else if (op == "axpy") { f = num(2 * m * cf); b = num(3 * e * m) }
             else if (op == "copy") { b = num(2 * e * m) }
             else if (op == "dot" || op == "dotc" || op == "dotu") { f = num(2 * m * cf); b = num(2 * e * m) }
-            else if (op == "nrm2") { f = num(2 * m); b = num(e * m) }
-            else if (op == "scal") { f = num(m); b = num(2 * e * m) }
+            else if (op == "nrm2") { f = num(2 * m * parts); b = num(e * m) }
+            else if (op == "scal") { f = num(parts == 2 ? 6 * m : m); b = num(2 * e * m) }
             else if (op == "swap") { b = num(4 * e * m) }
             else if (op == "gemv") { f = num(2 * m * n * cf); b = num(e * (m * n + n + 2 * m)) }
             else if (op == "ger") { f = num(2 * m * n); b = num(e * (2 * m * n + m + n)) }

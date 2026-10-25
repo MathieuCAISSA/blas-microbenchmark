@@ -14,9 +14,11 @@ CLEANFILES = $(man1_MANS)
 # keeping in the tree. test_man_content.sh checks this list against the
 # benchmarks actually built.
 # BEGIN routines (man-makefile): written by src/c/routines.sh
-ROUTINES = dasum saxpy daxpy dcopy sdot ddot zdotc dnrm2 dscal dswap \
-	sgemv dgemv dger dsymv dsyr dsyr2 dtrmv dtrsv sgemm dgemm cgemm zgemm \
-	dsymm zhemm ssyrk dsyrk zherk dsyr2k dtrmm strsm dtrsm ztrsm
+ROUTINES = sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy \
+	dcopy ccopy zcopy sdot ddot cdotc zdotc snrm2 dnrm2 scnrm2 dznrm2 \
+	sscal dscal cscal zscal sswap dswap cswap zswap sgemv dgemv dger \
+	dsymv dsyr dsyr2 dtrmv dtrsv sgemm dgemm cgemm zgemm dsymm zhemm \
+	ssyrk dsyrk zherk dsyr2k dtrmm strsm dtrsm ztrsm
 # END routines (man-makefile)
 
 SUBST = v=$$(printf '%s' '$(PACKAGE_VERSION)' | sed 's/-/\\\\-/g') && \
