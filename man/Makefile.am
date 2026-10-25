@@ -18,8 +18,9 @@ ROUTINES = sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy \
 	dcopy ccopy zcopy sdot ddot cdotc zdotc snrm2 dnrm2 scnrm2 dznrm2 \
 	sscal dscal cscal zscal sswap dswap cswap zswap sgemv dgemv cgemv \
 	zgemv sger dger ssymv dsymv ssyr dsyr ssyr2 dsyr2 strmv dtrmv ctrmv \
-	ztrmv strsv dtrsv ctrsv ztrsv sgemm dgemm cgemm zgemm dsymm zhemm \
-	ssyrk dsyrk zherk dsyr2k dtrmm strsm dtrsm ztrsm
+	ztrmv strsv dtrsv ctrsv ztrsv sgemm dgemm cgemm zgemm ssymm dsymm \
+	csymm zsymm chemm zhemm ssyrk dsyrk csyrk zsyrk cherk zherk ssyr2k \
+	dsyr2k csyr2k zsyr2k strmm dtrmm ctrmm ztrmm strsm dtrsm ctrsm ztrsm
 # END routines (man-makefile)
 
 SUBST = v=$$(printf '%s' '$(PACKAGE_VERSION)' | sed 's/-/\\\\-/g') && \

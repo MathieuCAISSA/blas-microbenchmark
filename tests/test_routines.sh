@@ -36,32 +36,34 @@ fresh() {
 }
 
 fresh
-echo 'zsymm      3      z          mn     symm' >>"$T/src/c/routines.txt"
+# zfake, of a family fake: a routine the table will never have, which no
+# source needs here.
+echo 'zfake      3      z          mn     fake' >>"$T/src/c/routines.txt"
 if sh "$T/src/c/routines.sh" --check "$T" >"$T/out" 2>&1; then
-    fail "--check passed with zsymm in the table alone"
+    fail "--check passed with zfake in the table alone"
 fi
 n=$(grep -c 'is not the table' "$T/out")
 # Every list but level 1's and level 2's Makefile.am, the man page's three
 # counted apart.
-test "$n" = 8 || fail "zsymm in the table alone: $n lists stale, not 8: $(cat "$T/out")"
-grep -q '^+	complex16/bmb_zsymm$' "$T/out" ||
-    fail "the stale level 3 Makefile.am's difference does not add zsymm: $(cat "$T/out")"
+test "$n" = 8 || fail "zfake in the table alone: $n lists stale, not 8: $(cat "$T/out")"
+grep -q '^+	complex16/bmb_zfake$' "$T/out" ||
+    fail "the stale level 3 Makefile.am's difference does not add zfake: $(cat "$T/out")"
 echo "ok   a routine in the table alone: the 8 lists it belongs in stale"
 
 sh "$T/src/c/routines.sh" "$T" >/dev/null || fail "routines.sh could not write the lists"
 sh "$T/src/c/routines.sh" --check "$T" >"$T/out" 2>&1 ||
     fail "--check failed on what routines.sh wrote: $(cat "$T/out")"
-grep -q "zsymm: 3$" "$T/src/report/report.html" || fail "zsymm not in the report's LEVEL"
-grep -q "'zsymm': 3,$" "$T/packaging/reframe/blas_microbenchmark.py" || fail "zsymm not in ReFrame's ROUTINES"
-grep -q '^complex16_bmb_zsymm_SOURCES = bmb_symm.c$' "$T/src/c/level3/Makefile.am" ||
-    fail "zsymm is not built from its family's source in level 3's Makefile.am"
-grep -q '^complex16_bmb_zsymm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z$' "$T/src/c/level3/Makefile.am" ||
-    fail "zsymm's source is not compiled for double complex in level 3's Makefile.am"
-grep -q '`ztrsm` `zsymm` |$' "$T/README.md" || fail "zsymm not in the README's complex column"
-grep -q 'zsymm	\\-m is M, \\-M is N$' "$T/man/blas-microbenchmark.1.in" ||
-    fail "zsymm not in the man page's table of dimensions"
-grep -E -q '(^| )bmb_zsymm \\- microbenchmarks for BLAS routines$' "$T/man/blas-microbenchmark.1.in" ||
-    fail "zsymm not last in the man page's NAME"
+grep -q "zfake: 3$" "$T/src/report/report.html" || fail "zfake not in the report's LEVEL"
+grep -q "'zfake': 3,$" "$T/packaging/reframe/blas_microbenchmark.py" || fail "zfake not in ReFrame's ROUTINES"
+grep -q '^complex16_bmb_zfake_SOURCES = bmb_fake.c$' "$T/src/c/level3/Makefile.am" ||
+    fail "zfake is not built from its family's source in level 3's Makefile.am"
+grep -q '^complex16_bmb_zfake_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z$' "$T/src/c/level3/Makefile.am" ||
+    fail "zfake's source is not compiled for double complex in level 3's Makefile.am"
+grep -q '`ztrsm` `zfake` |$' "$T/README.md" || fail "zfake not in the README's complex column"
+grep -q 'zfake	\\-m is M, \\-M is N$' "$T/man/blas-microbenchmark.1.in" ||
+    fail "zfake not in the man page's table of dimensions"
+grep -E -q '(^| )bmb_zfake \\- microbenchmarks for BLAS routines$' "$T/man/blas-microbenchmark.1.in" ||
+    fail "zfake not last in the man page's NAME"
 echo "ok   routines.sh writes them, and --check then passes"
 
 # refused LINE MESSAGE: the table with LINE added stops routines.sh with

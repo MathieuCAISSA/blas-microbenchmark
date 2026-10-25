@@ -871,6 +871,178 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #230: level 3 in its other precisions. zsymm, zsyrk, zsyr2k and
+     * ztrmm against naive references, row-major, the triangle of C a
+     * rank-k update must not touch kept; csymm, csyrk, csyr2k and ctrmm
+     * against the same, and chemm, cherk and ctrsm against zhemm, zherk
+     * and ztrsm, on the same values; ssymm, ssyr2k and strmm against
+     * their double ones, with the arguments that flip. ---- */
+    {
+        double za[2 * M * K], zb[2 * M * K], zc[2 * M * N], zw[2 * M * N], got[2 * M * N];
+        float ca[2 * M * K], cb[2 * M * K], cc[2 * M * N];
+        const double alpha[2] = { 0.5, 0.25 }, beta[2] = { 0.25, -0.5 };
+        const float falpha[2] = { 0.5f, 0.25f }, fbeta[2] = { 0.25f, -0.5f };
+        float fa[64], fb[64], fc[64];
+        int pass;
+
+        /* symm, Left/Upper: C = alpha A B + beta C, A M x M symmetric */
+        fill(za, 2 * M * M);
+        fill_off(zb, 2 * M * N, 3);
+        fill_off(zc, 2 * M * N, 5);
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                double t[2] = { 0.0, 0.0 };
+
+                for (l = 0; l < M; l++) {
+                    const int e = l >= i ? i * M + l : l * M + i;
+
+                    cmac(t, za[2 * e], za[2 * e + 1], zb[2 * (l * N + j)], zb[2 * (l * N + j) + 1]);
+                }
+                zw[2 * (i * N + j)] = zw[2 * (i * N + j) + 1] = 0.0;
+                cmac(&zw[2 * (i * N + j)], alpha[0], alpha[1], t[0], t[1]);
+                cmac(&zw[2 * (i * N + j)], beta[0], beta[1], zc[2 * (i * N + j)], zc[2 * (i * N + j) + 1]);
+            }
+        }
+        to_f(ca, za, 2 * M * M);
+        to_f(cb, zb, 2 * M * N);
+        to_f(cc, zc, 2 * M * N);
+        cblas_zsymm(CblasRowMajor, CblasLeft, CblasUpper, M, N, alpha, za, M, zb, N, beta, zc, N);
+        check("zsymm.LU", zc, zw, 2 * M * N);
+        cblas_csymm(CblasRowMajor, CblasLeft, CblasUpper, M, N, falpha, ca, M, cb, N, fbeta, cc, N);
+        to_d(got, cc, 2 * M * N);
+        check("csymm.LU", got, zw, 2 * M * N);
+
+        /* syrk and syr2k, Upper/NoTrans: A and B N x K, C N x N, its lower
+         * triangle as it was */
+        for (pass = 0; pass < 2; pass++) {
+            fill(za, 2 * N * K);
+            fill_off(zb, 2 * N * K, 3);
+            fill_off(zc, 2 * N * N, 5);
+            memcpy(zw, zc, sizeof(double) * 2 * N * N);
+            for (i = 0; i < N; i++) {
+                for (j = i; j < N; j++) {
+                    double t[2] = { 0.0, 0.0 };
+
+                    for (l = 0; l < K; l++) {
+                        const double *ai = &za[2 * (i * K + l)], *aj = &za[2 * (j * K + l)];
+                        const double *bi = &zb[2 * (i * K + l)], *bj = &zb[2 * (j * K + l)];
+
+                        if (pass == 0) {
+                            cmac(t, ai[0], ai[1], aj[0], aj[1]);
+                        } else {
+                            cmac(t, ai[0], ai[1], bj[0], bj[1]);
+                            cmac(t, bi[0], bi[1], aj[0], aj[1]);
+                        }
+                    }
+                    zw[2 * (i * N + j)] = zw[2 * (i * N + j) + 1] = 0.0;
+                    cmac(&zw[2 * (i * N + j)], alpha[0], alpha[1], t[0], t[1]);
+                    cmac(&zw[2 * (i * N + j)], beta[0], beta[1], zc[2 * (i * N + j)], zc[2 * (i * N + j) + 1]);
+                }
+            }
+            to_f(ca, za, 2 * N * K);
+            to_f(cb, zb, 2 * N * K);
+            to_f(cc, zc, 2 * N * N);
+            if (pass == 0) {
+                cblas_zsyrk(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, alpha, za, K, beta, zc, N);
+                cblas_csyrk(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, falpha, ca, K, fbeta, cc, N);
+            } else {
+                cblas_zsyr2k(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, alpha, za, K, zb, K, beta, zc, N);
+                cblas_csyr2k(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, falpha, ca, K, cb, K, fbeta, cc, N);
+            }
+            check(pass == 0 ? "zsyrk.UN" : "zsyr2k.UN", zc, zw, 2 * N * N);
+            to_d(got, cc, 2 * N * N);
+            check(pass == 0 ? "csyrk.UN" : "csyr2k.UN", got, zw, 2 * N * N);
+        }
+
+        /* trmm, Left/Upper/ConjTrans: B = alpha A^H B, A M x M upper,
+         * (A^H)_il = conj(A_li), l <= i */
+        fill_ctri(za);
+        fill_off(zb, 2 * M * N, 3);
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                double t[2] = { 0.0, 0.0 };
+
+                for (l = 0; l <= i; l++) {
+                    const double *ali = &za[2 * (l * M + i)], *blj = &zb[2 * (l * N + j)];
+
+                    cmac(t, ali[0], -ali[1], blj[0], blj[1]);
+                }
+                zw[2 * (i * N + j)] = zw[2 * (i * N + j) + 1] = 0.0;
+                cmac(&zw[2 * (i * N + j)], alpha[0], alpha[1], t[0], t[1]);
+            }
+        }
+        to_f(ca, za, 2 * M * M);
+        to_f(cb, zb, 2 * M * N);
+        cblas_ztrmm(CblasRowMajor, CblasLeft, CblasUpper, CblasConjTrans, CblasNonUnit, M, N, alpha, za, M,
+                    zb, N);
+        check("ztrmm.LUC", zb, zw, 2 * M * N);
+        cblas_ctrmm(CblasRowMajor, CblasLeft, CblasUpper, CblasConjTrans, CblasNonUnit, M, N, falpha, ca, M,
+                    cb, N);
+        to_d(got, cb, 2 * M * N);
+        check("ctrmm.LUC", got, zw, 2 * M * N);
+
+        /* chemm, cherk and ctrsm against their double complex ones, which
+         * the checks above (#67) hold to a reference */
+        fill(za, 2 * M * M);
+        fill_off(zb, 2 * M * N, 3);
+        fill_off(zc, 2 * M * N, 5);
+        to_f(ca, za, 2 * M * M);
+        to_f(cb, zb, 2 * M * N);
+        to_f(cc, zc, 2 * M * N);
+        cblas_zhemm(CblasRowMajor, CblasRight, CblasLower, M, N, alpha, za, N, zb, N, beta, zc, N);
+        cblas_chemm(CblasRowMajor, CblasRight, CblasLower, M, N, falpha, ca, N, cb, N, fbeta, cc, N);
+        to_d(got, cc, 2 * M * N);
+        check("chemm.RL", got, zc, 2 * M * N);
+        fill(za, 2 * N * K);
+        fill_off(zc, 2 * N * N, 5);
+        to_f(ca, za, 2 * N * K);
+        to_f(cc, zc, 2 * N * N);
+        cblas_zherk(CblasRowMajor, CblasLower, CblasConjTrans, N, K, 0.5, za, N, 0.25, zc, N);
+        cblas_cherk(CblasRowMajor, CblasLower, CblasConjTrans, N, K, 0.5f, ca, N, 0.25f, cc, N);
+        to_d(got, cc, 2 * N * N);
+        check("cherk.LC", got, zc, 2 * N * N);
+        fill_ctri(za);
+        fill_off(zb, 2 * M * N, 3);
+        to_f(ca, za, 2 * M * M);
+        to_f(cb, zb, 2 * M * N);
+        cblas_ztrsm(CblasRowMajor, CblasLeft, CblasUpper, CblasConjTrans, CblasNonUnit, M, N, alpha, za, M,
+                    zb, N);
+        cblas_ctrsm(CblasRowMajor, CblasLeft, CblasUpper, CblasConjTrans, CblasNonUnit, M, N, falpha, ca, M,
+                    cb, N);
+        to_d(got, cb, 2 * M * N);
+        check_tol("ctrsm.LUC", got, zb, 2 * M * N, 1e-5);
+
+        /* the real ones */
+        fill(a, N * N);
+        fill(b, M * N);
+        fill_off(c, M * N, 7);
+        to_f(fa, a, N * N);
+        to_f(fb, b, M * N);
+        to_f(fc, c, M * N);
+        cblas_dsymm(CblasRowMajor, CblasRight, CblasLower, M, N, 0.5, a, N, b, N, 0.25, c, N);
+        cblas_ssymm(CblasRowMajor, CblasRight, CblasLower, M, N, 0.5f, fa, N, fb, N, 0.25f, fc, N);
+        to_d(got, fc, M * N);
+        check("ssymm.RL", got, c, M * N);
+        fill(a, K * N);
+        fill_off(b, K * N, 3);
+        fill_off(c, N * N, 7);
+        to_f(fa, a, K * N);
+        to_f(fb, b, K * N);
+        to_f(fc, c, N * N);
+        cblas_dsyr2k(CblasRowMajor, CblasLower, CblasTrans, N, K, 0.5, a, N, b, N, 0.25, c, N);
+        cblas_ssyr2k(CblasRowMajor, CblasLower, CblasTrans, N, K, 0.5f, fa, N, fb, N, 0.25f, fc, N);
+        to_d(got, fc, N * N);
+        check("ssyr2k.LT", got, c, N * N);
+        fill_tri(a, N, 0);
+        fill(b, M * N);
+        to_f(fa, a, N * N);
+        to_f(fb, b, M * N);
+        cblas_dtrmm(CblasRowMajor, CblasRight, CblasLower, CblasTrans, CblasUnit, M, N, 0.5, a, N, b, N);
+        cblas_strmm(CblasRowMajor, CblasRight, CblasLower, CblasTrans, CblasUnit, M, N, 0.5f, fa, N, fb, N);
+        to_d(got, fb, M * N);
+        check("strmm.RLTU", got, b, M * N);
+    }
+
     /* ---- #228: level 2 in its other precisions. Each single-precision
      * real routine against its double one, checked above, on the same
      * values, row-major, so through the flip; the values are multiples

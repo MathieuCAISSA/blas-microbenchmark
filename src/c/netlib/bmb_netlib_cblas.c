@@ -183,6 +183,49 @@ extern void zhemm_(const char *side, const char *uplo, const int *m, const int *
                    const void *alpha, const void *a, const int *lda,
                    const void *b, const int *ldb, const void *beta, void *c,
                    const int *ldc, size_t side_len, size_t uplo_len);
+/* The other precisions (#230). */
+extern void ssymm_(const char *side, const char *uplo, const int *m, const int *n, const float *alpha,
+                   const float *a, const int *lda, const float *b, const int *ldb, const float *beta,
+                   float *c, const int *ldc, size_t side_len, size_t uplo_len);
+extern void csymm_(const char *side, const char *uplo, const int *m, const int *n, const void *alpha,
+                   const void *a, const int *lda, const void *b, const int *ldb, const void *beta, void *c,
+                   const int *ldc, size_t side_len, size_t uplo_len);
+extern void zsymm_(const char *side, const char *uplo, const int *m, const int *n, const void *alpha,
+                   const void *a, const int *lda, const void *b, const int *ldb, const void *beta, void *c,
+                   const int *ldc, size_t side_len, size_t uplo_len);
+extern void chemm_(const char *side, const char *uplo, const int *m, const int *n, const void *alpha,
+                   const void *a, const int *lda, const void *b, const int *ldb, const void *beta, void *c,
+                   const int *ldc, size_t side_len, size_t uplo_len);
+extern void csyrk_(const char *uplo, const char *trans, const int *n, const int *k, const void *alpha,
+                   const void *a, const int *lda, const void *beta, void *c, const int *ldc,
+                   size_t uplo_len, size_t trans_len);
+extern void zsyrk_(const char *uplo, const char *trans, const int *n, const int *k, const void *alpha,
+                   const void *a, const int *lda, const void *beta, void *c, const int *ldc,
+                   size_t uplo_len, size_t trans_len);
+extern void cherk_(const char *uplo, const char *trans, const int *n, const int *k, const float *alpha,
+                   const void *a, const int *lda, const float *beta, void *c, const int *ldc,
+                   size_t uplo_len, size_t trans_len);
+extern void ssyr2k_(const char *uplo, const char *trans, const int *n, const int *k, const float *alpha,
+                    const float *a, const int *lda, const float *b, const int *ldb, const float *beta,
+                    float *c, const int *ldc, size_t uplo_len, size_t trans_len);
+extern void csyr2k_(const char *uplo, const char *trans, const int *n, const int *k, const void *alpha,
+                    const void *a, const int *lda, const void *b, const int *ldb, const void *beta,
+                    void *c, const int *ldc, size_t uplo_len, size_t trans_len);
+extern void zsyr2k_(const char *uplo, const char *trans, const int *n, const int *k, const void *alpha,
+                    const void *a, const int *lda, const void *b, const int *ldb, const void *beta,
+                    void *c, const int *ldc, size_t uplo_len, size_t trans_len);
+extern void strmm_(const char *side, const char *uplo, const char *transa, const char *diag, const int *m,
+                   const int *n, const float *alpha, const float *a, const int *lda, float *b,
+                   const int *ldb, size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
+extern void ctrmm_(const char *side, const char *uplo, const char *transa, const char *diag, const int *m,
+                   const int *n, const void *alpha, const void *a, const int *lda, void *b, const int *ldb,
+                   size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
+extern void ztrmm_(const char *side, const char *uplo, const char *transa, const char *diag, const int *m,
+                   const int *n, const void *alpha, const void *a, const int *lda, void *b, const int *ldb,
+                   size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
+extern void ctrsm_(const char *side, const char *uplo, const char *transa, const char *diag, const int *m,
+                   const int *n, const void *alpha, const void *a, const int *lda, void *b, const int *ldb,
+                   size_t side_len, size_t uplo_len, size_t transa_len, size_t diag_len);
 
 static char bmb_trans(const CBLAS_TRANSPOSE t)
 {
@@ -969,5 +1012,266 @@ void cblas_zhemm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPL
         const char uplo = bmb_uplo_flipped(Uplo);
 
         zhemm_(&side, &uplo, &N, &M, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    }
+}
+
+/* The other precisions (#230), as their double or double complex
+ * counterpart above: swapping the operands keeps every flag, a
+ * conjugate transpose's too, and a complex symmetric matrix flips N and
+ * T as a real one does. */
+
+void cblas_ssymm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const float alpha, const float *A, const int lda, const float *B,
+                 const int ldb, const float beta, float *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        ssymm_(&side, &uplo, &M, &N, &alpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        ssymm_(&side, &uplo, &N, &M, &alpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_csymm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const void *alpha, const void *A, const int lda, const void *B,
+                 const int ldb, const void *beta, void *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        csymm_(&side, &uplo, &M, &N, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        csymm_(&side, &uplo, &N, &M, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_zsymm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const void *alpha, const void *A, const int lda, const void *B,
+                 const int ldb, const void *beta, void *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        zsymm_(&side, &uplo, &M, &N, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        zsymm_(&side, &uplo, &N, &M, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_chemm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo, const int M,
+                 const int N, const void *alpha, const void *A, const int lda, const void *B,
+                 const int ldb, const void *beta, void *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        chemm_(&side, &uplo, &M, &N, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        chemm_(&side, &uplo, &N, &M, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_csyrk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const void *alpha, const void *A, const int lda,
+                 const void *beta, void *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = bmb_trans(Trans);
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = bmb_trans_flipped(Trans);
+    }
+
+    csyrk_(&uplo, &trans, &N, &K, alpha, A, &lda, beta, C, &ldc, 1, 1);
+}
+
+void cblas_zsyrk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const void *alpha, const void *A, const int lda,
+                 const void *beta, void *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = bmb_trans(Trans);
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = bmb_trans_flipped(Trans);
+    }
+
+    zsyrk_(&uplo, &trans, &N, &K, alpha, A, &lda, beta, C, &ldc, 1, 1);
+}
+
+void cblas_cherk(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                 const int N, const int K, const float alpha, const void *A, const int lda,
+                 const float beta, void *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = (Trans == CblasNoTrans) ? 'N' : 'C';
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = (Trans == CblasNoTrans) ? 'C' : 'N';
+    }
+
+    cherk_(&uplo, &trans, &N, &K, &alpha, A, &lda, &beta, C, &ldc, 1, 1);
+}
+
+void cblas_ssyr2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const float alpha, const float *A, const int lda,
+                  const float *B, const int ldb, const float beta, float *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = bmb_trans(Trans);
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = bmb_trans_flipped(Trans);
+    }
+
+    ssyr2k_(&uplo, &trans, &N, &K, &alpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+}
+
+void cblas_csyr2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const void *beta, void *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = bmb_trans(Trans);
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = bmb_trans_flipped(Trans);
+    }
+
+    csyr2k_(&uplo, &trans, &N, &K, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+}
+
+void cblas_zsyr2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const void *beta, void *C, const int ldc)
+{
+    char uplo;
+    char trans;
+
+    if (Order == CblasColMajor) {
+        uplo = bmb_uplo(Uplo);
+        trans = bmb_trans(Trans);
+    } else {
+        uplo = bmb_uplo_flipped(Uplo);
+        trans = bmb_trans_flipped(Trans);
+    }
+
+    zsyr2k_(&uplo, &trans, &N, &K, alpha, A, &lda, B, &ldb, beta, C, &ldc, 1, 1);
+}
+
+void cblas_strmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const float alpha, const float *A, const int lda, float *B, const int ldb)
+{
+    const char transa = bmb_trans(TransA);
+    const char diag = bmb_diag(Diag);
+
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        strmm_(&side, &uplo, &transa, &diag, &M, &N, &alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        strmm_(&side, &uplo, &transa, &diag, &N, &M, &alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    }
+}
+
+void cblas_ctrmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb)
+{
+    const char transa = bmb_trans(TransA);
+    const char diag = bmb_diag(Diag);
+
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        ctrmm_(&side, &uplo, &transa, &diag, &M, &N, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        ctrmm_(&side, &uplo, &transa, &diag, &N, &M, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    }
+}
+
+void cblas_ztrmm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb)
+{
+    const char transa = bmb_trans(TransA);
+    const char diag = bmb_diag(Diag);
+
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        ztrmm_(&side, &uplo, &transa, &diag, &M, &N, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        ztrmm_(&side, &uplo, &transa, &diag, &N, &M, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    }
+}
+
+void cblas_ctrsm(const CBLAS_ORDER Order, const CBLAS_SIDE Side, const CBLAS_UPLO Uplo,
+                 const CBLAS_TRANSPOSE TransA, const CBLAS_DIAG Diag, const int M, const int N,
+                 const void *alpha, const void *A, const int lda, void *B, const int ldb)
+{
+    const char transa = bmb_trans(TransA);
+    const char diag = bmb_diag(Diag);
+
+    if (Order == CblasColMajor) {
+        const char side = bmb_side(Side);
+        const char uplo = bmb_uplo(Uplo);
+
+        ctrsm_(&side, &uplo, &transa, &diag, &M, &N, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
+    } else {
+        const char side = bmb_side_flipped(Side);
+        const char uplo = bmb_uplo_flipped(Uplo);
+
+        ctrsm_(&side, &uplo, &transa, &diag, &N, &M, alpha, A, &lda, B, &ldb, 1, 1, 1, 1);
     }
 }

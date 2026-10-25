@@ -57,14 +57,18 @@ block() {
         }
         # wrap: the words of list, as lines of at most width bytes once
         # first (the first line) or rest (the others) is put before them,
-        # each line but the last ended with end.
-        function wrap(list, width, first, rest, end,    w, k, i, line, out) {
+        # each line but the last ended with end. restpad, when given, is
+        # what rest is short of the width it takes once rendered: a table
+        # cell of "\\&" is as wide as "Level 1" on the first line.
+        function wrap(list, width, first, rest, end, restpad,    w, k, i, line, out, pad) {
             k = split(list, w, " ")
             line = first
+            pad = 0
             for (i = 1; i <= k; i++) {
-                if (line != first && line != rest && length(line " " w[i] end) > width) {
+                if (line != first && line != rest && length(line " " w[i] end) + pad > width) {
                     out = out line end "\n"
                     line = rest
+                    pad = restpad
                 }
                 line = (line == first || line == rest) ? line w[i] : line " " w[i]
             }
@@ -110,7 +114,7 @@ block() {
                     for (i = 1; i <= n; i++) {
                         if (level[i] == l) { list = list " " name[i] }
                     }
-                    printf "%s", wrap(substr(list, 2), 66, "Level " l "\t", "\\&\t", "")
+                    printf "%s", wrap(substr(list, 2), 66, "Level " l "\t", "\\&\t", "", 5)
                 }
                 printf ".TE\n"
             } else if (kind == "man-sizes") {
