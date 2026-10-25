@@ -39,7 +39,13 @@ level1_PROGRAMS = \
 	single/bmb_sswap \
 	double/bmb_dswap \
 	complex/bmb_cswap \
-	complex16/bmb_zswap
+	complex16/bmb_zswap \
+	single/bmb_isamax \
+	double/bmb_idamax \
+	complex/bmb_icamax \
+	complex16/bmb_izamax \
+	single/bmb_srot \
+	double/bmb_drot
 
 single_bmb_sasum_SOURCES = bmb_asum.c
 single_bmb_sasum_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
@@ -97,6 +103,18 @@ complex_bmb_cswap_SOURCES = bmb_swap.c
 complex_bmb_cswap_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_zswap_SOURCES = bmb_swap.c
 complex16_bmb_zswap_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+single_bmb_isamax_SOURCES = bmb_iamax.c
+single_bmb_isamax_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_idamax_SOURCES = bmb_iamax.c
+double_bmb_idamax_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_icamax_SOURCES = bmb_iamax.c
+complex_bmb_icamax_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_izamax_SOURCES = bmb_iamax.c
+complex16_bmb_izamax_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+single_bmb_srot_SOURCES = bmb_rot.c
+single_bmb_srot_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_drot_SOURCES = bmb_rot.c
+double_bmb_drot_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
 
 ROUTINE_TESTS = \
 	single/test_bmb_sasum.sh \
@@ -126,7 +144,13 @@ ROUTINE_TESTS = \
 	single/test_bmb_sswap.sh \
 	double/test_bmb_dswap.sh \
 	complex/test_bmb_cswap.sh \
-	complex16/test_bmb_zswap.sh
+	complex16/test_bmb_zswap.sh \
+	single/test_bmb_isamax.sh \
+	double/test_bmb_idamax.sh \
+	complex/test_bmb_icamax.sh \
+	complex16/test_bmb_izamax.sh \
+	single/test_bmb_srot.sh \
+	double/test_bmb_drot.sh
 # END routines (make1)
 
 # Minimalistic smoke tests (small vector, 1 warmup + 2 timed iterations),

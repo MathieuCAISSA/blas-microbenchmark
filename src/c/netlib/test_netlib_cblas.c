@@ -871,6 +871,49 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #234: i?amax, against the first of two tied largest values
+     * (index 1, not 3), 0-based, and 0 for an empty vector; srot and drot
+     * against a reference ---- */
+    {
+        const double dv[6] = { 1.0, -3.0, 2.0, 3.0, -0.5, 0.25 };
+        const float sv[6] = { 1.0f, -3.0f, 2.0f, 3.0f, -0.5f, 0.25f };
+        /* |re| + |im|: 1.5, 3, 2.5, 3 */
+        const double zv[8] = { 1.0, 0.5, -1.0, 2.0, 2.0, -0.5, 1.5, -1.5 };
+        const float cv[8] = { 1.0f, 0.5f, -1.0f, 2.0f, 2.0f, -0.5f, 1.5f, -1.5f };
+        double got[16], want4[16];
+        float sx[8], sy[8];
+
+        want4[0] = 1.0;
+        got[0] = (double) cblas_idamax(6, dv, 1);
+        check("idamax", got, want4, 1);
+        got[0] = (double) cblas_isamax(6, sv, 1);
+        check("isamax", got, want4, 1);
+        got[0] = (double) cblas_izamax(4, zv, 1);
+        check("izamax", got, want4, 1);
+        got[0] = (double) cblas_icamax(4, cv, 1);
+        check("icamax", got, want4, 1);
+        want4[0] = 0.0;
+        got[0] = (double) cblas_idamax(0, dv, 1);
+        check("idamax.0", got, want4, 1);
+
+        fill(x, 8);
+        fill_off(y, 8, 3);
+        to_f(sx, x, 8);
+        to_f(sy, y, 8);
+        for (i = 0; i < 8; i++) {
+            want4[i] = 0.6 * x[i] + 0.8 * y[i];
+            want4[8 + i] = 0.6 * y[i] - 0.8 * x[i];
+        }
+        cblas_drot(8, x, 1, y, 1, 0.6, 0.8);
+        memcpy(got, x, sizeof(double) * 8);
+        memcpy(got + 8, y, sizeof(double) * 8);
+        check("drot", got, want4, 16);
+        cblas_srot(8, sx, 1, sy, 1, 0.6f, 0.8f);
+        to_d(got, sx, 8);
+        to_d(got + 8, sy, 8);
+        check_tol("srot", got, want4, 16, 1e-6);
+    }
+
     /* ---- #230: level 3 in its other precisions. zsymm, zsyrk, zsyr2k and
      * ztrmm against naive references, row-major, the triangle of C a
      * rank-k update must not touch kept; csymm, csyrk, csyr2k and ctrmm

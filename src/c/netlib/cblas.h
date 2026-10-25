@@ -13,6 +13,8 @@
  * --with-blas-backend=netlib is selected, so it never shadows the real
  * cblas.h of a backend that has one. */
 
+#include <stddef.h>
+
 typedef enum { CblasRowMajor = 101, CblasColMajor = 102 } CBLAS_ORDER;
 typedef enum { CblasNoTrans = 111, CblasTrans = 112, CblasConjTrans = 113 } CBLAS_TRANSPOSE;
 typedef enum { CblasUpper = 121, CblasLower = 122 } CBLAS_UPLO;
@@ -56,6 +58,16 @@ void cblas_zscal(const int N, const void *alpha, void *X, const int incX);
 void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY);
 void cblas_cswap(const int N, void *X, const int incX, void *Y, const int incY);
 void cblas_zswap(const int N, void *X, const int incX, void *Y, const int incY);
+
+/* i?amax and ?rot (#234). CBLAS gives the index 0-based, as a size_t. */
+size_t cblas_isamax(const int N, const float *X, const int incX);
+size_t cblas_idamax(const int N, const double *X, const int incX);
+size_t cblas_icamax(const int N, const void *X, const int incX);
+size_t cblas_izamax(const int N, const void *X, const int incX);
+void cblas_srot(const int N, float *X, const int incX, float *Y, const int incY,
+                const float c, const float s);
+void cblas_drot(const int N, double *X, const int incX, double *Y, const int incY,
+                const double c, const double s);
 
 /* Level 2 */
 void cblas_dgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,

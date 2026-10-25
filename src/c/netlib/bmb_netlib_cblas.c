@@ -62,6 +62,15 @@ extern void zscal_(const int *n, const void *alpha, void *x, const int *incx);
 extern void sswap_(const int *n, float *x, const int *incx, float *y, const int *incy);
 extern void cswap_(const int *n, void *x, const int *incx, void *y, const int *incy);
 extern void zswap_(const int *n, void *x, const int *incx, void *y, const int *incy);
+/* i?amax and ?rot (#234): an INTEGER function, 1-based. */
+extern int isamax_(const int *n, const float *x, const int *incx);
+extern int idamax_(const int *n, const double *x, const int *incx);
+extern int icamax_(const int *n, const void *x, const int *incx);
+extern int izamax_(const int *n, const void *x, const int *incx);
+extern void srot_(const int *n, float *x, const int *incx, float *y, const int *incy,
+                  const float *c, const float *s);
+extern void drot_(const int *n, double *x, const int *incx, double *y, const int *incy,
+                  const double *c, const double *s);
 
 extern void dgemv_(const char *trans, const int *m, const int *n, const double *alpha,
                    const double *a, const int *lda, const double *x, const int *incx,
@@ -436,6 +445,45 @@ void cblas_cswap(const int N, void *X, const int incX, void *Y, const int incY)
 void cblas_zswap(const int N, void *X, const int incX, void *Y, const int incY)
 {
     zswap_(&N, X, &incX, Y, &incY);
+}
+
+/* Fortran counts from 1, and gives 0 for an empty vector; CBLAS counts
+ * from 0, and gives 0 for one too, as reference CBLAS does. */
+static size_t bmb_index(const int i)
+{
+    return i > 0 ? (size_t) i - 1 : 0;
+}
+
+size_t cblas_isamax(const int N, const float *X, const int incX)
+{
+    return bmb_index(isamax_(&N, X, &incX));
+}
+
+size_t cblas_idamax(const int N, const double *X, const int incX)
+{
+    return bmb_index(idamax_(&N, X, &incX));
+}
+
+size_t cblas_icamax(const int N, const void *X, const int incX)
+{
+    return bmb_index(icamax_(&N, X, &incX));
+}
+
+size_t cblas_izamax(const int N, const void *X, const int incX)
+{
+    return bmb_index(izamax_(&N, X, &incX));
+}
+
+void cblas_srot(const int N, float *X, const int incX, float *Y, const int incY,
+                const float c, const float s)
+{
+    srot_(&N, X, &incX, Y, &incY, &c, &s);
+}
+
+void cblas_drot(const int N, double *X, const int incX, double *Y, const int incY,
+                const double c, const double s)
+{
+    drot_(&N, X, &incX, Y, &incY, &c, &s);
 }
 
 /* Level 2 */

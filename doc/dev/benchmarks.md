@@ -239,11 +239,15 @@ does over a few thousand calls:
 - trmv and trmm multiply the operand by A every time and trsv and trsm
   divide by it, in every precision, so it reaches infinity or denormals
   well inside a single batch — and denormals are where the hardware
-  slows down and the timing stops meaning anything. They set `reset_every_call = 1`, which pins the
-  batch to 1 call, even under an explicit `-b` (ignored with a warning;
-  it used to apply, and timed dtrmv 1.5× too fast, #48).
+  slows down and the timing stops meaning anything. They set
+  `reset_every_call = 1`, which pins the batch to 1 call, even under an
+  explicit `-b` (ignored with a warning; it used to apply, and timed
+  dtrmv 1.5× too fast, #48).
 - `dscal` shrinks its vector by `0.999999` per call, which needs about
   10⁸ calls to matter. It leaves the flag at 0 and gets batched.
+- `srot` grows its vectors by `1 + 5e-8` per call (`c² + s²` in single
+  precision), billions of calls from overflowing: batched too, x and y
+  restored with each batch (#234).
 
 Setting the flag when it isn't needed is not free: it puts the clock's own
 cost back into every measurement, which is the whole point of batching.
@@ -253,8 +257,8 @@ cost back into every measurement, which is the whole point of batching.
 - `flops`: every routine that does arithmetic. Use the conventional BLAS
   operation counts (`2*M*N*K` for gemm, `K*N*(N+1)` for syrk,
   `N*M*(M+1)` for a left-side trsm, ...) — what the routine is *defined*
-  to compute, not what a particular implementation issues. `dcopy` and
-  `dswap` declare none.
+  to compute, not what a particular implementation issues. The copies,
+  the swaps and `i?amax`, a search, declare none.
 - `bytes`: levels 1 and 2 only. Count each operand read once and each
   result written once, the way STREAM does — no read-for-ownership — so
   the numbers are comparable with STREAM's. Level 3 must *not* declare it:
