@@ -871,6 +871,61 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #244: packed storage, row-major: dspmv and sspmv Upper against
+     * dsymv on the same matrix unpacked, dtpsv and stpsv Upper/Trans by
+     * substitution. Row-major packed Upper keeps each row from the
+     * diagonal on. ---- */
+    {
+        double ap[M * (M + 1) / 2];
+        float fap[M * (M + 1) / 2], fx[M], fy[M];
+        double got[M];
+
+        fill(a, M * M);
+        for (i = 0, l = 0; i < M; i++) {
+            for (j = i; j < M; j++) {
+                ap[l++] = a[i * M + j];
+            }
+        }
+        fill(x, M);
+        fill_off(y, M, 3);
+        to_f(fap, ap, M * (M + 1) / 2);
+        to_f(fx, x, M);
+        to_f(fy, y, M);
+        memcpy(want, y, sizeof(double) * M);
+        cblas_dsymv(CblasRowMajor, CblasUpper, M, 0.5, a, M, x, 1, 0.25, want, 1);
+        cblas_dspmv(CblasRowMajor, CblasUpper, M, 0.5, ap, x, 1, 0.25, y, 1);
+        check("dspmv.U", y, want, M);
+        cblas_sspmv(CblasRowMajor, CblasUpper, M, 0.5f, fap, fx, 1, 0.25f, fy, 1);
+        to_d(got, fy, M);
+        check("sspmv.U", got, want, M);
+
+        /* A^T x' = b, A upper: x' multiplied back by A^T */
+        fill_tri(a, M, 1);
+        for (i = 0, l = 0; i < M; i++) {
+            for (j = i; j < M; j++) {
+                ap[l++] = a[i * M + j];
+            }
+        }
+        to_f(fap, ap, M * (M + 1) / 2);
+        fill(tmp, M);
+        memcpy(x, tmp, sizeof(double) * M);
+        to_f(fx, tmp, M);
+        cblas_dtpsv(CblasRowMajor, CblasUpper, CblasTrans, CblasNonUnit, M, ap, x, 1);
+        cblas_stpsv(CblasRowMajor, CblasUpper, CblasTrans, CblasNonUnit, M, fap, fx, 1);
+        for (l = 0; l < 2; l++) {
+            if (l == 1) {
+                to_d(x, fx, M);
+            }
+            for (j = 0; j < M; j++) {
+                got[j] = 0.0;
+                for (i = 0; i <= j; i++) {
+                    got[j] += a[i * M + j] * x[i];
+                }
+            }
+            check_tol(l == 0 ? "dtpsv.UT" : "stpsv.UT", got, tmp, M, l == 0 ? 1e-12 : 1e-5);
+        }
+    }
+
     /* ---- #242: her2k, row-major, Upper/NoTrans: C = alpha A B^H +
      * conj(alpha) B A^H + beta C, A and B N x K, through the flip to the
      * other triangle with alpha conjugated; the strictly lower part as it

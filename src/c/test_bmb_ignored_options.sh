@@ -1,7 +1,8 @@
 #!/bin/sh
 # An option a benchmark has no use for is ignored with a warning naming it,
 # never silently: --layout and --ld-pad on a vector routine (#7, #163),
-# --vector-size on a matrix one, --matrix-dim1 on a vector one,
+# --ld-pad on a packed matrix, which has no leading dimension and records
+# no padding (#244), --vector-size on a matrix one, --matrix-dim1 on a vector one,
 # --matrix-dim2 on a routine with a single dimension, --matrix-dim3 on
 # any but GEMM (#215). An argument a routine does not have (--trans,
 # --uplo, --side, --diag, #221), or a letter it does not take, is
@@ -33,6 +34,13 @@ warns() {
 
 warns '--layout is ignored for ddot: it has no matrix' level1/double/bmb_ddot -v 8 -L col
 warns '--ld-pad is ignored for ddot: it has no matrix' level1/double/bmb_ddot -v 8 -p 8
+warns '--ld-pad is ignored for dspmv: its matrix is packed' level2/double/bmb_dspmv -m 8 -p 8
+level2/double/bmb_dtpsv -C -x 0 -i 1 -m 8 -p 8 -o "$T/packed.json" >"$T/packed.out" 2>/dev/null ||
+    fail "dtpsv -p 8 failed"
+if grep -q 'leading dimensions' "$T/packed.out" || grep -q '"ld_pad"' "$T/packed.json"; then
+    fail "dtpsv, whose matrix is packed, recorded a padding"
+fi
+grep -q '^  "layout": "row",$' "$T/packed.json" || fail "dtpsv, a matrix routine, records no layout"
 warns '--matrix-dim1 is ignored for ddot' level1/double/bmb_ddot -v 8 -m 8
 warns '--vector-size is ignored for dgemv' level2/double/bmb_dgemv -m 8 -v 8
 warns '--matrix-dim2 is ignored for dtrsv' level2/double/bmb_dtrsv -m 8 -M 8

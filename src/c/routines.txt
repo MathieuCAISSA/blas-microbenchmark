@@ -69,6 +69,8 @@ ssymv      2      s          n      symv
 dsymv      2      d          n      symv
 chemv      2      c          n      hemv
 zhemv      2      z          n      hemv
+sspmv      2      s          n      spmv
+dspmv      2      d          n      spmv
 ssyr       2      s          n      syr
 dsyr       2      d          n      syr
 cher       2      c          n      her
@@ -85,6 +87,8 @@ strsv      2      s          n      trsv
 dtrsv      2      d          n      trsv
 ctrsv      2      c          n      trsv
 ztrsv      2      z          n      trsv
+stpsv      2      s          n      tpsv
+dtpsv      2      d          n      tpsv
 sgemm      3      s          mkn    gemm
 dgemm      3      d          mkn    gemm
 cgemm      3      c          mkn    gemm

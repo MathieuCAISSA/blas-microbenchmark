@@ -108,6 +108,17 @@ void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
 void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
                 const float *X, const int incX, const float *Y, const int incY,
                 float *A, const int lda);
+/* Packed storage (#244). */
+void cblas_sspmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                 const float *Ap, const float *X, const int incX, const float beta, float *Y,
+                 const int incY);
+void cblas_stpsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const float *Ap, float *X, const int incX);
+void cblas_dspmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const double alpha,
+                 const double *Ap, const double *X, const int incX, const double beta, double *Y,
+                 const int incY);
+void cblas_dtpsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const double *Ap, double *X, const int incX);
 /* her2k (#242). */
 void cblas_cher2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
                   const int N, const int K, const void *alpha, const void *A, const int lda,

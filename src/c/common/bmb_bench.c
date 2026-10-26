@@ -809,6 +809,12 @@ static void bmb_warn_unused_options(const bmb_benchmark_t *bench, const bmb_opti
                  bench->routine_name);
         bmb_log_warning(msg);
     }
+    if (opts->ld_pad_set && bench->packed) {
+        snprintf(msg, sizeof(msg),
+                 "--ld-pad is ignored for %s: its matrix is packed, with no leading dimension.",
+                 bench->routine_name);
+        bmb_log_warning(msg);
+    }
     if (opts->matrix_dim2_set && bench->dim2_label == NULL) {
         snprintf(msg, sizeof(msg),
                  "--matrix-dim2 is ignored for %s: it has a single size dimension (%s).",
@@ -919,7 +925,8 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.batch = bench->reset_every_call ? 1 : opts.batch;
     rs.cache_cold = opts.cache_cold;
     rs.align = opts.align;
-    rs.ld_pad = opts.ld_pad;
+    rs.ld_pad = bench->packed ? 0 : opts.ld_pad;
+    rs.packed = bench->packed;
     rs.warmup_time = opts.warmup_time;
     rs.min_time = opts.min_time;
     rs.max_spread = opts.max_spread;

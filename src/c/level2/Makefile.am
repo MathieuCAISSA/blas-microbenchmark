@@ -22,6 +22,8 @@ level2_PROGRAMS = \
 	double/bmb_dsymv \
 	complex/bmb_chemv \
 	complex16/bmb_zhemv \
+	single/bmb_sspmv \
+	double/bmb_dspmv \
 	single/bmb_ssyr \
 	double/bmb_dsyr \
 	complex/bmb_cher \
@@ -37,7 +39,9 @@ level2_PROGRAMS = \
 	single/bmb_strsv \
 	double/bmb_dtrsv \
 	complex/bmb_ctrsv \
-	complex16/bmb_ztrsv
+	complex16/bmb_ztrsv \
+	single/bmb_stpsv \
+	double/bmb_dtpsv
 
 single_bmb_sgemv_SOURCES = bmb_gemv.c
 single_bmb_sgemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
@@ -67,6 +71,10 @@ complex_bmb_chemv_SOURCES = bmb_hemv.c
 complex_bmb_chemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_zhemv_SOURCES = bmb_hemv.c
 complex16_bmb_zhemv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+single_bmb_sspmv_SOURCES = bmb_spmv.c
+single_bmb_sspmv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_dspmv_SOURCES = bmb_spmv.c
+double_bmb_dspmv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
 single_bmb_ssyr_SOURCES = bmb_syr.c
 single_bmb_ssyr_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dsyr_SOURCES = bmb_syr.c
@@ -99,6 +107,10 @@ complex_bmb_ctrsv_SOURCES = bmb_trsv.c
 complex_bmb_ctrsv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_ztrsv_SOURCES = bmb_trsv.c
 complex16_bmb_ztrsv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+single_bmb_stpsv_SOURCES = bmb_tpsv.c
+single_bmb_stpsv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_dtpsv_SOURCES = bmb_tpsv.c
+double_bmb_dtpsv_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
 
 ROUTINE_TESTS = \
 	single/test_bmb_sgemv.sh \
@@ -115,6 +127,8 @@ ROUTINE_TESTS = \
 	double/test_bmb_dsymv.sh \
 	complex/test_bmb_chemv.sh \
 	complex16/test_bmb_zhemv.sh \
+	single/test_bmb_sspmv.sh \
+	double/test_bmb_dspmv.sh \
 	single/test_bmb_ssyr.sh \
 	double/test_bmb_dsyr.sh \
 	complex/test_bmb_cher.sh \
@@ -130,7 +144,9 @@ ROUTINE_TESTS = \
 	single/test_bmb_strsv.sh \
 	double/test_bmb_dtrsv.sh \
 	complex/test_bmb_ctrsv.sh \
-	complex16/test_bmb_ztrsv.sh
+	complex16/test_bmb_ztrsv.sh \
+	single/test_bmb_stpsv.sh \
+	double/test_bmb_dtpsv.sh
 # END routines (make2)
 
 # Minimalistic smoke tests (small matrices, 1 warmup + 2 timed iterations).
@@ -139,5 +155,6 @@ TESTS = $(ROUTINE_TESTS)
 EXTRA_DIST = $(TESTS)
 
 # The source geru and gerc share: each program includes it, the second
-# with BMB_CONJ defined (#236).
-noinst_HEADERS = bmb_geru.h
+# with BMB_CONJ defined (#236); packed storage, which spmv and tpsv read
+# (#244).
+noinst_HEADERS = bmb_geru.h bmb_packed.h

@@ -37,6 +37,10 @@ releases with the same major version can be compared and read by the same
 - `cher2k` and `zher2k` (#242): the Hermitian rank-2k update, with
   `--uplo` and `--trans` (`N` or `C`) as `cherk` and `zherk`. 96
   benchmarks: every routine of #169's first three steps.
+- Packed storage (#244): `sspmv`, `dspmv`, `stpsv` and `dtpsv`, symv and
+  trsv on one triangle kept in N(N+1)/2 elements, with no leading
+  dimension: `--ld-pad` is ignored for them, with a warning, and their
+  results record no padding. 100 benchmarks.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,

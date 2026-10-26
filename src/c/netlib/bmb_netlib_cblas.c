@@ -53,6 +53,19 @@ extern void ccopy_(const int *n, const void *x, const int *incx, void *y, const 
 extern void zcopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
 extern float complex cdotc_(const int *n, const void *x, const int *incx,
                             const void *y, const int *incy);
+/* Packed storage (#244). */
+extern void sspmv_(const char *uplo, const int *n, const float *alpha, const float *ap,
+                   const float *x, const int *incx, const float *beta, float *y, const int *incy,
+                   size_t uplo_len);
+extern void stpsv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const float *ap, float *x, const int *incx, size_t uplo_len, size_t trans_len,
+                   size_t diag_len);
+extern void dspmv_(const char *uplo, const int *n, const double *alpha, const double *ap,
+                   const double *x, const int *incx, const double *beta, double *y, const int *incy,
+                   size_t uplo_len);
+extern void dtpsv_(const char *uplo, const char *trans, const char *diag, const int *n,
+                   const double *ap, double *x, const int *incx, size_t uplo_len, size_t trans_len,
+                   size_t diag_len);
 /* her2k (#242). */
 extern void cher2k_(const char *uplo, const char *trans, const int *n, const int *k,
                     const void *alpha, const void *a, const int *lda, const void *b,
@@ -725,6 +738,47 @@ void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float a
     } else {
         sger_(&N, &M, &alpha, Y, &incY, X, &incX, A, &lda);
     }
+}
+
+/* Packed storage (#244). Row-major packed Upper is column-major packed
+ * Lower of the transpose, as for a full matrix: the triangle flips, and
+ * a triangular solve's transpose with it, as for dsymv and dtrsv. */
+void cblas_sspmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
+                 const float *Ap, const float *X, const int incX, const float beta, float *Y,
+                 const int incY)
+{
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+
+    sspmv_(&uplo, &N, &alpha, Ap, X, &incX, &beta, Y, &incY, 1);
+}
+
+void cblas_stpsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const float *Ap, float *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+
+    stpsv_(&uplo, &trans, &diag, &N, Ap, X, &incX, 1, 1, 1);
+}
+
+void cblas_dspmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const double alpha,
+                 const double *Ap, const double *X, const int incX, const double beta, double *Y,
+                 const int incY)
+{
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+
+    dspmv_(&uplo, &N, &alpha, Ap, X, &incX, &beta, Y, &incY, 1);
+}
+
+void cblas_dtpsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const double *Ap, double *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+
+    dtpsv_(&uplo, &trans, &diag, &N, Ap, X, &incX, 1, 1, 1);
 }
 
 /* her2k (#242). Row-major, C's buffer read column-major is C^T =
