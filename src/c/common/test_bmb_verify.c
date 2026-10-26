@@ -405,6 +405,19 @@ static void test_perturb_single(void)
     unsetenv("BMB_VERIFY_CORRUPT");
 }
 
+static void test_skip(void)
+{
+    unsetenv("BMB_VERIFY_SKIP");
+    check(!bmb_verify_skip(), "skip: off without BMB_VERIFY_SKIP");
+    setenv("BMB_VERIFY_SKIP", "0", 1);
+    check(!bmb_verify_skip(), "skip: BMB_VERIFY_SKIP=0 is off");
+    setenv("BMB_VERIFY_SKIP", "", 1);
+    check(!bmb_verify_skip(), "skip: an empty BMB_VERIFY_SKIP is off");
+    setenv("BMB_VERIFY_SKIP", "1", 1);
+    check(bmb_verify_skip(), "skip: on with BMB_VERIFY_SKIP=1");
+    unsetenv("BMB_VERIFY_SKIP");
+}
+
 int main(void)
 {
     test_matvec();
@@ -417,6 +430,7 @@ int main(void)
     test_probe();
     test_perturb();
     test_perturb_single();
+    test_skip();
 
     if (failures != 0) {
         printf("%d check(s) failed\n", failures);

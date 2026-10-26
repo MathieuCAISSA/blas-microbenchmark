@@ -119,7 +119,9 @@ static int verify(void *vctx, char *msg, size_t size)
 
     bmb_to_double(y0, ctx->y, n);
     bmb_to_double(x, ctx->x, n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->y[0]);
     bmb_matvec(ctx->uplo == 'U' ? BMB_VERIFY_SYM_UPPER : BMB_VERIFY_SYM_LOWER, ctx->col, n, n, ctx->a,
                (size_t) ctx->lda, x, NULL, t, tabs);

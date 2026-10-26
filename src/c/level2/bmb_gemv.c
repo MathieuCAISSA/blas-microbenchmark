@@ -136,7 +136,9 @@ static int verify(void *vctx, char *msg, size_t size)
 
     bmb_to_double(y0, ctx->y, m);
     bmb_to_double(x, ctx->x, n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->y[0]);
     bmb_matvec(BMB_VERIFY_OP(ctx->trans), ctx->col, (size_t) ctx->m, (size_t) ctx->n, ctx->a,
                (size_t) ctx->lda, x, NULL, t, tabs);

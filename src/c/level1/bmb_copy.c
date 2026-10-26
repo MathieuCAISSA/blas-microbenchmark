@@ -81,7 +81,9 @@ static int verify(void *vctx, char *msg, size_t size)
     }
     double *x = got + p * n;
 
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->y[0]);
     bmb_to_double(got, ctx->y, n);
     bmb_to_double(x, ctx->x, n);

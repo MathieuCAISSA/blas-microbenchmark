@@ -1,6 +1,7 @@
 #include <cblas.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include "bmb_bench.h"
 #include "bmb_prec.h"
@@ -79,7 +80,7 @@ static double bytes(size_t dim1, size_t dim2)
 }
 
 /* --verify: y0 + alpha * x, element by element, in double. */
-static int verify(void *vctx, char *msg, size_t size)
+static int verify_at(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     const size_t p = BMB_PARTS;
@@ -95,7 +96,9 @@ static int verify(void *vctx, char *msg, size_t size)
 
     bmb_to_double(y0, ctx->y, n);
     bmb_to_double(x, ctx->x, n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->y[0]);
     bmb_to_double(got, ctx->y, n);
     for (i = 0; i < n; i++) {
@@ -117,6 +120,23 @@ static int verify(void *vctx, char *msg, size_t size)
     ok = bmb_verify_close("y" BMB_PARTS_NOTE, got, want, scale, p * n, bmb_tolerance(1), msg, size);
     free(y0);
     return !ok;
+}
+
+/* --verify makes its call with an alpha of order 1, then gives the timed
+ * one back: the timed alpha is kept small so that repeated calls do not
+ * drift, and its update would fall inside single precision's tolerance,
+ * where a check could not tell it from no call at all (#239). */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    bmb_real_t timed[sizeof(ctx->alpha) / sizeof(ctx->alpha[0])];
+    int rc;
+
+    memcpy(timed, ctx->alpha, sizeof(timed));
+    bmb_set_scalar(ctx->alpha, BMB_R(0.5), BMB_R(0.25));
+    rc = verify_at(vctx, msg, size);
+    memcpy(ctx->alpha, timed, sizeof(timed));
+    return rc;
 }
 
 int main(int argc, char *argv[])

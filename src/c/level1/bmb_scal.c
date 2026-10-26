@@ -97,7 +97,7 @@ static double bytes(size_t dim1, size_t dim2)
 
 /* --verify: alpha times the template, element by element, in double. The
  * driver has just restored x from it. */
-static int verify(void *vctx, char *msg, size_t size)
+static int verify_at(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     const size_t p = BMB_PARTS;
@@ -110,7 +110,9 @@ static int verify(void *vctx, char *msg, size_t size)
     }
     double *scale = want + p * n, *x0 = scale + p * n, *got = x0 + p * n;
 
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->x[0]);
     bmb_to_double(x0, ctx->x0, n);
     bmb_to_double(got, ctx->x, n);
@@ -125,6 +127,23 @@ static int verify(void *vctx, char *msg, size_t size)
     ok = bmb_verify_close("x" BMB_PARTS_NOTE, got, want, scale, p * n, bmb_tolerance(1), msg, size);
     free(want);
     return !ok;
+}
+
+/* --verify makes its call with an alpha of order 1, then gives the timed
+ * one back: the timed alpha is kept small so that repeated calls do not
+ * drift, and its update would fall inside single precision's tolerance,
+ * where a check could not tell it from no call at all (#239). */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    bmb_real_t timed[sizeof(ctx->alpha) / sizeof(ctx->alpha[0])];
+    int rc;
+
+    memcpy(timed, ctx->alpha, sizeof(timed));
+    bmb_set_scalar(ctx->alpha, BMB_R(0.5), BMB_R(0.25));
+    rc = verify_at(vctx, msg, size);
+    memcpy(ctx->alpha, timed, sizeof(timed));
+    return rc;
 }
 
 int main(int argc, char *argv[])

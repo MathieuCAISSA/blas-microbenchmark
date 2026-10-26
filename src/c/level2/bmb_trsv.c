@@ -155,7 +155,9 @@ static int verify(void *vctx, char *msg, size_t size)
     }
     double *uxabs = ux + p * n, *scale = uxabs + n, *x = scale + p * n, *x0 = x + p * n;
 
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->x[0]);
     bmb_to_double(x, ctx->x, n);
     bmb_to_double(x0, ctx->x0, n);

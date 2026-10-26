@@ -161,7 +161,9 @@ static int verify(void *vctx, char *msg, size_t size)
 
     bmb_verify_probe(r, p * n);
     bmb_matvec(strict, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, l0, labs);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->c[0]);
     bmb_matvec(BMB_SHAPE(ctx->uplo), ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, y1, y1abs);
     if (ctx->trans == 'N') {

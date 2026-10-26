@@ -177,7 +177,9 @@ static int verify(void *vctx, char *msg, size_t size)
     double *y2 = y1abs + m, *y2abs = y2 + p * m, *want = y2abs + m, *scale = want + p * m;
 
     bmb_verify_probe(r, p * n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->b[0]);
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->b, (size_t) ctx->ldb, r, NULL, y1, y1abs);
     if (ctx->side == 'L') {

@@ -101,7 +101,7 @@ static double bytes(size_t dim1, size_t dim2)
 
 /* --verify, by random projection in double: A*r against
  * A0*r + alpha*x*(y.r). */
-static int verify(void *vctx, char *msg, size_t size)
+static int verify_at(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, i, j;
@@ -122,7 +122,9 @@ static int verify(void *vctx, char *msg, size_t size)
         s1abs += fabs((double) ctx->y[j] * r[j]);
     }
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p0, p0abs);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->a[0]);
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
     for (i = 0; i < m; i++) {
@@ -132,6 +134,22 @@ static int verify(void *vctx, char *msg, size_t size)
     ok = bmb_verify_close("A*r, for a random vector r", p, want, scale, m, bmb_tolerance(n), msg, size);
     free(r);
     return !ok;
+}
+
+/* --verify makes its call with an alpha of order 1, then gives the timed
+ * one back: the timed alpha is kept small so that repeated calls do not
+ * drift, and its update would fall inside single precision's tolerance,
+ * where a check could not tell it from no call at all (#239). */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    const bmb_real_t timed = ctx->alpha;
+    int rc;
+
+    ctx->alpha = BMB_R(0.5);
+    rc = verify_at(vctx, msg, size);
+    ctx->alpha = timed;
+    return rc;
 }
 
 int main(int argc, char *argv[])

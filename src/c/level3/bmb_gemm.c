@@ -266,7 +266,9 @@ static int verify(void *vctx, char *msg, size_t size)
     size_t b;
 
     bmb_verify_probe(r, p * n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->c[0]);
     ok = 1;
     for (b = 0; ok && b < (size_t) ctx->count; b++) {

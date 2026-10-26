@@ -120,4 +120,11 @@ void bmb_verify_perturb(double *value);
  * C. A library that is wrong is usually wrong everywhere, and by more. */
 void bmb_verify_perturb_single(float *value);
 
+/* Proving a check sees the call at all: when the environment sets
+ * BMB_VERIFY_SKIP, a verify() whose routine updates its operands makes
+ * no call, and has to report the operands as they were (#239). A check
+ * that cannot tell is one whose update falls inside its tolerance. A
+ * testing aid; it has no other use. */
+int bmb_verify_skip(void);
+
 #endif /* BMB_VERIFY_H */

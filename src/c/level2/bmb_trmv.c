@@ -152,7 +152,9 @@ static int verify(void *vctx, char *msg, size_t size)
     double *scale = want + p * n, *x0 = scale + p * n, *got = x0 + p * n;
 
     bmb_to_double(x0, ctx->x0, n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->x[0]);
     bmb_to_double(got, ctx->x, n);
     bmb_matvec(BMB_VERIFY_TRI(ctx->uplo, ctx->trans, ctx->diag), ctx->col, n, n, ctx->a,

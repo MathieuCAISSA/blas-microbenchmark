@@ -7,6 +7,7 @@
 #include <cblas.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 
 #include "bmb_bench.h"
 #include "bmb_prec.h"
@@ -125,7 +126,7 @@ static double bytes(size_t dim1, size_t dim2)
 
 /* --verify, by random projection in double: A*r against
  * A0*r + alpha*x*(y^T r), y^H r for gerc. */
-static int verify(void *vctx, char *msg, size_t size)
+static int verify_at(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t m = (size_t) ctx->m, n = (size_t) ctx->n, i, j;
@@ -150,7 +151,9 @@ static int verify(void *vctx, char *msg, size_t size)
         sabs += (fabs(yr) + fabs(yi)) * (fabs(rr) + fabs(ri));
     }
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p0, p0abs);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->a[0]);
     bmb_matvec(BMB_VERIFY_FULL, ctx->col, m, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
     /* alpha * s, then times x_i */
@@ -170,6 +173,23 @@ static int verify(void *vctx, char *msg, size_t size)
                           bmb_tolerance(n), msg, size);
     free(r);
     return !ok;
+}
+
+/* --verify makes its call with an alpha of order 1, then gives the timed
+ * one back: the timed alpha is kept small so that repeated calls do not
+ * drift, and its update would fall inside single precision's tolerance,
+ * where a check could not tell it from no call at all (#239). */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    bmb_real_t timed[sizeof(ctx->alpha) / sizeof(ctx->alpha[0])];
+    int rc;
+
+    memcpy(timed, ctx->alpha, sizeof(timed));
+    bmb_set_scalar(ctx->alpha, BMB_R(0.5), BMB_R(0.25));
+    rc = verify_at(vctx, msg, size);
+    memcpy(ctx->alpha, timed, sizeof(timed));
+    return rc;
 }
 
 int main(int argc, char *argv[])
