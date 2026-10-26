@@ -871,6 +871,51 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #242: her2k, row-major, Upper/NoTrans: C = alpha A B^H +
+     * conj(alpha) B A^H + beta C, A and B N x K, through the flip to the
+     * other triangle with alpha conjugated; the strictly lower part as it
+     * was, the diagonal's imaginary parts zeroed ---- */
+    {
+        double za[2 * N * K], zb[2 * N * K], zc[2 * N * N], zw[2 * N * N], got[2 * N * N];
+        float ca[2 * N * K], cb[2 * N * K], cc[2 * N * N];
+        const double alpha[2] = { 0.5, 0.25 };
+        const float falpha[2] = { 0.5f, 0.25f };
+
+        fill(za, 2 * N * K);
+        fill_off(zb, 2 * N * K, 3);
+        fill_off(zc, 2 * N * N, 5);
+        memcpy(zw, zc, sizeof(zc));
+        for (i = 0; i < N; i++) {
+            for (j = i; j < N; j++) {
+                double t[2] = { 0.0, 0.0 }, u[2] = { 0.0, 0.0 };
+                double *w = &zw[2 * (i * N + j)];
+
+                for (l = 0; l < K; l++) {
+                    const double *ai = &za[2 * (i * K + l)], *aj = &za[2 * (j * K + l)];
+                    const double *bi = &zb[2 * (i * K + l)], *bj = &zb[2 * (j * K + l)];
+
+                    cmac(t, ai[0], ai[1], bj[0], -bj[1]);
+                    cmac(u, bi[0], bi[1], aj[0], -aj[1]);
+                }
+                w[0] *= 0.25;
+                w[1] *= 0.25;
+                cmac(w, alpha[0], alpha[1], t[0], t[1]);
+                cmac(w, alpha[0], -alpha[1], u[0], u[1]);
+                if (i == j) {
+                    w[1] = 0.0;
+                }
+            }
+        }
+        to_f(ca, za, 2 * N * K);
+        to_f(cb, zb, 2 * N * K);
+        to_f(cc, zc, 2 * N * N);
+        cblas_zher2k(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, alpha, za, K, zb, K, 0.25, zc, N);
+        check("zher2k.UN", zc, zw, 2 * N * N);
+        cblas_cher2k(CblasRowMajor, CblasUpper, CblasNoTrans, N, K, falpha, ca, K, cb, K, 0.25f, cc, N);
+        to_d(got, cc, 2 * N * N);
+        check("cher2k.UN", got, zw, 2 * N * N);
+    }
+
     /* ---- #238: hemv, her and her2, row-major, Upper: through the flip
      * to the other triangle and the conjugated vectors, against a naive
      * reference; the strictly lower part as it was, the diagonal's

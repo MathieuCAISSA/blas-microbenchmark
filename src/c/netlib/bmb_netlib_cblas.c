@@ -53,6 +53,15 @@ extern void ccopy_(const int *n, const void *x, const int *incx, void *y, const 
 extern void zcopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
 extern float complex cdotc_(const int *n, const void *x, const int *incx,
                             const void *y, const int *incy);
+/* her2k (#242). */
+extern void cher2k_(const char *uplo, const char *trans, const int *n, const int *k,
+                    const void *alpha, const void *a, const int *lda, const void *b,
+                    const int *ldb, const float *beta, void *c, const int *ldc, size_t uplo_len,
+                    size_t trans_len);
+extern void zher2k_(const char *uplo, const char *trans, const int *n, const int *k,
+                    const void *alpha, const void *a, const int *lda, const void *b,
+                    const int *ldb, const double *beta, void *c, const int *ldc, size_t uplo_len,
+                    size_t trans_len);
 /* hemv, her and her2 (#238). */
 extern void chemv_(const char *uplo, const int *n, const void *alpha, const void *a,
                    const int *lda, const void *x, const int *incx, const void *beta, void *y,
@@ -715,6 +724,50 @@ void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float a
         sger_(&M, &N, &alpha, X, &incX, Y, &incY, A, &lda);
     } else {
         sger_(&N, &M, &alpha, Y, &incY, X, &incX, A, &lda);
+    }
+}
+
+/* her2k (#242). Row-major, C's buffer read column-major is C^T =
+ * conj(C), Hermitian in the other triangle, and A's and B's are A^T and
+ * B^T: C^T = alpha conj(B) A^T + conj(alpha) conj(A) B^T + beta C^T =
+ * conj(alpha) (A^T)^H B^T + alpha (B^T)^H A^T + beta C^T, her2k with
+ * the triangle flipped, N and C swapped and alpha conjugated, as
+ * reference CBLAS makes it; no vector to conjugate. */
+void cblas_cher2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const float beta, void *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+        const char trans = (Trans == CblasNoTrans) ? 'N' : 'C';
+
+        cher2k_(&uplo, &trans, &N, &K, alpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+    } else {
+        const float *al = alpha;
+        const float calpha[2] = { al[0], -al[1] };
+        const char uplo = bmb_uplo_flipped(Uplo);
+        const char trans = (Trans == CblasNoTrans) ? 'C' : 'N';
+
+        cher2k_(&uplo, &trans, &N, &K, calpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+    }
+}
+
+void cblas_zher2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const double beta, void *C, const int ldc)
+{
+    if (Order == CblasColMajor) {
+        const char uplo = bmb_uplo(Uplo);
+        const char trans = (Trans == CblasNoTrans) ? 'N' : 'C';
+
+        zher2k_(&uplo, &trans, &N, &K, alpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
+    } else {
+        const double *al = alpha;
+        const double calpha[2] = { al[0], -al[1] };
+        const char uplo = bmb_uplo_flipped(Uplo);
+        const char trans = (Trans == CblasNoTrans) ? 'C' : 'N';
+
+        zher2k_(&uplo, &trans, &N, &K, calpha, A, &lda, B, &ldb, &beta, C, &ldc, 1, 1);
     }
 }
 

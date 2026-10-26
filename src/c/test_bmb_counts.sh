@@ -77,7 +77,7 @@ while read -r r level prec kind family; do
             else if (op == "trmv" || op == "trsv") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) / 2 + 2 * m)) }
             else if (op == "gemm" || op == "symm" || op == "hemm") { f = num(2 * m * m * n * cf); p = num(e * (m * m + 2 * m * n)) }
             else if (op == "syrk" || op == "herk") { f = num(n * m * (m + 1) * cf); p = num(e * (m * n + m * m)) }
-            else if (op == "syr2k") { f = num(2 * n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }
+            else if (op == "syr2k" || op == "her2k") { f = num(2 * n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }
             else if (op == "trmm" || op == "trsm") { f = num(n * m * (m + 1) * cf); p = num(e * (m * m + m * n)) }
             else { printf "no count for %s in this test: add its formula\n", r; bad = 1; exit 1 }
             want = sprintf("counts: %s %s %s flops %s bytes %s footprint %s", r, m, n, f, b, p)

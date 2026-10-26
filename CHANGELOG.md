@@ -34,6 +34,9 @@ releases with the same major version can be compared and read by the same
 - `chemv`, `zhemv`, `cher`, `zher`, `cher2` and `zher2` (#238): the
   Hermitian level 2 routines, with `--uplo` as their real counterparts.
   94 benchmarks.
+- `cher2k` and `zher2k` (#242): the Hermitian rank-2k update, with
+  `--uplo` and `--trans` (`N` or `C`) as `cherk` and `zherk`. 96
+  benchmarks: every routine of #169's first three steps.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,

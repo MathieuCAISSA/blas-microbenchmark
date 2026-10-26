@@ -24,8 +24,8 @@ bmb_zher2, bmb_strmv, bmb_dtrmv, bmb_ctrmv, bmb_ztrmv, bmb_strsv, bmb_dtrsv,
 bmb_ctrsv, bmb_ztrsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm, bmb_ssymm,
 bmb_dsymm, bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk,
 bmb_csyrk, bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k, bmb_dsyr2k,
-bmb_csyr2k, bmb_zsyr2k, bmb_strmm, bmb_dtrmm, bmb_ctrmm, bmb_ztrmm,
-bmb_strsm, bmb_dtrsm, bmb_ctrsm,
+bmb_csyr2k, bmb_zsyr2k, bmb_cher2k, bmb_zher2k, bmb_strmm, bmb_dtrmm,
+bmb_ctrmm, bmb_ztrmm, bmb_strsm, bmb_dtrsm, bmb_ctrsm,
 bmb_ztrsm \- microbenchmarks for BLAS routines
 .\" END routines (man-name)
 .SH SYNOPSIS
@@ -70,8 +70,8 @@ Level 2	sgemv dgemv cgemv zgemv sger dger cgeru zgeru cgerc zgerc
 \&	ztrsv
 Level 3	sgemm dgemm cgemm zgemm ssymm dsymm csymm zsymm chemm
 \&	zhemm ssyrk dsyrk csyrk zsyrk cherk zherk ssyr2k dsyr2k
-\&	csyr2k zsyr2k strmm dtrmm ctrmm ztrmm strsm dtrsm ctrsm
-\&	ztrsm
+\&	csyr2k zsyr2k cher2k zher2k strmm dtrmm ctrmm ztrmm strsm
+\&	dtrsm ctrsm ztrsm
 .TE
 .\" END routines (man-routines)
 .PP
@@ -97,8 +97,9 @@ counted from 0 as in C.
 Some exist for complex numbers only: cdotc and zdotc, the dot product
 with the first vector conjugated, and cdotu and zdotu, without; cgeru,
 zgeru, cgerc and zgerc, the rank\-1 updates, with y conjugated in gerc;
-and the Hermitian counterparts of symv, syr, syr2, symm and syrk:
-chemv, zhemv, cher, zher, cher2, zher2, chemm, zhemm, cherk and zherk.
+and the Hermitian counterparts of symv, syr, syr2, symm, syrk and
+syr2k: chemv, zhemv, cher, zher, cher2, zher2, chemm, zhemm, cherk,
+zherk, cher2k and zher2k.
 .PP
 Level 1 routines are sized with
 .BR \-v .
@@ -121,6 +122,7 @@ sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N; \-K gives K apart
 ssyrk dsyrk csyrk zsyrk	\-m is N, \-M is K
 cherk zherk ssyr2k	\-m is N, \-M is K
 dsyr2k csyr2k zsyr2k	\-m is N, \-M is K
+cher2k zher2k	\-m is N, \-M is K
 ssymv dsymv chemv zhemv	\-m is N (square; no \-M)
 ssyr dsyr cher zher	\-m is N (square; no \-M)
 ssyr2 dsyr2 cher2 zher2	\-m is N (square; no \-M)

@@ -120,11 +120,13 @@ Hermitian shapes, which ignore those parts, and check the other
 triangle unchanged apart, as herk's does.
 
 The Hermitian routines share their symmetric family's source: symm and
-hemm, syrk and herk, each pair from a header (`bmb_symm.h`, `bmb_syrk.h`)
-that its two sources include, `bmb_hemm.c` and `bmb_herk.c` with
-`BMB_HERM` defined (#209: CodeQL takes a source included as such for a
-mistake). That gives a Hermitian matrix, `A^H` for `A^T`, and herk's
-alpha and beta real, as BLAS takes them. A Hermitian A's diagonal has an
+hemm, syrk and herk, syr2k and her2k, each pair from a header
+(`bmb_symm.h`, `bmb_syrk.h`, `bmb_syr2k.h`) that its two sources
+include, `bmb_hemm.c`, `bmb_herk.c` and `bmb_her2k.c` with `BMB_HERM`
+defined (#209: CodeQL takes a source included as such for a mistake;
+#242). That gives a Hermitian matrix, `A^H` for `A^T`, herk's alpha and
+beta real and her2k's beta, as BLAS takes them, and her2k's second
+product taking conj(alpha). A Hermitian A's diagonal has an
 imaginary part, which a Hermitian matrix cannot have and BLAS does not
 read; `--verify` ignores it too, so a library that used it would be
 caught.
