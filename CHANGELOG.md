@@ -61,6 +61,14 @@ releases with the same major version can be compared and read by the same
   `bmb_report` keeps variants apart. The defaults are what every routine
   measured before.
 
+### Fixed
+- `--verify` in single precision did not see a library that skipped the
+  call, or got its update slightly wrong, for `caxpy`, `sscal`, `cscal`,
+  `sger`, `ssyr`, `ssyr2`, `cgeru`, `cgerc`, `cher` and `cher2` (#239):
+  their alpha is kept small so that repeated calls do not drift, and the
+  update fell inside the tolerance. Their check now calls with an alpha
+  of order 1; the timed calls keep theirs.
+
 ## [1.8.0] - 2026-10-23
 
 ### Changed

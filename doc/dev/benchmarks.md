@@ -396,14 +396,26 @@ library's result by a relative 1e-6 (`bmb_verify_perturb()`) before
 comparing; in single precision it doubles it, plus one
 (`bmb_verify_perturb_single()`), since the projection of a float `cgemm`
 does not see even 1e-1 in one element of a 64 x 64 `C`. It exists so
-that `src/c/test_bmb_verify.sh` can prove each of
-the 32 checks fails when it should. A new routine's `verify()` must call
-`bmb_verify_perturb()` or `bmb_verify_perturb_single()` on its result,
-or that test fails for it. Beyond
-the hook, each check was also seen to catch a real wrong computation — a
-transposed `dgemm` or `sgemm`, a `cgemm` or `zgemm` conjugating an
-operand, a `dsyrk` or `dsyr2` on the wrong triangle, a `dtrsv` solving
-with the transpose, a `saxpy` with twice its alpha.
+that `src/c/test_bmb_verify.sh` can prove each check fails when it
+should. A new routine's `verify()` must call `bmb_verify_perturb()` or
+`bmb_verify_perturb_single()` on its result, or that test fails for it.
+Beyond the hook, each check was also seen to catch a real wrong
+computation — a transposed `dgemm` or `sgemm`, a `cgemm` or `zgemm`
+conjugating an operand, a `dsyrk` or `dsyr2` on the wrong triangle, a
+`dtrsv` solving with the transpose, a `saxpy` with twice its alpha.
+
+**`BMB_VERIFY_SKIP=1`** makes the `verify()` of a routine that updates
+its operands skip its call (`bmb_verify_skip()`), which its check has to
+report: a check that cannot tell no call from the call is one whose
+update falls inside its tolerance (#239). The corruption hook could not
+show that, adding |v| + 1 in single precision. A new routine that
+updates its operands guards its `verify()`'s call with
+`if (!bmb_verify_skip())`; the reductions (asum, dot, nrm2, iamax),
+which return a value of their own, do not. axpy, scal, ger, geru, gerc,
+syr, syr2, her and her2 keep a small alpha (or one near 1) so that
+repeated calls do not drift; in single precision their update fell
+inside the tolerance, and their `verify()` now calls with an alpha of
+order 1, giving the timed one back after.
 
 ## Known measurement limitations
 

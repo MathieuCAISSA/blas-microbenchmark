@@ -3,7 +3,9 @@
 # can fail: with BMB_VERIFY_CORRUPT set, every benchmark's check sees its
 # result altered (by a relative 1e-6 in double precision; doubled in
 # single, see bmb_verify.h), and has to stop with exit status 2,
-# say what is wrong, and write no results file.
+# say what is wrong, and write no results file; with BMB_VERIFY_SKIP
+# set, every check of a routine that updates its operands sees no call,
+# and has to stop the same way (#239).
 #
 # Without it, every benchmark has to pass at several sizes, non-square
 # shapes and two thread counts -- a library can be right at one and wrong
@@ -134,10 +136,34 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         done
     done
 
+    printf '%s %s\n' "$b" "$sizes" >>"$T/sized"
     n=$((n + 1))
 done
 test "$n" -ge 32 || fail "only $n benchmarks found"
 echo "ok   all $n benchmarks pass --verify, in both layouts, padded or not, where they have a matrix, with every --trans they take, and each one's check catches a corrupted result"
+
+# A check that sees the call at all (#239): with BMB_VERIFY_SKIP set, a
+# routine that updates its operands makes no call in its check, and the
+# check has to say the result is wrong, in every precision. A single-
+# precision check whose update fell inside its tolerance passed that
+# way: caxpy, sscal, cscal, sger, ssyr, ssyr2, cgeru, cgerc, cher and
+# cher2 did. The reductions (asum, dot, dotc, dotu, nrm2, iamax) return
+# a value of their own instead, and are left out.
+k=0
+while read -r b sizes; do
+    r=${b##*/bmb_}
+    case $r in *asum | ?dot | ?dotc | ?dotu | *nrm2 | i?amax) continue ;; esac
+    set +e
+    # shellcheck disable=SC2086 # the size options, split on purpose
+    BMB_VERIFY_SKIP=1 "$b" -x 0 -w 0 -i 1 $sizes >/dev/null 2>"$T/$r-skip.err"
+    rc=$?
+    set -e
+    test "$rc" -eq 2 || fail "$r passed --verify without its call (exit $rc): its check does not see the update"
+    grep -q '^Wrong result: ' "$T/$r-skip.err" || fail "$r without its call: $(cat "$T/$r-skip.err")"
+    k=$((k + 1))
+done <"$T/sized"
+test "$k" -ge 60 || fail "only $k benchmarks checked without their call"
+echo "ok   the $k benchmarks that update their operands: each check fails when the call is skipped"
 
 # On by default: no option, and the results are checked.
 level3/double/bmb_dgemm -x 0 -i 1 -m 8 -o "$T/default.json" >"$T/default.out"

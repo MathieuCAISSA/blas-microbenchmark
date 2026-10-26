@@ -184,7 +184,9 @@ static int verify(void *vctx, char *msg, size_t size)
     double *u = y1abs + m, *uabs = u + p * m, *want = uabs + m, *scale = want + p * m;
 
     bmb_verify_probe(r, p * n);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->b[0]);
     if (ctx->side == 'L') {
         /* op(A) * X = alpha * B0: op(A)*(X*r) against alpha*B0*r. */

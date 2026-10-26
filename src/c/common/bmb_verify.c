@@ -246,3 +246,10 @@ void bmb_verify_perturb_single(float *value)
         *value += fabsf(*value) + 1.0f;
     }
 }
+
+int bmb_verify_skip(void)
+{
+    const char *env = getenv("BMB_VERIFY_SKIP");
+
+    return env != NULL && env[0] != '\0' && env[0] != '0';
+}

@@ -107,7 +107,7 @@ static double bytes(size_t dim1, size_t dim2)
  * A0*r + alpha x (x^H r), A read as the Hermitian matrix its triangle
  * stands for, whose update is Hermitian too; and the other triangle,
  * which that reading does not see, unchanged. */
-static int verify(void *vctx, char *msg, size_t size)
+static int verify_at(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
     size_t n = (size_t) ctx->n, i;
@@ -137,7 +137,9 @@ static int verify(void *vctx, char *msg, size_t size)
     }
     bmb_matvec(shape, ctx->col, n, n, ctx->a, (size_t) ctx->lda, r, NULL, p0, p0abs);
     bmb_matvec(strict, ctx->col, n, n, ctx->a, (size_t) ctx->lda, r, NULL, l0, labs);
-    call(ctx);
+    if (!bmb_verify_skip()) {
+        call(ctx);
+    }
     bmb_perturb(&ctx->a[0]);
     bmb_matvec(shape, ctx->col, n, n, ctx->a, (size_t) ctx->lda, r, NULL, p, pabs);
     for (i = 0; i < n; i++) {
@@ -158,6 +160,22 @@ static int verify(void *vctx, char *msg, size_t size)
     }
     free(r);
     return !ok;
+}
+
+/* --verify makes its call with an alpha of order 1, then gives the timed
+ * one back: the timed alpha is kept small so that repeated calls do not
+ * drift, and its update would fall inside single precision's tolerance,
+ * where a check could not tell it from no call at all (#239). */
+static int verify(void *vctx, char *msg, size_t size)
+{
+    bmb_ctx_t *ctx = vctx;
+    const bmb_real_t timed = ctx->alpha;
+    int rc;
+
+    ctx->alpha = BMB_R(0.5);
+    rc = verify_at(vctx, msg, size);
+    ctx->alpha = timed;
+    return rc;
 }
 
 int main(int argc, char *argv[])
