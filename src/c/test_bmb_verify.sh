@@ -68,7 +68,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
             case $r in
                 sgemm | dgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
                 ?gemv | ?ger | ?geru | ?gerc | ?symm | ?hemm | ?syrk | ?herk \
-                    | ?syr2k | ?trmm | ?trsm) sizes="-m 7,33,64 -M 5,64" ;;
+                    | ?syr2k | ?her2k | ?trmm | ?trsm) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac
             ;;
@@ -88,7 +88,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         ?trmm | ?trsm) variants=$(combos --side=L,R --uplo=U,L --trans=$t3 --diag=N,U) ;;
         ?trmv | ?trsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
         ?symm | ?hemm) variants=$(combos --side=L,R --uplo=U,L) ;;
-        ?herk) variants=$(combos --uplo=U,L --trans=N,C) ;;
+        ?herk | ?her2k) variants=$(combos --uplo=U,L --trans=N,C) ;;
         ?syrk | ?syr2k) variants=$(combos --uplo=U,L --trans=N,T) ;;
         ?symv | ?syr | ?syr2 | ?hemv | ?her | ?her2) variants=$(combos --uplo=U,L) ;;
         *) variants=default ;;

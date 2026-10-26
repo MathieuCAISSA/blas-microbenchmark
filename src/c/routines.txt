@@ -105,6 +105,8 @@ ssyr2k     3      s          nk     syr2k
 dsyr2k     3      d          nk     syr2k
 csyr2k     3      c          nk     syr2k
 zsyr2k     3      z          nk     syr2k
+cher2k     3      c          nk     her2k
+zher2k     3      z          nk     her2k
 strmm      3      s          mn     trmm
 dtrmm      3      d          mn     trmm
 ctrmm      3      c          mn     trmm

@@ -108,6 +108,13 @@ void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
 void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
                 const float *X, const int incX, const float *Y, const int incY,
                 float *A, const int lda);
+/* her2k (#242). */
+void cblas_cher2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const float beta, void *C, const int ldc);
+void cblas_zher2k(const CBLAS_ORDER Order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE Trans,
+                  const int N, const int K, const void *alpha, const void *A, const int lda,
+                  const void *B, const int ldb, const double beta, void *C, const int ldc);
 /* The Hermitian level 2 routines (#238). */
 void cblas_chemv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N,
                  const void *alpha, const void *A, const int lda, const void *X, const int incX,

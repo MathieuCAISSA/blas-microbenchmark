@@ -15,7 +15,7 @@
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-blue.svg"></a>
 </p>
 
-- **94 benchmarks**, one executable per BLAS routine (`bmb_dgemm`,
+- **96 benchmarks**, one executable per BLAS routine (`bmb_dgemm`,
   `bmb_ddot`, …), levels 1 to 3, in single, double and complex
   precision. Think [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/),
   for BLAS instead of MPI.
@@ -122,7 +122,7 @@ noise. `man bmb_report` has the details.
 | --- | --- | --- | --- |
 | **1** — vectors | `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap` `idamax` `drot` | `sasum` `saxpy` `scopy` `sdot` `snrm2` `sscal` `sswap` `isamax` `srot` | `scasum` `dzasum` `caxpy` `zaxpy` `ccopy` `zcopy` `cdotc` `zdotc` `cdotu` `zdotu` `scnrm2` `dznrm2` `cscal` `zscal` `cswap` `zswap` `icamax` `izamax` |
 | **2** — matrix × vector | `dgemv` `dger` `dsymv` `dsyr` `dsyr2` `dtrmv` `dtrsv` | `sgemv` `sger` `ssymv` `ssyr` `ssyr2` `strmv` `strsv` | `cgemv` `zgemv` `cgeru` `zgeru` `cgerc` `zgerc` `chemv` `zhemv` `cher` `zher` `cher2` `zher2` `ctrmv` `ztrmv` `ctrsv` `ztrsv` |
-| **3** — matrix × matrix | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `ssymm` `ssyrk` `ssyr2k` `strmm` `strsm` | `cgemm` `zgemm` `csymm` `zsymm` `chemm` `zhemm` `csyrk` `zsyrk` `cherk` `zherk` `csyr2k` `zsyr2k` `ctrmm` `ztrmm` `ctrsm` `ztrsm` |
+| **3** — matrix × matrix | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `ssymm` `ssyrk` `ssyr2k` `strmm` `strsm` | `cgemm` `zgemm` `csymm` `zsymm` `chemm` `zhemm` `csyrk` `zsyrk` `cherk` `zherk` `csyr2k` `zsyr2k` `cher2k` `zher2k` `ctrmm` `ztrmm` `ctrsm` `ztrsm` |
 <!-- END routines (readme) -->
 
 Each is `bmb_<routine>`. Level 1 and 2 report GFLOP/s and GB/s, level 3

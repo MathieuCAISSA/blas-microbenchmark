@@ -33,8 +33,8 @@ ROUTINES = {
     'sgemm': 3, 'dgemm': 3, 'cgemm': 3, 'zgemm': 3, 'ssymm': 3, 'dsymm': 3,
     'csymm': 3, 'zsymm': 3, 'chemm': 3, 'zhemm': 3, 'ssyrk': 3, 'dsyrk': 3,
     'csyrk': 3, 'zsyrk': 3, 'cherk': 3, 'zherk': 3, 'ssyr2k': 3, 'dsyr2k': 3,
-    'csyr2k': 3, 'zsyr2k': 3, 'strmm': 3, 'dtrmm': 3, 'ctrmm': 3, 'ztrmm': 3,
-    'strsm': 3, 'dtrsm': 3, 'ctrsm': 3, 'ztrsm': 3,
+    'csyr2k': 3, 'zsyr2k': 3, 'cher2k': 3, 'zher2k': 3, 'strmm': 3, 'dtrmm': 3,
+    'ctrmm': 3, 'ztrmm': 3, 'strsm': 3, 'dtrsm': 3, 'ctrsm': 3, 'ztrsm': 3,
 }
 # END routines (reframe)
 

@@ -28,6 +28,8 @@ level3_PROGRAMS = \
 	double/bmb_dsyr2k \
 	complex/bmb_csyr2k \
 	complex16/bmb_zsyr2k \
+	complex/bmb_cher2k \
+	complex16/bmb_zher2k \
 	single/bmb_strmm \
 	double/bmb_dtrmm \
 	complex/bmb_ctrmm \
@@ -77,6 +79,10 @@ complex_bmb_csyr2k_SOURCES = bmb_syr2k.c
 complex_bmb_csyr2k_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_zsyr2k_SOURCES = bmb_syr2k.c
 complex16_bmb_zsyr2k_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+complex_bmb_cher2k_SOURCES = bmb_her2k.c
+complex_bmb_cher2k_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zher2k_SOURCES = bmb_her2k.c
+complex16_bmb_zher2k_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_strmm_SOURCES = bmb_trmm.c
 single_bmb_strmm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dtrmm_SOURCES = bmb_trmm.c
@@ -115,6 +121,8 @@ ROUTINE_TESTS = \
 	double/test_bmb_dsyr2k.sh \
 	complex/test_bmb_csyr2k.sh \
 	complex16/test_bmb_zsyr2k.sh \
+	complex/test_bmb_cher2k.sh \
+	complex16/test_bmb_zher2k.sh \
 	single/test_bmb_strmm.sh \
 	double/test_bmb_dtrmm.sh \
 	complex/test_bmb_ctrmm.sh \
@@ -132,6 +140,7 @@ TESTS = $(ROUTINE_TESTS) \
 
 EXTRA_DIST = $(TESTS)
 
-# The sources symm and hemm, syrk and herk share: each pair of programs
-# includes one, the second with BMB_HERM defined (#209).
-noinst_HEADERS = bmb_symm.h bmb_syrk.h
+# The sources symm and hemm, syrk and herk, syr2k and her2k share: each
+# pair of programs includes one, the second with BMB_HERM defined (#209,
+# #242).
+noinst_HEADERS = bmb_symm.h bmb_syrk.h bmb_syr2k.h
