@@ -74,6 +74,30 @@ fi
 grep -q "contains a newline" "$T/err" || fail "the newline refusal does not say why: $(cat "$T/err")"
 pass "refuses a file name containing a newline"
 
+# ---- --peak-gflops and --peak-gbs (#251) ----
+# A peak is a plain decimal above 0 and up to 1000000, as the benchmarks
+# take it; anything else is refused before any page is written. A taken
+# one reaches the page as a JSON number: 007 as 7, which JSON can read.
+for bad in 0 0.0 -1 1e3 inf .5 5. 1000000.5 32x ''; do
+    for opt in --peak-gflops --peak-gbs; do
+        if $R "$opt" "$bad" "$T/ddot.json" >"$T/out" 2>"$T/err"; then
+            fail "$opt '$bad' was accepted"
+        fi
+        test -s "$T/out" && fail "$opt '$bad': a page was written"
+        grep -q -- "$opt takes a number above 0" "$T/err" || fail "$opt '$bad': $(cat "$T/err")"
+    done
+done
+if $R --peak-gbs >"$T/out" 2>"$T/err"; then
+    fail "--peak-gbs without a value was accepted"
+fi
+grep -q 'needs a value' "$T/err" || fail "--peak-gbs without a value: $(cat "$T/err")"
+pass "refuses a peak that is not a number above 0 and up to 1000000, or none"
+$R --peak-gflops 007 --peak-gbs=204.8 "$T/ddot.json" >"$T/peak.html" 2>"$T/err" ||
+    fail "a valid peak was refused: $(cat "$T/err")"
+grep -q '<script type="application/json" id="bmb-meta">{.*, "peak_gflops": 7, "peak_gbs": 204.8}' "$T/peak.html" ||
+    fail "the page does not carry the peak given: $(grep 'bmb-meta' "$T/peak.html")"
+pass "a peak given, in the page as a JSON number, by either spelling of the option"
+
 # ---- the page ----
 $R "$T/ddot.json" "$T/dgemm.json" >"$T/report.html" 2>"$T/err" \
     || fail "valid input was refused: $(cat "$T/err")"

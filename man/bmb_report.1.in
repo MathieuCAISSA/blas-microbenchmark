@@ -11,6 +11,10 @@
 bmb_report \- one HTML page of charts from blas-microbenchmark results
 .SH SYNOPSIS
 .B bmb_report
+.RB [ \-\-peak\-gflops
+.IR x ]
+.RB [ \-\-peak\-gbs
+.IR y ]
 .IR result.json ...
 .B >
 .I report.html
@@ -48,6 +52,11 @@ files from before 1.8.0 measured with
 .BR \-s ,
 to the mean;
 .IP \(bu
+with a peak (see
+.BR "The peak" ),
+a line at it on the level 3 performance chart, and for levels 1 and 2
+a roofline;
+.IP \(bu
 each library compared with a reference, on a log scale centred on \(mu1,
 so that twice as slow and twice as fast sit at the same distance from it.
 The reference is OpenBLAS when there is one, and can be changed on the
@@ -67,7 +76,8 @@ and
 .BR \-M ;
 .IP \(bu
 the raw data, every row of every file, sortable, with whether each point
-was checked when any was.
+was checked when any was, and its percentage of the peak when there is
+one.
 .PP
 The charts come in a section per routine, level 1 first; within a level,
 operations come in alphabetical order, each one's precisions together in
@@ -122,6 +132,40 @@ It takes runs to tell a difference from noise: 4 of each series, or 3
 against 5.
 With 3 against 3, no outcome can reach p < 0.05, so the page says there
 are too few runs rather than calling the difference noise.
+.SS The peak
+A figure is judged by what the machine can do once its peak is known:
+.B \-\-peak\-gflops
+and
+.B \-\-peak\-gbs
+given to the benchmarks, which record them, or given to
+.BR bmb_report ,
+which overrides them for every result.
+It is never estimated.
+The FLOP rate is one core's: a run at
+.I t
+threads is judged by
+.I t
+cores' peak, a thread a core.
+The one given to the benchmarks is in the routine's own precision; the
+one given to
+.B bmb_report
+is in double precision, and taken as twice it for single, as vector
+units do twice the floats.
+Each routine's section says where its peak came from.
+.PP
+Level 3, which can approach the FLOP peak, shows a line at it on the
+performance chart, and each point's percentage of it in its tooltip and
+the raw data.
+Levels 1 and 2, which are bound by memory, show a roofline: each size a
+dot, at its arithmetic intensity, its GFLOP/s over its GB/s \(em the
+FLOPs a byte its counts give \(em under the memory roof, the bandwidth
+times the intensity, and the compute roof, the peak; both scales are
+logarithmic, and each dot's tooltip gives its percentage of the roof.
+The routines that do no arithmetic (copy, swap,
+.BR i?amax )
+have none.
+The memory roof is the bandwidth of memory: a size held in a cache goes
+above it.
 .SS What it accepts
 Results of the same major version as
 .B bmb_report
@@ -132,6 +176,20 @@ fastest sample, and those from 0.6.x do not record the machine.
 One refused file means no page at all, since a page missing a library
 would be read as complete.
 .SH OPTIONS
+.TP
+.BI "\-\-peak\-gflops " x
+One core's peak FLOP rate, in GFLOP/s, in double precision, for every
+result: see
+.BR "The peak" .
+A plain decimal above 0 and up to 1000000.
+Default: the peak each result carries, if any.
+.TP
+.BI "\-\-peak\-gbs " y
+The machine's memory bandwidth, in GB/s, for every result: the
+roofline's memory roof.
+As
+.BR \-\-peak\-gflops .
+Default: the bandwidth each result carries, if any.
 .TP
 .B "\-h, \-\-help"
 Show a summary of the usage.

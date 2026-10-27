@@ -99,6 +99,17 @@ the code points at them; the ones easiest to break by accident:
   dataviz skill's reference palette, light and dark, used as validated —
   if you change a hue, re-run its validator rather than eyeballing it.
 - **One y axis per chart.** GB/s is a second chart, not a second scale.
+- **The peak (#168, #251)** is given, never estimated: a series' from
+  its results (`peak_gflops_per_core`, `peak_gbs`, #249), or
+  `bmb_report --peak-gflops/--peak-gbs` for every series, overriding
+  them, its FLOP rate double precision's and twice it in single
+  (`peakOf`, `singlePrecision`). A core's, so a run at t threads is
+  judged by t times it. Level 3 gets a line at it on the GFLOP/s chart,
+  in the same unit, so still one axis, and a percentage in the tooltip
+  and the raw data; levels 1 and 2 a roofline (`rooflineData`,
+  `rooflineChart`): intensity as the point's GFLOP/s over its GB/s, so
+  no count is recomputed in the page, log scales, the ridge kept inside
+  the x range. Each routine's section says where its peak came from.
 - **Anything from a result file reaches the DOM through `textContent`**,
   never `innerHTML`: a label is whatever someone typed.
 - **Charts draw at the width they get** and redraw on resize, rather than

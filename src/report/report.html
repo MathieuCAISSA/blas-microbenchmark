@@ -122,6 +122,7 @@ svg .end-label { fill: var(--ink-2); }
 /* The one dashed line on the page, and dashed on purpose: it is a
  * projection (ideal scaling), not data and not a grid. */
 svg .ideal { fill: none; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.7; }
+svg .roof { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 6 4; }
 svg .cell:focus { outline: none; }
 svg .cell.active { stroke: var(--ink); stroke-width: 2; }
 .heat { grid-column: 1 / -1; }
@@ -418,6 +419,10 @@ details[open] > summary { margin-bottom: 12px; }
           series = routine.series[id.key] = { identity: id, points: {} };
           routine.seriesOrder.push(series);
         }
+        /* The peak the results were given (#249), a core's FLOP rate in
+         * the routine's precision and the memory bandwidth. */
+        if (r.peak_gflops_per_core > 0) { series.peakGflops = r.peak_gflops_per_core; }
+        if (r.peak_gbs > 0) { series.peakGbs = r.peak_gbs; }
         var p = {
           threads: row.thread_count, d1: row.dim1,
           d2: (row.dim2 === undefined) ? null : row.dim2,
@@ -800,6 +805,8 @@ details[open] > summary { margin-bottom: 12px; }
         drawn.forEach(function (s) {
           s.points.forEach(function (p) { ymax = Math.max(ymax, p.y, p.y2 || 0); });
         });
+        /* A peak line is drawn whole, however far above the points. */
+        (opt.yMarkers || []).forEach(function (mk) { ymax = Math.max(ymax, mk.y); });
         var ystep = niceStep((ymax || 1) * (opt.yHeadroom || 1), 4);
         lo = 0;
         hi = Math.ceil((ymax * (opt.yHeadroom || 1.04)) / ystep) * ystep || ystep;
@@ -850,6 +857,14 @@ details[open] > summary { margin-bottom: 12px; }
       var xt = sv("text", { x: m.left + iw / 2, y: H - 4, "text-anchor": "middle" }, "axis-title");
       xt.textContent = opt.xLabel + (xlog ? ", log scale" : "");
       svg.appendChild(xt);
+
+      (opt.yMarkers || []).forEach(function (mk) {
+        var py = Math.round(sy(mk.y)) + 0.5;
+        svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: py, y2: py }, "roof"));
+        var ml = sv("text", { x: m.left + 4, y: py - 4 }, "marker-label");
+        ml.textContent = mk.label;
+        svg.appendChild(ml);
+      });
 
       (opt.markers || []).forEach(function (mk) {
         if (mk.x <= xmin || mk.x >= xmax) { return; }
@@ -1091,22 +1106,32 @@ details[open] > summary { margin-bottom: 12px; }
 
     function build(field, title, unit) {
       var kinds = {};
+      /* Level 3 against its peak (#251): a line at each series' peak at
+       * this thread count, and each point's percentage of it. */
+      var peaks = {};
       var series = list.map(function (s) {
         var pts = s.points.filter(function (p) { return p[field] !== undefined; });
         var repeated = pts.some(function (p) { return runSpread(p, field).n > 1; });
+        var peak = (field === "gflops" && rt.level === 3) ? peakOf(rt, s.series) : { gflops: null };
+        if (peak.gflops) { peaks[peak.gflops * threads] = true; }
         return {
           name: s.identity.name, colour: colour(s.identity),
           points: pts.map(function (p) {
             var q = { x: slice.pick(p), y: p[field] };
             var b = bandOf(p, field, repeated);
+            var pct = percentOfPeak(p, peak);
             if (b) {
               q.y2 = b.y2;
               if (b.extra) { q.extra = b.extra; }
               kinds[b.kind] = true;
             }
+            if (pct !== null) { q.extra = (q.extra ? q.extra + " · " : "") + pct.toFixed(0) + "% of peak"; }
             return q;
           })
         };
+      });
+      var yMarkers = Object.keys(peaks).map(function (y) {
+        return { y: Number(y), label: "peak, " + plural(threads, "core") + ": " + fmtRate(Number(y)) + " " + unit };
       });
       if (!series.some(function (s) { return s.points.length; })) { return; }
       var bands = [kinds.runs ? "band: fastest to slowest run" : "",
@@ -1114,13 +1139,166 @@ details[open] > summary { margin-bottom: 12px; }
                    kinds.mean ? "band: fastest sample to mean" : ""]
         .filter(function (b) { return b; });
       out.push(lineChart({ title: title, subtitle: sub + (bands.length ? " · " + bands.join(" · ") : ""),
-                           xLabel: slice.label, yLabel: unit, yUnit: unit, series: series, markers: markers }));
+                           xLabel: slice.label, yLabel: unit, yUnit: unit, series: series, markers: markers,
+                           yMarkers: yMarkers }));
     }
     build("gflops", "Performance against size", "GFLOP/s");
     build("gbs", "Bandwidth against size", "GB/s");
     return { charts: out, list: list, slice: slice };
   }
 
+
+  /* ------------------------------------------------------------------ *
+   * The roofline (#251), for levels 1 and 2: each size a dot, at its   *
+   * arithmetic intensity -- its GFLOP/s over its GB/s, the FLOPs a     *
+   * byte its counts give -- and its GFLOP/s, under the memory roof,    *
+   * the bandwidth times the intensity, and, when given, the compute    *
+   * roof, the thread count's cores' peak. Log scales both ways. Only   *
+   * the series with a bandwidth, and the points with both rates: copy, *
+   * swap and i?amax do no arithmetic, and have none.                   *
+   * ------------------------------------------------------------------ */
+
+  function rooflineData(rt, threads, given) {
+    var roofs = [], series = [], xs = [], ys = [];
+    rt.seriesOrder.forEach(function (s) {
+      if (!s.identity.slot) { return; }
+      var peak = peakOf(rt, s, given);
+      if (!peak.gbs) { return; }
+      var pts = pointsOf(s).filter(function (p) {
+        return p.threads === threads && p.gflops > 0 && p.gbs > 0;
+      }).map(function (p) { return { x: p.gflops / p.gbs, y: p.gflops, p: p }; });
+      if (!pts.length) { return; }
+      var roof = { gbs: peak.gbs, gflops: peak.gflops ? peak.gflops * threads : null };
+      var same = roofs.filter(function (r) { return r.gbs === roof.gbs && r.gflops === roof.gflops; })[0];
+      if (same) { roof = same; } else { roofs.push(roof); }
+      series.push({ series: s, name: s.identity.name, colour: colour(s.identity), points: pts, roof: roof });
+      pts.forEach(function (q) { xs.push(q.x); ys.push(q.y); });
+    });
+    if (!series.length) { return null; }
+    /* Room around the points, and the ridge, where the roofs meet, inside. */
+    var xlo = Math.min.apply(null, xs) / 4, xhi = Math.max.apply(null, xs) * 4;
+    roofs.forEach(function (r) { if (r.gflops) { xhi = Math.max(xhi, 2 * r.gflops / r.gbs); } });
+    var ylo = Math.min.apply(null, ys) / 4, yhi = Math.max.apply(null, ys) * 2;
+    roofs.forEach(function (r) {
+      ylo = Math.min(ylo, r.gbs * xlo);
+      yhi = Math.max(yhi, 1.5 * roofAt(r, xhi));
+    });
+    return { series: series, roofs: roofs, x: [xlo, xhi], y: [ylo, yhi] };
+  }
+
+  /* The roof over intensity x: the bandwidth times x, capped by the
+   * compute peak when there is one. */
+  function roofAt(roof, x) { return roof.gflops ? Math.min(roof.gbs * x, roof.gflops) : roof.gbs * x; }
+
+  /* 1, 2 and 5 times each power of ten between lo and hi. */
+  function decadeTicks(lo, hi) {
+    var t = [], k;
+    for (k = Math.floor(Math.log(lo) / Math.LN10); Math.pow(10, k) <= hi; k++) {
+      [1, 2, 5].forEach(function (f) {
+        var v = f * Math.pow(10, k);
+        if (v >= lo && v <= hi) { t.push(v); }
+      });
+    }
+    return t;
+  }
+
+  function rooflineChart(rt, data, threads) {
+    var fig = el("figure", "chart card");
+    var cap = el("figcaption");
+    cap.appendChild(el("h3", null, "Roofline"));
+    cap.appendChild(el("p", "sub", plural(threads, "thread") + " · " + data.roofs.map(function (r) {
+      return "memory roof " + fmtRate(r.gbs) + " GB/s" + (r.gflops ? ", compute roof " + fmtRate(r.gflops) + " GFLOP/s" : "");
+    }).join("; ")));
+    fig.appendChild(cap);
+    if (data.series.length >= 2) {
+      var legend = el("ul", "legend");
+      data.series.forEach(function (s) {
+        var li = el("li");
+        var key = el("span", "key");
+        key.style.background = s.colour;
+        li.appendChild(key);
+        li.appendChild(document.createTextNode(s.name));
+        legend.appendChild(li);
+      });
+      fig.appendChild(legend);
+    }
+    var plot = el("div", "plot");
+    fig.appendChild(plot);
+    var clipId = "bmb-clip-" + (++clipCount);
+
+    function draw() {
+      plot.textContent = "";
+      var W = Math.max(300, plot.clientWidth || 600);
+      var H = 280;
+      var m = { top: 24, right: 16, bottom: 40, left: 56 };
+      var iw = W - m.left - m.right;
+      var ih = H - m.top - m.bottom;
+      function sx(x) { return m.left + iw * Math.log(x / data.x[0]) / Math.log(data.x[1] / data.x[0]); }
+      function sy(y) { return m.top + ih - ih * Math.log(y / data.y[0]) / Math.log(data.y[1] / data.y[0]); }
+
+      var svg = sv("svg", { width: W, height: H, viewBox: "0 0 " + W + " " + H, role: "img",
+                            "aria-label": "Roofline of " + rt.title + ". Exact values are in the raw data table." });
+      var defs = sv("defs", {});
+      var clip = sv("clipPath", { id: clipId });
+      clip.appendChild(sv("rect", { x: m.left, y: m.top, width: iw, height: ih }));
+      defs.appendChild(clip);
+      svg.appendChild(defs);
+
+      thinTicks(decadeTicks(data.y[0], data.y[1]), sy, 16).forEach(function (v) {
+        var py = Math.round(sy(v)) + 0.5;
+        svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: py, y2: py }, "gridline"));
+        var tt = sv("text", { x: m.left - 8, y: sy(v) + 4, "text-anchor": "end" }, "tick");
+        tt.textContent = fmtRate(v);
+        svg.appendChild(tt);
+      });
+      thinTicks(decadeTicks(data.x[0], data.x[1]), sx, 36).forEach(function (v) {
+        var tx = sv("text", { x: sx(v), y: m.top + ih + 18, "text-anchor": "middle" }, "tick");
+        tx.textContent = fmtRate(v);
+        svg.appendChild(tx);
+      });
+      svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: m.top + ih + 0.5, y2: m.top + ih + 0.5 }, "axisline"));
+      var yt = sv("text", { x: 0, y: 12 }, "axis-title");
+      yt.textContent = "GFLOP/s, log scale";
+      svg.appendChild(yt);
+      var xt = sv("text", { x: m.left + iw / 2, y: H - 4, "text-anchor": "middle" }, "axis-title");
+      xt.textContent = "Arithmetic intensity, FLOPs a byte, log scale";
+      svg.appendChild(xt);
+
+      data.roofs.forEach(function (r) {
+        var x0 = data.x[0], x1 = data.x[1];
+        var pts = [[x0, roofAt(r, x0)]];
+        if (r.gflops && r.gflops / r.gbs < x1) { pts.push([r.gflops / r.gbs, r.gflops]); }
+        pts.push([x1, roofAt(r, x1)]);
+        svg.appendChild(sv("path", { d: pts.map(function (q, i) { return (i ? "L" : "M") + sx(q[0]) + "," + sy(q[1]); }).join(""),
+                                     "clip-path": "url(#" + clipId + ")" }, "roof"));
+        var ml = sv("text", { x: sx(x0) + 4, y: sy(roofAt(r, x0)) - 6 }, "marker-label");
+        ml.textContent = fmtRate(r.gbs) + " GB/s";
+        svg.appendChild(ml);
+        if (r.gflops) {
+          var cl = sv("text", { x: m.left + iw - 4, y: sy(r.gflops) - 6, "text-anchor": "end" }, "marker-label");
+          cl.textContent = fmtRate(r.gflops) + " GFLOP/s";
+          svg.appendChild(cl);
+        }
+      });
+
+      data.series.forEach(function (s) {
+        s.points.forEach(function (q) {
+          var dot = sv("circle", { cx: sx(q.x), cy: sy(q.y), r: 4 }, "dot");
+          dot.style.fill = s.colour;
+          var title = sv("title", {});
+          title.textContent = s.name + " · " + sizeText(q.p.d1, q.p.d2) + " · " + fmtRate(q.y) + " GFLOP/s · " +
+                              fmtRate(q.x) + " FLOPs a byte · " + (100 * q.y / roofAt(s.roof, q.x)).toFixed(0) + "% of the roof";
+          dot.appendChild(title);
+          svg.appendChild(dot);
+        });
+      });
+      plot.appendChild(svg);
+    }
+
+    fig.draw = draw;
+    charts.push(fig);
+    return fig;
+  }
 
   /* The figure a routine is judged by: GFLOP/s, or GB/s for the two that
    * do no arithmetic (dcopy, dswap). */
@@ -1131,6 +1309,61 @@ details[open] > summary { margin-bottom: 12px; }
     return flops ? "gflops" : "gbs";
   }
   function metricUnit(field) { return field === "gflops" ? "GFLOP/s" : "GB/s"; }
+
+  /* ------------------------------------------------------------------ *
+   * The peak (#251): what bmb_report was given, for every series, or    *
+   * else what each series' results carry (#249). bmb_report's FLOP rate *
+   * is a core's in double precision; a single-precision routine does   *
+   * twice the operations a cycle on the same vector units. A run at t  *
+   * threads is judged by t cores' peak, a thread a core.               *
+   * ------------------------------------------------------------------ */
+
+  var givenPeak = { gflops: 0, gbs: 0 };
+
+  /* s, c, and sc (scasum): single; d, z, dz: double; i?amax by its second letter. */
+  function singlePrecision(name) {
+    var n = name.charAt(0) === "i" ? name.slice(1) : name;
+    return n.charAt(0) === "s" || n.charAt(0) === "c";
+  }
+
+  function peakOf(rt, s, given) {
+    var g = given || givenPeak;
+    var out = { gflops: null, gbs: null, gflopsFrom: null, gbsFrom: null };
+    if (g.gflops > 0) {
+      out.gflops = g.gflops * (singlePrecision(rt.name) ? 2 : 1);
+      out.gflopsFrom = "bmb_report";
+    } else if (s.peakGflops > 0) {
+      out.gflops = s.peakGflops;
+      out.gflopsFrom = "results";
+    }
+    if (g.gbs > 0) {
+      out.gbs = g.gbs;
+      out.gbsFrom = "bmb_report";
+    } else if (s.peakGbs > 0) {
+      out.gbs = s.peakGbs;
+      out.gbsFrom = "results";
+    }
+    return out;
+  }
+
+  /* A point's GFLOP/s in percent of its thread count's peak, or null. */
+  function percentOfPeak(p, peak) {
+    return (peak.gflops && p.gflops !== undefined) ? 100 * p.gflops / (peak.gflops * p.threads) : null;
+  }
+
+  function peakText(rt, peak) {
+    var parts = [];
+    if (peak.gflops) {
+      parts.push(fmtRate(peak.gflops) + " GFLOP/s a core, given " +
+                 (peak.gflopsFrom === "bmb_report"
+                    ? "to bmb_report" + (singlePrecision(rt.name) ? " (twice its double-precision figure)" : "")
+                    : "in the results"));
+    }
+    if (peak.gbs) {
+      parts.push(fmtRate(peak.gbs) + " GB/s, given " + (peak.gbsFrom === "bmb_report" ? "to bmb_report" : "in the results"));
+    }
+    return parts.join("; ");
+  }
 
   function sizeText(d1, d2) {
     return d2 === null ? d1.toLocaleString("en-US") : d1.toLocaleString("en-US") + " × " + d2.toLocaleString("en-US");
@@ -1654,7 +1887,9 @@ details[open] > summary { margin-bottom: 12px; }
     sliceForSize: sliceForSize, sizeData: sizeData, cacheMarkers: cacheMarkers,
     ratioData: ratioData, ratioDomain: ratioDomain, ratioTicks: ratioTicks,
     thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
-    heatData: heatData, heatStep: heatStep, STEPS: STEPS
+    heatData: heatData, heatStep: heatStep, STEPS: STEPS,
+    singlePrecision: singlePrecision, peakOf: peakOf, percentOfPeak: percentOfPeak, peakText: peakText,
+    rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks
   };
 
   /* ------------------------------------------------------------------ *
@@ -1663,6 +1898,8 @@ details[open] > summary { margin-bottom: 12px; }
 
   var meta = {};
   try { meta = JSON.parse(document.getElementById("bmb-meta").textContent); } catch (e) { meta = {}; }
+  /* bmb_report --peak-gflops and --peak-gbs (#251), for every series. */
+  givenPeak = { gflops: meta.peak_gflops > 0 ? meta.peak_gflops : 0, gbs: meta.peak_gbs > 0 ? meta.peak_gbs : 0 };
 
   /* Each result is its own block, parsed on its own, so one bad file
    * cannot take the others down with it. */
@@ -1849,6 +2086,18 @@ details[open] > summary { margin-bottom: 12px; }
       if (res.empty) { body.appendChild(el("p", "empty", res.empty)); }
       made = made.concat(res.charts || []);
 
+      if (rt.level === 1 || rt.level === 2) {
+        var rd = rooflineData(rt, threads);
+        if (rd) { made.push(rooflineChart(rt, rd, threads)); }
+      }
+      /* Where each series' peak came from (#251). */
+      var peakNotes = [];
+      rt.seriesOrder.forEach(function (s) {
+        var t = peakText(rt, peakOf(rt, s));
+        if (t && peakNotes.indexOf(t) < 0) { peakNotes.push(t); }
+      });
+      peakNotes.forEach(function (t) { notes.push("Peak: " + t + "."); });
+
       var rc = ratioChart(rt, res.list, res.slice, threads, referenceFor(rt, reference));
       if (rc) {
         if (rc.chart) { made.push(rc.chart); }
@@ -1949,6 +2198,10 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "Time", n: true, v: function (r) { return r.p.time; }, f: fmtTime },
     { h: "GFLOP/s", n: true, v: function (r) { return r.p.gflops; }, f: fmtRate },
     { h: "GB/s", n: true, v: function (r) { return r.p.gbs; }, f: fmtRate },
+    { h: "% of peak", n: true, v: function (r) {
+        var pct = percentOfPeak(r.p, peakOf(r.rt, r.s));
+        return pct === null ? undefined : pct;
+      }, f: function (v) { return v.toFixed(0) + "%"; } },
     { h: "Median", n: true, v: function (r) { return r.p.median; }, f: fmtTime },
     { h: "Q1", n: true, v: function (r) { return r.p.q1; }, f: fmtTime },
     { h: "Q3", n: true, v: function (r) { return r.p.q3; }, f: fmtTime },

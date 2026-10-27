@@ -68,6 +68,8 @@
     if (o.layout) { r.layout = o.layout; }
     if (o.run) { r.run = o.run; }
     if (o.kernels) { r.kernels = o.kernels; }
+    if (o.peakGflops) { r.peak_gflops_per_core = o.peakGflops; }
+    if (o.peakGbs) { r.peak_gbs = o.peakGbs; }
     return r;
   }
 
@@ -717,6 +719,60 @@
       eq(R.bandOf({ time: 1e-6, gflops: 10, q3: 2e-6, runs: [{ time: 1e-6, gflops: 10 }, { time: 2e-6, gflops: 5 }] }, "gflops", true),
          { y2: 5, kind: "runs", extra: "2 runs: median 7.50, slowest 5.00" },
          "band: down to the slowest run when the point was measured more than once");
+    });
+
+    /* ---- The peak (#251) ---- */
+
+    test("peak", function () {
+      eq(["sgemm", "dgemm", "cgemm", "zgemm", "scasum", "dznrm2", "isamax", "idamax", "icamax", "izamax"].map(R.singlePrecision),
+         [true, false, true, false, true, false, true, false, true, false],
+         "the precision from the routine's name: s, c and sc single; d, z and dz double; i?amax by its second letter");
+
+      var m = R.buildModel([
+        entry("d.json", { routine: "daxpy", peakGflops: 32, peakGbs: 40,
+                          rows: [[1, 1000, null, 1, 2, 24], [1, 100000, null, 1, 1, 12], [2, 1000, null, 1, 4, 48]] }),
+        entry("s.json", { routine: "sdot", rows: [[1, 1000, null, 1, 2, 8]] }),
+        entry("c.json", { routine: "dcopy", peakGbs: 40, rows: [[1, 8, null, 1, null, 8]] })
+      ]);
+      var rt = function (name) { return m.routines.filter(function (r) { return r.name === name; })[0]; };
+      var axpy = rt("daxpy"), dot = rt("sdot"), copy = rt("dcopy");
+      var none = { gflops: 0, gbs: 0 };
+
+      eq(R.peakOf(axpy, axpy.seriesOrder[0], none), { gflops: 32, gbs: 40, gflopsFrom: "results", gbsFrom: "results" },
+         "the peak the results carry");
+      eq(R.peakOf(dot, dot.seriesOrder[0], none), { gflops: null, gbs: null, gflopsFrom: null, gbsFrom: null },
+         "no peak: none");
+      eq(R.peakOf(axpy, axpy.seriesOrder[0], { gflops: 16, gbs: 0 }),
+         { gflops: 16, gbs: 40, gflopsFrom: "bmb_report", gbsFrom: "results" },
+         "bmb_report's peak overrides the results', each rate on its own");
+      eq(R.peakOf(dot, dot.seriesOrder[0], { gflops: 16, gbs: 100 }).gflops, 32,
+         "bmb_report's peak is double precision's: twice it in single");
+      eq(R.peakText(dot, R.peakOf(dot, dot.seriesOrder[0], { gflops: 16, gbs: 100 })),
+         "32.0 GFLOP/s a core, given to bmb_report (twice its double-precision figure); 100 GB/s, given to bmb_report",
+         "the page says where the peak came from, and the doubling");
+
+      near(R.percentOfPeak({ gflops: 16, threads: 2 }, { gflops: 32 }), 25, "a point's percentage of its thread count's cores' peak");
+      eq(R.percentOfPeak({ gflops: 16, threads: 2 }, { gflops: null }), null, "no percentage without a peak");
+      eq(R.percentOfPeak({ threads: 1 }, { gflops: 32 }), null, "nor for a point with no FLOPs");
+
+      near(R.roofAt({ gbs: 40, gflops: 64 }, 0.5), 20, "under the ridge, the memory roof: bandwidth times intensity");
+      near(R.roofAt({ gbs: 40, gflops: 64 }, 8), 64, "past it, the compute roof");
+      near(R.roofAt({ gbs: 40, gflops: null }, 8), 320, "without a compute peak, the memory roof all the way");
+
+      var rd = R.rooflineData(axpy, 1, none);
+      eq(rd.series.length, 1, "a roofline for the series with a bandwidth");
+      eq(rd.series[0].points.map(function (q) { return q.x; }), [2 / 24, 1 / 12],
+         "each point at its GFLOP/s over its GB/s, the FLOPs a byte");
+      eq(rd.roofs, [{ gbs: 40, gflops: 32 }], "at 1 thread, one core's peak");
+      eq(R.rooflineData(axpy, 2, none).roofs, [{ gbs: 40, gflops: 64 }], "at 2 threads, two cores'");
+      check(rd.x[0] < 1 / 12 && rd.x[1] >= 2 * 32 / 40, "the x range holds the points and the ridge, where the roofs meet");
+      check(rd.y[0] <= 40 * rd.x[0] && rd.y[1] >= 32, "the y range holds the memory roof's start and the compute roof");
+      eq(R.rooflineData(dot, 1, none), null, "no bandwidth, no roofline");
+      eq(R.rooflineData(copy, 1, none), null, "no FLOPs (dcopy), no roofline");
+      eq(R.rooflineData(dot, 1, { gflops: 0, gbs: 100 }).roofs, [{ gbs: 100, gflops: null }],
+         "bmb_report's bandwidth alone: the memory roof alone");
+
+      eq(R.decadeTicks(0.03, 30), [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20], "log ticks: 1, 2 and 5 times each power of ten");
     });
 
     /* ---- Formatting ---- */
