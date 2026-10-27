@@ -41,6 +41,23 @@ file, with every `</` turned into `<\/` (the same character to JSON) so
 that a `</script>` inside a label cannot close its element. Each block is
 parsed on its own, so one bad file cannot take the others down with it.
 
+## bmb_suite
+
+`src/suite/bmb_suite.sh` runs the benchmarks one after the other into a
+directory that `bmb_report` takes whole (#254). `make` substitutes the
+version and `$(pkglibexecdir)`, where an installed `bmb_suite` finds the
+benchmarks; one beside a `Makefile` with `../c/level1` next to it is in
+a build tree, and runs that tree's. Its list of routines, with their
+levels and precisions, is written by `src/c/routines.sh`. The profiles
+`quick` and `full` are in the script, and `bmb_suite(1)` shows them:
+`test_man_content.sh` holds the two to the same lines.
+
+It only runs the benchmarks and says how each went: what a result
+holds is theirs and `bmb_report`'s to check. `test_bmb_suite.sh` runs
+the whole suite at tiny sizes, then the report on it; the cases a real
+suite cannot give (an install's layout, a benchmark missing, failing
+or skipping) run on stand-in trees of shell scripts.
+
 ## The page
 
 All of it is in `report.html`: plain JavaScript and SVG, no library, in

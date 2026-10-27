@@ -1,0 +1,220 @@
+.\" bmb_suite(1). make turns bmb_suite.1.in into bmb_suite.1, then into the
+.\" site's bmb_suite.html; edit the .in. man/test_man_*.sh check it
+.\" against the programs: see doc/dev/documentation.md.
+.TH BMB_SUITE 1 2026-10-27 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.\" No hyphenation, no justification: both hurt in a terminal.
+.nh
+.ds AD l
+.ad l
+.SH NAME
+bmb_suite \- run the blas\-microbenchmark suite into one directory of results
+.SH SYNOPSIS
+.B bmb_suite
+.RB [ \-\-level
+.IR list ]
+.RB [ \-\-precision
+.IR list ]
+.RB [ \-\-routine
+.IR list ]
+.RB [ \-\-profile
+.IR profile ]
+.RB [ \-n ]
+.B \-o
+.I dir
+.RB [ \-\-
+.IR "benchmark option" ...]
+.SH DESCRIPTION
+.B bmb_suite
+runs the benchmarks of
+.BR blas\-microbenchmark (1),
+every one or a selection, one after the other, and writes their results
+into one directory, which
+.BR bmb_report (1)
+takes whole:
+.PP
+.RS
+.EX
+bmb_suite \-o results \-\-profile quick
+bmb_report results > report.html
+.EE
+.RE
+.PP
+The benchmarks it runs are those installed with it, in
+.IR @pkglibexecdir@ ;
+run from a build tree
+.RI ( build/src/suite/bmb_suite ),
+those of that tree.
+A routine missing from an older install is left out, and said; one
+asked for by
+.B \-\-routine
+is refused.
+.SS The results
+Each routine writes
+.IR dir / routine .json,
+and what the benchmark printed goes to
+.IR dir / routine .log.
+.I dir
+is created, and refused when it already holds files: the results of two
+runs would mix in the report.
+A line on standard error says which routine runs, and how many are left.
+.PP
+A benchmark that fails, a result wrong under
+.B \-\-verify
+or an option it refuses, is said with the end of its log, and the others
+still run; one that skips (exit 77, a batch mode the library does not
+have) is said too.
+.SS Sizes and profiles
+Without
+.BR \-\-profile ,
+each benchmark runs at its level's default size.
+A profile gives the sizes instead: a line a level
+.RB ( level1 ,
+.BR level2 ,
+.BR level3 )
+or a routine, then the options it is run with; a routine's line wins
+over its level's.
+A
+.B #
+starts a comment.
+Two are shipped.
+.B quick
+measures a few sizes a level, about a minute on one core of a laptop:
+.PP
+.RS
+.EX
+level1 \-v 1000,100000,10000000
+level2 \-m 200,2000
+level3 \-m 200,1000
+sgbmv \-m 200,2000 \-M 32
+dgbmv \-m 200,2000 \-M 32
+stbsv \-m 200,2000 \-M 32
+dtbsv \-m 200,2000 \-M 32
+.EE
+.RE
+.PP
+.B full
+doubles the size from the first-level cache to memory at levels 1 and 2,
+and up to 2048 at level 3, several minutes on the same core:
+.PP
+.RS
+.EX
+level1 \-v 256:16777216
+level2 \-m 32:4096
+level3 \-m 32:2048
+sgbmv \-m 32:4096 \-M 32
+dgbmv \-m 32:4096 \-M 32
+stbsv \-m 32:4096 \-M 32
+dtbsv \-m 32:4096 \-M 32
+.EE
+.RE
+.PP
+The band routines get a band of 32 elements: by default, theirs is as
+wide as the matrix.
+.SS Options for every benchmark
+The words after
+.B \-\-
+go to every benchmark, after the profile's:
+.B "\-t 1,8"
+for the thread counts,
+.BR "\-\-cache cold" ,
+.BR "\-i 50" .
+.B bmb_suite
+gives each
+.B "\-f json \-o"
+itself, last.
+It refuses
+.B \-o
+and
+.B \-f
+there, and
+.BR \-\-peak\-gflops ,
+whose value is in the routine's precision and would be wrong for half
+of them: give the peak to
+.BR bmb_report (1)
+instead.
+An option a routine has no use for is ignored with a warning in its
+log; one it refuses
+.RB ( \-\-trans
+on
+.BR ddot )
+makes it fail.
+.SH OPTIONS
+.TP
+.BI "\-o, \-\-output " dir
+Where the results go: created, and refused when it already holds files.
+.TP
+.BI "\-\-level " list
+Only the routines of these levels, a list such as
+.BR 1,2 .
+.TP
+.BI "\-\-precision " list
+Only the routines of these precisions, of
+.BR s ,
+.BR d ,
+.B c
+and
+.BR z ,
+a list such as
+.BR d,z .
+.TP
+.BI "\-\-routine " list
+Only these routines, a list such as
+.BR dgemm,ddot .
+With
+.B \-\-level
+or
+.BR \-\-precision ,
+those of them that are also of the levels and precisions given.
+.TP
+.BI "\-\-profile " profile
+The sizes:
+.BR quick ,
+.B full
+or a profile file (see
+.BR "Sizes and profiles" ).
+Default: each level's default size.
+.TP
+.B "\-n, \-\-dry\-run"
+Print the commands, one a line, and run nothing.
+.TP
+.B "\-h, \-\-help"
+Show a summary of the usage.
+.TP
+.B "\-V, \-\-version"
+Show the version.
+.SH EXIT STATUS
+0 when every benchmark ran or skipped;
+1 when one failed, after the others ran;
+2 for a usage error, said before anything runs.
+.SH EXAMPLES
+The quick profile on 1 and 8 threads, then the report:
+.PP
+.RS
+.EX
+bmb_suite \-\-profile quick \-o results \-\- \-t 1,8
+bmb_report results > report.html
+.EE
+.RE
+.PP
+Level 3 in double precision, at the default size, cold:
+.PP
+.RS
+.EX
+bmb_suite \-\-level 3 \-\-precision d,z \-o level3 \-\- \-\-cache cold
+.EE
+.RE
+.PP
+What a profile would run, without running it:
+.PP
+.RS
+.EX
+bmb_suite \-n \-\-profile full \-\-routine dgemm \-o results
+.EE
+.RE
+.SH SEE ALSO
+.BR blas\-microbenchmark (1),
+.BR bmb_report (1)
+.PP
+The guides \(em installing, comparing libraries, on an HPC cluster,
+ReFrame \(em and this manual online:
+https://mathieucaissa.github.io/blas\-microbenchmark/

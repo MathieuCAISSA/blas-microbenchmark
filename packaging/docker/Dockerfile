@@ -70,7 +70,7 @@ FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b
 ARG BLAS_BACKEND=openblas
 
 LABEL org.opencontainers.image.title="blas-microbenchmark" \
-      org.opencontainers.image.description="BLAS microbenchmarks, one executable per routine, and bmb_report" \
+      org.opencontainers.image.description="BLAS microbenchmarks, one executable per routine, bmb_suite and bmb_report" \
       org.opencontainers.image.source="https://github.com/MathieuCAISSA/blas-microbenchmark" \
       org.opencontainers.image.licenses="Apache-2.0"
 

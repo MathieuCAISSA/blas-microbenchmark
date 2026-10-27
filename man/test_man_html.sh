@@ -191,16 +191,18 @@ grep -q '<a href="bmb_report.html"><b>bmb_report</b>(1)</a>' "$site/blas-microbe
     || fail "blas-microbenchmark.html does not link bmb_report(1) to bmb_report.html"
 grep -q '<a href="blas-microbenchmark.html"><b>blas-microbenchmark</b>(1)</a>' "$site/bmb_report.html" \
     || fail "bmb_report.html does not link blas-microbenchmark(1) to blas-microbenchmark.html"
+grep -q '<a href="bmb_report.html"><b>bmb_report</b>(1)</a>' "$site/bmb_suite.html" \
+    || fail "bmb_suite.html does not link bmb_report(1) to bmb_report.html"
 grep -q 'href="https://man7.org/linux/man-pages/man8/numactl.8.html"' "$site"/*.html \
     || fail "numactl(8) is not linked to man7.org"
 grep -q '<a href="measuring.html#HOW_A_NUMBER_IS_MEASURED"><b>HOW A NUMBER IS MEASURED</b></a>' "$site/options.html" \
     || fail "options.html does not link its reference to HOW A NUMBER IS MEASURED"
-for p in blas-microbenchmark bmb_report; do
+for p in blas-microbenchmark bmb_report bmb_suite; do
     grep -q "<a href=\"$p.html\">" "$site/index.html" || fail "the index does not link to $p.html"
     grep -q '<a href="https://github.com/MathieuCAISSA/blas-microbenchmark">' "$site/$p.html" \
         || fail "the project's URL in $p.html is not a link"
 done
-ok "the pages link to each other, to man7.org for the rest, to the project; the index to both"
+ok "the pages link to each other, to man7.org for the rest, to the project; the index to the manuals"
 
 # What the man page says, the site says: every option, in the manual's
 # pages.
@@ -210,6 +212,9 @@ for opt in $("$BENCH" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+' | sed 's/.*
 done
 for opt in $("$REPORT" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+' | sed 's/.*, //'); do
     grep -q -- "$opt" "$site/bmb_report.html" || fail "bmb_report.html does not have $opt"
+done
+for opt in $("$SUITE" --help | grep -oE '^  -[a-zA-Z], --[a-z0-9-]+|^      --[a-z0-9-]+' | sed 's/.* //'); do
+    grep -q -- "$opt" "$site/bmb_suite.html" || fail "bmb_suite.html does not have $opt"
 done
 ok "each page on the site has every option of its program's --help"
 

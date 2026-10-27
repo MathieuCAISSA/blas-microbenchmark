@@ -82,6 +82,10 @@ jobs:
           ./_install/libexec/blas-microbenchmark/level3/bmb_dgemm -x 0 -i 1 -m 32 -o r.json
           ./_install/bin/bmb_report r.json > r.html
           grep -qi '^<!doctype html>' r.html
+          # bmb_suite beside it, running the benchmarks of its install.
+          ./_install/bin/bmb_suite --routine ddot,dgemm -o runs -- -x 0 -i 1 -w 0 -v 64 -m 16
+          ./_install/bin/bmb_report runs > runs.html
+          test "$(grep -c 'class="bmb-result"' runs.html)" = 2
 
       # So that a download can be checked: sha256sum -c SHA256SUMS.
       - name: Checksums

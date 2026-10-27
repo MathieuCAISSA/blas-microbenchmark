@@ -146,6 +146,9 @@ block() {
                     }
                     printf "| **%d** — %s |%s |%s |%s |\n", l, what[l], d, s, c
                 }
+            } else if (kind == "suite") {
+                for (i = 1; i <= n; i++) { all = all " " name[i] ":" level[i] ":" prec[i] }
+                printf "ROUTINES=\047\n%s\047\n", wrap(substr(all, 2), 79, "    ", "    ", "")
             } else if (kind == "report" || kind == "reframe") {
                 # A line per level at least; \001 keeps a name and its
                 # level on one line.
@@ -215,4 +218,5 @@ update man/blas-microbenchmark.1.in man-sizes
 update README.md readme
 update src/report/report.html report
 update packaging/reframe/blas_microbenchmark.py reframe
+update src/suite/bmb_suite.sh suite
 exit "$status"

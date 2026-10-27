@@ -33,8 +33,9 @@ aarch64-only). Keep it green — a routine that only works "on my machine"
 isn't done.
 
 The `openblas` job also installs into a staging root and fails if anything
-lands outside `--prefix`, or if `bin/bmb_report`, the `libexec`
-benchmarks and the man pages are not where the README says; and it fails
+lands outside `--prefix`, or if `bin/bmb_report`, `bin/bmb_suite`, the
+`libexec` benchmarks and the man pages are not where the README says;
+installed for real, `bmb_suite` runs two of the benchmarks there; and it fails
 if the browser tests skipped, since the x86 runners have Chrome.
 
 The comment above each job is published on the site's Development page,

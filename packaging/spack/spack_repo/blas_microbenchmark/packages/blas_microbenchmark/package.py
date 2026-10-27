@@ -174,10 +174,21 @@ class BlasMicrobenchmark(AutotoolsPackage):
         assert out.startswith("<!doctype html>"), "bmb_report did not write an HTML page"
         assert '"routine": "ddot"' in out, "the page does not carry the result"
 
+    def test_suite(self):
+        """run two benchmarks with bmb_suite into a directory, and report it"""
+        run = which(self.prefix.bin.bmb_suite, required=True)
+        run("--routine", "ddot,dgemm", "-o", "runs", "--",
+            "-x", "0", "-i", "1", "-w", "0", "-v", "64", "-m", "16", error=str.split)
+        for r in ["ddot", "dgemm"]:
+            assert os.path.isfile(join_path("runs", r + ".json")), f"bmb_suite wrote no {r}.json"
+        report = which(self.prefix.bin.bmb_report, required=True)
+        out = report("runs", output=str, error=str.split)
+        assert out.count('class="bmb-result"') == 2, "the page does not carry both results"
+
     def test_man_pages(self):
         """check the manual pages, an alias per benchmark included"""
         man1 = self.prefix.share.man.man1
-        for page in ["blas-microbenchmark.1", "bmb_report.1"] + [
+        for page in ["blas-microbenchmark.1", "bmb_report.1", "bmb_suite.1"] + [
             os.path.basename(b) + ".1" for b in self._benchmarks()
         ]:
             assert os.path.isfile(join_path(man1, page)), f"no {page} in {man1}"

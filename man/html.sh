@@ -172,8 +172,9 @@ The benchmarks|counters|Hardware counters
 The benchmarks|output|Output
 The benchmarks|environment|Exit status and environment
 The benchmarks|examples|Examples
-The report|bmb_report|bmb_report
-The report|outputs|What they produce
+Run and report|bmb_suite|bmb_suite
+Run and report|bmb_report|bmb_report
+Run and report|outputs|What they produce
 Project|development|Development'
 
 # Which page each section of blas-microbenchmark(1) goes to; a section
@@ -351,7 +352,7 @@ footer_html() {
 EOF
 }
 
-# The man pages: bmb_report(1) as one page, blas-microbenchmark(1) cut
+# The man pages: bmb_report(1) and bmb_suite(1) a page each, blas-microbenchmark(1) cut
 # into a page per section, or per few small ones.
 for page; do
     name=$(basename "$page" .1)
@@ -526,7 +527,7 @@ rm -f "$out/development.body"
     echo '</ul>'
     echo '<h2 class="landing-h">Where to go next</h2>'
     echo '<div class="cards">'
-    printf '%s\n' "$MENU" | awk -F'|' '$2 != "index" && ($1 == "Getting started" || $1 == "Guides" || $2 == "blas-microbenchmark" || $2 == "bmb_report" || $2 == "outputs") { print $2 "|" $3 }' \
+    printf '%s\n' "$MENU" | awk -F'|' '$2 != "index" && ($1 == "Getting started" || $1 == "Guides" || $2 == "blas-microbenchmark" || $2 == "bmb_suite" || $2 == "bmb_report" || $2 == "outputs") { print $2 "|" $3 }' \
         | while IFS='|' read -r p t; do
             case $p in
                 install) d="From a release, with Spack, in a container, from git; checking the download." ;;
@@ -536,6 +537,7 @@ rm -f "$out/development.body"
                 hpc) d="Modules, Spack, Slurm, pinning and NUMA, Apptainer." ;;
                 reframe) d="Every benchmark as a ReFrame test, with your references." ;;
                 blas-microbenchmark) d="The manual: every option, how a number is measured, threads, outputs." ;;
+                bmb_suite) d="The whole suite, or a selection, at a profile's sizes, into one directory." ;;
                 bmb_report) d="The manual of the report: series, charts, repeated runs and noise." ;;
                 outputs) d="The table, CSV and JSON of a real run, and a report." ;;
                 *) d= ;;

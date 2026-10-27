@@ -21,7 +21,7 @@ changing it:
 |---|---|
 | a benchmark, `src/c/common`, timing, rates, `--verify` | [doc/dev/benchmarks.md](doc/dev/benchmarks.md) |
 | `configure.ac`, a BLAS library, `bmb_threads.c`, `bmb_build.c`, `bmb_machine.c`, `src/c/netlib`, `src/c/mkl` | [doc/dev/backends.md](doc/dev/backends.md) |
-| `bmb_report`, `src/report`, `doc/images` | [doc/dev/report.md](doc/dev/report.md) |
+| `bmb_report`, `bmb_suite`, `src/report`, `src/suite`, `doc/images` | [doc/dev/report.md](doc/dev/report.md) |
 | the README, `--help`, `man/`, the site | [doc/dev/documentation.md](doc/dev/documentation.md) |
 | `.github/` | [doc/dev/ci.md](doc/dev/ci.md) |
 | `packaging/`, `spack-repo-index.yaml` | [doc/dev/packaging.md](doc/dev/packaging.md) |
@@ -165,12 +165,13 @@ the test.
 | | `test_bmb_report.sh` | `bmb_report`: what it refuses, a peak that is not a number above 0 and up to 10^6 among it, a valid one in the page as a JSON number, a directory: every result under it at any depth, in name order, with a file after it, refused without a result, with a file that is not one or a name with a newline, that the page is self-contained, and that its `LEVEL` table lists every benchmark built, in its level |
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws; a series run four times gets its band, the noise test and a raw row per run; three versions of a library get a history; files with a run block get the Run column and the samples' band; the kernels the library chose, beside it; a roofline with its roofs, a level 3 peak line, the percentages in the raw data, and where the peak came from |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`), including the Mann-Whitney p-values against an independent count; a cold series kept apart, in the charts and the history; a padded series kept apart too; the kernels a series ran, listed, not splitting it; a GEMM run with `-K`, a section per K; a non-default `--trans`, a series of its own, named by it, a file from before the arguments one with the defaults; a batch, by its count and mode; the peak, from the results or given to `bmb_report` (twice in single precision), where it came from, a point's percentage of its cores' peak, the roofline's points, roofs and ranges, none without a bandwidth or FLOPs |
+| `src/suite` | `test_bmb_suite.sh` | `bmb_suite`: every benchmark of the build tree at tiny sizes through a profile file, a JSON and a log each, then `bmb_report` on the directory; `--level`, `--precision`, `--routine` and the shipped profiles through `-n`, a routine's line winning over its level's, the options passed on after the profile's and before `-f json -o`; each refusal before anything runs (no `-o`, a directory holding files, a bad list, an unknown routine or profile, a profile line neither a level nor a routine or given twice, `-o`, `-f` or `--peak-gflops` passed on); on stand-in trees, an install's layout and a build tree's, a missing routine left out or, asked for, refused, a failure said with its log and the others run (exit 1), a skip |
 | `tests` | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
 | | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
 | | `test_configure_paths.sh` | `--with-blas-incpath`/`--with-blas-libpath` come first in the search, ahead of a module's variables and of the directories `configure` probes in a distribution's install (#58): `configure` run per backend, its flags read from `config.log` |
 | | `test_coverage_exclusions.sh` | every coverage exclusion in the C code (`GCOVR_EXCL_*`) gives its reason on its line, and every `START` has its `STOP` |
-| | `test_routines.sh` | every list of the routines (the levels' and the man pages' `Makefile.am`, the man page's NAME and tables, the README's, the report's `LEVEL`, ReFrame's `ROUTINES`) is what `src/c/routines.sh` writes from `src/c/routines.txt`; on a copy, a routine added to the table alone makes the 8 lists it belongs in stale, and a malformed line, a duplicate or a missing marker is refused |
+| | `test_routines.sh` | every list of the routines (the levels' and the man pages' `Makefile.am`, the man page's NAME and tables, the README's, the report's `LEVEL`, ReFrame's `ROUTINES`, `bmb_suite`'s) is what `src/c/routines.sh` writes from `src/c/routines.txt`; on a copy, a routine added to the table alone makes the 9 lists it belongs in stale, and a malformed line, a duplicate or a missing marker is refused |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
@@ -236,9 +237,12 @@ src/c/level<N>/  # the sources of the families (bmb_<family>.c, one for
 src/report/      # bmb_report: the script, the HTML template, how the two
                  # are assembled, fixtures in the formats it refuses, and
                  # the browser tests (browser.sh, test_report.js)
-man/             # the man pages, blas-microbenchmark(1) and bmb_report(1),
-                 # html.sh and devpage.sh, which make the documentation
-                 # site, site.css, its stylesheet, and site/, its guides;
+src/suite/       # bmb_suite, which runs the suite into one directory of
+                 # results, and its test
+man/             # the man pages, blas-microbenchmark(1), bmb_report(1)
+                 # and bmb_suite(1), html.sh and devpage.sh, which make the
+                 # documentation site, site.css, its stylesheet, and
+                 # site/, its guides;
                  # the man page tests and man_helper.sh, what they share
 doc/             # the report's chart images, which the README and the
                  # site show, and screenshots.sh, which makes them
@@ -312,10 +316,11 @@ alternatives and kept on purpose, so don't "fix" it:
   bigger annoyance.
 
 The cost is that no benchmark lands in `$PATH`; README.md gives the two
-lines that put the three directories there. The one exception is
-`bmb_report`, a single user-facing command, which goes to `$(bindir)` — and
-so follows `--prefix`, `--bindir` and `DESTDIR` like anything else Automake
-installs. CI checks that on every pull request (the `openblas` job's "Install
+lines that put the three directories there. The exceptions are the two
+user-facing commands, `bmb_report` and `bmb_suite`, which go to `$(bindir)`
+— and so follow `--prefix`, `--bindir` and `DESTDIR` like anything else
+Automake installs. `bmb_suite` runs the whole suite (#254); it is not the
+launcher rejected below, and the benchmarks keep their names. CI checks that on every pull request (the `openblas` job's "Install
 layout" step: nothing may land outside the prefix), and the release
 workflow checks it again from the tarball.
 

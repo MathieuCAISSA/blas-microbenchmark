@@ -23,6 +23,12 @@ releases with the same major version can be compared and read by the same
   its peak came from.
 - `bmb_report <dir>` (#253): a directory stands for every result under
   it, at any depth, in name order.
+- `bmb_suite` (#254), installed beside `bmb_report`: every benchmark, or
+  those of some levels, precisions or routines, at each level's default
+  size or a profile's (`quick`, `full` or a file), with the options
+  after `--` passed on, into one directory for `bmb_report <dir>`. A
+  benchmark that fails is said with its log, and the others still run.
+  `man bmb_suite`.
 - Level 1 in every precision BLAS has (#226): `sasum`, `scasum`,
   `dzasum`, `caxpy`, `zaxpy`, `scopy`, `ccopy`, `zcopy`, `cdotc`,
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,

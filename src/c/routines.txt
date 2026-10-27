@@ -1,7 +1,7 @@
 # The routines the package benchmarks, one per line. src/c/routines.sh
 # writes every list of them from this table: the levels' Makefile.am,
 # man/Makefile.am, the man page's tables, the README's, the report's
-# LEVEL and the ReFrame tests' ROUTINES (#199). Edit the table, then run
+# LEVEL, the ReFrame tests' ROUTINES and bmb_suite's (#199). Edit the table, then run
 # src/c/routines.sh (./autogen.sh does); make check fails until the lists
 # agree with it.
 #
