@@ -6,7 +6,10 @@
 # -n; the options passed on, after the profile's, -f and -o last; and
 # what it refuses before anything runs. On stand-in trees, an install's
 # layout and a build tree's, made of a few scripts: a benchmark that
-# fails, the next one still run, one that skips, one missing.
+# fails, the next one still run, one that skips, one missing. With --blas
+# (#255): the build tree given twice under two names, a directory and a
+# label each; the forms a suite takes; a result recording another backend
+# than its suite's; and what --blas refuses.
 set -e
 
 R=./bmb_suite
@@ -149,20 +152,32 @@ test "$(grep -c 'class="bmb-result"' "$T/report.html")" = "$n" || fail "the repo
 pass "bmb_report takes the directory: $n results"
 
 # ---- stand-in trees ----
-# A benchmark there is a script: it says its arguments and exits with the
-# status its name gives (fail_<routine> files make it fail, skip_ skip).
+# fake PATH [BACKEND [RECORDED]]: a stand-in benchmark, a script. It
+# reads a line of its input, which would take the next suite of --blas
+# were that bmb_suite's list. Its --version names BACKEND (fake by
+# default; none for -). Otherwise it says
+# its arguments and, as its name has it, fails (ddot), skips (dgemm) or
+# writes a result recording RECORDED (BACKEND by default) to its last
+# argument, where bmb_suite puts -o's file.
 fake() {
     mkdir -p "$(dirname "$1")"
-    cat >"$1" <<'EOF'
-#!/bin/sh
+    {
+        printf '#!/bin/sh\nversion=%s\nrecorded=%s\n' "${2:-fake}" "${3:-${2:-fake}}"
+        cat <<'EOF'
+read -r line
+if [ "$1" = --version ]; then
+    [ "$version" = - ] || echo "BLAS backend: $version (a stand-in)"
+    exit 0
+fi
 echo "args: $*"
 case $0 in
 *bmb_dgemm) echo 'no strided batch in this library' >&2; exit 77 ;;
 *bmb_ddot) echo 'verification failed: expected 1, got 2' >&2; exit 2 ;;
 esac
 for a; do o=$a; done
-echo '{}' >"$o"
+printf '{\n  "backend": "%s",\n}\n' "$recorded" >"$o"
 EOF
+    } >"$1"
     chmod +x "$1"
 }
 
@@ -215,6 +230,74 @@ fake "$T/tree/c/level2/complex16/bmb_zgemv"
 test "$(ls "$T/tree-out" | tr '\n' ' ')" = "sdot.json sdot.log zgemv.json zgemv.log " ||
     fail "a build tree's benchmarks not run: $(ls "$T/tree-out")"
 pass "a build tree: a directory a precision under each level"
+
+# ---- --blas (#255) ----
+# The build tree given twice, under two names, by two of the forms a suite
+# takes: a directory and a label each, the backend of the build checked.
+top=$(cd ../.. && pwd)
+built=$(../c/level1/double/bmb_ddot --version | sed -n 's/^BLAS backend: \([^ ]*\).*/\1/p')
+test -n "$built" || fail "no backend read from bmb_ddot --version"
+profile 'level1 -v 64'
+$R --blas one="$top" --blas two="$top/src/c" -o "$T/blas" --level 1 --precision d --profile "$T/profile" \
+    -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" || fail "the build tree given twice: $(cat "$T/err")"
+n=0
+for r in $(awk '$2 == 1 && $3 == "d" { print $1 }' "$T/table"); do
+    for name in one two; do
+        j=$T/blas/$name/$r.json
+        test -s "$j" || fail "no $j"
+        grep -q "^  \"label\": \"$name\",\$" "$j" || fail "$j is not labelled $name"
+        grep -q "^  \"backend\": \"$built\",\$" "$j" || fail "$j does not record $built"
+    done
+    n=$((n + 1))
+done
+grep -q "^bmb_suite: one: dasum (1/$((2 * n)))\$" "$T/err" || fail "no progress line for one's first: $(head -3 "$T/err")"
+grep -q "^bmb_suite: two: drot ($((2 * n))/$((2 * n)))\$" "$T/err" || fail "no progress line for two's last: $(tail -3 "$T/err")"
+test "$(ls "$T/blas" | tr '\n' ' ')" = "one two " || fail "$T/blas holds more than a directory a name: $(ls "$T/blas")"
+../report/bmb_report "$T/blas" >"$T/blas.html" 2>"$T/err" || fail "bmb_report refused the two: $(cat "$T/err")"
+test "$(grep -c 'class="bmb-result"' "$T/blas.html")" = $((2 * n)) || fail "the report does not hold both libraries' results"
+pass "--blas, the build tree twice: a directory, a label each, every result recording $built; bmb_report takes both"
+
+# The forms of a suite, through -n: an install prefix, the directory of
+# its levels, a build tree's.
+fake "$T/prefix/libexec/blas-microbenchmark/level1/bmb_daxpy"
+run_n --blas p="$T/prefix" --blas l="$T/prefix/libexec/blas-microbenchmark" --blas t="$top/src/c" --routine daxpy -- -i 1
+grep -qx "$T/prefix/libexec/blas-microbenchmark/level1/bmb_daxpy -i 1 --label p -f json -o $T/dry/p/daxpy.json" "$T/cmds" ||
+    fail "an install prefix: $(cat "$T/cmds")"
+grep -qx "$T/prefix/libexec/blas-microbenchmark/level1/bmb_daxpy -i 1 --label l -f json -o $T/dry/l/daxpy.json" "$T/cmds" ||
+    fail "the directory of its levels: $(cat "$T/cmds")"
+grep -qx "$top/src/c/level1/double/bmb_daxpy -i 1 --label t -f json -o $T/dry/t/daxpy.json" "$T/cmds" ||
+    fail "a build tree's levels: $(cat "$T/cmds")"
+pass "--blas: an install prefix, the directory of its levels, a build tree; the label after the options passed on"
+
+# A result recording another backend than its suite's --version is a
+# failure, and the others still run.
+fake "$T/mixed/level1/bmb_daxpy" fake other
+fake "$T/mixed/level1/bmb_dcopy"
+set +e
+$R --blas m="$T/mixed" --blas p="$T/prefix" -o "$T/mixed-out" --precision d >"$T/out" 2>"$T/err"
+rc=$?
+set -e
+test "$rc" = 1 || fail "a result of another backend: exit $rc, not 1: $(cat "$T/err")"
+grep -q "^bmb_suite: m: daxpy records the backend other, not fake, which $T/mixed was built for\$" "$T/err" ||
+    fail "a result of another backend not said: $(cat "$T/err")"
+grep -q '^bmb_suite: failed: m/daxpy$' "$T/err" || fail "m/daxpy not listed as failed: $(cat "$T/err")"
+test -s "$T/mixed-out/m/dcopy.json" || fail "the next benchmark was not run"
+test -s "$T/mixed-out/p/daxpy.json" || fail "the next suite was not run: $(cat "$T/err")"
+pass "--blas: a result recording another backend than its suite's is a failure"
+
+fake "$T/mute/level1/bmb_daxpy" -
+refused 'the backend of .* cannot be read' -o "$T/none" --blas m="$T/mute"
+refused "--blas takes <name>=<suite>" -o "$T/none" --blas openblas
+refused "--blas takes <name>=<suite>" -o "$T/none" --blas=openblas=
+refused "'' is not a name" -o "$T/none" --blas ="$top"
+refused "'a b' is not a name" -o "$T/none" --blas "a b=$top"
+refused "'.a' is not a name" -o "$T/none" --blas .a="$top"
+refused "one is given twice" -o "$T/none" --blas one="$top" --blas one="$top/src/c"
+refused "no blas-microbenchmark in $T" -o "$T/none" --blas x="$T"
+for w in -l -lx --label=x --lab; do
+    refused "$w: with --blas, bmb_suite labels" -o "$T/none" --blas one="$top" -- "$w" x
+done
+pass "--blas refused: no name or suite, a name that is no directory name or given twice, a path with no suite, a backend unread, a label passed on"
 
 rm -rf "$T"
 echo "all checks passed"
