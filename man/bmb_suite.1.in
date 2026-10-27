@@ -18,6 +18,8 @@ bmb_suite \- run the blas\-microbenchmark suite into one directory of results
 .IR list ]
 .RB [ \-\-profile
 .IR profile ]
+.RB [ \-\-blas
+.IR name = suite ]...
 .RB [ \-n ]
 .B \-o
 .I dir
@@ -110,6 +112,82 @@ dtbsv \-m 32:4096 \-M 32
 .PP
 The band routines get a band of 32 elements: by default, theirs is as
 wide as the matrix.
+.SS Several libraries
+The benchmarks measure the library they were built against: a
+blas\-microbenchmark a library.
+.B \-\-blas
+.IR name = suite
+runs the one in
+.IR suite ,
+an install prefix (where
+.I libexec/blas\-microbenchmark
+is), a build tree (where
+.I src/c
+is) or the directory of its levels, into
+.IR dir / name .
+It can be given once a library; then the suite
+.B bmb_suite
+is installed with is not run, unless given too.
+The selection, the profile and the options apply to each, and
+.BR bmb_report (1)
+takes
+.I dir
+whole, a series a library.
+.PP
+Each benchmark is run with
+.B \-\-label
+.IR name ,
+which tells apart two builds of one library (two versions, two
+compilers) in the report, so
+.B \-l
+is refused among the options passed on.
+The backend each suite was built for is read from its benchmarks'
+.B \-\-version
+before anything runs, and each result must record it: one recording
+another fails, rather than becoming a series under the wrong name.
+A name is letters, digits,
+.BR . ,
+.B _
+and
+.BR \- ,
+each given once.
+.PP
+With Spack, a blas\-microbenchmark a library:
+.PP
+.RS
+.EX
+spack install blas\-microbenchmark ^openblas
+spack install blas\-microbenchmark ^blis
+spack install blas\-microbenchmark ^intel\-oneapi\-mkl
+O=$(spack location \-i blas\-microbenchmark ^openblas)
+B=$(spack location \-i blas\-microbenchmark ^blis)
+M=$(spack location \-i blas\-microbenchmark ^intel\-oneapi\-mkl)
+bmb_suite \-\-blas openblas=$O \-\-blas blis=$B \-\-blas mkl=$M \-\-profile quick \-o results
+bmb_report results > report.html
+.EE
+.RE
+.PP
+or the three in a Spack environment, a
+.I spack.yaml
+of its own directory:
+.PP
+.RS
+.EX
+spack:
+  specs:
+  \- blas\-microbenchmark ^openblas
+  \- blas\-microbenchmark ^blis
+  \- blas\-microbenchmark ^intel\-oneapi\-mkl
+  concretizer:
+    unify: false
+.EE
+.RE
+.PP
+which
+.B "spack \-e . install"
+builds, and
+.B "spack \-e . location \-i"
+then finds, as above.
 .SS Options for every benchmark
 The words after
 .B \-\-
@@ -174,6 +252,18 @@ or a profile file (see
 .BR "Sizes and profiles" ).
 Default: each level's default size.
 .TP
+.BI "\-\-blas " name = suite
+Run the blas\-microbenchmark of
+.IR suite ,
+an install prefix or a build tree, into
+.IR dir / name ;
+once a library (see
+.BR "Several libraries" ).
+Default: the suite
+.B bmb_suite
+is installed with, into
+.IR dir .
+.TP
 .B "\-n, \-\-dry\-run"
 Print the commands, one a line, and run nothing.
 .TP
@@ -184,7 +274,8 @@ Show a summary of the usage.
 Show the version.
 .SH EXIT STATUS
 0 when every benchmark ran or skipped;
-1 when one failed, after the others ran;
+1 when one failed, or wrote a result of another backend than its
+suite's, after the others ran;
 2 for a usage error, said before anything runs.
 .SH EXAMPLES
 The quick profile on 1 and 8 threads, then the report:

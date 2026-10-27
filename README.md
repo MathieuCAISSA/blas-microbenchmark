@@ -123,6 +123,10 @@ bmb_suite --profile quick -o results -- -t 1,8
 bmb_report results > report.html
 ```
 
+With `--blas <name>=<prefix>` once a library, each built and installed on
+its own (with Spack, `spack location -i blas-microbenchmark ^blis`), it
+runs them all in one command, a series each in the report.
+
 ## The benchmarks
 
 <!-- BEGIN routines (readme): written by src/c/routines.sh -->

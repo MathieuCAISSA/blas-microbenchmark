@@ -58,6 +58,17 @@ the whole suite at tiny sizes, then the report on it; the cases a real
 suite cannot give (an install's layout, a benchmark missing, failing
 or skipping) run on stand-in trees of shell scripts.
 
+With `--blas <name>=<suite>` (#255), it runs each suite in turn, the
+selection, profile and options the same; everything about every suite
+is checked before anything runs, its backend among it, read from
+`--version`. A result is then checked to record that backend
+(`"backend": ...` on its own line, as `bmb_print.c` writes it): the
+one check of a result's content `bmb_suite` makes, since a file of
+another library would be a series under the wrong name. Each benchmark
+gets `--label <name>`, which the report adds to a series' name only
+between series of the same backend: `test_bmb_suite.sh` gives the
+build tree twice, under two names, for that.
+
 ## The page
 
 All of it is in `report.html`: plain JavaScript and SVG, no library, in

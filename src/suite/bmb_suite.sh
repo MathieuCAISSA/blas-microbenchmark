@@ -43,6 +43,7 @@ Usage: bmb_suite [OPTION]... -o DIR [-- BENCHMARK OPTION...]
 Runs every benchmark of blas-microbenchmark, or a selection, one after
 the other, and writes their results into DIR, a JSON file a routine, for
 bmb_report DIR. The options after -- go to every benchmark, e.g. -t 1,8.
+With --blas, the same for each library, into DIR/NAME.
 
   -o, --output <dir>       where the results go: created, and refused when
                            it already holds files
@@ -51,6 +52,11 @@ bmb_report DIR. The options after -- go to every benchmark, e.g. -t 1,8.
       --routine <list>     only these routines, e.g. dgemm,ddot
       --profile <profile>  the sizes: quick, full or a file (default: each
                            level's default size)
+      --blas <name>=<suite>
+                           also run the blas-microbenchmark of <suite>, an
+                           install prefix or a build tree, into DIR/<name>;
+                           once a library (default: the suite bmb_suite
+                           is installed with, into DIR)
   -n, --dry-run            print the commands, run nothing
   -h, --help               show this help
   -V, --version            show the version
@@ -58,6 +64,9 @@ bmb_report DIR. The options after -- go to every benchmark, e.g. -t 1,8.
 Full documentation: man bmb_suite
 EOF
 }
+
+nl='
+'
 
 say() {
     printf 'bmb_suite: %s\n' "$*" >&2
@@ -149,6 +158,8 @@ quoted() {
 }
 
 out=
+specs=
+names=
 levels=
 precisions=
 routines=
@@ -168,12 +179,12 @@ while [ $# -gt 0 ]; do
         dry=1
         shift
         ;;
-    -o | --output | --level | --precision | --routine | --profile)
+    -o | --output | --level | --precision | --routine | --profile | --blas)
         [ $# -ge 2 ] || refuse "$1 needs a value"
         opt=$1 val=$2
         shift 2
         ;;
-    --output=* | --level=* | --precision=* | --routine=* | --profile=*)
+    --output=* | --level=* | --precision=* | --routine=* | --profile=* | --blas=*)
         opt=${1%%=*} val=${1#*=}
         shift
         ;;
@@ -193,6 +204,22 @@ while [ $# -gt 0 ]; do
     --precision) precisions=$(words "$opt" "$val" d,z '[sdcz]' 'a precision, s, d, c or z') || exit 2 ;;
     --routine) routines=$(words "$opt" "$val" dgemm,ddot '[a-z0-9]+' 'a routine') || exit 2 ;;
     --profile) profile_name=$val ;;
+    --blas)
+        # A name is a directory of the results, and a label: kept plain.
+        name=${val%%=*}
+        case $val in
+        *=?*) ;;
+        *) refuse "--blas takes <name>=<suite>, e.g. --blas openblas=/opt/bmb-openblas (got '$val')" ;;
+        esac
+        printf '%s\n' "$name" | grep -Eqx '[A-Za-z0-9_][A-Za-z0-9._-]*' ||
+            refuse "--blas: '$name' is not a name: letters, digits, '.', '_' and '-'"
+        case $val in
+        *"$nl"*) refuse "--blas: a suite's path contains a newline" ;;
+        esac
+        in_list "$name" "$names" && [ -n "$names" ] && refuse "--blas: $name is given twice"
+        names="$names $name"
+        specs="$specs$val$nl"
+        ;;
     esac
     unset opt
 done
@@ -203,6 +230,12 @@ case $out in
 esac
 for w in "$@"; do
     own_option "$w" && refuse "$w: bmb_suite sets -o and -f itself, and the peak is given to bmb_report"
+    # getopt_long takes --lab for --label; --la is --layout's too.
+    case $w in
+    -l* | --lab*)
+        [ -n "$specs" ] && refuse "$w: with --blas, bmb_suite labels each library's results with its name"
+        ;;
+    esac
 done
 
 known=
@@ -260,18 +293,37 @@ $profile
 EOF
 }
 
-# The suite: the benchmarks of the build tree this bmb_suite is in, a
-# directory a precision under each level, or those installed with it.
-here=$(dirname "$0")
-if [ -f "$here/Makefile" ] && [ -d "$here/../c/level1" ]; then
-    suite=$here/../c
-    tree=1
-else
-    suite=$BMB_LIBEXEC
+# resolve SPEC: the suite SPEC, <name>=<path>, gives, in name, suite and
+# tree (1 for a build tree, a directory a precision under each level);
+# false when <path> holds none. An empty SPEC is bmb_suite's own: the
+# build tree it is in, or the suite it was installed with.
+resolve() {
+    name=${1%%=*}
+    p=${1#*=}
     tree=0
-fi
+    if [ -z "$1" ]; then
+        here=$(dirname "$0")
+        if [ -f "$here/Makefile" ] && [ -d "$here/../c/level1" ]; then
+            suite=$here/../c
+            tree=1
+        else
+            suite=$BMB_LIBEXEC
+        fi
+    elif [ -d "$p/libexec/blas-microbenchmark/level1" ]; then
+        suite=$p/libexec/blas-microbenchmark
+    elif [ -d "$p/src/c/level1" ]; then
+        suite=$p/src/c
+        tree=1
+    elif [ -d "$p/level1" ]; then
+        suite=$p
+        [ -d "$p/level1/double" ] && tree=1
+    else
+        return 1
+    fi
+    return 0
+}
 
-# bench ROUTINE LEVEL PRECISION: where the benchmark is.
+# bench ROUTINE LEVEL PRECISION: where the suite's benchmark is.
 bench() {
     if [ "$tree" = 1 ]; then
         case $3 in
@@ -286,26 +338,56 @@ bench() {
     fi
 }
 
-selected=
-total=0
-missing=
-for e in $ROUTINES; do
-    r=${e%%:*}
-    p=${e##*:}
+# choose: the routines selected that the suite has, in selected and
+# count, and those it lacks, in missing. A routine newer than an install
+# is left out, unless asked for; a suite with none selected is refused.
+choose() {
+    selected=
+    count=0
+    missing=
+    for e in $ROUTINES; do
+        r=${e%%:*}
+        p=${e##*:}
+        l=${e#*:}
+        l=${l%%:*}
+        in_list "$r" "$routines" && in_list "$l" "$levels" && in_list "$p" "$precisions" || continue
+        if [ ! -x "$(bench "$r" "$l" "$p")" ]; then
+            in_list "$r" "$routines" && [ -n "$routines" ] &&
+                refuse "--routine: $r is not in $suite"
+            missing="$missing $r"
+            continue
+        fi
+        selected="$selected $e"
+        count=$((count + 1))
+    done
+    [ "$count" -gt 0 ] || refuse "no benchmark of $suite is selected"
+}
+
+# backend: the backend the suite was built for, from the --version of its
+# first benchmark selected; every result it writes must record it.
+backend() {
+    e=${selected# }
+    e=${e%% *}
     l=${e#*:}
-    l=${l%%:*}
-    in_list "$r" "$routines" && in_list "$l" "$levels" && in_list "$p" "$precisions" || continue
-    if [ ! -x "$(bench "$r" "$l" "$p")" ]; then
-        # A routine newer than an install is left out, unless asked for.
-        in_list "$r" "$routines" && [ -n "$routines" ] &&
-            refuse "--routine: $r is not in $suite"
-        missing="$missing $r"
-        continue
+    "$(bench "${e%%:*}" "${l%%:*}" "${e##*:}")" --version </dev/null 2>/dev/null |
+        sed -n 's/^BLAS backend: \([^ ]*\).*/\1/p'
+}
+
+# Every suite is checked before anything runs: a line a suite, an empty
+# one for bmb_suite's own.
+specs=${specs%"$nl"}
+total=0
+while IFS= read -r spec; do
+    resolve "$spec" ||
+        refuse "--blas: no blas-microbenchmark in ${spec#*=}: neither an install prefix, a build tree nor the directory of its levels"
+    choose
+    total=$((total + count))
+    if [ -n "$name" ] && [ -z "$(backend)" ]; then
+        refuse "--blas: $name: the backend of $suite cannot be read from its benchmarks' --version"
     fi
-    selected="$selected $e"
-    total=$((total + 1))
-done
-[ "$total" -gt 0 ] || refuse "no benchmark of $suite is selected"
+done <<SPECS
+$specs
+SPECS
 
 if [ -e "$out" ] && [ ! -d "$out" ]; then
     refuse "$out is not a directory"
@@ -313,42 +395,61 @@ fi
 if [ -d "$out" ] && [ -n "$(ls -A "$out")" ]; then
     refuse "$out already holds files, and the results of two runs would mix in the report: give another directory"
 fi
-if [ "$dry" = 0 ]; then
-    mkdir -p "$out" || refuse "$out cannot be created"
-fi
-[ -n "$missing" ] && say "not in $suite, left out:$missing"
 
 i=0
 failed=
-for e in $selected; do
-    r=${e%%:*}
-    p=${e##*:}
-    l=${e#*:}
-    l=${l%%:*}
-    i=$((i + 1))
-    b=$(bench "$r" "$l" "$p")
-    opts=$(profile_options "$r" "$l")
-    # -f and -o last: the benchmark takes the last of an option given twice.
-    if [ "$dry" = 1 ]; then
-        # shellcheck disable=SC2086 # the profile's options, a word each
-        c=$(quoted "$b" $opts "$@" -f json -o "$out/$r.json")
-        printf '%s\n' "${c# }"
-        continue
+while IFS= read -r spec; do
+    resolve "$spec"
+    choose
+    dir=$out${name:+/$name}
+    who=${name:+$name: }
+    expected=
+    [ -n "$name" ] && expected=$(backend)
+    if [ "$dry" = 0 ]; then
+        mkdir -p "$dir" || refuse "$dir cannot be created"
     fi
-    say "$r ($i/$total)"
-    # shellcheck disable=SC2086 # the profile's options, a word each
-    "$b" $opts "$@" -f json -o "$out/$r.json" >"$out/$r.log" 2>&1
-    rc=$?
-    case $rc in
-    0) ;;
-    77) say "$r: skipped, $(tail -n 1 "$out/$r.log")" ;;
-    *)
-        say "$r failed (exit $rc); the end of $out/$r.log:"
-        tail -n 5 "$out/$r.log" | sed 's/^/    /' >&2
-        failed="$failed $r"
-        ;;
-    esac
-done
+    [ -n "$missing" ] && say "${who}not in $suite, left out:$missing"
+    for e in $selected; do
+        r=${e%%:*}
+        p=${e##*:}
+        l=${e#*:}
+        l=${l%%:*}
+        i=$((i + 1))
+        b=$(bench "$r" "$l" "$p")
+        opts=$(profile_options "$r" "$l")
+        # The label, then -f and -o, last: the benchmark takes the last of
+        # an option given twice.
+        if [ "$dry" = 1 ]; then
+            # shellcheck disable=SC2086 # the profile's options, a word each
+            c=$(quoted "$b" $opts "$@" ${name:+--label "$name"} -f json -o "$dir/$r.json")
+            printf '%s\n' "${c# }"
+            continue
+        fi
+        say "$who$r ($i/$total)"
+        # shellcheck disable=SC2086 # the profile's options, a word each
+        "$b" $opts "$@" ${name:+--label "$name"} -f json -o "$dir/$r.json" </dev/null >"$dir/$r.log" 2>&1
+        rc=$?
+        case $rc in
+        0)
+            # A result of another library would be a series under the
+            # wrong name.
+            if [ -n "$expected" ] && ! grep -qxF "  \"backend\": \"$expected\"," "$dir/$r.json"; then
+                got=$(sed -n 's/^  "backend": "\(.*\)",$/\1/p' "$dir/$r.json")
+                say "$who$r records the backend ${got:-none}, not $expected, which $suite was built for"
+                failed="$failed $name/$r"
+            fi
+            ;;
+        77) say "$who$r: skipped, $(tail -n 1 "$dir/$r.log")" ;;
+        *)
+            say "$who$r failed (exit $rc); the end of $dir/$r.log:"
+            tail -n 5 "$dir/$r.log" | sed 's/^/    /' >&2
+            failed="$failed ${name:+$name/}$r"
+            ;;
+        esac
+    done
+done <<SPECS
+$specs
+SPECS
 
 if [ -n "$failed" ]; then
     say "failed:$failed"

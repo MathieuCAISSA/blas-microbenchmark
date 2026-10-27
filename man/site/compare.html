@@ -32,7 +32,10 @@ firefox report.html</pre>
 <p><code>bmb_suite</code> runs every benchmark, or those of some levels, precisions or routines, at the sizes of a profile, into one directory, which <code>bmb_report</code> takes whole. <code>quick</code> measures a few sizes a level, in about a minute; <code>full</code> sweeps from the caches to memory, in several. The options after <code>--</code> go to every benchmark:</p>
 <pre>bmb_suite --profile quick -o results -- -t 1,8
 bmb_report results &gt; report.html</pre>
-<p>Its manual, <a href="bmb_suite.html"><code>bmb_suite</code></a>, has the profiles and how to write your own.</p>
+<p>With <code>--blas &lt;name&gt;=&lt;suite&gt;</code>, once a library, it runs the blas-microbenchmark of each build above, an install prefix or a build tree, into a directory a name, each benchmark labelled with it; each result is checked to record the library its build was made for:</p>
+<pre>bmb_suite --blas openblas=build-openblas --blas blis=build-blis --profile quick -o results
+bmb_report results &gt; report.html</pre>
+<p>Its manual, <a href="bmb_suite.html"><code>bmb_suite</code></a>, has the profiles, how to write your own, and the same with Spack.</p>
 
 <h2 id="noise">Is the difference real?</h2>
 <p>Two runs of the same command never give quite the same numbers. Run each command several times, each into its own file:</p>

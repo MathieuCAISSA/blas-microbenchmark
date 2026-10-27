@@ -29,6 +29,10 @@ releases with the same major version can be compared and read by the same
   after `--` passed on, into one directory for `bmb_report <dir>`. A
   benchmark that fails is said with its log, and the others still run.
   `man bmb_suite`.
+- `bmb_suite --blas <name>=<suite>` (#255), once a library: the
+  blas-microbenchmark built for each, an install prefix or a build tree,
+  into `<dir>/<name>/`, each benchmark labelled with its name, each
+  result checked to record the backend its suite was built for.
 - Level 1 in every precision BLAS has (#226): `sasum`, `scasum`,
   `dzasum`, `caxpy`, `zaxpy`, `scopy`, `ccopy`, `zcopy`, `cdotc`,
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,
