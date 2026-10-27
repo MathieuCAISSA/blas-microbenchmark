@@ -35,9 +35,11 @@ mkdir "$T"
 #  - dgemm under a fourth label, as three versions of the library (one
 #    run, its version string rewritten, since one version is installed):
 #    the history;
-#  - dgemv as a grid, at one thread only: the heatmap.
+#  - dgemv as a grid, at one thread only: the heatmap; with a peak and
+#    a bandwidth, its roofline (#251), as dgemm a's peak gives the level 3
+#    peak line.
 ../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
-../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c -o "$T/dgemm-a.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c --peak-gflops 16 -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
     ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label b -C -o "$T/dgemm-b.json" >/dev/null
 for i in 1 2 3 4; do
@@ -50,7 +52,7 @@ for v in 0.3.9 0.3.26 0.3.28; do
   "blas": "OpenBLAS '"$v"' Haswell",' "$T/hist.json" >"$T/hist-$v.json"
 done
 rm "$T/hist.json"
-../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 -o "$T/dgemv.json" >/dev/null
+../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 --peak-gflops 16 --peak-gbs 20 -o "$T/dgemv.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 
@@ -110,6 +112,22 @@ grep -q '>Run<' "$dom" || fail "no Run column in the provenance table"
 grep -q '<td[^>]*>1 sample, 0.2 s and 0 warm-up calls · ' "$dom" || fail "the Run column does not say how the series were measured"
 grep -q 'band: fastest sample to third quartile' "$dom" || fail "no quartile band for the series measured once"
 echo "ok   rendered: the Run column, and the samples' band, for files with a run block"
+
+# The peak (#251): dgemv's roofline, with its two roofs and a dot a size;
+# dgemm a's peak line; each point's percentage of it in the raw data; and
+# where each peak came from.
+grep -q '<h3>Roofline</h3>' "$dom" || fail "no roofline for dgemv, given a peak and a bandwidth"
+test "$(grep -o 'class="roof"' "$dom" | wc -l)" -ge 2 || fail "the roofline or the level 3 chart draws no roof"
+grep -q 'memory roof 20.0 GB/s, compute roof 16.0 GFLOP/s' "$dom" || fail "the roofline does not give its roofs"
+# The roof bends at the ridge, where the memory roof meets the compute
+# roof: three points, not a slope straight to the end.
+grep -E -q '<path d="M[^"L]*L[^"L]*L[^"L]*"[^>]*class="roof"' "$dom" || fail "the roofline's roof does not bend at the ridge"
+grep -q '% of the roof</title>' "$dom" || fail "the roofline's dots do not say how far they are from the roof"
+# At the thread count the page opens on: a core's 16 times that.
+grep -E -q 'peak, (1 core: 16.0|2 cores: 32.0) GFLOP/s' "$dom" || fail "no peak line on dgemm a's performance chart"
+grep -q '>% of peak<' "$dom" || fail "no % of peak column in the raw data"
+grep -q 'Peak: 16.0 GFLOP/s a core, given in the results' "$dom" || fail "the page does not say where the peak came from"
+echo "ok   rendered: the roofline, the peak line, the percentages, and where the peak came from"
 
 # The kernels the library chose (#162), beside it, where it says them.
 if grep -q '^  "kernels": ' "$T/ddot.json"; then

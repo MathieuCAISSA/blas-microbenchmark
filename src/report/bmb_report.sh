@@ -14,14 +14,19 @@ BMB_ACCEPT_MAJOR='@ACCEPT_MAJOR@'
 
 usage() {
     cat <<'EOF'
-Usage: bmb_report RESULT.json... > report.html
+Usage: bmb_report [OPTION]... RESULT.json... > report.html
 
 Turns the JSON results written by the blas-microbenchmark benchmarks
 (bmb_<routine> -o result.json) into one self-contained HTML page of charts.
 The page needs no network: open it with any browser.
 
-  -h, --help     show this help
-  -V, --version  show the version
+      --peak-gflops <x>  one core's peak, in GFLOP/s, in double precision
+                         (twice that in single): level 3 as a fraction of
+                         it, levels 1 and 2 on a roofline; overrides the
+                         peak the results carry
+      --peak-gbs <y>     the memory bandwidth, in GB/s: the roofline's roof
+  -h, --help             show this help
+  -V, --version          show the version
 
 Full documentation: man bmb_report
 EOF
@@ -103,21 +108,61 @@ json_string() {
     printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's#</#<\\/#g'
 }
 
-case $1 in
--h | --help)
-    usage
-    exit 0
-    ;;
--V | --version)
-    printf 'bmb_report %s\n' "$BMB_VERSION"
-    exit 0
-    ;;
--*)
-    say "unknown option: $1"
-    usage >&2
-    exit 2
-    ;;
-esac
+# peak OPTION VALUE: VALUE as a JSON number if it is a peak, a plain
+# decimal above 0 and up to 1000000, as the benchmarks take it (#249);
+# else says so and exits.
+peak() {
+    case $2 in
+    '' | *[!0-9.]* | .* | *. | *.*.*)
+        say "$1 takes a number above 0 and up to 1000000, e.g. 32 (got '$2')"
+        exit 2
+        ;;
+    esac
+    if ! awk -v v="$2" 'BEGIN { exit !(v + 0 > 0 && v + 0 <= 1000000) }'; then
+        say "$1 takes a number above 0 and up to 1000000, e.g. 32 (got '$2')"
+        exit 2
+    fi
+    # As a JSON number: 007 is not one, 7 is.
+    awk -v v="$2" 'BEGIN { printf "%.15g", v + 0 }'
+}
+
+peak_gflops=
+peak_gbs=
+while [ $# -gt 0 ]; do
+    case $1 in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    -V | --version)
+        printf 'bmb_report %s\n' "$BMB_VERSION"
+        exit 0
+        ;;
+    --peak-gflops | --peak-gbs)
+        [ $# -ge 2 ] || { say "$1 needs a value"; exit 2; }
+        v=$(peak "$1" "$2") || exit 2
+        if [ "$1" = --peak-gflops ]; then peak_gflops=$v; else peak_gbs=$v; fi
+        shift 2
+        ;;
+    --peak-gflops=* | --peak-gbs=*)
+        v=$(peak "${1%%=*}" "${1#*=}") || exit 2
+        case $1 in --peak-gflops=*) peak_gflops=$v ;; *) peak_gbs=$v ;; esac
+        shift
+        ;;
+    --)
+        shift
+        break
+        ;;
+    -*)
+        say "unknown option: $1"
+        usage >&2
+        exit 2
+        ;;
+    *)
+        break
+        ;;
+    esac
+done
 
 if [ $# -eq 0 ]; then
     usage >&2
@@ -143,8 +188,10 @@ cat <<'BMB_REPORT_HEAD'
 @BMB_REPORT_HEAD@
 BMB_REPORT_HEAD
 
-printf '<script type="application/json" id="bmb-meta">{"generator": "bmb_report %s", "date": "%s"}</script>\n' \
-    "$(json_string "$BMB_VERSION")" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+# The peaks are digits and a point, checked above: safe as JSON numbers.
+printf '<script type="application/json" id="bmb-meta">{"generator": "bmb_report %s", "date": "%s"%s%s}</script>\n' \
+    "$(json_string "$BMB_VERSION")" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    "${peak_gflops:+, \"peak_gflops\": $peak_gflops}" "${peak_gbs:+, \"peak_gbs\": $peak_gbs}"
 
 for f in "$@"; do
     printf '<script type="application/json" class="bmb-result">{"file": "%s", "result":\n' \

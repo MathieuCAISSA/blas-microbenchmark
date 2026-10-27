@@ -15,6 +15,12 @@ releases with the same major version can be compared and read by the same
   user knows them, recorded in every output (`# peak:`,
   `peak_gflops_per_core` and `peak_gbs` in the JSON) for `bmb_report` to
   judge the rates by. Never estimated.
+- `bmb_report` judges the rates by the peak (#251), the results' or one
+  given to it with `--peak-gflops` (a core's, in double precision, twice
+  it in single) and `--peak-gbs`: level 3's performance chart gets a line
+  at the peak of the thread count's cores and each point its percentage
+  of it, levels 1 and 2 a roofline a routine, and each routine says where
+  its peak came from.
 - Level 1 in every precision BLAS has (#226): `sasum`, `scasum`,
   `dzasum`, `caxpy`, `zaxpy`, `scopy`, `ccopy`, `zcopy`, `cdotc`,
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,
