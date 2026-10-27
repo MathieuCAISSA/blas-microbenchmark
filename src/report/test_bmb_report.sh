@@ -126,6 +126,45 @@ test "$opened" -eq "$closed" \
 grep -qF 'x<\/script><b>y' "$T/report.html" || fail "the label was not escaped"
 pass "a </script> inside a label stays inside its data block"
 
+# ---- a directory (#253) ----
+# Every *.json under it, at any depth, in name order whatever order they
+# were written in; anything else beside them left alone. A directory and
+# a file mix.
+mkdir -p "$T/dir/b" "$T/dir/a/deep" "$T/empty/sub"
+cp "$T/ddot.json" "$T/dir/b/ddot.json"
+cp "$T/dgemm.json" "$T/dir/b/a dgemm.json"
+cp "$T/ddot.json" "$T/dir/a/deep/ddot.json"
+cp "$T/dgemm.json" "$T/dir/a/dgemm.json"
+echo 'a log' >"$T/dir/a/dgemm.log"
+$R "$T/dir" "$T/ddot.json" >"$T/dir.html" 2>"$T/err" || fail "a directory was refused: $(cat "$T/err")"
+sed -n 's/^<script type="application\/json" class="bmb-result">{"file": "\([^"]*\)", "result":$/\1/p' \
+    "$T/dir.html" >"$T/files"
+printf '%s\n' "$T/dir/a/deep/ddot.json" "$T/dir/a/dgemm.json" "$T/dir/b/a dgemm.json" \
+    "$T/dir/b/ddot.json" "$T/ddot.json" >"$T/expected"
+cmp -s "$T/files" "$T/expected" || fail "a directory and a file did not give their results in order:
+$(diff "$T/expected" "$T/files")"
+pass "a directory: every result under it, at any depth, in name order, then a file"
+
+# refuse_dir DIR MESSAGE NAME WHAT: DIR refused, no page written, with
+# MESSAGE naming NAME; WHAT is what the case is.
+refuse_dir() {
+    if $R "$T/ddot.json" "$1" >"$T/out" 2>"$T/err"; then
+        fail "$1 was accepted"
+    fi
+    test -s "$T/out" && fail "$1: a page was written although it was refused"
+    grep -q "$2" "$T/err" || fail "$1: the message does not say '$2': $(cat "$T/err")"
+    grep -qF "$3" "$T/err" || fail "$1: the message does not name $3: $(cat "$T/err")"
+    pass "refuses $4"
+}
+refuse_dir "$T/empty" "no result" "$T/empty" "a directory without a result"
+cp "$F/not-ours.json" "$T/dir/b/c.json"
+refuse_dir "$T/dir" "not a blas-microbenchmark result" "$T/dir/b/c.json" \
+    "a directory holding a file that is not a result"
+rm "$T/dir/b/c.json"
+cp "$T/ddot.json" "$nl_name"
+mv "$nl_name" "$T/dir/a/"
+refuse_dir "$T/dir" "contains a newline" "$T/dir" "a directory holding a file name with a newline"
+
 # ---- the page knows every routine's level ----
 # Its LEVEL table orders the sections and names each routine's level; a
 # routine missing from it would sort first, with no level, and no other

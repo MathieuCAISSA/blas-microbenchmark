@@ -15,7 +15,7 @@ bmb_report \- one HTML page of charts from blas-microbenchmark results
 .IR x ]
 .RB [ \-\-peak\-gbs
 .IR y ]
-.IR result.json ...
+.RI { result.json | dir }...
 .B >
 .I report.html
 .SH DESCRIPTION
@@ -24,6 +24,10 @@ turns the JSON results written by the benchmarks of
 .BR blas\-microbenchmark (1)
 .RB ( "bmb_\fIroutine\fP \-o result.json" )
 into one HTML page of charts, written to standard output.
+A directory stands for every
+.B *.json
+under it, at any depth, taken in name order, so that the same directory
+always gives the same page.
 .PP
 The page is self-contained: data, styles and script are all inside it and
 nothing is fetched, so it opens from disk on a machine with no network, and
@@ -210,6 +214,14 @@ bmb_dgemm \-m 128:2048 \-t 1:8 \-o results/dgemm\-openblas.json
 bmb_dgemm \-m 128:2048 \-t 1:8 \-o results/dgemm\-blis.json  # BLIS build
 bmb_report results/*.json > report.html
 firefox report.html
+.EE
+.RE
+.PP
+A directory a library, given as a whole:
+.PP
+.RS
+.EX
+bmb_report results/ > report.html  # results/openblas/*.json, results/blis/*.json
 .EE
 .RE
 .PP

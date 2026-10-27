@@ -2,6 +2,7 @@
 # bmb_report -- one HTML page of charts from blas-microbenchmark results.
 #
 #     bmb_report results/*.json > report.html
+#     bmb_report results/ > report.html
 #     firefox report.html
 #
 # The page is self-contained: data, styles and script all live inside it and
@@ -14,10 +15,11 @@ BMB_ACCEPT_MAJOR='@ACCEPT_MAJOR@'
 
 usage() {
     cat <<'EOF'
-Usage: bmb_report [OPTION]... RESULT.json... > report.html
+Usage: bmb_report [OPTION]... RESULT.json|DIR... > report.html
 
 Turns the JSON results written by the blas-microbenchmark benchmarks
 (bmb_<routine> -o result.json) into one self-contained HTML page of charts.
+A directory stands for every *.json under it, at any depth.
 The page needs no network: open it with any browser.
 
       --peak-gflops <x>  one core's peak, in GFLOP/s, in double precision
@@ -175,14 +177,51 @@ if [ -t 1 ]; then
     exit 2
 fi
 
+# A directory stands for every result under it, at any depth, in name
+# order, so that the same directory always gives the same page (#253): a
+# directory a library is what bmb_run writes. The files taken are kept a
+# line each, which a name with a newline would break: refused first.
 status=0
-for f in "$@"; do
-    check_file "$f" || status=1
+files=
+for a in "$@"; do
+    if [ -d "$a" ]; then
+        if [ -n "$(find "$a" -name "*$nl*")" ]; then
+            say "$a: a file name under it contains a newline; rename it"
+            status=1
+            continue
+        fi
+        if ! found=$(find "$a" -name '*.json' ! -type d); then
+            say "$a: cannot be read in full"
+            status=1
+            continue
+        fi
+        if [ -z "$found" ]; then
+            say "$a: no result (*.json) under it"
+            status=1
+            continue
+        fi
+        found=$(printf '%s\n' "$found" | LC_ALL=C sort)
+        while IFS= read -r f; do
+            check_file "$f" || status=1
+        done <<EOF
+$found
+EOF
+        files=$files$found$nl
+    else
+        check_file "$a" || status=1
+        files=$files$a$nl
+    fi
 done
 if [ $status -ne 0 ]; then
     say "no report written"
     exit 1
 fi
+set -f
+IFS=$nl
+# shellcheck disable=SC2086 # a file a line, every name checked above
+set -- $files
+unset IFS
+set +f
 
 cat <<'BMB_REPORT_HEAD'
 @BMB_REPORT_HEAD@
