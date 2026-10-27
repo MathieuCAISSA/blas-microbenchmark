@@ -174,7 +174,7 @@ class BlasMicrobenchmark(AutotoolsPackage):
         assert out.startswith("<!doctype html>"), "bmb_report did not write an HTML page"
         assert '"routine": "ddot"' in out, "the page does not carry the result"
 
-    def test_suite(self):
+    def test_bmb_suite(self):
         """run two benchmarks with bmb_suite into a directory, and report it"""
         run = which(self.prefix.bin.bmb_suite, required=True)
         run("--routine", "ddot,dgemm", "-o", "runs", "--",
