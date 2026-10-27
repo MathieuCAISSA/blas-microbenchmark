@@ -176,6 +176,8 @@ class BlasMicrobenchmark(AutotoolsPackage):
 
     def test_bmb_suite(self):
         """run two benchmarks with bmb_suite into a directory, and report it"""
+        if self.spec.satisfies("@:1.8"):
+            raise SkipTest("bmb_suite came with 1.9.0")
         run = which(self.prefix.bin.bmb_suite, required=True)
         run("--routine", "ddot,dgemm", "-o", "runs", "--",
             "-x", "0", "-i", "1", "-w", "0", "-v", "64", "-m", "16", error=str.split)
@@ -188,7 +190,8 @@ class BlasMicrobenchmark(AutotoolsPackage):
     def test_man_pages(self):
         """check the manual pages, an alias per benchmark included"""
         man1 = self.prefix.share.man.man1
-        for page in ["blas-microbenchmark.1", "bmb_report.1", "bmb_suite.1"] + [
-            os.path.basename(b) + ".1" for b in self._benchmarks()
-        ]:
+        pages = ["blas-microbenchmark.1", "bmb_report.1"]
+        if not self.spec.satisfies("@:1.8"):
+            pages.append("bmb_suite.1")
+        for page in pages + [os.path.basename(b) + ".1" for b in self._benchmarks()]:
             assert os.path.isfile(join_path(man1, page)), f"no {page} in {man1}"

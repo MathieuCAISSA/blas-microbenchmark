@@ -62,8 +62,8 @@ methods on an installed spec:
 | `test_linked_library` | `bmb_dgemm` loads the BLAS of the spec (`ldd`), not another one installed: what a library named differently in Spack and in the distribution would cause |
 | `test_benchmarks` | every benchmark, at a tiny size, says its result was verified |
 | `test_report` | `bmb_report` turns a result file into a page carrying it |
-| `test_bmb_suite` | `bmb_suite` runs two benchmarks of the install into a directory, which `bmb_report` takes |
-| `test_man_pages` | the three pages, and an alias per benchmark |
+| `test_bmb_suite` | `bmb_suite` runs two benchmarks of the install into a directory, which `bmb_report` takes; skipped before 1.9.0 |
+| `test_man_pages` | the three pages (`bmb_suite.1` from 1.9.0), and an alias per benchmark |
 
 Each was seen to fail: a corrupted result (`BMB_VERIFY_CORRUPT=1`), a
 library expected under another prefix, an empty report, a missing alias
