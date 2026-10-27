@@ -57,6 +57,9 @@ With --blas, the same for each library, into DIR/NAME.
                            install prefix or a build tree, into DIR/<name>;
                            once a library (default: the suite bmb_suite
                            is installed with, into DIR)
+      --blas flexiblas:<name>,...
+                           the same for each library FlexiBLAS loads, the
+                           suite bmb_suite is installed with built against it
   -n, --dry-run            print the commands, run nothing
   -h, --help               show this help
   -V, --version            show the version
@@ -157,6 +160,15 @@ quoted() {
     done
 }
 
+# add_name NAME: NAME, a directory of the results and a label, kept
+# plain and given once, added to names.
+add_name() {
+    printf '%s\n' "$1" | grep -Eqx '[A-Za-z0-9_][A-Za-z0-9._-]*' ||
+        refuse "--blas: '$1' is not a name: letters, digits, '.', '_' and '-'"
+    in_list "$1" "$names" && [ -n "$names" ] && refuse "--blas: $1 is given twice"
+    names="$names $1"
+}
+
 out=
 specs=
 names=
@@ -205,20 +217,29 @@ while [ $# -gt 0 ]; do
     --routine) routines=$(words "$opt" "$val" dgemm,ddot '[a-z0-9]+' 'a routine') || exit 2 ;;
     --profile) profile_name=$val ;;
     --blas)
-        # A name is a directory of the results, and a label: kept plain.
-        name=${val%%=*}
+        # A line of specs a library: <name>=<path>, or <name>: for one
+        # FlexiBLAS loads, which no <name> can be mistaken for.
         case $val in
-        *=?*) ;;
-        *) refuse "--blas takes <name>=<suite>, e.g. --blas openblas=/opt/bmb-openblas (got '$val')" ;;
+        flexiblas:*)
+            list=$(printf '%s\n' "${val#flexiblas:}" | tr ',' ' ')
+            case $list in
+            *[!\ ]*) ;;
+            *) refuse "--blas flexiblas: takes the names FlexiBLAS gives its libraries, e.g. --blas flexiblas:OPENBLAS-OPENMP,BLIS-OPENMP" ;;
+            esac
+            for name in $list; do
+                add_name "$name"
+                specs="$specs$name:$nl"
+            done
+            ;;
+        *=?*)
+            add_name "${val%%=*}"
+            case $val in
+            *"$nl"*) refuse "--blas: a suite's path contains a newline" ;;
+            esac
+            specs="$specs$val$nl"
+            ;;
+        *) refuse "--blas takes <name>=<suite> or flexiblas:<name>,..., e.g. --blas openblas=/opt/bmb-openblas (got '$val')" ;;
         esac
-        printf '%s\n' "$name" | grep -Eqx '[A-Za-z0-9_][A-Za-z0-9._-]*' ||
-            refuse "--blas: '$name' is not a name: letters, digits, '.', '_' and '-'"
-        case $val in
-        *"$nl"*) refuse "--blas: a suite's path contains a newline" ;;
-        esac
-        in_list "$name" "$names" && [ -n "$names" ] && refuse "--blas: $name is given twice"
-        names="$names $name"
-        specs="$specs$val$nl"
         ;;
     esac
     unset opt
@@ -296,12 +317,27 @@ EOF
 # resolve SPEC: the suite SPEC, <name>=<path>, gives, in name, suite and
 # tree (1 for a build tree, a directory a precision under each level);
 # false when <path> holds none. An empty SPEC is bmb_suite's own: the
-# build tree it is in, or the suite it was installed with.
+# build tree it is in, or the suite it was installed with; so is <name>:,
+# run with FLEXIBLAS=<name>, which flex is then set to.
 resolve() {
-    name=${1%%=*}
-    p=${1#*=}
+    flex=
+    case $1 in
+    *=*)
+        name=${1%%=*}
+        p=${1#*=}
+        ;;
+    ?*)
+        name=${1%:}
+        flex=$name
+        p=
+        ;;
+    *)
+        name=
+        p=
+        ;;
+    esac
     tree=0
-    if [ -z "$1" ]; then
+    if [ -z "$p" ]; then
         here=$(dirname "$0")
         if [ -f "$here/Makefile" ] && [ -d "$here/../c/level1" ]; then
             suite=$here/../c
@@ -363,13 +399,22 @@ choose() {
     [ "$count" -gt 0 ] || refuse "no benchmark of $suite is selected"
 }
 
+# run COMMAND...: COMMAND, with FLEXIBLAS set to flex if it is.
+run() {
+    if [ -n "$flex" ]; then
+        FLEXIBLAS=$flex "$@"
+    else
+        "$@"
+    fi
+}
+
 # backend: the backend the suite was built for, from the --version of its
 # first benchmark selected; every result it writes must record it.
 backend() {
     e=${selected# }
     e=${e%% *}
     l=${e#*:}
-    "$(bench "${e%%:*}" "${l%%:*}" "${e##*:}")" --version </dev/null 2>/dev/null |
+    run "$(bench "${e%%:*}" "${l%%:*}" "${e##*:}")" --version </dev/null 2>/dev/null |
         sed -n 's/^BLAS backend: \([^ ]*\).*/\1/p'
 }
 
@@ -382,8 +427,19 @@ while IFS= read -r spec; do
         refuse "--blas: no blas-microbenchmark in ${spec#*=}: neither an install prefix, a build tree nor the directory of its levels"
     choose
     total=$((total + count))
-    if [ -n "$name" ] && [ -z "$(backend)" ]; then
-        refuse "--blas: $name: the backend of $suite cannot be read from its benchmarks' --version"
+    if [ -n "$name" ]; then
+        b=$(backend)
+        [ -n "$b" ] || refuse "--blas: $name: the backend of $suite cannot be read from its benchmarks' --version"
+        # FlexiBLAS loads its default for a name it does not know, which
+        # the backend then names: flexiblas/ and the name in lower case.
+        if [ -n "$flex" ]; then
+            case $b in
+            flexiblas/*) ;;
+            *) refuse "--blas flexiblas:$flex: $suite is built against $b, not FlexiBLAS" ;;
+            esac
+            [ "$b" = "flexiblas/$(printf '%s' "$flex" | tr '[:upper:]' '[:lower:]')" ] ||
+                refuse "--blas flexiblas:$flex: FLEXIBLAS=$flex loads $b; 'flexiblas list' gives the names it knows"
+        fi
     fi
 done <<SPECS
 $specs
@@ -422,12 +478,12 @@ while IFS= read -r spec; do
         if [ "$dry" = 1 ]; then
             # shellcheck disable=SC2086 # the profile's options, a word each
             c=$(quoted "$b" $opts "$@" ${name:+--label "$name"} -f json -o "$dir/$r.json")
-            printf '%s\n' "${c# }"
+            printf '%s%s\n' "${flex:+FLEXIBLAS=$flex }" "${c# }"
             continue
         fi
         say "$who$r ($i/$total)"
         # shellcheck disable=SC2086 # the profile's options, a word each
-        "$b" $opts "$@" ${name:+--label "$name"} -f json -o "$dir/$r.json" </dev/null >"$dir/$r.log" 2>&1
+        run "$b" $opts "$@" ${name:+--label "$name"} -f json -o "$dir/$r.json" </dev/null >"$dir/$r.log" 2>&1
         rc=$?
         case $rc in
         0)

@@ -69,6 +69,14 @@ gets `--label <name>`, which the report adds to a series' name only
 between series of the same backend: `test_bmb_suite.sh` gives the
 build tree twice, under two names, for that.
 
+`--blas flexiblas:<name>,...` (#256) is bmb_suite's own suite once a
+library, with `FLEXIBLAS=<name>`. FlexiBLAS loads its default for a name
+it does not know, rather than fail, so the name is checked through the
+backend `--version` gives, `flexiblas/` and the name in lower case (as
+`bmb_build_backend_name()` writes it), before anything runs. The
+stand-in FlexiBLAS of `test_bmb_suite.sh` is a script that answers so;
+the `flexiblas` CI job runs the real one.
+
 ## The page
 
 All of it is in `report.html`: plain JavaScript and SVG, no library, in
