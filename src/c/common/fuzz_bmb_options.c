@@ -5,7 +5,8 @@
  * iteration, a printable label, the output format a .json file implies,
  * an alignment posix_memalign() takes and a padding that keeps every
  * matrix size within the ceiling (#163), times within an hour, a spread
- * within 100 %, a --min-time not past --max-time (#164) -- then described
+ * within 100 %, a --min-time not past --max-time (#164), a peak up to
+ * 10^6 (#249) -- then described
  * into buffers of every small size. A crash, a
  * sanitizer report or a broken promise aborts.
  *
@@ -119,6 +120,8 @@ static void check_options(const bmb_options_t *opts)
           && opts->min_time <= opts->max_time && opts->max_time <= 3600.0,
           "a time out of bounds, or a --min-time past --max-time");
     check(opts->max_spread >= 0.0 && opts->max_spread <= 100.0, "a spread out of bounds");
+    check(opts->peak_gflops >= 0.0 && opts->peak_gflops <= 1.0e6 && opts->peak_gbs >= 0.0
+          && opts->peak_gbs <= 1.0e6, "a peak out of bounds");
     check(max_point(&opts->matrix_dim1) + opts->ld_pad <= size_ceiling()
           && max_point(&opts->matrix_dim2) + opts->ld_pad <= size_ceiling()
           && max_point(&opts->matrix_dim3) + opts->ld_pad <= size_ceiling(),

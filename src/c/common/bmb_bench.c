@@ -915,6 +915,8 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.batch_count = bmb_batch_count;
     rs.batch_mode = bmb_batch_mode;
     rs.label = opts.label;
+    rs.peak_gflops = opts.peak_gflops;
+    rs.peak_gbs = opts.peak_gbs;
     rs.verified = opts.verify;
     rs.argc = argc;
     rs.argv = argv;

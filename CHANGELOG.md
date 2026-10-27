@@ -10,6 +10,11 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `--peak-gflops` and `--peak-gbs` (#249): a core's peak FLOP rate in
+  the routine's precision, and the machine's memory bandwidth, as the
+  user knows them, recorded in every output (`# peak:`,
+  `peak_gflops_per_core` and `peak_gbs` in the JSON) for `bmb_report` to
+  judge the rates by. Never estimated.
 - Level 1 in every precision BLAS has (#226): `sasum`, `scasum`,
   `dzasum`, `caxpy`, `zaxpy`, `scopy`, `ccopy`, `zcopy`, `cdotc`,
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,

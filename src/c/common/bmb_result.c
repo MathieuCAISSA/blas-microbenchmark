@@ -18,6 +18,8 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->batch_count = 1;
     rs->batch_mode = 0;
     rs->label = NULL;
+    rs->peak_gflops = 0.0;
+    rs->peak_gbs = 0.0;
     rs->verified = 0;
     rs->layout = NULL;
     rs->packed = 0;

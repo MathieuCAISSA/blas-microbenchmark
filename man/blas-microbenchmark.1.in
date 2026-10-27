@@ -406,6 +406,26 @@ NUMA binding, SMT off.
 1 to 200 characters, no control characters.
 Default: none, and no label is written.
 .TP
+.BI "\-\-peak\-gflops " x
+Record the peak FLOP rate of one core, in the routine's precision, in
+GFLOP/s:
+.BR bmb_report (1)
+then shows level 3 results as a fraction of it, times the thread count
+(a thread a core), and draws the roofline of levels 1 and 2.
+The frequency times the operations a cycle gives it: two FMA units of 8
+doubles each do 32.
+A plain decimal above 0 and up to 1000000, never estimated: the vector
+width, the FMA units and the frequency under load are not something the
+machine reports reliably.
+Default: none, and no peak is written.
+.TP
+.BI "\-\-peak\-gbs " y
+Record the machine's memory bandwidth, in GB/s, the roofline's memory
+roof: STREAM's triad, or the vendor's figure.
+As
+.BR \-\-peak\-gflops .
+Default: none.
+.TP
 .BI "\-o, \-\-output " file
 Also save the results to
 .IR file .
@@ -830,7 +850,13 @@ With
 .BR \-l ,
 a
 .B "#\ label:"
-line follows the backend and kernels lines, and unless
+line follows the backend and kernels lines, and with
+.B \-\-peak\-gflops
+or
+.BR \-\-peak\-gbs ,
+a
+.B "#\ peak:"
+line after it, the values as given; unless
 .B \-C
 was given, a
 .B "#\ verified:"
@@ -857,6 +883,10 @@ one object holding the same information as fields:
 .BR blas ,
 .BR kernels ,
 .BR label ,
+.B peak_gflops_per_core
+and
+.B peak_gbs
+(as given),
 .BR verified ,
 .B layout
 .RB ( row " or " col ,

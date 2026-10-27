@@ -131,6 +131,7 @@ FUZZ_CORPUS = \
 	fuzz/bmb_options/label \
 	fuzz/bmb_options/layout-memory \
 	fuzz/bmb_options/label-newline \
+	fuzz/bmb_options/peak \
 	fuzz/bmb_options/linear-sweep \
 	fuzz/bmb_options/quick-start \
 	fuzz/bmb_options/refused \

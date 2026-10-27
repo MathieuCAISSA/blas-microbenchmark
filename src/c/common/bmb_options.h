@@ -107,6 +107,11 @@ typedef struct {
 
     char *label;              /* -l, --label; NULL when not given */
 
+    /* The machine's peak, as the user gives it (#249), for the report to
+     * judge the rates by; 0 when not given, never estimated. */
+    double peak_gflops;       /* --peak-gflops: one core's, in GFLOP/s */
+    double peak_gbs;          /* --peak-gbs: the memory bandwidth, GB/s */
+
     char *output_file;        /* -o, --output */
     bmb_output_format_t output_format;
     int output_format_set;    /* whether -f/--output-format was given */
