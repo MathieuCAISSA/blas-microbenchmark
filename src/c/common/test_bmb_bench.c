@@ -15,7 +15,8 @@
  * time-based warm-up and sampling (#164), on stubs whose calls take a
  * known time or none to speak of: --warmup-time once a thread count,
  * --min-time and --max-time in the calls they allow, --max-spread
- * judged on 10 samples at least, or -i, and never more than 100000.
+ * judged on 10 samples at least, or -i, then at each doubling, and never
+ * more than 100000, on a clock the test moves itself (#218).
  * And the default size of each level (#165), on stubs that only record
  * the size they are set up for. */
 
@@ -30,6 +31,7 @@
 #include <time.h>
 
 #include "bmb_bench.h"
+#include "bmb_timer.h"
 
 static int failures;
 static int calls;
@@ -224,8 +226,18 @@ static void *mem_setup(size_t dim1, size_t dim2, unsigned int thread_count)
 /* A call of 200 microseconds, spun on the clock: the time-based options'
  * stub, whose calls are counted. With timed_alternate, every other call
  * takes 400: samples that spread for certain, where equal ones can tie
- * to the clock's resolution and spread by nothing (#183). */
-static int timed_calls, timed_alternate;
+ * to the clock's resolution and spread by nothing (#183); only the first
+ * timed_alternate of them, when it is more than 1.
+ *
+ * With timed_virtual, the call does not spin: it moves the driver's
+ * clock by exactly its length. That clock is bmb_timer_now(), which this
+ * test defines in place of bmb_timer.c's, linked from libbmbcommon.a
+ * only for a program that does not: the real clock, or the virtual one.
+ * --max-spread's stop then sees samples no load on the machine can
+ * spread; on the real clock, one preempted sample among 10 kept it from
+ * stopping there (#218). */
+static int timed_calls, timed_alternate, timed_virtual;
+static double timed_clock;
 
 static double now(void)
 {
@@ -235,16 +247,27 @@ static double now(void)
     return (double) ts.tv_sec + (double) ts.tv_nsec * 1.0e-9;
 }
 
+double bmb_timer_now(void)
+{
+    return timed_virtual ? timed_clock : now();
+}
+
 static void timed_call(void *ctx)
 {
+    const int longer = timed_alternate && timed_calls % 2 != 0
+                       && (timed_alternate == 1 || timed_calls < timed_alternate);
+    const double length = longer ? 400.0e-6 : 200.0e-6;
     const double t0 = now();
-    const double length = (timed_alternate && timed_calls % 2 != 0) ? 400.0e-6 : 200.0e-6;
 
     (void) ctx;
+    timed_calls++;
+    if (timed_virtual) {
+        timed_clock += length;
+        return;
+    }
     while (now() - t0 < length) {
         work += 1.0;
     }
-    timed_calls++;
 }
 
 /* Runs `bench` with -v 8 -x 0 -b 1 -i 1 -C followed by the arguments
@@ -420,17 +443,30 @@ int main(void)
         status = timed_run(&tb, &n, &secs, w, z, T, Tt, (char *) NULL);
         check(status == EXIT_SUCCESS && n > 1 && n <= 101 && secs >= 0.02,
               "--min-time 0.02: samples until they add up to 0.02 s");
+        /* On the virtual clock (#218): calls of exactly 200 us, or 400 and
+         * 200 in turn for the first 10, then 200. */
+        timed_virtual = 1;
         status = timed_run(&tb, &n, &secs, w, z, e, loose, (char *) NULL);
         check(status == EXIT_SUCCESS && n == 10, "--max-spread 50: calls this regular stop at 10 samples");
         status = timed_run(&tb, &n, &secs, w, z, e, loose, i, i20, (char *) NULL);
         check(status == EXIT_SUCCESS && n == 20, "--max-spread 50 -i 20: at -i, past 10");
+        /* 5 of the first 10 at 400 us: a spread of 2/3 of the median.
+         * Judged again at 20, with 15 at 200, it is 1/4: met there. */
+        timed_alternate = 10;
+        status = timed_run(&tb, &n, &secs, w, z, e, loose, (char *) NULL);
+        timed_alternate = 0;
+        check(status == EXIT_SUCCESS && n == 20,
+              "--max-spread 50 not met at 10 samples: judged again at 20, and met there");
         /* Calls of 200 and 400 us in turn spread by 2/3 of their median:
-         * --max-spread 10 is never met. */
+         * --max-spread 10 is never met. On the real clock, the first 10
+         * samples of a loaded machine could take the 0.02 s alone. */
         timed_alternate = 1;
+        timed_clock = 0.0;
         status = timed_run(&tb, &n, &secs, w, z, e, tight, E, Et, (char *) NULL);
         timed_alternate = 0;
-        check(status == EXIT_SUCCESS && n > 10 && n <= 101 && secs >= 0.02,
+        check(status == EXIT_SUCCESS && n > 10 && n <= 101 && timed_clock >= 0.02,
               "--max-spread never met: --max-time 0.02 stops it");
+        timed_virtual = 0;
 
         /* Calls of a microsecond or so: the cap, and -i past it. */
         tb.call = call;
