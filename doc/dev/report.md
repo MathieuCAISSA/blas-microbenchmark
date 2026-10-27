@@ -4,7 +4,8 @@ How `bmb_report` and its page are built and tested. Start at
 [AGENTS.md](../../AGENTS.md).
 
 `bmb_report results/*.json > report.html` turns any number of JSON results
-into one HTML page of charts (#1). The page must open from `file://` with
+(or `bmb_report results/`, every one under a directory, #253) into one
+HTML page of charts (#1). The page must open from `file://` with
 no network, so everything is inside it: data, styles, script, nothing
 fetched. `test_bmb_report.sh` enforces that, among other things, by
 refusing any external `src`/`href`.

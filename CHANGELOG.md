@@ -21,6 +21,8 @@ releases with the same major version can be compared and read by the same
   at the peak of the thread count's cores and each point its percentage
   of it, levels 1 and 2 a roofline a routine, and each routine says where
   its peak came from.
+- `bmb_report <dir>` (#253): a directory stands for every result under
+  it, at any depth, in name order.
 - Level 1 in every precision BLAS has (#226): `sasum`, `scasum`,
   `dzasum`, `caxpy`, `zaxpy`, `scopy`, `ccopy`, `zcopy`, `cdotc`,
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,
