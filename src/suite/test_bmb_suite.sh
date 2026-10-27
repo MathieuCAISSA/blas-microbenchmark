@@ -9,7 +9,10 @@
 # fails, the next one still run, one that skips, one missing. With --blas
 # (#255): the build tree given twice under two names, a directory and a
 # label each; the forms a suite takes; a result recording another backend
-# than its suite's; and what --blas refuses.
+# than its suite's; and what --blas refuses. With --blas flexiblas: (#256),
+# on a stand-in FlexiBLAS: FLEXIBLAS set a library, a library it does not
+# know refused, a suite not built against it refused; on this build, the
+# library loaded now when it is built against FlexiBLAS, else refused.
 set -e
 
 R=./bmb_suite
@@ -155,7 +158,9 @@ pass "bmb_report takes the directory: $n results"
 # fake PATH [BACKEND [RECORDED]]: a stand-in benchmark, a script. It
 # reads a line of its input, which would take the next suite of --blas
 # were that bmb_suite's list. Its --version names BACKEND (fake by
-# default; none for -). Otherwise it says
+# default; none for -; for flexiblas, flexiblas/ and the library FLEXIBLAS
+# names, OPENBLAS or BLIS, else OPENBLAS, FlexiBLAS's default here, in
+# lower case). Otherwise it says
 # its arguments and, as its name has it, fails (ddot), skips (dgemm) or
 # writes a result recording RECORDED (BACKEND by default) to its last
 # argument, where bmb_suite puts -o's file.
@@ -165,6 +170,13 @@ fake() {
         printf '#!/bin/sh\nversion=%s\nrecorded=%s\n' "${2:-fake}" "${3:-${2:-fake}}"
         cat <<'EOF'
 read -r line
+if [ "$version" = flexiblas ]; then
+    case ${FLEXIBLAS-} in
+    OPENBLAS | BLIS) version=flexiblas/$(printf '%s' "$FLEXIBLAS" | tr '[:upper:]' '[:lower:]') ;;
+    *) version=flexiblas/openblas ;;
+    esac
+    recorded=$version
+fi
 if [ "$1" = --version ]; then
     [ "$version" = - ] || echo "BLAS backend: $version (a stand-in)"
     exit 0
@@ -298,6 +310,78 @@ for w in -l -lx --label=x --lab; do
     refused "$w: with --blas, bmb_suite labels" -o "$T/none" --blas one="$top" -- "$w" x
 done
 pass "--blas refused: no name or suite, a name that is no directory name or given twice, a path with no suite, a backend unread, a label passed on"
+
+# ---- --blas flexiblas: (#256) ----
+# On a stand-in install built against a stand-in FlexiBLAS, which knows
+# OPENBLAS and BLIS: FLEXIBLAS set a library, a directory and a label
+# each, each result recording the library loaded.
+mkdir -p "$T/fbin"
+sed "s|^BMB_LIBEXEC=.*|BMB_LIBEXEC='$(pwd)/$T/flibexec'|" "$R" >"$T/fbin/bmb_suite"
+chmod +x "$T/fbin/bmb_suite"
+fake "$T/flibexec/level1/bmb_daxpy" flexiblas
+fake "$T/flibexec/level1/bmb_dcopy" flexiblas
+"$T/fbin/bmb_suite" --blas flexiblas:OPENBLAS,BLIS -o "$T/flex" -- -i 1 >"$T/out" 2>"$T/err" ||
+    fail "--blas flexiblas:OPENBLAS,BLIS: $(cat "$T/err")"
+for name in OPENBLAS BLIS; do
+    for r in daxpy dcopy; do
+        grep -qx "  \"backend\": \"flexiblas/$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')\"," "$T/flex/$name/$r.json" ||
+            fail "$T/flex/$name/$r.json did not load $name"
+        grep -q -- "-i 1 --label $name -f json" "$T/flex/$name/$r.log" || fail "$name's $r: $(cat "$T/flex/$name/$r.log")"
+    done
+done
+grep -q '^bmb_suite: BLIS: dcopy (4/4)$' "$T/err" || fail "no progress line for BLIS's last: $(cat "$T/err")"
+pass "--blas flexiblas:OPENBLAS,BLIS: FLEXIBLAS set a library, a directory and a label each"
+
+"$T/fbin/bmb_suite" -n --blas flexiblas:BLIS --blas p="$T/prefix" --routine daxpy -o "$T/dry" >"$T/cmds" 2>"$T/err" ||
+    fail "flexiblas: and a suite, -n: $(cat "$T/err")"
+grep -qx "FLEXIBLAS=BLIS $(pwd)/$T/flibexec/level1/bmb_daxpy --label BLIS -f json -o $T/dry/BLIS/daxpy.json" "$T/cmds" ||
+    fail "the FlexiBLAS library's command: $(cat "$T/cmds")"
+grep -qx "$T/prefix/libexec/blas-microbenchmark/level1/bmb_daxpy --label p -f json -o $T/dry/p/daxpy.json" "$T/cmds" ||
+    fail "the suite's command, beside: $(cat "$T/cmds")"
+pass "--blas flexiblas: beside --blas <name>=<suite>; -n gives FLEXIBLAS"
+
+# refused_f MESSAGE ARG...: the stand-in FlexiBLAS install refuses ARG...
+refused_f() {
+    msg=$1
+    shift
+    set +e
+    "$T/fbin/bmb_suite" -o "$T/none" "$@" >"$T/out" 2>"$T/err"
+    rc=$?
+    set -e
+    test "$rc" = 2 || fail "bmb_suite $*: exit $rc, not 2: $(cat "$T/err")"
+    grep -q -- "$msg" "$T/err" || fail "bmb_suite $*: no '$msg' in: $(cat "$T/err")"
+    test -e "$T/none" && fail "bmb_suite $*: refused, but made $T/none"
+    return 0
+}
+refused_f "FLEXIBLAS=NETLIB loads flexiblas/openblas; 'flexiblas list' gives the names" --blas flexiblas:BLIS,NETLIB
+refused_f "--blas flexiblas: takes the names" --blas flexiblas:
+refused_f "--blas flexiblas: takes the names" --blas flexiblas:,
+refused_f "BLIS is given twice" --blas flexiblas:BLIS,OPENBLAS,BLIS
+refused_f "BLIS is given twice" --blas flexiblas:BLIS --blas BLIS="$T/prefix"
+refused_f "'a/b' is not a name" --blas flexiblas:a/b
+set +e
+"$T/bin/bmb_suite" -o "$T/none" --blas flexiblas:BLIS >"$T/out" 2>"$T/err"
+rc=$?
+set -e
+test "$rc" = 2 && grep -q "is built against fake, not FlexiBLAS" "$T/err" ||
+    fail "a suite not built against FlexiBLAS: exit $rc, $(cat "$T/err")"
+pass "--blas flexiblas: refused: a library FlexiBLAS does not know, no name, one given twice, a suite not built against it"
+
+# The build tree's own: in the CI job that builds against FlexiBLAS, the
+# library loaded now, through bmb_suite; anywhere else, refused.
+case $built in
+flexiblas/*)
+    lib=$(printf '%s' "${built#flexiblas/}" | tr '[:lower:]' '[:upper:]')
+    $R --blas flexiblas:"$lib" -o "$T/own" --routine ddot -- -x 0 -i 1 -w 0 -v 64 >"$T/out" 2>"$T/err" ||
+        fail "--blas flexiblas:$lib on the build tree: $(cat "$T/err")"
+    grep -qx "  \"backend\": \"$built\"," "$T/own/$lib/ddot.json" || fail "the build tree's $lib: not $built"
+    pass "--blas flexiblas:$lib, on this build against FlexiBLAS"
+    ;;
+*)
+    refused "is built against $built, not FlexiBLAS" -o "$T/none" --blas flexiblas:OPENBLAS
+    pass "--blas flexiblas: refused on this build, against $built"
+    ;;
+esac
 
 rm -rf "$T"
 echo "all checks passed"

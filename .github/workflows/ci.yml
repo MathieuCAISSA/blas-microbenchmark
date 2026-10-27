@@ -785,6 +785,24 @@ jobs:
           build/src/report/bmb_report openblas.json blis.json > report.html
           grep -c 'class="bmb-result"' report.html | grep -qx 2
 
+      # The same through bmb_suite, which sets FLEXIBLAS a library: a
+      # directory each, each result naming the library it loaded, and a
+      # name FlexiBLAS does not know refused before anything runs.
+      - name: bmb_suite, two libraries
+        run: |
+          S=build/src/suite/bmb_suite
+          $S --blas flexiblas:OPENBLAS-OPENMP,BLIS-OPENMP --routine ddot,dgemv,dgemm -o suite \
+            -- -x 0 -i 1 -w 0 -v 4096 -m 64
+          for r in ddot dgemv dgemm; do
+            grep -q '"backend": "flexiblas/openblas-openmp",' suite/OPENBLAS-OPENMP/$r.json
+            grep -q '"backend": "flexiblas/blis-openmp",' suite/BLIS-OPENMP/$r.json
+          done
+          build/src/report/bmb_report suite > suite.html
+          grep -c 'class="bmb-result"' suite.html | grep -qx 6
+          if $S --blas flexiblas:NO-SUCH -o none 2>err.txt; then exit 1; fi
+          grep "FLEXIBLAS=NO-SUCH loads" err.txt
+          test ! -e none
+
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -33,6 +33,10 @@ releases with the same major version can be compared and read by the same
   blas-microbenchmark built for each, an install prefix or a build tree,
   into `<dir>/<name>/`, each benchmark labelled with its name, each
   result checked to record the backend its suite was built for.
+- `bmb_suite --blas flexiblas:<name>,...` (#256): one build against
+  FlexiBLAS, run once a library with `FLEXIBLAS` set to its name, into
+  `<dir>/<name>/`; a name FlexiBLAS does not know refused before
+  anything runs.
 - Level 1 in every precision BLAS has (#226): `sasum`, `scasum`,
   `dzasum`, `caxpy`, `zaxpy`, `scopy`, `ccopy`, `zcopy`, `cdotc`,
   `snrm2`, `scnrm2`, `dznrm2`, `sscal`, `cscal`, `zscal`, `sswap`,

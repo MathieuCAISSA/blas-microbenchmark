@@ -20,6 +20,8 @@ bmb_suite \- run the blas\-microbenchmark suite into one directory of results
 .IR profile ]
 .RB [ \-\-blas
 .IR name = suite ]...
+.RB [ \-\-blas
+.BI flexiblas: name ,...]
 .RB [ \-n ]
 .B \-o
 .I dir
@@ -188,6 +190,40 @@ which
 builds, and
 .B "spack \-e . location \-i"
 then finds, as above.
+.PP
+A build against FlexiBLAS loads the library
+.B FLEXIBLAS
+names when a benchmark starts, and records it
+.RB ( flexiblas/openblas\-openmp ).
+.B \-\-blas
+.BI flexiblas: name ,...
+runs the suite
+.B bmb_suite
+is installed with, which must be built against FlexiBLAS, once a
+library, with
+.B FLEXIBLAS
+set to its name, into
+.IR dir / name :
+.PP
+.RS
+.EX
+bmb_suite \-\-blas flexiblas:OPENBLAS\-OPENMP,BLIS\-OPENMP \-\-profile quick \-o results
+.EE
+.RE
+.PP
+.B "flexiblas list"
+gives the names.
+For a name it does not know, FlexiBLAS loads its default library, so
+each name is checked before anything runs: the benchmarks'
+.B \-\-version
+must record it.
+Both forms of
+.B \-\-blas
+can be given together.
+What it costs: FlexiBLAS must be installed with its libraries (Fedora
+packages it, and Spack builds it; Debian and Ubuntu do not), and its
+indirection, a call through a pointer, shows on the smallest level 1
+calls.
 .SS Options for every benchmark
 The words after
 .B \-\-
@@ -263,6 +299,13 @@ Default: the suite
 .B bmb_suite
 is installed with, into
 .IR dir .
+.TP
+.BI "\-\-blas flexiblas:" name ,...
+The same for each library the FlexiBLAS that the suite
+.B bmb_suite
+is installed with is built against loads, with
+.B FLEXIBLAS
+set to its name.
 .TP
 .B "\-n, \-\-dry\-run"
 Print the commands, one a line, and run nothing.
