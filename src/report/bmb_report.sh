@@ -200,7 +200,11 @@ for a in "$@"; do
             status=1
             continue
         fi
-        found=$(printf '%s\n' "$found" | LC_ALL=C sort)
+        if ! found=$(printf '%s\n' "$found" | LC_ALL=C sort); then
+            say "$a: its files could not be sorted"
+            status=1
+            continue
+        fi
         while IFS= read -r f; do
             check_file "$f" || status=1
         done <<EOF
