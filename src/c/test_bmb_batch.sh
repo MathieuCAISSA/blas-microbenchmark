@@ -1,11 +1,11 @@
 #!/bin/sh
 # Checks that -b cannot batch the routines whose operand is restored
-# before every call (the trmv, trsv, tpsv, trmm and trsm families, every
-# precision the table lists): N calls in a row would run on an operand
-# drifting towards infinity or denormals, and the timing would stop
-# meaning anything (#48). They stay at one call per sample, which the
-# JSON gives as calls_per_sample and as the run block's batch, with a
-# warning; another routine keeps the batch it was given, without one.
+# before every call (the trmv, trsv, tpsv, tbsv, trmm and trsm families,
+# every precision the table lists): N calls in a row would run on an
+# operand drifting towards infinity or denormals, and the timing would
+# stop meaning anything (#48). They stay at one call per sample, which
+# the JSON gives as calls_per_sample and as the run block's batch, with
+# a warning; another routine keeps the batch it was given, without one.
 # Tiny sizes only.
 set -e
 
@@ -24,7 +24,7 @@ calls() {
     sed -n 's/^ *"calls_per_sample": \([0-9]*\),$/\1/p' "$1"
 }
 
-grep -v '^#' "${srcdir:-.}/routines.txt" | awk '$5 ~ /^(trmv|trsv|tpsv|trmm|trsm)$/ { print $1, $2, $3 }' >"$T/reset" ||
+grep -v '^#' "${srcdir:-.}/routines.txt" | awk '$5 ~ /^(trmv|trsv|tpsv|tbsv|trmm|trsm)$/ { print $1, $2, $3 }' >"$T/reset" ||
     fail "no triangular routines in routines.txt"
 n=0
 while read -r r level prec; do
@@ -41,7 +41,7 @@ while read -r r level prec; do
         || fail "$name -b 50: the run block does not give the batch size used, 1"
     n=$((n + 1))
 done <"$T/reset"
-test "$n" -ge 18 || fail "only $n triangular routines found"
+test "$n" -ge 20 || fail "only $n triangular routines found"
 echo "ok   -b 50: the $n triangular multiplies and solves stay at one call per sample, say so, and record it"
 
 level2/double/bmb_dgemv -C -x 0 -i 2 -b 50 -s -m 8 -o "$T/dgemv.json" >/dev/null 2>"$T/dgemv.err" \

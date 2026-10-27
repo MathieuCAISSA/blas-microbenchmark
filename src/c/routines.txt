@@ -59,6 +59,8 @@ sgemv      2      s          mn     gemv
 dgemv      2      d          mn     gemv
 cgemv      2      c          mn     gemv
 zgemv      2      z          mn     gemv
+sgbmv      2      s          nk     gbmv
+dgbmv      2      d          nk     gbmv
 sger       2      s          mn     ger
 dger       2      d          mn     ger
 cgeru      2      c          mn     geru
@@ -89,6 +91,8 @@ ctrsv      2      c          n      trsv
 ztrsv      2      z          n      trsv
 stpsv      2      s          n      tpsv
 dtpsv      2      d          n      tpsv
+stbsv      2      s          nk     tbsv
+dtbsv      2      d          nk     tbsv
 sgemm      3      s          mkn    gemm
 dgemm      3      d          mkn    gemm
 cgemm      3      c          mkn    gemm

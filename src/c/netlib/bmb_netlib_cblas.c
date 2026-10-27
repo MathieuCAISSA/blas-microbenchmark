@@ -53,6 +53,19 @@ extern void ccopy_(const int *n, const void *x, const int *incx, void *y, const 
 extern void zcopy_(const int *n, const void *x, const int *incx, void *y, const int *incy);
 extern float complex cdotc_(const int *n, const void *x, const int *incx,
                             const void *y, const int *incy);
+/* Band storage (#246). */
+extern void sgbmv_(const char *trans, const int *m, const int *n, const int *kl, const int *ku,
+                   const float *alpha, const float *a, const int *lda, const float *x, const int *incx,
+                   const float *beta, float *y, const int *incy, size_t trans_len);
+extern void stbsv_(const char *uplo, const char *trans, const char *diag, const int *n, const int *k,
+                   const float *a, const int *lda, float *x, const int *incx, size_t uplo_len,
+                   size_t trans_len, size_t diag_len);
+extern void dgbmv_(const char *trans, const int *m, const int *n, const int *kl, const int *ku,
+                   const double *alpha, const double *a, const int *lda, const double *x, const int *incx,
+                   const double *beta, double *y, const int *incy, size_t trans_len);
+extern void dtbsv_(const char *uplo, const char *trans, const char *diag, const int *n, const int *k,
+                   const double *a, const int *lda, double *x, const int *incx, size_t uplo_len,
+                   size_t trans_len, size_t diag_len);
 /* Packed storage (#244). */
 extern void sspmv_(const char *uplo, const int *n, const float *alpha, const float *ap,
                    const float *x, const int *incx, const float *beta, float *y, const int *incy,
@@ -738,6 +751,62 @@ void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float a
     } else {
         sger_(&N, &M, &alpha, Y, &incY, X, &incX, A, &lda);
     }
+}
+
+/* Band storage (#246). Row-major band storage is column-major band
+ * storage of the transpose: a gbmv flips its transpose and swaps M and
+ * N, and KL and KU, the transpose's diagonals below being the matrix's
+ * above; a tbsv flips its triangle and transpose, as dtrsv. */
+void cblas_sgbmv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA, const int M, const int N,
+                 const int KL, const int KU, const float alpha, const float *A, const int lda,
+                 const float *X, const int incX, const float beta, float *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char trans = bmb_trans(TransA);
+
+        sgbmv_(&trans, &M, &N, &KL, &KU, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+    } else {
+        const char trans = bmb_trans_flipped(TransA);
+
+        sgbmv_(&trans, &N, &M, &KU, &KL, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+    }
+}
+
+void cblas_stbsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const int K, const float *A, const int lda,
+                 float *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+
+    stbsv_(&uplo, &trans, &diag, &N, &K, A, &lda, X, &incX, 1, 1, 1);
+}
+
+void cblas_dgbmv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA, const int M, const int N,
+                 const int KL, const int KU, const double alpha, const double *A, const int lda,
+                 const double *X, const int incX, const double beta, double *Y, const int incY)
+{
+    if (order == CblasColMajor) {
+        const char trans = bmb_trans(TransA);
+
+        dgbmv_(&trans, &M, &N, &KL, &KU, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+    } else {
+        const char trans = bmb_trans_flipped(TransA);
+
+        dgbmv_(&trans, &N, &M, &KU, &KL, &alpha, A, &lda, X, &incX, &beta, Y, &incY, 1);
+    }
+}
+
+void cblas_dtbsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const int K, const double *A, const int lda,
+                 double *X, const int incX)
+{
+    const char diag = bmb_diag(Diag);
+    const char uplo = (order == CblasColMajor) ? bmb_uplo(Uplo) : bmb_uplo_flipped(Uplo);
+    const char trans = (order == CblasColMajor) ? bmb_trans(TransA) : bmb_trans_flipped(TransA);
+
+    dtbsv_(&uplo, &trans, &diag, &N, &K, A, &lda, X, &incX, 1, 1, 1);
 }
 
 /* Packed storage (#244). Row-major packed Upper is column-major packed

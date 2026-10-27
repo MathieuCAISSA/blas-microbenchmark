@@ -27,6 +27,8 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
         */level2/*)
             case $name in
                 bmb_?gemv | bmb_?ger | bmb_?geru | bmb_?gerc) sizes="-m 100,1000,2000 -M 37,1000" ;;
+                # -M is a band's K: narrow, wide, and past N
+                bmb_?gbmv | bmb_?tbsv) sizes="-m 100,1000,2000 -M 1,37,2000" ;;
                 *) sizes="-m 100,1000,2000" ;;
             esac
             ;;

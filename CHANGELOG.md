@@ -41,6 +41,11 @@ releases with the same major version can be compared and read by the same
   trsv on one triangle kept in N(N+1)/2 elements, with no leading
   dimension: `--ld-pad` is ignored for them, with a warning, and their
   results record no padding. 100 benchmarks.
+- Band storage (#246): `sgbmv`, `dgbmv`, `stbsv` and `dtbsv`, gemv and
+  trsv on a band of K diagonals each side of the main one (gbmv,
+  measured square) or off it (tbsv): `-m` is N and `-M` is K. Without
+  `-M`, K is N and the band covers the whole matrix; the rates count the
+  band's elements inside it. 104 benchmarks.
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,
