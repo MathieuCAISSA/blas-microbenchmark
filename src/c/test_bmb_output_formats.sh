@@ -95,6 +95,21 @@ level3/double/bmb_dgemm -x 0 -i 1 -m 8 -M 8 --label 'say "hi"' -o fmtl.json -f j
 grep -q '^# label: say "hi"$' fmtl.txt || fail "text output carries no label line"
 grep -q '"label": "say \\"hi\\""' fmtl.json || fail "json label is missing or not escaped"
 
+# The machine's peak as given (#249): a comment line in the text and the
+# CSV, two fields in the JSON, each as typed; none without the options,
+# and the one given alone when only one is.
+if grep -q '^# peak:' fmt.csv || grep -q '"peak_' fmt.json; then
+    fail "a peak was written although none was given"
+fi
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 --peak-gflops 12.3456789 --peak-gbs 1000000 -o fmtp.json >fmtp.txt \
+    || fail "the --peak-gflops --peak-gbs run failed"
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 --peak-gbs 204.8 -o fmtp.csv >/dev/null || fail "the --peak-gbs run failed"
+grep -q '^# peak: 12.3456789 GFLOP/s a core, 1000000 GB/s (given)$' fmtp.txt || fail "text output: $(grep '^# peak' fmtp.txt)"
+grep -q '^  "peak_gflops_per_core": 12.3456789,$' fmtp.json || fail "json has no peak_gflops_per_core 12.3456789, to the last digit"
+grep -q '^  "peak_gbs": 1000000,$' fmtp.json || fail "json has no peak_gbs 1000000, written in full"
+grep -q '^# peak: 204.8 GB/s (given)$' fmtp.csv || fail "csv with --peak-gbs alone: $(grep '^# peak' fmtp.csv)"
+echo "ok   a given peak, in every format, as typed; none without"
+
 # The median and the quartiles of the samples are in every output (#161),
 # after -s's mean, standard deviation, slowest and batch size, which stay
 # where they were, so that a CSV read by column position keeps its
@@ -214,6 +229,6 @@ grep -q '^Frequency: governor performance, turbo off$' version.txt \
     || fail "-V did not describe the x86 fixture's frequency: $(cat version.txt)"
 rm -f version.txt
 
-rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt freq.txt freq.err freq.csv freq.json stat.csv stat.json \
+rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt fmtp.json fmtp.txt fmtp.csv freq.txt freq.err freq.csv freq.json stat.csv stat.json \
     k.csv k.txt k.dims k.json args.json args.txt
 echo "ok   output formats"

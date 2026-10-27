@@ -34,11 +34,14 @@
 #define BMB_DEFAULT_WARMUP_TIME  0.2
 #define BMB_DEFAULT_MAX_TIME     10.0
 #define BMB_MAX_SECONDS          3600.0
+/* --peak-gflops and --peak-gbs: a figure a person typed, not a typo or a
+ * unit slip (a core's 32 GFLOP/s, a node's 400 GB/s, an HBM part's 3000). */
+#define BMB_MAX_PEAK             1.0e6
 
 /* The routine's arguments (#221) have no short option: past the
  * characters, so that getopt_long tells them apart. */
 enum { BMB_OPT_TRANS = 256, BMB_OPT_UPLO, BMB_OPT_SIDE, BMB_OPT_DIAG, BMB_OPT_BATCH_COUNT,
-       BMB_OPT_BATCH_MODE };
+       BMB_OPT_BATCH_MODE, BMB_OPT_PEAK_GFLOPS, BMB_OPT_PEAK_GBS };
 
 const char *bmb_batch_mode_name(int mode)
 {
@@ -97,6 +100,8 @@ static const struct option bmb_long_options[] = {
     {"max-spread",     required_argument, NULL, 'e'},
     {"max-time",       required_argument, NULL, 'E'},
     {"label",          required_argument, NULL, 'l'},
+    {"peak-gflops",    required_argument, NULL, BMB_OPT_PEAK_GFLOPS},
+    {"peak-gbs",       required_argument, NULL, BMB_OPT_PEAK_GBS},
     {"output",         required_argument, NULL, 'o'},
     {"output-format",  required_argument, NULL, 'f'},
     {"help",           no_argument,       NULL, 'h'},
@@ -386,11 +391,11 @@ static int bmb_option_range(const char *str, const char *option, bmb_range_t *ou
 /* Parses a duration or a percentage: digits, then optionally a point and
  * more digits ("0.2", "10"), between 0 and `max`. Nothing strtod would
  * take besides: no sign, no exponent, no "inf" or "nan". */
-static int bmb_option_decimal(const char *str, const char *option, double max, double *out)
+/* A plain decimal (digits, then optionally a point and digits), or -1:
+ * no sign, exponent, inf or bare point, whatever strtod() would take. */
+static double bmb_plain_decimal(const char *str)
 {
     const char *p = str;
-    char msg[256];
-    double value;
 
     while (*p >= '0' && *p <= '9') {
         p++;
@@ -405,10 +410,34 @@ static int bmb_option_decimal(const char *str, const char *option, double max, d
             p = str;
         }
     }
-    value = (p > str && *p == '\0') ? strtod(str, NULL) : -1.0;
+    return (p > str && *p == '\0') ? strtod(str, NULL) : -1.0;
+}
+
+static int bmb_option_decimal(const char *str, const char *option, double max, double *out)
+{
+    char msg[256];
+    const double value = bmb_plain_decimal(str);
+
     if (value < 0.0 || value > max) {
         snprintf(msg, sizeof(msg), "Invalid value for %s (expected a number from 0 to %g, e.g. 0.5).",
                  option, max);
+        bmb_log_error(msg);
+        return -1;
+    }
+    *out = value;
+    return 0;
+}
+
+/* --peak-gflops and --peak-gbs: a plain decimal, as the times are, but a
+ * peak of 0 would make every rate infinitely far above it. */
+static int bmb_option_peak(const char *str, const char *option, double *out)
+{
+    char msg[256];
+    const double value = bmb_plain_decimal(str);
+
+    if (value <= 0.0 || value > BMB_MAX_PEAK) {
+        snprintf(msg, sizeof(msg), "Invalid value for %s (expected a number above 0 and up to %.0f, e.g. 32).",
+                 option, BMB_MAX_PEAK);
         bmb_log_error(msg);
         return -1;
     }
@@ -515,6 +544,8 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
     opts->min_time = 0.0;
     opts->max_spread = 0.0;
     opts->max_time = BMB_DEFAULT_MAX_TIME;
+    opts->peak_gflops = 0.0;
+    opts->peak_gbs = 0.0;
 
     opts->output_file = NULL;
     opts->output_format = BMB_FORMAT_CSV;
@@ -730,6 +761,18 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             }
             break;
 
+        case BMB_OPT_PEAK_GFLOPS:
+            if (bmb_option_peak(optarg, "--peak-gflops", &opts->peak_gflops) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
+        case BMB_OPT_PEAK_GBS:
+            if (bmb_option_peak(optarg, "--peak-gbs", &opts->peak_gbs) != 0) {
+                return BMB_OPTIONS_ERROR;
+            }
+            break;
+
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
                 return BMB_OPTIONS_ERROR;
@@ -855,6 +898,10 @@ void bmb_options_print_help(const char *prog_name)
         "  -E, --max-time <s>            stop taking samples at s seconds whatever -T and -e ask\n"
         "                                 (default: %g)\n"
         "  -l, --label <text>            tag the results, e.g. \"turbo off\" (default: none)\n"
+        "      --peak-gflops <x>         record one core's peak, in GFLOP/s, in the routine's\n"
+        "                                 precision, for bmb_report (default: none)\n"
+        "      --peak-gbs <y>            record the machine's memory bandwidth, in GB/s, for\n"
+        "                                 bmb_report (default: none)\n"
         "  -o, --output <filename>       also save results to filename\n"
         "  -f, --output-format <fmt>     csv or json (default: csv, or inferred from -o's extension)\n"
         "  -h, --help                    show this help\n"

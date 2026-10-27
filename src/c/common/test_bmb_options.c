@@ -259,6 +259,51 @@ static void test_arguments(void)
     }
 }
 
+/* The machine's peak (#249): a plain decimal above 0, up to 10^6, as the
+ * times are parsed; 0 when not given. */
+static void test_peak(void)
+{
+    static const struct {
+        const char *opt, *val;
+        int ok;
+        double want;
+    } cases[] = {
+        {"--peak-gflops", "32", 1, 32.0}, {"--peak-gflops", "2.5", 1, 2.5},
+        {"--peak-gflops", "1000000", 1, 1.0e6}, {"--peak-gbs", "204.8", 1, 204.8},
+        {"--peak-gflops", "0", 0, 0.0}, {"--peak-gbs", "0.0", 0, 0.0},
+        {"--peak-gflops", "1000000.5", 0, 0.0}, {"--peak-gflops", "-1", 0, 0.0},
+        {"--peak-gflops", "1e3", 0, 0.0}, {"--peak-gbs", "inf", 0, 0.0},
+        {"--peak-gbs", "100GB", 0, 0.0}, {"--peak-gbs", "", 0, 0.0},
+    };
+    bmb_options_t opts;
+    size_t i;
+
+    if (parse_args(&opts, ARGS_END) != BMB_OPTIONS_OK || opts.peak_gflops != 0.0 || opts.peak_gbs != 0.0) {
+        fail("peak", "set when not given");
+    } else {
+        ok("no --peak-gflops or --peak-gbs: neither set");
+    }
+    bmb_options_free(&opts);
+    for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        char what[96];
+        double got = -1.0;
+        bmb_options_status_t st = parse_args(&opts, cases[i].opt, cases[i].val, ARGS_END);
+
+        snprintf(what, sizeof(what), "%s '%s' %s", cases[i].opt, cases[i].val,
+                 cases[i].ok ? "taken" : "refused");
+        if (st == BMB_OPTIONS_OK) {
+            got = strcmp(cases[i].opt, "--peak-gflops") == 0 ? opts.peak_gflops : opts.peak_gbs;
+            bmb_options_free(&opts);
+        }
+        if ((st == BMB_OPTIONS_OK) != cases[i].ok
+            || (cases[i].ok && fabs(got - cases[i].want) > 1.0e-12 * cases[i].want)) {
+            fail(what, "got the wrong status or value");
+        } else {
+            ok(what);
+        }
+    }
+}
+
 /* Batched calls (#159): a count from 1 to 1000000, strictly; a mode by
  * its name. Neither set when not given. */
 static void test_batch(void)
@@ -404,6 +449,7 @@ int main(void)
     test_dim2();
     test_arguments();
     test_batch();
+    test_peak();
     test_output_format();
 
     /* ---- the four sweep forms ---- */

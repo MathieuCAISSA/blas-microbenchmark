@@ -216,6 +216,16 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
     }
+    if (rs->peak_gflops > 0.0 || rs->peak_gbs > 0.0) {
+        fprintf(out, "# peak: ");
+        if (rs->peak_gflops > 0.0) {
+            fprintf(out, "%.15g GFLOP/s a core%s", rs->peak_gflops, rs->peak_gbs > 0.0 ? ", " : "");
+        }
+        if (rs->peak_gbs > 0.0) {
+            fprintf(out, "%.15g GB/s", rs->peak_gbs);
+        }
+        fprintf(out, " (given)\n");
+    }
     if (rs->verified) {
         fprintf(out, "# verified: every point, against a reference, before it was timed\n");
     }
@@ -556,6 +566,12 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
         fprintf(out, "  \"label\": ");
         bmb_print_json_string(out, rs->label);
         fprintf(out, ",\n");
+    }
+    if (rs->peak_gflops > 0.0) {
+        fprintf(out, "  \"peak_gflops_per_core\": %.15g,\n", rs->peak_gflops);
+    }
+    if (rs->peak_gbs > 0.0) {
+        fprintf(out, "  \"peak_gbs\": %.15g,\n", rs->peak_gbs);
     }
     if (rs->verified) {
         fprintf(out, "  \"verified\": true,\n");

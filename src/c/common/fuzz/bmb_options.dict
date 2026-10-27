@@ -68,5 +68,7 @@
 "--diag="
 "--batch-count="
 "--batch-mode="
+"--peak-gflops="
+"--peak-gbs="
 "group"
 "strided"

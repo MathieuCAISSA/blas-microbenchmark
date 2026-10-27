@@ -52,6 +52,8 @@ typedef struct {
     unsigned int batch_count; /* matrices per call, under BMB_ARG_BATCH */
     int batch_mode;           /* a bmb_batch_mode_t */
     const char *label;      /* --label, or NULL; owned by the options */
+    double peak_gflops;     /* --peak-gflops, a core's; 0 when not given */
+    double peak_gbs;        /* --peak-gbs; 0 when not given */
     int verified;           /* --verify: every point was checked */
     const char *layout;     /* "row" or "col" for routines with a matrix;
                              * NULL for vector routines, which have none */
