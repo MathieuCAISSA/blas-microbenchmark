@@ -11,7 +11,7 @@ Three places, for three readers:
   about 140 once, because nobody found anything in it.
 - **The man pages** are the reference: `blas-microbenchmark(1)` for every
   benchmark (options, sweeps, how a number is measured, threads, output,
-  exit status, examples) and `bmb_report(1)`. A new option, output field
+  exit status, examples), `bmb_report(1)` and `bmb_suite(1)`. A new option, output field
   or behaviour goes there, not into the README.
 - **The guides** on the site (`man/site/`, #115) are for a task: install,
   a first run, comparing libraries, the libraries one by one, a cluster,

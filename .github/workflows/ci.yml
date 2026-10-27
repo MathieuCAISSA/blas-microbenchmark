@@ -88,11 +88,13 @@ jobs:
           fi
           P=stage/opt/bmb-test
           test -x $P/bin/bmb_report
+          test -x $P/bin/bmb_suite
           test -x $P/libexec/blas-microbenchmark/level1/bmb_ddot
           test -x $P/libexec/blas-microbenchmark/level2/bmb_dgemv
           test -x $P/libexec/blas-microbenchmark/level3/bmb_dgemm
           test -f $P/share/man/man1/blas-microbenchmark.1
           test -f $P/share/man/man1/bmb_report.1
+          test -f $P/share/man/man1/bmb_suite.1
           grep -qx '.so man1/blas-microbenchmark.1' $P/share/man/man1/bmb_dgemm.1
           # The page gives the install path, as the reader sees it.
           MANPAGER=cat MANWIDTH=200 man -l $P/share/man/man1/blas-microbenchmark.1 \
@@ -101,6 +103,13 @@ jobs:
           $P/bin/bmb_report r.json > r.html
           grep -qi '^<!doctype html>' r.html
           find stage -type f | sort
+          # bmb_suite runs the benchmarks where they were installed, not
+          # where they were staged: installed for real, it finds them.
+          sudo make install >/dev/null
+          /opt/bmb-test/bin/bmb_suite --routine ddot,dgemm -o runs -- -x 0 -i 1 -w 0 -v 64 -m 16
+          test -s runs/ddot.json && test -s runs/dgemm.json
+          /opt/bmb-test/bin/bmb_report runs > runs.html
+          test "$(grep -c 'class="bmb-result"' runs.html)" = 2
 
       - name: Upload test logs
         if: always()

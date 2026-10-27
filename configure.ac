@@ -552,6 +552,7 @@ AC_CONFIG_FILES([
   man/Makefile
   src/c/Makefile
   src/report/Makefile
+  src/suite/Makefile
   src/c/common/Makefile
   src/c/level1/Makefile
   src/c/level2/Makefile

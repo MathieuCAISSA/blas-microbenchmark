@@ -28,6 +28,12 @@ firefox report.html</pre>
 <!-- picture dgemm-ratio | dgemm, BLIS relative to OpenBLAS at 8 threads, on a log scale around x1 | Each library against the reference. -->
 <p>The <a href="outputs.html">Outputs</a> page shows each part.</p>
 
+<h2 id="suite">The whole suite at once</h2>
+<p><code>bmb_suite</code> runs every benchmark, or those of some levels, precisions or routines, at the sizes of a profile, into one directory, which <code>bmb_report</code> takes whole. <code>quick</code> measures a few sizes a level, in about a minute; <code>full</code> sweeps from the caches to memory, in several. The options after <code>--</code> go to every benchmark:</p>
+<pre>bmb_suite --profile quick -o results -- -t 1,8
+bmb_report results &gt; report.html</pre>
+<p>Its manual, <a href="bmb_suite.html"><code>bmb_suite</code></a>, has the profiles and how to write your own.</p>
+
 <h2 id="noise">Is the difference real?</h2>
 <p>Two runs of the same command never give quite the same numbers. Run each command several times, each into its own file:</p>
 <pre>for run in 1 2 3 4; do

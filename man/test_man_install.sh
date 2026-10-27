@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installs the man pages into a staging root and opens them the way a user
-# would: man blas-microbenchmark, man bmb_report, and man bmb_<routine> for
+# would: man blas-microbenchmark, man bmb_report, man bmb_suite, and man bmb_<routine> for
 # every benchmark, through its alias. Then uninstalls, and checks nothing
 # is left behind.
 set -e
@@ -15,7 +15,7 @@ mandir_staged=$stage$mandir
 for page in $PAGES; do
     test -f "$stage$man1dir/$page" || fail "$page is not installed in $man1dir"
 done
-ok "both pages installed in $man1dir"
+ok "the $(echo $PAGES | wc -w) pages installed in $man1dir"
 
 # MANPAGER=cat and no terminal: plain text. MANWIDTH wide enough that the
 # install path, which the check below looks for, is not broken.
@@ -25,7 +25,8 @@ show() {
 
 show blas-microbenchmark | grep -q '^BLAS-MICROBENCHMARK(1)' || fail "man blas-microbenchmark: $(cat "$T/man.err")"
 show bmb_report | grep -q '^BMB_REPORT(1)' || fail "man bmb_report: $(cat "$T/man.err")"
-ok "man blas-microbenchmark and man bmb_report open the pages"
+show bmb_suite | grep -q '^BMB_SUITE(1)' || fail "man bmb_suite: $(cat "$T/man.err")"
+ok "man blas-microbenchmark, man bmb_report and man bmb_suite open the pages"
 
 for r in $ROUTINES; do
     test -f "$stage$man1dir/bmb_$r.1" || fail "no alias page for bmb_$r"

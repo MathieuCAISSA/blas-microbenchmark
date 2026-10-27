@@ -197,6 +197,24 @@ test "$(status "$REPORT")" -eq 2 || fail "bmb_report with no argument did not ex
 test "$(status "$REPORT" --no-such-option)" -eq 2 || fail "bmb_report with an unknown option did not exit 2"
 ok "bmb_report exits 0, 1 or 2 when bmb_report(1) says, and writes nothing when it refuses"
 
+section bmb_suite.1 "EXIT STATUS" | grep -q '^0 when' || fail "bmb_suite(1) EXIT STATUS no longer starts with 0"
+test "$(status "$SUITE" -o "$T/run" --routine ddot -- -x 0 -i 1 -w 0 -v 8)" -eq 0 || fail "bmb_suite on ddot did not exit 0"
+test "$(BMB_VERIFY_CORRUPT=1 status "$SUITE" -o "$T/run-bad" --routine ddot -- -x 0 -i 1 -w 0 -v 8)" -eq 1 ||
+    fail "bmb_suite with a wrong result did not exit 1"
+test "$(status "$SUITE")" -eq 2 || fail "bmb_suite with no argument did not exit 2"
+test "$(status "$SUITE" -o "$T/run" --routine ddot)" -eq 2 || fail "bmb_suite into a directory holding files did not exit 2"
+ok "bmb_suite exits 0, 1 or 2 when bmb_suite(1) says"
+
+# The profiles bmb_suite(1) shows are the ones it ships, line for line.
+for p in quick full; do
+    sed -n "/^profile_$p() {\$/,/^}\$/p" "$S/../src/suite/bmb_suite.sh" | sed '1,2d;$d' | sed '$d' | grep -v '^#' >"$T/shipped"
+    test -s "$T/shipped" || fail "no $p profile read from bmb_suite.sh"
+    unescape bmb_suite.1 | awk -v p="$p" '/^\.B / { last = $2 } /^\.EX/ { on = (last == p); next } /^\.EE/ { on = 0 } on' >"$T/shown"
+    cmp -s "$T/shipped" "$T/shown" || fail "bmb_suite(1) does not show the $p profile bmb_suite ships:
+$(diff "$T/shipped" "$T/shown")"
+done
+ok "bmb_suite(1) shows the quick and full profiles as bmb_suite ships them"
+
 # ---- examples ---------------------------------------------------------
 # Every command in an example (.EX) block: the program exists, and every
 # option it is given is one of the program's. An option taking a value

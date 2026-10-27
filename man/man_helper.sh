@@ -5,9 +5,10 @@
 # make check -- unless BMB_MAN_STRICT is set, as in the CI job dedicated to
 # the man pages, where a SKIP would let the pages go unchecked.
 
-PAGES="blas-microbenchmark.1 bmb_report.1"
+PAGES="blas-microbenchmark.1 bmb_report.1 bmb_suite.1"
 BENCH=../src/c/level3/double/bmb_dgemm
 REPORT=../src/report/bmb_report
+SUITE=../src/suite/bmb_suite
 
 fail() {
     echo "FAIL: $*"
@@ -82,7 +83,8 @@ options_of() {
 }
 
 # check_commands FILE: every command in FILE, one per line, that runs a
-# benchmark or bmb_report runs one that exists, with options it takes;
+# benchmark, bmb_report or bmb_suite runs one that exists, with options it
+# takes (after bmb_suite's --, a benchmark's);
 # commands_checked is set to how many it checked. Not in a $(...): there, a fail
 # would only end the subshell.
 check_commands() {
@@ -93,6 +95,7 @@ check_commands() {
         while [ $# -gt 0 ]; do
             case $1 in
                 bmb_report) prog=$REPORT ;;
+                bmb_suite) prog=$SUITE ;;
                 bmb_*) prog=$(bin_of "${1#bmb_}") ;;
                 *) shift; continue ;;
             esac
@@ -102,6 +105,13 @@ check_commands() {
             while [ $# -gt 0 ]; do
                 case $1 in
                     '#' | '>' | '|') break ;;
+                    # bmb_suite passes what follows on to every benchmark.
+                    --)
+                        test "$prog" = "$SUITE" || fail "\"$line\" gives -- to $(basename "$prog")"
+                        options_of "$BENCH" >"$T/opts"
+                        shift
+                        continue
+                        ;;
                     -*)
                         known=$(awk -v o="$1" '$1 == o || $2 == o { print ($3 == "<" ? "arg" : "flag") }' "$T/opts")
                         test -n "$known" || fail "\"$line\" uses $1, which $(basename "$prog") does not take"

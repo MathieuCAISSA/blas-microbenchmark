@@ -72,6 +72,9 @@ ok "blas-microbenchmark.1 gives the same $(wc -l <"$T/help") numeric defaults as
 compare options "$REPORT" bmb_report.1
 ok "bmb_report.1 documents exactly the $(wc -l <"$T/help") options of --help"
 
+compare options "$SUITE" bmb_suite.1
+ok "bmb_suite.1 documents exactly the $(wc -l <"$T/help") options of --help"
+
 # The benchmarks share one parser, so one of them speaks for all; but the
 # page says so, and that is worth checking too.
 for b in ../src/c/level1/double/bmb_ddot ../src/c/level2/double/bmb_dgemv; do
@@ -81,9 +84,10 @@ for b in ../src/c/level1/double/bmb_ddot ../src/c/level2/double/bmb_dgemv; do
 done
 ok "the benchmarks all take the same options, as the page says"
 
-# Both --help texts point at their man page.
+# Every --help text points at its man page.
 "$BENCH" --help | grep -q 'man blas-microbenchmark' || fail "$BENCH --help does not point at the man page"
 "$REPORT" --help | grep -q 'man bmb_report' || fail "$REPORT --help does not point at the man page"
+"$SUITE" --help | grep -q 'man bmb_suite' || fail "$SUITE --help does not point at the man page"
 ok "--help points at the man page"
 
 rm -rf "$T"

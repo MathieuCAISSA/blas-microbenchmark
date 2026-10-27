@@ -115,6 +115,14 @@ Run each command several times, into separate files, and the page also
 shows how far the runs spread, and which differences are beyond that
 noise. `man bmb_report` has the details.
 
+To run every benchmark, or a selection, at a profile's sizes, into one
+directory that `bmb_report` takes whole (`man bmb_suite`):
+
+```bash
+bmb_suite --profile quick -o results -- -t 1,8
+bmb_report results > report.html
+```
+
 ## The benchmarks
 
 <!-- BEGIN routines (readme): written by src/c/routines.sh -->
@@ -132,8 +140,8 @@ GFLOP/s.
 
 ### From a release
 
-The [Quick start](#quick-start) above. `make install` puts `bmb_report` in
-`/usr/local/bin`, the manual pages in `/usr/local/share/man`, and the
+The [Quick start](#quick-start) above. `make install` puts `bmb_suite` and
+`bmb_report` in `/usr/local/bin`, the manual pages in `/usr/local/share/man`, and the
 benchmarks by BLAS level under `/usr/local/libexec/blas-microbenchmark`,
 not on the `PATH`; to run them all by name:
 
@@ -268,7 +276,7 @@ environment: [packaging/reframe](packaging/reframe/README.md).
 ## Documentation
 
 - **[The manual](https://mathieucaissa.github.io/blas-microbenchmark/)**,
-  online or as `man blas-microbenchmark` and `man bmb_report`, with
+  online or as `man blas-microbenchmark`, `man bmb_suite` and `man bmb_report`, with
   [what a run produces](https://mathieucaissa.github.io/blas-microbenchmark/outputs.html)
   (table, CSV, JSON, the report). Before installing:
   `man -l man/blas-microbenchmark.1` from the build directory.

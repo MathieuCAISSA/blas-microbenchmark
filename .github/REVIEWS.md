@@ -93,6 +93,12 @@ it comes from in brackets.
   `reframe` job then skipped (#148).
 - [ ] Text is not taken for binary: `grep -I` skips a file that is not
   UTF-8 (#15).
+- [ ] A test of the Spack package is named for what it checks, never with
+  a name Spack's own package class has: a method `test_suite` replaced
+  Spack's attribute of that name, and every `spack test run` failed
+  (#258). One of something new skips the releases before it
+  (`self.spec.satisfies("@:1.8")`): the `spack` job tests the latest
+  release's install too (#258 again).
 - [ ] A change to what `bmb_options_parse()` accepts keeps the checks of
   `fuzz_bmb_options` true of everything it accepts, and a new form of
   option gets a seed in `src/c/common/fuzz/bmb_options/`, listed in
