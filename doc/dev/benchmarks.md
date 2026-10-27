@@ -82,6 +82,19 @@ packed elements rather than from a dense copy: `--verify` is on by
 default, and an N x N matrix of doubles would take twice the packed
 one's memory, four times a float's.
 
+**Band storage (#246).** gbmv and tbsv keep a band of K diagonals on
+each side of the main one (gbmv, measured square with KL = KU = K) or
+off it in a triangle (tbsv), each column of the matrix (or row, with
+`--layout row`) a column (row) of the band array, of leading dimension
+2K + 1 (K + 1), which `--ld-pad` pads. Their size is `nk`: `-m` is N,
+`-M` is K. BLAS takes a K of N or more, the band reaching past the
+corners, which a sweep without `-M` gives; their counts take only the
+band's elements inside the matrix. `src/c/level2/bmb_band.h` holds the
+index and the product their checks need, read from the band as
+`bmb_packed.h` reads a packed matrix. gbmv refuses a K whose 2K + 1
+diagonals would not fit an `int`, which the parser, bounding K alone,
+does not.
+
 **Other precisions: families (#6, #67, #166).** The routines of one
 operation in several precisions are a family, written once:
 `src/c/level3/bmb_gemm.c` is sgemm, dgemm, cgemm and zgemm, compiled once

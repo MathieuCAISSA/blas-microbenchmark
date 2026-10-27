@@ -108,6 +108,19 @@ void cblas_zgemv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA,
 void cblas_sger(const CBLAS_ORDER order, const int M, const int N, const float alpha,
                 const float *X, const int incX, const float *Y, const int incY,
                 float *A, const int lda);
+/* Band storage (#246). */
+void cblas_sgbmv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA, const int M, const int N,
+                 const int KL, const int KU, const float alpha, const float *A, const int lda,
+                 const float *X, const int incX, const float beta, float *Y, const int incY);
+void cblas_stbsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const int K, const float *A, const int lda,
+                 float *X, const int incX);
+void cblas_dgbmv(const CBLAS_ORDER order, const CBLAS_TRANSPOSE TransA, const int M, const int N,
+                 const int KL, const int KU, const double alpha, const double *A, const int lda,
+                 const double *X, const int incX, const double beta, double *Y, const int incY);
+void cblas_dtbsv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const CBLAS_TRANSPOSE TransA,
+                 const CBLAS_DIAG Diag, const int N, const int K, const double *A, const int lda,
+                 double *X, const int incX);
 /* Packed storage (#244). */
 void cblas_sspmv(const CBLAS_ORDER order, const CBLAS_UPLO Uplo, const int N, const float alpha,
                  const float *Ap, const float *X, const int incX, const float beta, float *Y,

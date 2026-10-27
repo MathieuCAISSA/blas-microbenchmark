@@ -67,8 +67,9 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         *)
             case $r in
                 sgemm | dgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
-                ?gemv | ?ger | ?geru | ?gerc | ?symm | ?hemm | ?syrk | ?herk \
-                    | ?syr2k | ?her2k | ?trmm | ?trsm) sizes="-m 7,33,64 -M 5,64" ;;
+                # gbmv's and tbsv's -M is the band's K, 5 and past N.
+                ?gemv | ?gbmv | ?tbsv | ?ger | ?geru | ?gerc | ?symm | ?hemm \
+                    | ?syrk | ?herk | ?syr2k | ?her2k | ?trmm | ?trsm) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac
             ;;
@@ -86,9 +87,9 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $r in
         [sd]gemm) variants=$(combos --trans=NN,NT,TN,TT) ;;
         [cz]gemm) variants=$(combos --trans=NN,NT,TN,TT,CN,TC) ;;
-        ?gemv) variants=$(combos --trans=$t3) ;;
+        ?gemv | ?gbmv) variants=$(combos --trans=$t3) ;;
         ?trmm | ?trsm) variants=$(combos --side=L,R --uplo=U,L --trans=$t3 --diag=N,U) ;;
-        ?trmv | ?trsv | ?tpsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
+        ?trmv | ?trsv | ?tpsv | ?tbsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
         ?symm | ?hemm) variants=$(combos --side=L,R --uplo=U,L) ;;
         ?herk | ?her2k) variants=$(combos --uplo=U,L --trans=N,C) ;;
         ?syrk | ?syr2k) variants=$(combos --uplo=U,L --trans=N,T) ;;

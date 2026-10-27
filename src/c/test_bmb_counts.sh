@@ -71,6 +71,16 @@ while read -r r level prec kind family; do
             else if (op == "symv" || op == "spmv") { f = num(2 * m * m); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
             else if (op == "syr") { f = num(m * (m + 1)); b = num(e * (m * (m + 1) + m)) }
             else if (op == "syr2") { f = num(2 * m * (m + 1)); b = num(e * (m * (m + 1) + 2 * m)) }
+            else if (op == "gbmv") {
+                # the elements of the band inside the matrix, K = n diagonals each side
+                eb = n >= m - 1 ? m * m : m * (2 * n + 1) - n * (n + 1)
+                f = num(2 * eb); b = num(e * (eb + 3 * m))
+            }
+            else if (op == "tbsv") {
+                # the elements of the band inside the triangle
+                eb = n >= m - 1 ? m * (m + 1) / 2 : m * (n + 1) - n * (n + 1) / 2
+                f = num(2 * eb); b = num(e * (eb + 2 * m))
+            }
             else if (op == "hemv") { f = num(2 * m * m * cf); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
             else if (op == "her") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) + m)) }
             else if (op == "her2") { f = num(2 * m * (m + 1) * cf); b = num(e * (m * (m + 1) + 2 * m)) }

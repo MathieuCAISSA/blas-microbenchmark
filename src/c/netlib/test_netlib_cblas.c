@@ -871,6 +871,66 @@ int main(void)
         check("zherk.col.UC", zc, want3, 2 * N * N);
     }
 
+    /* ---- #246: band storage, row-major, an M x N band with KL = 2 below
+     * and KU = 1 above, narrower than the matrix on both sides: dgbmv and sgbmv against dgemv on the same matrix
+     * dense, both transposes; dtbsv and stbsv Lower/NoTrans, K = 1, by
+     * substitution. Row-major, element (i, j) is at column KL + j - i of
+     * row i. ---- */
+    {
+        const int kl = 2, ku = 1, ldb = kl + ku + 1;
+        double ab[M * 4], dense[M * N], got[M];
+        float fab[M * 4], fx[M], fy[M];
+        int t;
+
+        fill(ab, M * ldb);
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                dense[i * N + j] = (j >= i - kl && j <= i + ku) ? ab[i * ldb + kl + j - i] : 0.0;
+            }
+        }
+        to_f(fab, ab, M * ldb);
+        for (t = 0; t < 2; t++) {
+            const int nx = t == 0 ? N : M, ny = t == 0 ? M : N;
+
+            fill(x, nx);
+            fill_off(y, ny, 3);
+            to_f(fx, x, nx);
+            to_f(fy, y, ny);
+            memcpy(want, y, sizeof(double) * ny);
+            cblas_dgemv(CblasRowMajor, t == 0 ? CblasNoTrans : CblasTrans, M, N, 0.5, dense, N, x, 1, 0.25,
+                        want, 1);
+            cblas_dgbmv(CblasRowMajor, t == 0 ? CblasNoTrans : CblasTrans, M, N, kl, ku, 0.5, ab, ldb, x, 1,
+                        0.25, y, 1);
+            check(t == 0 ? "dgbmv.N" : "dgbmv.T", y, want, ny);
+            cblas_sgbmv(CblasRowMajor, t == 0 ? CblasNoTrans : CblasTrans, M, N, kl, ku, 0.5f, fab, ldb, fx,
+                        1, 0.25f, fy, 1);
+            to_d(got, fy, ny);
+            check(t == 0 ? "sgbmv.N" : "sgbmv.T", got, want, ny);
+        }
+
+        /* Lower, K = 1: row i keeps (i, i - 1) at column 0, (i, i) at 1 */
+        fill_tri(a, M, 0);
+        for (i = 0; i < M; i++) {
+            ab[i * 2] = i > 0 ? a[i * M + i - 1] : 99.0;
+            ab[i * 2 + 1] = a[i * M + i];
+        }
+        to_f(fab, ab, M * 2);
+        fill(tmp, M);
+        memcpy(x, tmp, sizeof(double) * M);
+        to_f(fx, tmp, M);
+        cblas_dtbsv(CblasRowMajor, CblasLower, CblasNoTrans, CblasNonUnit, M, 1, ab, 2, x, 1);
+        cblas_stbsv(CblasRowMajor, CblasLower, CblasNoTrans, CblasNonUnit, M, 1, fab, 2, fx, 1);
+        for (l = 0; l < 2; l++) {
+            if (l == 1) {
+                to_d(x, fx, M);
+            }
+            for (i = 0; i < M; i++) {
+                got[i] = a[i * M + i] * x[i] + (i > 0 ? a[i * M + i - 1] * x[i - 1] : 0.0);
+            }
+            check_tol(l == 0 ? "dtbsv.LN" : "stbsv.LN", got, tmp, M, l == 0 ? 1e-12 : 1e-5);
+        }
+    }
+
     /* ---- #244: packed storage, row-major: dspmv and sspmv Upper against
      * dsymv on the same matrix unpacked, dtpsv and stpsv Upper/Trans by
      * substitution. Row-major packed Upper keeps each row from the
