@@ -68,13 +68,13 @@ while read -r r level prec kind family; do
             else if (op == "gemv") { f = num(2 * m * n * cf); b = num(e * (m * n + n + 2 * m)) }
             else if (op == "ger") { f = num(2 * m * n); b = num(e * (2 * m * n + m + n)) }
             else if (op == "geru" || op == "gerc") { f = num(2 * m * n * cf); b = num(e * (2 * m * n + m + n)) }
-            else if (op == "symv") { f = num(2 * m * m); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
+            else if (op == "symv" || op == "spmv") { f = num(2 * m * m); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
             else if (op == "syr") { f = num(m * (m + 1)); b = num(e * (m * (m + 1) + m)) }
             else if (op == "syr2") { f = num(2 * m * (m + 1)); b = num(e * (m * (m + 1) + 2 * m)) }
             else if (op == "hemv") { f = num(2 * m * m * cf); b = num(e * (m * (m + 1) / 2 + 3 * m)) }
             else if (op == "her") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) + m)) }
             else if (op == "her2") { f = num(2 * m * (m + 1) * cf); b = num(e * (m * (m + 1) + 2 * m)) }
-            else if (op == "trmv" || op == "trsv") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) / 2 + 2 * m)) }
+            else if (op == "trmv" || op == "trsv" || op == "tpsv") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) / 2 + 2 * m)) }
             else if (op == "gemm" || op == "symm" || op == "hemm") { f = num(2 * m * m * n * cf); p = num(e * (m * m + 2 * m * n)) }
             else if (op == "syrk" || op == "herk") { f = num(n * m * (m + 1) * cf); p = num(e * (m * n + m * m)) }
             else if (op == "syr2k" || op == "her2k") { f = num(2 * n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }

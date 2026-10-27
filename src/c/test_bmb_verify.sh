@@ -74,9 +74,11 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
             ;;
     esac
 
+    # A packed matrix (#244) has no leading dimension to pad.
     case $b in
-        level1/*) layouts=none ;;
-        *) layouts="row col row:3 col:3" ;;
+        level1/*) layouts=none others=none ;;
+        */bmb_?spmv | */bmb_?tpsv) layouts="row col" others="row col" ;;
+        *) layouts="row col row:3 col:3" others="row col:3" ;;
     esac
     # The routine's variants, each a word of --option=value joined by
     # commas, the defaults first.
@@ -86,11 +88,11 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         [cz]gemm) variants=$(combos --trans=NN,NT,TN,TT,CN,TC) ;;
         ?gemv) variants=$(combos --trans=$t3) ;;
         ?trmm | ?trsm) variants=$(combos --side=L,R --uplo=U,L --trans=$t3 --diag=N,U) ;;
-        ?trmv | ?trsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
+        ?trmv | ?trsv | ?tpsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
         ?symm | ?hemm) variants=$(combos --side=L,R --uplo=U,L) ;;
         ?herk | ?her2k) variants=$(combos --uplo=U,L --trans=N,C) ;;
         ?syrk | ?syr2k) variants=$(combos --uplo=U,L --trans=N,T) ;;
-        ?symv | ?syr | ?syr2 | ?hemv | ?her | ?her2) variants=$(combos --uplo=U,L) ;;
+        ?symv | ?spmv | ?syr | ?syr2 | ?hemv | ?her | ?her2) variants=$(combos --uplo=U,L) ;;
         *) variants=default ;;
     esac
     first=${variants%% *}
@@ -99,7 +101,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         # The defaults with two thread counts, in every layout; each other
         # variant, which changes the call and the check, not the threads,
         # with one, row-major and column-major padded.
-        case $v in "$first") lays=$layouts threads=1,2 ;; *) lays="row col:3" threads=1 ;; esac
+        case $v in "$first") lays=$layouts threads=1,2 ;; *) lays=$others threads=1 ;; esac
         for variant in $lays; do
             layout=${variant%%:*}
             pad=${variant#*:}

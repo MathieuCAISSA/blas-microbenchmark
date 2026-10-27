@@ -34,6 +34,7 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
     esac
     case $f in
         */level1/*) layouts=- ;;
+        */bmb_?spmv | */bmb_?tpsv) layouts="row col" ;;
         *) layouts="row col col:8" ;;
     esac
     for variant in $layouts; do

@@ -84,6 +84,11 @@ typedef struct {
      * 0: dim1 is swept over --matrix-dim1 (level 2 & 3 routines). */
     int use_vector_range;
 
+    /* 1: the matrix is packed (#244), one triangle's N (N + 1) / 2
+     * elements with no leading dimension, so --ld-pad does not apply:
+     * ignored with a warning, and no padding recorded. */
+    int packed;
+
     /* 1, 2 or 3: the BLAS level, whose default size the routine takes
      * when no size is given (#165). */
     int level;

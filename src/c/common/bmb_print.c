@@ -172,7 +172,7 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
     }
     fprintf(out, "%s cache\n", rs->cache_cold ? "cold" : "hot");
     fprintf(out, "# operands: aligned to %u bytes", rs->align);
-    if (rs->layout != NULL) {
+    if (rs->layout != NULL && !rs->packed) {
         fprintf(out, ", leading dimensions + %u", rs->ld_pad);
     }
     fputc('\n', out);
@@ -507,7 +507,7 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
     }
     fprintf(out, "    \"cache\": \"%s\",\n", rs->cache_cold ? "cold" : "hot");
     fprintf(out, "    \"align\": %u,\n", rs->align);
-    if (rs->layout != NULL) {
+    if (rs->layout != NULL && !rs->packed) {
         fprintf(out, "    \"ld_pad\": %u,\n", rs->ld_pad);
     }
     bmb_print_json_arguments(out, rs);

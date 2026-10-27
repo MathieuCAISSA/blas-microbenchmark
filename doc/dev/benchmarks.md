@@ -72,6 +72,16 @@ the order (the triangular routines' `bmb_off_diagonal()`). Each of the
 22 routines was seen to fail `--verify` with its call forced to
 row-major under `--layout col`.
 
+**Packed storage (#244).** spmv and tpsv keep one triangle of A in
+N(N+1)/2 elements, row after row or column after column as `--layout`
+says, with no leading dimension. They set `packed` in their
+`bmb_benchmark_t`: the driver then ignores `--ld-pad` with a warning and
+records no padding. `src/c/level2/bmb_packed.h` gives where an element
+is kept, and the product their checks need, read straight from the
+packed elements rather than from a dense copy: `--verify` is on by
+default, and an N x N matrix of doubles would take twice the packed
+one's memory, four times a float's.
+
 **Other precisions: families (#6, #67, #166).** The routines of one
 operation in several precisions are a family, written once:
 `src/c/level3/bmb_gemm.c` is sgemm, dgemm, cgemm and zgemm, compiled once

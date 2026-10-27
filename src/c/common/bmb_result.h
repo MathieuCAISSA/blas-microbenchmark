@@ -55,6 +55,8 @@ typedef struct {
     int verified;           /* --verify: every point was checked */
     const char *layout;     /* "row" or "col" for routines with a matrix;
                              * NULL for vector routines, which have none */
+    int packed;             /* a matrix without a leading dimension (#244):
+                             * no padding to record */
     /* How the run was made, for the files to say (#161). argv is main's,
      * argc 0 when there is none; batch is the size every point used, 0
      * when it was chosen per point. */

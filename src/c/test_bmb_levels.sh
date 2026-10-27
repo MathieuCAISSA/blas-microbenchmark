@@ -20,11 +20,12 @@ for want in 1 2 3; do
     while read -r program f; do
         # A family whose source it shares with another (bmb_symm.c and
         # bmb_hemm.c) includes it from a header of the level's own
-        # directory, where the level is.
+        # directory, where the level is; a header of helpers it includes
+        # too (bmb_packed.h, #244) declares none.
         src=$S/level$want/$f
         # Split on purpose: one header name a line, none with a space.
         for h in $(sed -n 's/^#include "\(bmb_[a-z0-9]*\.h\)"$/\1/p' "$src"); do
-            if [ -f "$S/level$want/$h" ]; then
+            if [ -f "$S/level$want/$h" ] && grep -q 'bench\.level = ' "$S/level$want/$h"; then
                 src=$S/level$want/$h
             fi
         done
