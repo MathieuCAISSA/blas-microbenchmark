@@ -434,7 +434,7 @@ details[open] > summary { margin-bottom: 12px; }
           name: r.routine, k: k, level: LEVEL[r.routine] || 0,
           title: r.routine + (k === null ? "" : ", K = " + k.toLocaleString("en-US")),
           anchor: "routine-" + r.routine + (k === null ? "" : "-k" + k),
-          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
+          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null, dim3Label: r.dim3_label || "K",
           series: {}, seriesOrder: [], duplicates: []
         };
       }
@@ -505,6 +505,54 @@ details[open] > summary { margin-bottom: 12px; }
         return;
       }
       addResult(entry.file, entry.result);
+    });
+
+    /* A sweep of K alone at one M x N (#284), as HPL's updates are
+     * measured: a section per K would each hold a single size and draw
+     * nothing, so they become one section charted against K. Each point
+     * drawn at its K; its runs, which the raw data lists, keep their
+     * dimensions. */
+    var kSections = {};
+    Object.keys(routines).forEach(function (key) {
+      var rt = routines[key];
+      if (rt.k !== null) { (kSections[rt.name] = kSections[rt.name] || []).push(key); }
+    });
+    Object.keys(kSections).forEach(function (name) {
+      var keys = kSections[name], sizes = {}, size = null;
+      keys.forEach(function (key) {
+        routines[key].seriesOrder.forEach(function (s) {
+          pointsOf(s).forEach(function (p) { sizes[p.d1 + "x" + p.d2] = size = p; });
+        });
+      });
+      if (keys.length < 2 || Object.keys(sizes).length !== 1) { return; }
+      var first = routines[keys[0]];
+      var swept = {
+        name: name, k: null, kSweep: { d1: size.d1, d2: size.d2 }, level: first.level,
+        title: name + ", K at " + sizeText(size.d1, size.d2), anchor: "routine-" + name + "-ksweep",
+        dim1Label: first.dim3Label, dim2Label: null, series: {}, seriesOrder: [], duplicates: []
+      };
+      keys.forEach(function (key) {
+        var from = routines[key];
+        from.seriesOrder.forEach(function (s) {
+          var to = swept.series[s.identity.key];
+          if (!to) {
+            to = swept.series[s.identity.key] = { identity: s.identity, points: {} };
+            swept.seriesOrder.push(to);
+          }
+          if (s.peakGflops) { to.peakGflops = s.peakGflops; }
+          if (s.peakGbs) { to.peakGbs = s.peakGbs; }
+          pointsOf(s).forEach(function (p) {
+            var q = {}, f;
+            for (f in p) { if (Object.prototype.hasOwnProperty.call(p, f)) { q[f] = p[f]; } }
+            q.d1 = p.d3;
+            q.d2 = null;
+            to.points[q.threads + "x" + q.d1] = q;
+          });
+        });
+        swept.duplicates = swept.duplicates.concat(from.duplicates);
+        delete routines[key];
+      });
+      routines[name + " K"] = swept;
     });
 
     /* Legend names: the backend, then only as much of label, library
@@ -1440,6 +1488,9 @@ details[open] > summary { margin-bottom: 12px; }
     return parts.join("; ");
   }
 
+  /* A point's size as its section names it: its K in a sweep of K (#284). */
+  function pointSize(rt, d1, d2) { return (rt.kSweep ? "K = " : "") + sizeText(d1, d2); }
+
   function sizeText(d1, d2) {
     return d2 === null ? d1.toLocaleString("en-US") : d1.toLocaleString("en-US") + " × " + d2.toLocaleString("en-US");
   }
@@ -1507,7 +1558,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     var series = data.series.map(function (x) {
       return {
-        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + sizeText(x.size.d1, x.size.d2) + ")"),
+        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + pointSize(rt, x.size.d1, x.size.d2) + ")"),
         colour: colour(x.identity),
         points: x.points.map(function (p) { return { x: p.x, y: p.y, extra: Math.round(100 * p.efficiency) + "% of ideal" }; }),
         ideal: x.ideal
@@ -1518,7 +1569,7 @@ details[open] > summary { margin-bottom: 12px; }
       notes: data.notes,
       chart: lineChart({
         title: "Thread scaling",
-        subtitle: (data.chosen ? "at " + sizeText(data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
+        subtitle: (data.chosen ? "at " + pointSize(rt, data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
                   " · dashed: ideal linear scaling",
         xLabel: "Threads", yLabel: unit, yUnit: unit, series: series, yHeadroom: 1.2,
         xFormat: function (x) { return String(x); },
@@ -1711,7 +1762,8 @@ details[open] > summary { margin-bottom: 12px; }
       ? "History of " + name + ": each version is tested against the one before (Mann-Whitney U on their runs, two-sided, p < " +
         ALPHA + "); \"slower\" marks a regression beyond noise."
       : "History of " + name + ": measure each version several times, into separate files, to tell a regression from noise.");
-    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2, points: points, notes: notes };
+    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2,
+             size: pointSize(rt, at.d1, at.d2), points: points, notes: notes };
   }
 
   function historyChart(data) {
@@ -1720,7 +1772,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     return lineChart({
       title: data.name + " version by version",
-      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + sizeText(data.d1, data.d2) + " · oldest to newest",
+      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + data.size + " · oldest to newest",
       xLabel: "Version", yLabel: unit, yUnit: unit, xLinear: true, endLabels: false,
       xFormat: function (x) { return labels[x - 1]; },
       xHead: function (x) { return data.name + " " + labels[x - 1]; },
@@ -1969,7 +2021,7 @@ details[open] > summary { margin-bottom: 12px; }
     ratioData: ratioData, ratioDomain: ratioDomain, ratioTicks: ratioTicks,
     thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
     heatData: heatData, heatStep: heatStep, STEPS: STEPS,
-    singlePrecision: singlePrecision, peakOf: peakOf, peakUsed: peakUsed, percentOfPeak: percentOfPeak, peakText: peakText,
+    pointSize: pointSize, singlePrecision: singlePrecision, peakOf: peakOf, peakUsed: peakUsed, percentOfPeak: percentOfPeak, peakText: peakText,
     rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks
   };
 
@@ -2066,7 +2118,7 @@ details[open] > summary { margin-bottom: 12px; }
     var v = el("div", "value", fmtRate(best[field]) + " ");
     v.appendChild(el("small", null, unit));
     tile.appendChild(v);
-    var size = best.d2 === null ? best.d1.toLocaleString("en-US") : best.d1.toLocaleString("en-US") + " × " + best.d2.toLocaleString("en-US");
+    var size = pointSize(rt, best.d1, best.d2);
     tile.appendChild(el("div", "detail", bestSeries.identity.name + " · " + size + " · " + plural(best.threads, "thread")));
     tiles.appendChild(tile);
   });
@@ -2260,7 +2312,7 @@ details[open] > summary { margin-bottom: 12px; }
        * listed; more are summarised, with the full list one click away. */
       var dups = rt.duplicates;
       function dupText(d) {
-        return d.series.identity.name + ", " + sizeText(d.point.d1, d.point.d2) + " at " +
+        return d.series.identity.name + ", " + pointSize(rt, rt.kSweep ? d.point.d3 : d.point.d1, rt.kSweep ? null : d.point.d2) + " at " +
                plural(d.point.threads, "thread") + ": drawn from " + d.kept + ", " + d.other + " was " +
                d.gap.toFixed(0) + "% slower";
       }
@@ -2272,7 +2324,8 @@ details[open] > summary { margin-bottom: 12px; }
         var det = el("details");
         det.appendChild(el("summary", null, dups.length + " points were measured in more than one file; the fastest is drawn, the others are its runs. Largest gap: " +
                                              worst.gap.toFixed(0) + "% (" + worst.series.identity.name + ", " +
-                                             sizeText(worst.point.d1, worst.point.d2) + ")."));
+                                             pointSize(rt, rt.kSweep ? worst.point.d3 : worst.point.d1,
+                                                       rt.kSweep ? null : worst.point.d2) + ")."));
         var inner = el("ul", "notes");
         dups.forEach(function (d) { inner.appendChild(el("li", null, dupText(d) + ".")); });
         det.appendChild(inner);

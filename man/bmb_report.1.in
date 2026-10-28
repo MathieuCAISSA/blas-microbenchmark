@@ -93,7 +93,8 @@ BLAS order: sasum, dasum, scasum, dzasum, then saxpy; sgemm, dgemm,
 cgemm, zgemm, then zhemm, zherk, dsymm.
 A GEMM run with
 .B \-K
-gets a section per K.
+gets a section per K, or, sweeping K alone at one M \(mu N, one section
+charted against K.
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
 .SS Series

@@ -39,7 +39,9 @@ mkdir "$T"
 #    a bandwidth, its roofline (#251), as dgemm a's peak gives the level 3
 #    peak line;
 #  - dcopy, which does no arithmetic, with both peaks: the bandwidth as a
-#    line on its GB/s chart, and only it in its note (#288).
+#    line on its GB/s chart, and only it in its note (#288);
+#  - dgemm with K swept at one M x N, under a fifth label: one section,
+#    charted against K (#284).
 ../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
 ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c --peak-gflops 16 -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
@@ -57,6 +59,7 @@ done
 rm "$T/hist.json"
 ../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 --peak-gflops 16 --peak-gbs 20 -o "$T/dgemv.json" >/dev/null
 ../c/level1/double/bmb_dcopy -x 0 -i 1 -v 8:64 --peak-gflops 16 --peak-gbs 20 -o "$T/dcopy.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 16 -K 8,16,32 --label k -o "$T/dgemm-k.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 
@@ -145,6 +148,16 @@ if grep '^<tr><td>dgemv</td>' "$T/rows" | grep -q '%</td>'; then
     fail "a percentage of the FLOP peak in dgemv's raw data"
 fi
 echo "ok   rendered: the peak only where the level uses it"
+
+# K swept at one M x N (#284): one section, its chart against K, where a
+# section per K would each say that only one size was measured.
+grep -q '<section id="routine-dgemm-ksweep">' "$dom" || fail "no section for dgemm's K sweep"
+grep -q '>dgemm, K at 16 × 16<' "$dom" || fail "the K sweep's section is not titled by its M x N"
+grep -q 'axis-title">Matrix dim3 (K)<' "$dom" || fail "no chart against K"
+if grep -q 'Only one size was measured' "$dom"; then
+    fail "a section with only one size: the K sweep was not charted against K"
+fi
+echo "ok   rendered: K swept at one M x N, charted against K"
 
 # The kernels the library chose (#162), beside it, where it says them.
 if grep -q '^  "kernels": ' "$T/ddot.json"; then
