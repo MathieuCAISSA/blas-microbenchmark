@@ -1133,6 +1133,23 @@ details[open] > summary { margin-bottom: 12px; }
                pick: function (p) { return p.d2; }, keep: function () { return true; } };
     }
     var a = parens(rt.dim1Label), b = parens(rt.dim2Label);
+    /* A band's K (gbmv, tbsv, #286) is its width, not a matrix's second
+     * dimension: there is no square to slice to. Without -M it is N, the
+     * full band; with it, the K measured at the most N, the largest of
+     * those, and the others in the heatmap. */
+    if (rt.level === 2 && b === "K") {
+      if (all.every(function (p) { return p.d1 === p.d2; })) {
+        return { label: rt.dim1Label, note: b + " = " + a,
+                 pick: function (p) { return p.d1; }, keep: function () { return true; } };
+      }
+      var count = {}, k = null;
+      d2.forEach(function (v) {
+        count[v] = uniqSorted(all.filter(function (p) { return p.d2 === v; }).map(function (p) { return p.d1; })).length;
+        if (k === null || count[v] >= count[k]) { k = v; }
+      });
+      return { label: rt.dim1Label, note: rt.dim2Label + " = " + k.toLocaleString("en-US") + "; the other " + b + " are in the heatmap",
+               pick: function (p) { return p.d1; }, keep: function (p) { return p.d2 === k; } };
+    }
     var grid = all.some(function (p) { return p.d1 !== p.d2; });
     return { label: (a && b) ? "Size (" + a + "=" + b + ")" : rt.dim1Label + " = " + rt.dim2Label,
              note: grid ? "square matrices only; the other shapes are in the heatmap" : "square matrices",

@@ -52,6 +52,14 @@ section;
 .IP \(bu
 performance against size, and for levels 1 and 2 bandwidth against size,
 with the points where a sweep leaves L1, L2 and L3 marked.
+A matrix measured over a grid of shapes is drawn at its square ones, and
+a band
+.RB ( gbmv ,
+.BR tbsv )
+against N at one K: N itself without
+.BR \-M ,
+otherwise the K measured at the most N; the other shapes are in the
+heatmap.
 For a series with repeated runs (see
 .BR "Repeated runs and noise" ),
 a band shows the spread from the fastest run to the slowest; otherwise,

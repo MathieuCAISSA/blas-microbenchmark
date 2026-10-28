@@ -79,7 +79,8 @@ releases with the same major version can be compared and read by the same
   trsv on a band of K diagonals each side of the main one (gbmv,
   measured square) or off it (tbsv): `-m` is N and `-M` is K. Without
   `-M`, K is N and the band covers the whole matrix; the rates count the
-  band's elements inside it. 104 benchmarks.
+  band's elements inside it. 104 benchmarks. `bmb_report` charts them
+  against N at one K, the others in the heatmap (#286).
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,

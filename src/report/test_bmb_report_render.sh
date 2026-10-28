@@ -41,7 +41,8 @@ mkdir "$T"
 #  - dcopy, which does no arithmetic, with both peaks: the bandwidth as a
 #    line on its GB/s chart, and only it in its note (#288);
 #  - dgemm with K swept at one M x N, under a fifth label: one section,
-#    charted against K (#284).
+#    charted against K (#284);
+#  - dtbsv over N and its band's K: charted against N at one K (#286).
 ../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
 ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c --peak-gflops 16 -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
@@ -60,6 +61,7 @@ rm "$T/hist.json"
 ../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 --peak-gflops 16 --peak-gbs 20 -o "$T/dgemv.json" >/dev/null
 ../c/level1/double/bmb_dcopy -x 0 -i 1 -v 8:64 --peak-gflops 16 --peak-gbs 20 -o "$T/dcopy.json" >/dev/null
 ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 16 -K 8,16,32 --label k -o "$T/dgemm-k.json" >/dev/null
+../c/level2/double/bmb_dtbsv -x 0 -i 1 -m 16,32 -M 2,4 -o "$T/dtbsv.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 
@@ -158,6 +160,14 @@ if grep -q 'Only one size was measured' "$dom"; then
     fail "a section with only one size: the K sweep was not charted against K"
 fi
 echo "ok   rendered: K swept at one M x N, charted against K"
+
+# A band (#286): against N at one K, not on a square diagonal it does
+# not have, where it would have had a single point.
+grep -q 'Matrix dim2 (K) = 4; the other K are in the heatmap' "$dom" || fail "dtbsv is not charted against N at one K"
+if grep -q 'Only one size was measured' "$dom"; then
+    fail "a section with only one size: the band was sliced as a square matrix"
+fi
+echo "ok   rendered: a band, against N at one K"
 
 # The kernels the library chose (#162), beside it, where it says them.
 if grep -q '^  "kernels": ' "$T/ddot.json"; then
