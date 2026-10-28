@@ -106,10 +106,15 @@ The nine jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
 real sizes"): every benchmark, as many as `routines.txt` lists (#281), checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on
-that job's library. `make check` runs `--verify` on tiny sizes only, and
+that job's library; then each argument other than its default, one at a
+time, over the routines that take it (a transposed GEMM, a lower or
+right-side triangle, herk with C), GEMM with a K of its own and batched
+in each mode, a mode the library has not being a skip (#277). `make
+check` runs `--verify` on tiny sizes only, and
 a tolerance too tight for a real size, or a library that is only wrong
-once it splits the work between threads, would get through it. It takes
-seconds; the sanitizers job runs it under ASan and UBSan too.
+once it splits the work between threads, would get through it. Every
+run goes without warm-up (`-w 0`), which a check does not need: about a
+minute on OpenBLAS; the sanitizers job runs it under ASan and UBSan too.
 
 ## Coverage
 

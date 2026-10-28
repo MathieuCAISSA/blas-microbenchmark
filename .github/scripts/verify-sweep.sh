@@ -119,5 +119,5 @@ rm -f "$B/verify-sweep.err"
 # the others (#148 moved the binaries from under it).
 want=$(grep -c '^[a-z]' "$(dirname "$0")/../../src/c/routines.txt")
 test "$n" -eq "$want" || { echo "$n benchmarks found in $B, where routines.txt has $want"; exit 1; }
-test "$failed" -eq 0 || { echo "$failed of $n benchmarks computed a wrong result"; exit 1; }
+test "$failed" -eq 0 || { echo "$failed runs of the $n benchmarks computed a wrong result"; exit 1; }
 echo "all $n benchmarks verified"
