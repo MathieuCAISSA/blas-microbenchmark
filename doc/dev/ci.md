@@ -38,6 +38,11 @@ lands outside `--prefix`, or if `bin/bmb_report`, `bin/bmb_suite`, the
 installed for real, `bmb_suite` runs two of the benchmarks there; and it fails
 if the browser tests skipped, since the x86 runners have Chrome.
 
+The `blis` job also builds OpenBLAS beside BLIS and runs `bmb_suite
+--blas` across the two (#280): each library's results in its own
+directory, recording its own backend, and `bmb_report` on both. `make
+check` gives `--blas` the same build tree twice.
+
 The comment above each job is published on the site's Development page,
 with its runner, configure line and steps: keep it saying why the job
 exists.
