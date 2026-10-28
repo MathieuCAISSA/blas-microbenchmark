@@ -175,6 +175,13 @@ block() {
                     printf "  var FAMILY = {\n%s  };\n", t
                 } else {
                     printf "ROUTINES = {\n%s}\n", t
+                    # The directory each is built in (#148), which the first
+                    # letter of the name does not give for scasum or idamax.
+                    list = ""
+                    for (i = 1; i <= n; i++) { list = list " \047" name[i] "\047:\001\047" dir[prec[i]] "\047," }
+                    t = wrap(substr(list, 2), 79, "    ", "    ", "")
+                    gsub(/\001/, " ", t)
+                    printf "DIRECTORY = {\n%s}\n", t
                 }
             }
         }
