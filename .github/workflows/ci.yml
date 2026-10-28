@@ -1149,7 +1149,7 @@ jobs:
 
       - name: bmb_build_run on this commit's tarball
         run: |
-          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk)' \
+          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)' \
             -S bmb_tarball.tarball="$(ls build/blas-microbenchmark-*.tar.gz)" \
             -S level1_size=100000 -S level3_size=128 -S num_threads=2 \
             -r --report-file=build-run.json
@@ -1157,8 +1157,8 @@ jobs:
           import json
           cases = json.load(open('build-run.json'))['runs'][0]['testcases']
           runs = [c for c in cases if c['name'].startswith('bmb_build_run')]
-          assert len(runs) == 3 and all(c['result'] == 'pass' for c in runs), cases
-          print('built from the tarball, 3 routines passed')
+          assert len(runs) == 5 and all(c['result'] == 'pass' for c in runs), cases
+          print('built from the tarball, 5 routines passed')
           EOF
 
       - name: Their results make a report
