@@ -84,7 +84,7 @@ keeping with "nothing fetched". The decisions it implements are #1's, and
 the code points at them; the ones easiest to break by accident:
 
 - **A series is routine + backend + BLAS string + CPU + label + storage
-  order.** Files sharing one merge; a duplicate point keeps the fastest
+  order + cache + padding + arguments.** Files sharing one merge; a duplicate point keeps the fastest
   and is reported. A file with no `layout` (vector routines, results from
   before 1.4) counts as row-major, so a library keeps one series, one
   colour, across its routines; a column-major one is named
@@ -101,7 +101,14 @@ the code points at them; the ones easiest to break by accident:
   it counts as hot; so is its `ld_pad` (#163), a storage of its own as
   the layout is, 0 in a file without it. Its alignment is not: the
   default changed from whatever `malloc` gave to 64 bytes in 1.8.0, and
-  a key on it would cut every library's history there.
+  a key on it would cut every library's history there. The routine's
+  arguments other than the defaults (#221, and the batch's, #159) are
+  part of both keys too (`variantText`), a file without them counting as
+  the defaults; a GEMM run with `-K` is a section per K (`routineFor`).
+- **The section order** is by level, then operation, then precision
+  s, d, c, z, the operation and precision taken from `routines.txt`
+  (`FAMILY`, written by `routines.sh` beside `LEVEL`): scasum is asum's,
+  isamax iamax's (#269). A routine not in it sorts by its name.
 - **Repeated runs (#4).** Every measurement of a point is kept in its
   `runs`; the curve still goes through the fastest, as the benchmark
   reports the fastest sample. The band of
@@ -111,7 +118,8 @@ the code points at them; the ones easiest to break by accident:
   quartiles measured with `-s`. The raw data has a row per run.
 - **History (#9)**, decided with the user over a separate comparison
   command: series of one library that differ only by version (backend,
-  CPU, label and storage order alike; `historyGroups`), three or more
+  CPU, label, storage order, cache, padding and arguments alike;
+  `historyGroups`), three or more
   of them, two being the comparison chart's. Ordered by the first dotted
   number of the version string (`versionOf`, compared number by number,
   so 0.3.9 before 0.3.26), then by the date first measured. At the
