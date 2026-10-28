@@ -253,8 +253,10 @@ static int verify(void *vctx, char *msg, size_t size)
     /* The call's K is the point's (-K, #215): a setup that kept K = M
      * would pass the projection, which reads the K the call was given. */
     if (inner != bmb_bench_dim3(m)) { /* GCOVR_EXCL_BR_LINE: only a setup that ignores -K takes it; seen to, mutated */
+        /* GCOVR_EXCL_START: only a setup that ignores -K takes it; seen to, mutated */
         snprintf(msg, size, "the call's K is %zu, where the point's is %zu", inner, bmb_bench_dim3(m));
         return 1;
+        /* GCOVR_EXCL_STOP */
     }
     r = malloc((p * n + (p + 1) * inner + (4 * p + 2) * m) * sizeof(double));
     if (r == NULL) {
