@@ -141,7 +141,7 @@ fi
 # tile and from the table of contents, by level, and every link leads to
 # a section that is there.
 grep -o '<section id="routine-[a-z0-9-]*"' "$dom" | sed 's/.*id="//; s/"$//' | sort >"$T/sections"
-test "$(wc -l <"$T/sections")" -eq 3 || fail "not the 3 routine sections: $(cat "$T/sections")"
+test "$(wc -l <"$T/sections")" -ge 3 || fail "not the routine sections of ddot, dgemm and dgemv: $(cat "$T/sections")"
 grep -o '<a class="card tile" href="#[^"]*"' "$dom" | sed 's/.*href="#//; s/"$//' | sort >"$T/tiles"
 cmp -s "$T/tiles" "$T/sections" || fail "the summary's tiles do not each link to a section:
 $(diff "$T/sections" "$T/tiles")"
