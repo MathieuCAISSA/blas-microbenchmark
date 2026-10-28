@@ -177,7 +177,8 @@ one given to
 .B bmb_report
 is in double precision, and taken as twice it for single, as vector
 units do twice the floats.
-Each routine's section says where its peak came from.
+Each routine's section says the peak its charts use, and where it came
+from.
 .PP
 Level 3, which can approach the FLOP peak, shows a line at it on the
 performance chart, and each point's percentage of it in its tooltip and
@@ -187,9 +188,10 @@ dot, at its arithmetic intensity, its GFLOP/s over its GB/s \(em the
 FLOPs a byte its counts give \(em under the memory roof, the bandwidth
 times the intensity, and the compute roof, the peak; both scales are
 logarithmic, and each dot's tooltip gives its percentage of the roof.
+Without the bandwidth there is no roofline, and the FLOP peak is not used.
 The routines that do no arithmetic (copy, swap,
 .BR i?amax )
-have none.
+have none: their bandwidth chart shows a line at the bandwidth instead.
 The memory roof is the bandwidth of memory: a size held in a cache goes
 above it.
 .SS What it accepts

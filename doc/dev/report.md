@@ -157,7 +157,10 @@ the code points at them; the ones easiest to break by accident:
   and the raw data; levels 1 and 2 a roofline (`rooflineData`,
   `rooflineChart`): intensity as the point's GFLOP/s over its GB/s, so
   no count is recomputed in the page, log scales, the ridge kept inside
-  the x range. Each routine's section says where its peak came from.
+  the x range; a routine with no FLOPs, a line at the bandwidth on its
+  GB/s chart. Each routine's section says the peak its charts use and
+  where it came from (`peakUsed`, #288), and the percentage of the peak
+  is level 3's alone, in the tooltip and the raw data.
 - **Anything from a result file reaches the DOM through `textContent`**,
   never `innerHTML`: a label is whatever someone typed.
 - **Charts draw at the width they get** and redraw on resize, rather than

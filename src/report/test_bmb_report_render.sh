@@ -37,7 +37,9 @@ mkdir "$T"
 #    name as bmb_suite --blas labels it: the history (#287);
 #  - dgemv as a grid, at one thread only: the heatmap; with a peak and
 #    a bandwidth, its roofline (#251), as dgemm a's peak gives the level 3
-#    peak line.
+#    peak line;
+#  - dcopy, which does no arithmetic, with both peaks: the bandwidth as a
+#    line on its GB/s chart, and only it in its note (#288).
 ../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
 ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c --peak-gflops 16 -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
@@ -54,6 +56,7 @@ for v in 0.3.9 0.3.26 0.3.28; do
 done
 rm "$T/hist.json"
 ../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 --peak-gflops 16 --peak-gbs 20 -o "$T/dgemv.json" >/dev/null
+../c/level1/double/bmb_dcopy -x 0 -i 1 -v 8:64 --peak-gflops 16 --peak-gbs 20 -o "$T/dcopy.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 
@@ -129,6 +132,19 @@ grep -E -q 'peak, (1 core: 16.0|2 cores: 32.0) GFLOP/s' "$dom" || fail "no peak 
 grep -q '>% of peak<' "$dom" || fail "no % of peak column in the raw data"
 grep -q 'Peak: 16.0 GFLOP/s a core, given in the results' "$dom" || fail "the page does not say where the peak came from"
 echo "ok   rendered: the roofline, the peak line, the percentages, and where the peak came from"
+
+# The peak where it is used (#288): dcopy's bandwidth as a line, its
+# note without the FLOP peak it cannot use; a percentage of the peak in
+# the raw data for level 3's rows only, though dgemv was given one too.
+grep -q 'memory bandwidth: 20.0 GB/s' "$dom" || fail "no bandwidth line on dcopy's GB/s chart"
+grep -q '<li>Peak: 20.0 GB/s, given in the results.</li>' "$dom" ||
+    fail "dcopy's note does not give the bandwidth alone"
+awk '{ gsub(/<\/tr>/, "&\n"); print }' "$dom" >"$T/rows"
+grep '^<tr><td>dgemm</td>' "$T/rows" | grep -q '%</td>' || fail "no percentage of the peak in dgemm's raw data"
+if grep '^<tr><td>dgemv</td>' "$T/rows" | grep -q '%</td>'; then
+    fail "a percentage of the FLOP peak in dgemv's raw data"
+fi
+echo "ok   rendered: the peak only where the level uses it"
 
 # The kernels the library chose (#162), beside it, where it says them.
 if grep -q '^  "kernels": ' "$T/ddot.json"; then
