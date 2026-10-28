@@ -35,5 +35,5 @@ for want in 1 2 3; do
     done <levels-sources.tmp
 done
 rm -f levels-sources.tmp
-test "$n" -ge 32 || fail "only $n benchmarks found in the levels' Makefile.am"
+test "$n" -eq "$(grep -c '^[a-z]' "$S/routines.txt")" || fail "$n benchmarks found in the levels' Makefile.am, not the routines of routines.txt"
 echo "ok   all $n benchmarks declare the level of their directory"

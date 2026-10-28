@@ -142,7 +142,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     printf '%s %s\n' "$b" "$sizes" >>"$T/sized"
     n=$((n + 1))
 done
-test "$n" -ge 32 || fail "only $n benchmarks found"
+test "$n" -eq "$(grep -c '^[a-z]' "${srcdir:-.}/routines.txt")" || fail "$n benchmarks found, not the routines of routines.txt"
 echo "ok   all $n benchmarks pass --verify, in both layouts, padded or not, where they have a matrix, with every --trans they take, and each one's check catches a corrupted result"
 
 # A check that sees the call at all (#239): with BMB_VERIFY_SKIP set, a
