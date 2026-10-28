@@ -1095,6 +1095,10 @@ jobs:
             -S install_prefix="$PWD/inst" -S level1_size=100000 -S level2_size=256 \
             -S level3_size=128 -S num_threads=2 -S reference_file=lenient.json \
             -r --report-file=run.json
+          # Their results, kept for the report: the steps below run dgemm and
+          # ddot again under the same names, and a run failed on purpose
+          # leaves no output.
+          cp -R output bmb-run-output
           WANT=$(grep -c '^[a-z]' src/c/routines.txt) python3 - <<'EOF'
           import json, os
           cases = json.load(open('run.json'))['runs'][0]['testcases']
@@ -1163,9 +1167,9 @@ jobs:
 
       - name: Their results make a report
         run: |
-          # bmb_run's, a routine each: bmb_build_run's are in output too.
-          find output -path '*/bmb_run_*' -name result.json > results.txt
-          test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)"
+          find bmb-run-output -name result.json > results.txt
+          test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)" ||
+            { echo "$(wc -l < results.txt) results, not a routine each"; exit 1; }
           # shellcheck disable=SC2046
           inst/bin/bmb_report $(cat results.txt) > report.html
           grep -qi '^<!doctype html>' report.html
