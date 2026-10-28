@@ -1,7 +1,9 @@
 #!/bin/sh
 # dgbmv's smoke test, and a K whose band, 2K + 1 diagonals, would not fit
 # the int BLAS takes: the parser bounds K alone, so the benchmark refuses
-# it before anything is allocated (one row of such a band is 24 GB).
+# it before anything is allocated (one row of such a band is 24 GB). At
+# the parser's ceiling for both, N x (2K + 1) doubles would wrap size_t:
+# refused for its size, before the int (#266).
 set -e
 . "${srcdir:-.}/../test_helper.sh"
 
@@ -14,3 +16,5 @@ grep -q 'would not fit the int BLAS takes' dgbmv-band.err ||
     bmb_fail "dgbmv: a band too wide for an int was not refused for it: $(cat dgbmv-band.err)"
 rm -f dgbmv-band.err
 echo "ok   dgbmv refuses a band of 2K + 1 diagonals past an int"
+
+bmb_check_too_large ./double/bmb_dgbmv dgbmv -m 1518500249 -M 1518500249
