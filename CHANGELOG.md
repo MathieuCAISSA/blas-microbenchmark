@@ -122,6 +122,9 @@ releases with the same major version can be compared and read by the same
   comparison of the two libraries, without a word. Such a series is now
   always named by how it was measured, and so is one run with arguments
   other than the defaults.
+- `bmb_report -- -d.json` (#282): a result file whose name starts with
+  `-`, given after `--`, was taken by `sed` for an option, and no page
+  was written.
 
 ## [1.8.0] - 2026-10-23
 

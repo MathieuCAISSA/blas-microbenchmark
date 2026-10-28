@@ -764,7 +764,10 @@ jobs:
           done
 
       # --verify at the sizes and thread counts a user measures, against each
-      # library this one build can load.
+      # optimised library this one build can load. NETLIB is the reference
+      # BLAS, which the netlib job sweeps at the same sizes (#282): make
+      # check runs on it here, the sweep would add its minutes for nothing
+      # new.
       - name: Verified at real sizes, once per backend
         run: |
           for b in OPENBLAS-OPENMP BLIS-OPENMP; do

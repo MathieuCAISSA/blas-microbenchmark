@@ -74,6 +74,34 @@ fi
 grep -q "contains a newline" "$T/err" || fail "the newline refusal does not say why: $(cat "$T/err")"
 pass "refuses a file name containing a newline"
 
+# ---- the command line (#282) ----
+# A page on a terminal helps nobody: refused, exit 2, with the command
+# to redirect it. The terminal is script(1)'s, as in test_bmb_colors.sh.
+if command -v script >/dev/null 2>&1 && script -qec true /dev/null >/dev/null 2>&1; then
+    st=0
+    script -qec "$R $T/ddot.json" /dev/null >"$T/tty" 2>&1 || st=$?
+    test "$st" -eq 2 || fail "on a terminal: exit $st, not 2: $(cat "$T/tty")"
+    grep -q 'the report is HTML; redirect it to a file' "$T/tty" || fail "on a terminal, no word of why: $(cat "$T/tty")"
+    if grep -q '<!doctype html>' "$T/tty"; then
+        fail "the page was written to the terminal"
+    fi
+    pass "refuses to write the page to a terminal"
+else
+    echo "note no script(1) to give bmb_report a terminal: not checked"
+fi
+
+# A file whose name starts with "-": an option without --, the file
+# after it.
+cp "$T/ddot.json" "$T/-d.json"
+if (cd "$T" && ../$R -d.json >out 2>err); then
+    fail "-d.json without -- was taken as a file"
+fi
+grep -q 'unknown option: -d.json' "$T/err" || fail "-d.json without --: $(cat "$T/err")"
+(cd "$T" && ../$R -- -d.json >dash.html 2>err) || fail "-- -d.json was refused: $(cat "$T/err")"
+grep -q '{"file": "-d.json", "result":' "$T/dash.html" || fail "-- -d.json: the page does not carry the file"
+rm "$T/-d.json"
+pass "-- before a file named with a leading -"
+
 # ---- --peak-gflops and --peak-gbs (#251) ----
 # A peak is a plain decimal above 0 and up to 1000000, as the benchmarks
 # take it; anything else is refused before any page is written. A taken
@@ -164,6 +192,19 @@ rm "$T/dir/b/c.json"
 cp "$T/ddot.json" "$nl_name"
 mv "$nl_name" "$T/dir/a/"
 refuse_dir "$T/dir" "contains a newline" "$T/dir" "a directory holding a file name with a newline"
+rm "$T/dir/a/two
+lines.json"
+# A subdirectory find cannot enter: some results unread, so no page
+# (#282). Root enters it all the same.
+if [ "$(id -u)" -ne 0 ]; then
+    mkdir "$T/dir/locked"
+    cp "$T/ddot.json" "$T/dir/locked/ddot.json"
+    chmod 000 "$T/dir/locked"
+    refuse_dir "$T/dir" "cannot be read in full" "$T/dir" "a directory that cannot be read in full"
+    chmod 755 "$T/dir/locked"
+else
+    echo "note running as root, which reads any directory: an unreadable one not checked"
+fi
 
 # ---- the page knows every routine's level ----
 # Its LEVEL table orders the sections and names each routine's level; a
