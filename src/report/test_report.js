@@ -123,6 +123,22 @@
          "#221: the series that differs is named by its arguments, the defaults' by nothing");
     });
 
+    test("conditions always named", function () {
+      var m = R.buildModel([
+        entry("o.json", gemm({ run: { cache: "hot", arguments: { trans: "NN" } }, rows: [[1, 64, 64, 1e-5, 10, null]] })),
+        entry("b.json", gemm({ backend: "blis", blas: "BLIS 2.0", run: { cache: "hot", arguments: { trans: "NT" } },
+                               rows: [[1, 64, 64, 1e-5, 9, null]] }))
+      ]);
+      eq(names(m.identities), ["openblas", "blis · trans NT"],
+         "#285: a series alone of its backend is still named by arguments other than the defaults");
+      m = R.buildModel([
+        entry("c.json", gemm({ layout: "col", run: { cache: "cold", ld_pad: 8, arguments: { side: "R", batch_count: 4 } },
+                               rows: [[1, 64, 64, 1e-5, 10, null]] }))
+      ]);
+      eq(names(m.identities), ["openblas · column-major · cold cache · ld + 8 · side R, batch count 4"],
+         "#285: a page of one file names the layout, cache, padding and arguments it was measured with");
+    });
+
     test("batches", function () {
       function run(count, mode) { return { cache: "hot", arguments: { trans: "NN", batch_count: count, batch_mode: mode } }; }
       var m = R.buildModel([
