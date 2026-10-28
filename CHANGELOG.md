@@ -32,7 +32,10 @@ releases with the same major version can be compared and read by the same
 - `bmb_suite --blas <name>=<suite>` (#255), once a library: the
   blas-microbenchmark built for each, an install prefix or a build tree,
   into `<dir>/<name>/`, each benchmark labelled with its name, each
-  result checked to record the backend its suite was built for.
+  result checked to record the backend its suite was built for. A name
+  with the version in it (`openblas-0.3.26`) still makes a history in
+  `bmb_report`, and a series is named by it rather than also by its
+  version (#287).
 - `bmb_suite --blas flexiblas:<name>,...` (#256): one build against
   FlexiBLAS, run once a library with `FLEXIBLAS` set to its name, into
   `<dir>/<name>/`; a name FlexiBLAS does not know refused before

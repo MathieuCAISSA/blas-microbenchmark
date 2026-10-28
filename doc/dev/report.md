@@ -120,7 +120,10 @@ the code points at them; the ones easiest to break by accident:
   command: series of one library that differ only by version (backend,
   CPU, label, storage order, cache, padding and arguments alike;
   `historyGroups`), three or more
-  of them, two being the comparison chart's. Ordered by the first dotted
+  of them, two being the comparison chart's. A label that names the
+  version, as `bmb_suite --blas openblas-0.3.26=...` gives one, counts
+  without it (#287): the names a suite gives make one history, not one
+  each. Ordered by the first dotted
   number of the version string (`versionOf`, compared number by number,
   so 0.3.9 before 0.3.26), then by the date first measured. At the
   page's thread count, the largest size every version measured. Each
