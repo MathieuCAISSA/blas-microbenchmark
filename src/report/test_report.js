@@ -345,6 +345,32 @@
       eq([s.label, s.pick({ d1: 100, d2: 16 })], ["Matrix dim2 (N)", 16], "a fixed first size is plotted against the second");
     });
 
+    test("band", function () {
+      function band(rows) {
+        return R.buildModel([entry("b.json", { routine: "dgbmv", dim1Label: "Matrix dim1 (N)", dim2Label: "Matrix dim2 (K)",
+                                                rows: rows })]).routines[0];
+      }
+      var rt = band([[1, 64, 64, 1, 1, 1], [1, 256, 256, 1, 1, 1]]);
+      var s = R.sliceForSize(rt, 1);
+      eq([s.label, s.note], ["Matrix dim1 (N)", "K = N"], "#286: a band without -M, against N, K being N: not square matrices");
+      eq(R.sizeData(rt, 1).xs, [64, 256], "#286: and every N on it");
+
+      rt = band([[1, 64, 4, 1, 1, 1], [1, 64, 16, 1, 1, 1], [1, 256, 4, 1, 1, 1], [1, 256, 16, 1, 1, 1], [1, 1024, 4, 1, 1, 1],
+                 [2, 64, 4, 1, 2, 2], [2, 64, 16, 1, 2, 2], [2, 256, 4, 1, 2, 2], [2, 256, 16, 1, 2, 2]]);
+      s = R.sliceForSize(rt, 1);
+      eq([s.label, s.note], ["Matrix dim1 (N)", "Matrix dim2 (K) = 4; the other K are in the heatmap"],
+         "#286: N and K swept, against N at the K measured at the most N");
+      eq(R.sizeData(rt, 1).xs, [64, 256, 1024], "#286: where the square diagonal had one point");
+      eq(R.sliceForSize(rt, 2).note, "Matrix dim2 (K) = 16; the other K are in the heatmap",
+         "#286: at as many N each, the largest K");
+      eq(R.threadData(rt).chosen, { d1: 256, d2: 16 }, "#286: thread scaling at the largest N and K measured at every thread count");
+      var hd = R.heatData(rt, 1);
+      eq([hd.d1s, hd.d2s], [[64, 256, 1024], [4, 16]], "#286: the heatmap, N against K");
+
+      rt = band([[1, 64, 4, 1, 1, 1], [1, 64, 16, 1, 1, 1]]);
+      eq(R.sliceForSize(rt, 1).label, "Matrix dim2 (K)", "#286: one N, against K");
+    });
+
     test("sizeData", function () {
       var m = R.buildModel([entry("g.json", gemv({ rows: [[1, 8, 8, 1, 1, 1], [1, 8, 16, 1, 1, 1], [2, 16, 16, 1, 1, 1], [1, 16, 16, 1, 1, 1]] }))]);
       var rt = m.routines[0];
