@@ -16,7 +16,7 @@ How each BLAS library is found, linked and named. Start at
 | GPU libraries (cuBLAS, rocBLAS, MAGMA, …) | — | Planned for 2.0 (#87) |
 
 Every backend is reached through the CBLAS interface, so the same
-`bmb_<routine>.c` files link against whichever one `configure` picks; only
+`bmb_<family>.c` files link against whichever one `configure` picks; only
 `configure.ac`'s detection logic and `bmb_threads.c`'s thread-control
 dispatch differ per backend.
 
@@ -127,7 +127,7 @@ points itself, forwarding to the Fortran symbols, and that directory goes
 on the include path ahead of everything else only for this backend, so its
 `cblas.h` never shadows a real one. One code path, works either way.
 
-Two things that backend gets wrong easily:
+What that backend gets wrong easily:
 
 - Plain `-lblas` on Debian/Ubuntu goes through `update-alternatives` and
   normally resolves to *OpenBLAS*, silently benchmarking the wrong library.

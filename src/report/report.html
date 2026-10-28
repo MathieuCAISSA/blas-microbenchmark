@@ -500,18 +500,18 @@ details[open] > summary { margin-bottom: 12px; }
       addResult(entry.file, entry.result);
     });
 
-    /* Legend names: the backend alone when that is unambiguous, then only
-     * as much of label, library version and CPU as it takes to tell series
-     * of the same backend apart: each only if it tells this series from
-     * those the parts before it do not (#287), so that bmb_suite --blas
-     * openblas-0.3.26=... is not also named by its version. */
+    /* Legend names: the backend, then only as much of label, library
+     * version and CPU as it takes to tell series of the same backend
+     * apart: each only if it tells this series from those the parts
+     * before it do not (#287), so that bmb_suite --blas
+     * openblas-0.3.26=... is not also named by its version. What was
+     * measured other than by default is always named (#285): a BLIS
+     * series run with --trans NT beside an OpenBLAS one with the defaults
+     * is not a comparison of the two libraries. */
     identityOrder.forEach(function (id) {
       var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
       var parts = [id.backend];
       var shared = same;
-      function differs(f) {
-        return same.some(function (o) { return f(o) !== f(id); });
-      }
       function tellsApart(f, text) {
         if (text && shared.some(function (o) { return f(o) !== f(id); })) { parts.push(text); }
         shared = shared.filter(function (o) { return f(o) === f(id); });
@@ -520,11 +520,11 @@ details[open] > summary { margin-bottom: 12px; }
         tellsApart(function (o) { return o.label; }, id.label);
         tellsApart(function (o) { return shortBlas(o.blas); }, id.blas && shortBlas(id.blas));
         tellsApart(function (o) { return o.cpu; }, cpuName(id.cpu));
-        if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
-        if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
-        if (differs(function (o) { return o.pad; }) && id.pad) { parts.push("ld + " + id.pad); }
-        if (differs(function (o) { return o.variant; }) && id.variant) { parts.push(id.variant); }
       }
+      if (id.layout === "col") { parts.push("column-major"); }
+      if (id.cache === "cold") { parts.push("cold cache"); }
+      if (id.pad) { parts.push("ld + " + id.pad); }
+      if (id.variant) { parts.push(id.variant); }
       id.name = parts.join(" · ");
     });
 
