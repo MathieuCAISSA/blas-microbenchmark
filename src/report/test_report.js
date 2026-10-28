@@ -174,6 +174,7 @@
       var p16 = R.pointsOf(rt.seriesOrder[0]).filter(function (p) { return p.threads === 1 && p.d1 === 16; })[0];
       eq(p16.runs.map(function (q) { return [q.d1, q.d2, q.d3]; }), [[256, 256, 16], [256, 256, 16]],
          "#284: a K measured twice is one point, whose runs keep their M, N and K for the raw data");
+      eq(rt.duplicates.map(function (d) { return d.point.d3; }), [16], "#284: and the section says it was measured twice");
 
       m = R.buildModel([k("k.json", [[1, 64, 64, 1e-5, 10, null, 8], [1, 128, 128, 1e-5, 10, null, 8],
                                      [1, 64, 64, 1e-5, 10, null, 16]])]);

@@ -2241,7 +2241,7 @@ details[open] > summary { margin-bottom: 12px; }
        * listed; more are summarised, with the full list one click away. */
       var dups = rt.duplicates;
       function dupText(d) {
-        return d.series.identity.name + ", " + sizeText(d.point.d1, d.point.d2) + " at " +
+        return d.series.identity.name + ", " + pointSize(rt, rt.kSweep ? d.point.d3 : d.point.d1, rt.kSweep ? null : d.point.d2) + " at " +
                plural(d.point.threads, "thread") + ": drawn from " + d.kept + ", " + d.other + " was " +
                d.gap.toFixed(0) + "% slower";
       }
@@ -2253,7 +2253,8 @@ details[open] > summary { margin-bottom: 12px; }
         var det = el("details");
         det.appendChild(el("summary", null, dups.length + " points were measured in more than one file; the fastest is drawn, the others are its runs. Largest gap: " +
                                              worst.gap.toFixed(0) + "% (" + worst.series.identity.name + ", " +
-                                             sizeText(worst.point.d1, worst.point.d2) + ")."));
+                                             pointSize(rt, rt.kSweep ? worst.point.d3 : worst.point.d1,
+                                                       rt.kSweep ? null : worst.point.d2) + ")."));
         var inner = el("ul", "notes");
         dups.forEach(function (d) { inner.appendChild(el("li", null, dupText(d) + ".")); });
         det.appendChild(inner);
