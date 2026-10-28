@@ -197,8 +197,10 @@ history, the build directories and what `autoreconf` makes again.
 
 The `docker` job builds the image for each of the four backends, then
 runs, from it: every benchmark with `--verify`, in both storage orders,
-on 1 and 2 threads; `man`; a result written to a mounted directory as
-the runner's user, turned into a page by `bmb_report`; and the warning
+on 1 and 2 threads; `man` for each of the three pages; a result written
+to a mounted directory as the runner's user, turned into a page by
+`bmb_report`; `bmb_suite` on ddot and dgemm into a mounted directory,
+and `bmb_report` on that directory (#279); and the warning
 under `--cpus 1` and `--cpuset-cpus 0,1`, and its absence under
 `--cpus 2` with `-t 2`. Once (the `openblas` leg), hadolint checks the
 Dockerfile, and Apptainer converts the saved image to a SIF file and
@@ -219,6 +221,9 @@ its image would redistribute Intel's libraries, under Intel's licence.
 - **Checked as a user gets it**: every local copy removed, the image
   pulled back by its digest, run, and its attestation verified, in the
   same job.
+- **Before pushing**, each image runs a benchmark, `man bmb_suite`, and
+  `bmb_suite` into a mounted directory with `bmb_report` on it, as the
+  `docker` job does.
 - **On a pull request** that changes `release.yml`, the job builds and
   runs each image, and pushes nothing. The `docker` job of `ci.yml`
   remains the one that tests the Dockerfile on every change.

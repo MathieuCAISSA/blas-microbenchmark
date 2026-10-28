@@ -36,8 +36,9 @@ Open it with a browser.
 .SS What the page shows
 Each part appears only when the results can support it:
 .IP \(bu 2
-a summary: the best figure for each routine, and where each series came
-from (library and the kernels it chose, CPU, caches, OS, date, the CPU
+a summary: the best figure for each routine, which leads to its section,
+and where each series came from (library and the kernels it chose, CPU,
+caches, OS, date, the CPU
 frequency governor and turbo where the machine exposed them, and how the
 files were run: samples and warm-up, batch size, alignment, compiler and
 CFLAGS, the CPUs allowed, the variables set, with the command lines in a
@@ -46,8 +47,19 @@ checked against a reference before it was timed, once any was (the
 benchmarks do it unless run with
 .BR \-C );
 .IP \(bu
+with more than one routine, the routines by level, each leading to its
+section;
+.IP \(bu
 performance against size, and for levels 1 and 2 bandwidth against size,
 with the points where a sweep leaves L1, L2 and L3 marked.
+A matrix measured over a grid of shapes is drawn at its square ones, and
+a band
+.RB ( gbmv ,
+.BR tbsv )
+against N at one K: N itself without
+.BR \-M ,
+otherwise the K measured at the most N; the other shapes are in the
+heatmap.
 For a series with repeated runs (see
 .BR "Repeated runs and noise" ),
 a band shows the spread from the fastest run to the slowest; otherwise,
@@ -89,7 +101,8 @@ BLAS order: sasum, dasum, scasum, dzasum, then saxpy; sgemm, dgemm,
 cgemm, zgemm, then zhemm, zherk, dsymm.
 A GEMM run with
 .B \-K
-gets a section per K.
+gets a section per K, or, sweeping K alone at one M \(mu N, one section
+charted against K.
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
 .SS Series
@@ -126,6 +139,10 @@ Series that differ only by the library's version \(em the same backend,
 CPU, label, storage order, padding, cache and arguments \(em make a
 history once
 there are three of them; two are the comparison chart's.
+A label that names the version, as
+.B bmb_suite \-\-blas openblas\-0.3.26=...
+gives one, counts without it: openblas\-0.3.26 and openblas\-0.3.28 are
+one history.
 For each routine, at the thread count chosen on the page, it shows the
 largest size every version measured, version after version, ordered by
 the version number in the library's version string, oldest first.
@@ -169,7 +186,8 @@ one given to
 .B bmb_report
 is in double precision, and taken as twice it for single, as vector
 units do twice the floats.
-Each routine's section says where its peak came from.
+Each routine's section says the peak its charts use, and where it came
+from.
 .PP
 Level 3, which can approach the FLOP peak, shows a line at it on the
 performance chart, and each point's percentage of it in its tooltip and
@@ -179,9 +197,10 @@ dot, at its arithmetic intensity, its GFLOP/s over its GB/s \(em the
 FLOPs a byte its counts give \(em under the memory roof, the bandwidth
 times the intensity, and the compute roof, the peak; both scales are
 logarithmic, and each dot's tooltip gives its percentage of the roof.
+Without the bandwidth there is no roofline, and the FLOP peak is not used.
 The routines that do no arithmetic (copy, swap,
 .BR i?amax )
-have none.
+have none: their bandwidth chart shows a line at the bandwidth instead.
 The memory roof is the bandwidth of memory: a size held in a cache goes
 above it.
 .SS What it accepts
@@ -270,7 +289,8 @@ bmb_report results/*.json > report.html
 .EE
 .RE
 .SH SEE ALSO
-.BR blas\-microbenchmark (1)
+.BR blas\-microbenchmark (1),
+.BR bmb_suite (1)
 .PP
 The guides \(em installing, comparing libraries, on an HPC cluster,
 ReFrame \(em and this manual online:

@@ -21,6 +21,29 @@ every job of `ci.yml` except `coverage`, which is there to be read. A
 new job goes into the required checks (the branch protection settings)
 when it merges, or it can fail without stopping anything.
 
+### Waiting less (#305)
+
+A personal account runs 20 jobs at a time and a pull request starts 32,
+so with several open, runs queue for an hour. Three things keep that
+down:
+
+- **A superseded run is cancelled**: `ci.yml`'s `concurrency` group is
+  the pull request's, and a new push cancels the run in progress. A run
+  on `main` is never cancelled.
+- **A documentation-only pull request builds less**: the `changes` job
+  looks at what the pull request changes. When every file is Markdown,
+  under `doc/dev` or `doc/images`, a man page or a guide of the site,
+  the `openblas` job (whose `make check` reads every page and link) and
+  the `man` job run, and the eleven jobs that build and test a library
+  otherwise are skipped. A skipped job passes a required check, so they
+  run when `changes` fails (`!cancelled()`). The matrix jobs
+  (`browsers`, `fuzz`, `docker`, `spack`) always run: a matrix job
+  skipped whole reports under its bare name, and its checks, required
+  under their matrix names, would never come.
+- **No run again before a merge**: AGENTS.md's "Working on an issue"
+  says when a green pull request needs updating, and when its files'
+  tests run locally instead.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
 `configure --enable-werror`, `make`, and `make check` on every pull
 request and push to `main`,
@@ -37,6 +60,11 @@ lands outside `--prefix`, or if `bin/bmb_report`, `bin/bmb_suite`, the
 `libexec` benchmarks and the man pages are not where the README says;
 installed for real, `bmb_suite` runs two of the benchmarks there; and it fails
 if the browser tests skipped, since the x86 runners have Chrome.
+
+The `blis` job also builds OpenBLAS beside BLIS and runs `bmb_suite
+--blas` across the two (#280): each library's results in its own
+directory, recording its own backend, and `bmb_report` on both. `make
+check` gives `--blas` the same build tree twice.
 
 The comment above each job is published on the site's Development page,
 with its runner, configure line and steps: keep it saying why the job
@@ -75,7 +103,7 @@ site](documentation.md#the-site)), not by `ci.yml`.
 
 The nine jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
 `nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`) also run `.github/scripts/verify-sweep.sh` ("Verified at
-real sizes"): all 32, checked at sizes a user measures — a
+real sizes"): every benchmark, as many as `routines.txt` lists (#281), checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on
 that job's library. `make check` runs `--verify` on tiny sizes only, and

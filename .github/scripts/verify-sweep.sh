@@ -115,6 +115,9 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
 done
 
 rm -f "$B/verify-sweep.err"
-test "$n" -ge 32 || { echo "only $n benchmarks found in $B"; exit 1; }
+# As many as the table has: a pattern that missed a level would pass on
+# the others (#148 moved the binaries from under it).
+want=$(grep -c '^[a-z]' "$(dirname "$0")/../../src/c/routines.txt")
+test "$n" -eq "$want" || { echo "$n benchmarks found in $B, where routines.txt has $want"; exit 1; }
 test "$failed" -eq 0 || { echo "$failed of $n benchmarks computed a wrong result"; exit 1; }
 echo "all $n benchmarks verified"

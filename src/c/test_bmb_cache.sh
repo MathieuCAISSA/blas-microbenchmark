@@ -80,7 +80,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         || fail "$b -k cold failed: $(cat "$T/err")"
     n=$((n + 1))
 done
-test "$n" -ge 32 || fail "only $n benchmarks found"
+test "$n" -eq "$(grep -c '^[a-z]' "${srcdir:-.}/routines.txt")" || fail "$n benchmarks found, not the routines of routines.txt"
 echo "ok   all $n benchmarks run cold, checked"
 
 # Hot by default: said so, and no copies anywhere.

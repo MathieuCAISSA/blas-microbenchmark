@@ -49,6 +49,9 @@ it comes from in brackets.
   is wanted and a comment or `# shellcheck disable=SC2086` says so; no
   pipe that hides a failure (write to a file, then check it)
   ([the site](../doc/dev/documentation.md#the-site)).
+  A file name from the user reaches a command on its standard input or
+  after `--`, never where a leading `-` makes it an option: `bmb_report
+  -- -d.json` gave `-d.json` to `sed` (#282).
 - [ ] awk: a function that calls `match()` resets `RSTART` and
   `RLENGTH` for its caller; copy them before calling it (the link
   checker checked links twice, #16).
