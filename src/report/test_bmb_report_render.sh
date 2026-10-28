@@ -137,6 +137,24 @@ else
     echo "note this library does not say which kernels it chose: nothing to show"
 fi
 
+# Navigation (#289): each routine's section is linked from its summary
+# tile and from the table of contents, by level, and every link leads to
+# a section that is there.
+grep -o '<section id="routine-[a-z0-9-]*"' "$dom" | sed 's/.*id="//; s/"$//' | sort >"$T/sections"
+test "$(wc -l <"$T/sections")" -eq 3 || fail "not the 3 routine sections: $(cat "$T/sections")"
+grep -o '<a class="card tile" href="#[^"]*"' "$dom" | sed 's/.*href="#//; s/"$//' | sort >"$T/tiles"
+cmp -s "$T/tiles" "$T/sections" || fail "the summary's tiles do not each link to a section:
+$(diff "$T/sections" "$T/tiles")"
+sed -n 's/.*\(<nav class="toc"[^>]*>.*<\/nav>\).*/\1/p' "$dom" >"$T/toc"
+test -s "$T/toc" || fail "no table of contents"
+grep -o 'href="#[^"]*"' "$T/toc" | sed 's/.*href="#//; s/"$//' | sort >"$T/toc-links"
+cmp -s "$T/toc-links" "$T/sections" || fail "the table of contents does not link to each section:
+$(diff "$T/sections" "$T/toc-links")"
+for l in 1 2 3; do
+    grep -q "<strong>Level $l: </strong>" "$T/toc" || fail "the table of contents has no level $l"
+done
+echo "ok   rendered: each section linked from its tile and from the table of contents, by level"
+
 grep -q 'class="line"' "$dom" || fail "no line was drawn"
 grep -q 'class="cell"' "$dom" || fail "no heatmap cell was drawn"
 echo "ok   lines and heatmap cells drawn"
