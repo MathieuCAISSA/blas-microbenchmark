@@ -985,7 +985,7 @@ jobs:
 
       - name: Every benchmark, verified in the image
         run: |
-          docker run --rm bmb sh -ec '
+          docker run --rm -e WANT="$(grep -c '^[a-z]' src/c/routines.txt)" bmb sh -ec '
             n=0
             for b in /usr/local/libexec/blas-microbenchmark/level*/bmb_*; do
               case $b in
@@ -995,7 +995,7 @@ jobs:
               esac
               n=$((n + 1))
             done
-            test "$n" -ge 32
+            test "$n" -eq "$WANT"
             echo "all $n benchmarks verified"'
 
       - name: Man pages
@@ -1086,7 +1086,7 @@ jobs:
           sed -n 's/^- bmb_run %routine=\([a-z0-9]*\) .*/\1/p' list.txt | sort > reframe.txt
           ls inst/libexec/blas-microbenchmark/level*/ | sed -n 's/^bmb_//p' | sort > installed.txt
           diff reframe.txt installed.txt
-          test "$(wc -l < reframe.txt)" -ge 32
+          test "$(wc -l < reframe.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)"
 
       - name: bmb_run, every routine, with references it meets
         run: |
@@ -1095,10 +1095,10 @@ jobs:
             -S install_prefix="$PWD/inst" -S level1_size=100000 -S level2_size=256 \
             -S level3_size=128 -S num_threads=2 -S reference_file=lenient.json \
             -r --report-file=run.json
-          python3 - <<'EOF'
-          import json
+          WANT=$(grep -c '^[a-z]' src/c/routines.txt) python3 - <<'EOF'
+          import json, os
           cases = json.load(open('run.json'))['runs'][0]['testcases']
-          assert len(cases) >= 32 and all(c['result'] == 'pass' for c in cases), cases
+          assert len(cases) == int(os.environ['WANT']) and all(c['result'] == 'pass' for c in cases), cases
           perf = {c['routine']: c['perfvalues'] for c in cases}
           assert perf['dgemm']['generic:default:gflops'][1] == 0.001, perf['dgemm']
           assert set(perf['dcopy']) == {'generic:default:gbytes_per_s'}, perf['dcopy']
@@ -1164,7 +1164,7 @@ jobs:
       - name: Their results make a report
         run: |
           find output -name result.json > results.txt
-          test "$(wc -l < results.txt)" -ge 32
+          test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)"
           # shellcheck disable=SC2046
           inst/bin/bmb_report $(cat results.txt) > report.html
           grep -qi '^<!doctype html>' report.html

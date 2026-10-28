@@ -98,6 +98,6 @@ if grep -q '^#define HAVE_CBLAS_GEMM_BATCH 1$' "${top_builddir:?top_builddir is 
 fi
 batch=$((runs - batch))
 
-test "$n" -ge 32 || fail "only $n benchmarks found"
+test "$n" -eq "$(grep -c '^[a-z]' "${srcdir:-.}/routines.txt")" || fail "$n benchmarks found, not the routines of routines.txt"
 rm -rf "$T"
 echo "ok   $n benchmarks, and dgemm under --cache cold ($cold) and in a group call ($batch), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"
