@@ -85,7 +85,11 @@ one.
 .PP
 The charts come in a section per routine, level 1 first; within a level,
 operations come in alphabetical order, each one's precisions together in
-BLAS order: sgemm, dgemm, cgemm, zgemm, then zhemm, zherk, dsymm.
+BLAS order: sasum, dasum, scasum, dzasum, then saxpy; sgemm, dgemm,
+cgemm, zgemm, then zhemm, zherk, dsymm.
+A GEMM run with
+.B \-K
+gets a section per K.
 Hovering a chart gives the exact values; the arrow keys do the same from
 the keyboard.
 .SS Series
@@ -98,11 +102,20 @@ from vector routines or from before 1.4, count as row-major),
 padding of the leading dimensions
 .RB ( \-p ;
 a padded series is named so, and results without one are unpadded)
-and cache
+cache
 .RB ( \-k ;
 a series measured cold is named so, and results from before 1.8.0 count
-as hot).
-Files that share all seven make one curve: a sweep extended the next day, or
+as hot)
+and the routine's arguments
+.RB ( \-\-trans ,
+.BR \-\-uplo ,
+.BR \-\-side ,
+.BR \-\-diag ,
+.BR \-\-batch\-count ,
+.BR \-\-batch\-mode ;
+a series with others than the defaults is named by them, and results
+from before 1.9.0 count as the defaults).
+Files that share all eight make one curve: a sweep extended the next day, or
 thread counts measured in separate runs, merge on their own.
 A point measured in more than one file is drawn at the fastest
 measurement, and the page says so with the gap, so that a run which did
@@ -110,7 +123,8 @@ not reproduce does not go unnoticed; the others are kept as its runs.
 To compare two conditions on one machine, give each run its own label.
 .SS History of a library
 Series that differ only by the library's version \(em the same backend,
-CPU, label, storage order, padding and cache \(em make a history once
+CPU, label, storage order, padding, cache and arguments \(em make a
+history once
 there are three of them; two are the comparison chart's.
 For each routine, at the thread count chosen on the page, it shows the
 largest size every version measured, version after version, ordered by

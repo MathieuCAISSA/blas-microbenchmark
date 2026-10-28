@@ -54,6 +54,7 @@ sh "$T/src/c/routines.sh" "$T" >/dev/null || fail "routines.sh could not write t
 sh "$T/src/c/routines.sh" --check "$T" >"$T/out" 2>&1 ||
     fail "--check failed on what routines.sh wrote: $(cat "$T/out")"
 grep -q "zfake: 3$" "$T/src/report/report.html" || fail "zfake not in the report's LEVEL"
+grep -q 'zfake: \["fake", "z"\]$' "$T/src/report/report.html" || fail "zfake not in the report's FAMILY"
 grep -q "'zfake': 3,$" "$T/packaging/reframe/blas_microbenchmark.py" || fail "zfake not in ReFrame's ROUTINES"
 grep -q "'zfake': 'complex16',$" "$T/packaging/reframe/blas_microbenchmark.py" || fail "zfake not in ReFrame's DIRECTORY"
 grep -q " zfake:3:z$" "$T/src/suite/bmb_suite.sh" || fail "zfake not in bmb_suite's ROUTINES"
