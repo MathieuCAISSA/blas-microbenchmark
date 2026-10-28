@@ -152,7 +152,10 @@ class BlasMicrobenchmark(AutotoolsPackage):
     def test_benchmarks(self):
         """run every benchmark at a tiny size, its result checked against a reference"""
         benchmarks = self._benchmarks()
-        assert len(benchmarks) >= 26, f"only {len(benchmarks)} benchmarks installed"
+        # Every one from 1.9.0, 104; an older release, the 26 this asked for
+        # before: a build missing most of them must fail.
+        least = 104 if self.spec.satisfies("@1.9:") else 26
+        assert len(benchmarks) >= least, f"only {len(benchmarks)} benchmarks installed"
         for path in benchmarks:
             name = os.path.basename(path)
             level = os.path.basename(os.path.dirname(path))
