@@ -1004,6 +1004,8 @@ jobs:
           grep -q 'bmb_dgemm' man.txt
           docker run --rm -e MANPAGER=cat bmb man bmb_report > man.txt
           grep -q 'bmb_report' man.txt
+          docker run --rm -e MANPAGER=cat bmb man bmb_suite > man.txt
+          grep -q 'bmb_suite' man.txt
 
       - name: Results to a mounted directory, then the report
         run: |
@@ -1014,6 +1016,21 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/out:/results" bmb \
             bmb_report dgemm.json > report.html
           grep -qi '^<!doctype html>' report.html
+
+      # The suite the image ships (#279), as a user runs it: into a mounted
+      # directory, a result and a log a routine, the report on the whole.
+      - name: bmb_suite to a mounted directory, then its report
+        run: |
+          mkdir runs
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/runs:/results" bmb \
+            bmb_suite --routine ddot,dgemm -o suite -- -x 0 -i 1 -w 0 -v 64 -m 16
+          for r in ddot dgemm; do
+            test -s "runs/suite/$r.json" && test -s "runs/suite/$r.log"
+          done
+          test "$(stat -c %u runs/suite/dgemm.json)" = "$(id -u)"
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/runs:/results" bmb \
+            bmb_report suite > suite.html
+          test "$(grep -c 'class="bmb-result"' suite.html)" -eq 2
 
       # Netlib takes no thread count, so there is nothing to warn about.
       - name: A CPU quota or affinity smaller than -t is warned about

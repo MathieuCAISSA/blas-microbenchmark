@@ -205,7 +205,8 @@ one series.
   and 4 additions, so a complex routine counts four times its real
   counterpart (`cgemm`/`zgemm` `8*M*N*K` where `dgemm` counts `2*M*N*K`,
   `zherk` four times `dsyrk`), and their GFLOP/s are comparable.
-- `bytes`: 4 per element in single precision, 8 in double.
+- `bytes`: 4 per element in single precision, 8 in double, 8 in single
+  complex and 16 in double complex.
 - Sizes: the parser's ceiling keeps a d x d matrix of 8-byte elements
   within `size_t`, which covers `float`, `double` and single complex.
   A double complex element takes 16, so the z routines' `setup()` check
@@ -229,8 +230,8 @@ one series.
   did, in the same order: the 22 matrix routines' checks gave 1.8.0's
   values to the digit after the change.
 
-Dimension conventions (only two `--matrix-dim*` options exist, so routines
-with 3 mathematical dimensions reuse one):
+Dimension conventions (`-m` and `-M`, and `-K` for GEMM alone, so the
+other routines with 3 mathematical dimensions reuse one):
 
 - Vector routines (level 1): `dim1_label = "Vector size"`, `dim2_label = NULL`,
   `use_vector_range = 1`.
@@ -255,7 +256,7 @@ promised square matrices (#1, decision 3). If you touch `bmb_sweep_dim1()`,
 keep the two cases apart.
 
 If a routine overwrites one of its inputs in place (`dtrmv`, `dtrsv`,
-`dtrmm`, `dtrsm`) or drifts over repeated calls (`dscal`), keep an
+`dtpsv`, `dtbsv`, `dtrmm`, `dtrsm`) or drifts over repeated calls (`dscal`), keep an
 untouched template buffer and `memcpy` it into the working buffer — from
 `reset()`, **never from `call()`**. For `dtrmm`/`dtrsm` that copy is
 O(M·N), the same order as the routine's own memory traffic, so timing it
@@ -271,8 +272,8 @@ Then decide how often that reset has to run. Calls are timed in batches
 so the operand drifts across the calls inside one. Ask what that drift
 does over a few thousand calls:
 
-- trmv and trmm multiply the operand by A every time and trsv and trsm
-  divide by it, in every precision, so it reaches infinity or denormals
+- trmv and trmm multiply the operand by A every time and trsv, tpsv,
+  tbsv and trsm divide by it, in every precision, so it reaches infinity or denormals
   well inside a single batch — and denormals are where the hardware
   slows down and the timing stops meaning anything. They set
   `reset_every_call = 1`, which pins the batch to 1 call, even under an
@@ -355,7 +356,9 @@ runs before `autoreconf`:
 - the README's table of the benchmarks;
 - the `LEVEL` table of `src/report/report.html`, which orders the
   report's sections and names each routine's level;
-- `ROUTINES` in `packaging/reframe/blas_microbenchmark.py`.
+- `ROUTINES` in `packaging/reframe/blas_microbenchmark.py`;
+- `ROUTINES` in `src/suite/bmb_suite.sh`, what `--level`, `--precision`
+  and `--routine` select from.
 
 Edit the table, never a list: `make check` fails while a list is not
 what the table gives (`tests/test_routines.sh`), and the next run of
@@ -388,8 +391,8 @@ result with a reference from `bmb_verify.h`:
 
 - levels 1 and 2 are recomputed directly, about one call's work;
 - level 3 is checked by random projection (Freivalds): `C*r` against
-  `A*(B*r)` for a probe vector `r`, O(N^2) instead of O(N^3); `dtrsm` and
-  `dtrsv` by their residual; `dger`, `dsyr`, `dsyr2` by projecting the
+  `A*(B*r)` for a probe vector `r`, O(N^2) instead of O(N^3); trsm, trsv,
+  tpsv and tbsv by their residual; `dger`, `dsyr`, `dsyr2` by projecting the
   whole matrix, which also covers the triangle they must not touch;
   `dsyrk`/`dsyr2k` project their untouched strictly lower part before and
   after the call, and require it identical to the bit.

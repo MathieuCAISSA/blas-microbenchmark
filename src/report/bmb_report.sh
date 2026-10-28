@@ -179,7 +179,7 @@ fi
 
 # A directory stands for every result under it, at any depth, in name
 # order, so that the same directory always gives the same page (#253): a
-# directory a library is what bmb_run writes. The files taken are kept a
+# directory a library is what bmb_suite writes. The files taken are kept a
 # line each, which a name with a newline would break: refused first.
 status=0
 files=

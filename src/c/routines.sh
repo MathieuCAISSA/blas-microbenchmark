@@ -165,6 +165,14 @@ block() {
                 if (kind == "report") {
                     sub(/,\n$/, "\n", t)
                     printf "  var LEVEL = {\n%s  };\n", t
+                    # The operation and precision of each, which order the
+                    # sections: scasum beside sasum, as the table has it.
+                    list = ""
+                    for (i = 1; i <= n; i++) { list = list " " name[i] ":\001[\"" family[i] "\",\001\"" prec[i] "\"]," }
+                    t = wrap(substr(list, 2), 79, "    ", "    ", "")
+                    gsub(/\001/, " ", t)
+                    sub(/,\n$/, "\n", t)
+                    printf "  var FAMILY = {\n%s  };\n", t
                 } else {
                     printf "ROUTINES = {\n%s}\n", t
                     # The directory each is built in (#148), which the first

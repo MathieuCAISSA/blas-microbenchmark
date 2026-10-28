@@ -107,6 +107,12 @@ releases with the same major version can be compared and read by the same
   their alpha is kept small so that repeated calls do not drift, and the
   update fell inside the tolerance. Their check now calls with an alpha
   of order 1; the timed calls keep theirs.
+- `bmb_report` named a series measured column-major, cold or padded so
+  only beside another series of the same backend (#285): a BLIS series
+  measured cold beside an OpenBLAS one measured hot was drawn as a
+  comparison of the two libraries, without a word. Such a series is now
+  always named by how it was measured, and so is one run with arguments
+  other than the defaults.
 
 ## [1.8.0] - 2026-10-23
 

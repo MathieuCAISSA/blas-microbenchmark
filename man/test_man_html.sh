@@ -78,7 +78,7 @@ top=${srcdir:-.}/..
 d=$site/development.html
 n=0
 for t in $(grep -ho '\(test\|fuzz\)_[a-z0-9_]*\(\.sh\|\.js\)\{0,1\}' "$top"/src/c/Makefile.am "$top"/src/c/*/Makefile.am \
-           "$top"/src/report/Makefile.am "$top"/Makefile.am \
+           "$top"/src/report/Makefile.am "$top"/src/suite/Makefile.am "$top"/Makefile.am \
            | sed 's/_$//' | grep -v '^test_helper' | sort -u); do
     case $t in
         test_bmb_*.sh) r=${t#test_bmb_}; r=${r%.sh}

@@ -236,6 +236,15 @@ jobs:
           docker build -f packaging/docker/Dockerfile --build-arg BLAS_BACKEND="$BACKEND" -t bmb .
           docker run --rm bmb bmb_ddot --version
           docker run --rm bmb bmb_dgemm -x 0 -i 1 -m 64 >/dev/null
+          # The suite and its page, as the docker job of ci.yml runs them (#279).
+          docker run --rm -e MANPAGER=cat bmb man bmb_suite > man.txt
+          grep -q 'bmb_suite' man.txt
+          mkdir runs
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/runs:/results" bmb \
+            bmb_suite --routine ddot,dgemm -o suite -- -x 0 -i 1 -w 0 -v 64 -m 16
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/runs:/results" bmb \
+            bmb_report suite > suite.html
+          test "$(grep -c 'class="bmb-result"' suite.html)" -eq 2
 
       # X.Y.Z-<backend> for each; X.Y.Z and latest are the OpenBLAS one.
       - name: Push to ghcr.io

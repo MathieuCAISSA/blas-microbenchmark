@@ -123,6 +123,22 @@
          "#221: the series that differs is named by its arguments, the defaults' by nothing");
     });
 
+    test("conditions always named", function () {
+      var m = R.buildModel([
+        entry("o.json", gemm({ run: { cache: "hot", arguments: { trans: "NN" } }, rows: [[1, 64, 64, 1e-5, 10, null]] })),
+        entry("b.json", gemm({ backend: "blis", blas: "BLIS 2.0", run: { cache: "hot", arguments: { trans: "NT" } },
+                               rows: [[1, 64, 64, 1e-5, 9, null]] }))
+      ]);
+      eq(names(m.identities), ["openblas", "blis · trans NT"],
+         "#285: a series alone of its backend is still named by arguments other than the defaults");
+      m = R.buildModel([
+        entry("c.json", gemm({ layout: "col", run: { cache: "cold", ld_pad: 8, arguments: { side: "R", batch_count: 4 } },
+                               rows: [[1, 64, 64, 1e-5, 10, null]] }))
+      ]);
+      eq(names(m.identities), ["openblas · column-major · cold cache · ld + 8 · side R, batch count 4"],
+         "#285: a page of one file names the layout, cache, padding and arguments it was measured with");
+    });
+
     test("batches", function () {
       function run(count, mode) { return { cache: "hot", arguments: { trans: "NN", batch_count: count, batch_mode: mode } }; }
       var m = R.buildModel([
@@ -174,14 +190,18 @@
 
     test("routine order", function () {
       var names = ["zgemm", "dsymm", "sdot", "cgemm", "dgemv", "sgemm", "ddot", "dgemm", "daxpy", "sgemv", "saxpy",
-                   "zherk", "ztrsm", "zdotc", "zhemm", "strsm", "dtrsm", "ssyrk", "dsyrk"];
+                   "zherk", "ztrsm", "zdotc", "zhemm", "strsm", "dtrsm", "ssyrk", "dsyrk",
+                   "dzasum", "izamax", "sasum", "scnrm2", "icamax", "scasum", "isamax", "dasum", "idamax", "dnrm2",
+                   "dfoo", "afoo"];
       var m = R.buildModel(names.map(function (n) {
         return entry(n + ".json", { routine: n, rows: [[1, 8, null, 1e-6, 1, 8]] });
       }));
       eq(m.routines.map(function (rt) { return rt.name; }),
-         ["saxpy", "daxpy", "sdot", "ddot", "zdotc", "sgemv", "dgemv", "sgemm", "dgemm", "cgemm", "zgemm",
-          "zhemm", "zherk", "dsymm", "ssyrk", "dsyrk", "strsm", "dtrsm", "ztrsm"],
-         "#6, #67: routines by level, then by operation, its precisions in BLAS order s, d, c, z");
+         ["afoo", "dfoo", "sasum", "dasum", "scasum", "dzasum", "saxpy", "daxpy", "sdot", "ddot", "zdotc",
+          "isamax", "idamax", "icamax", "izamax", "dnrm2", "scnrm2", "sgemv", "dgemv",
+          "sgemm", "dgemm", "cgemm", "zgemm", "zhemm", "zherk", "dsymm", "ssyrk", "dsyrk", "strsm", "dtrsm", "ztrsm"],
+         "#6, #67, #269: routines by level, then by operation, its precisions in BLAS order s, d, c, z; " +
+         "scasum with asum and i?amax s, d, c, z, from the table; a routine it does not know first, with no level, by its name");
     });
 
     test("duplicates", function () {
@@ -580,6 +600,14 @@
         v("d.json", "0.3.9", base, padded), v("e.json", "0.3.26", base, padded), v("f.json", "0.3.28", base, padded)
       ]);
       eq(R.historyGroups(m.identities).length, 2, "and by their padding (#163)");
+
+      var transposed = { run: { arguments: { trans: "TN" } } };
+      m = R.buildModel([
+        v("a.json", "0.3.9", base), v("b.json", "0.3.26", base), v("c.json", "0.3.28", base),
+        v("d.json", "0.3.9", base, transposed), v("e.json", "0.3.26", base, transposed),
+        v("f.json", "0.3.28", base, transposed)
+      ]);
+      eq(R.historyGroups(m.identities).length, 2, "and by their arguments (#221, #269): TN and NN are two histories");
     });
 
     /* ---- FlexiBLAS (#5) ---- */

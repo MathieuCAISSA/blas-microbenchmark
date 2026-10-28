@@ -285,16 +285,57 @@ details[open] > summary { margin-bottom: 12px; }
     zher2k: 3, strmm: 3, dtrmm: 3, ctrmm: 3, ztrmm: 3, strsm: 3, dtrsm: 3,
     ctrsm: 3, ztrsm: 3
   };
+  var FAMILY = {
+    sasum: ["asum", "s"], dasum: ["asum", "d"], scasum: ["asum", "c"],
+    dzasum: ["asum", "z"], saxpy: ["axpy", "s"], daxpy: ["axpy", "d"],
+    caxpy: ["axpy", "c"], zaxpy: ["axpy", "z"], scopy: ["copy", "s"],
+    dcopy: ["copy", "d"], ccopy: ["copy", "c"], zcopy: ["copy", "z"],
+    sdot: ["dot", "s"], ddot: ["dot", "d"], cdotc: ["dotc", "c"],
+    zdotc: ["dotc", "z"], cdotu: ["dotu", "c"], zdotu: ["dotu", "z"],
+    snrm2: ["nrm2", "s"], dnrm2: ["nrm2", "d"], scnrm2: ["nrm2", "c"],
+    dznrm2: ["nrm2", "z"], sscal: ["scal", "s"], dscal: ["scal", "d"],
+    cscal: ["scal", "c"], zscal: ["scal", "z"], sswap: ["swap", "s"],
+    dswap: ["swap", "d"], cswap: ["swap", "c"], zswap: ["swap", "z"],
+    isamax: ["iamax", "s"], idamax: ["iamax", "d"], icamax: ["iamax", "c"],
+    izamax: ["iamax", "z"], srot: ["rot", "s"], drot: ["rot", "d"],
+    sgemv: ["gemv", "s"], dgemv: ["gemv", "d"], cgemv: ["gemv", "c"],
+    zgemv: ["gemv", "z"], sgbmv: ["gbmv", "s"], dgbmv: ["gbmv", "d"],
+    sger: ["ger", "s"], dger: ["ger", "d"], cgeru: ["geru", "c"],
+    zgeru: ["geru", "z"], cgerc: ["gerc", "c"], zgerc: ["gerc", "z"],
+    ssymv: ["symv", "s"], dsymv: ["symv", "d"], chemv: ["hemv", "c"],
+    zhemv: ["hemv", "z"], sspmv: ["spmv", "s"], dspmv: ["spmv", "d"],
+    ssyr: ["syr", "s"], dsyr: ["syr", "d"], cher: ["her", "c"],
+    zher: ["her", "z"], ssyr2: ["syr2", "s"], dsyr2: ["syr2", "d"],
+    cher2: ["her2", "c"], zher2: ["her2", "z"], strmv: ["trmv", "s"],
+    dtrmv: ["trmv", "d"], ctrmv: ["trmv", "c"], ztrmv: ["trmv", "z"],
+    strsv: ["trsv", "s"], dtrsv: ["trsv", "d"], ctrsv: ["trsv", "c"],
+    ztrsv: ["trsv", "z"], stpsv: ["tpsv", "s"], dtpsv: ["tpsv", "d"],
+    stbsv: ["tbsv", "s"], dtbsv: ["tbsv", "d"], sgemm: ["gemm", "s"],
+    dgemm: ["gemm", "d"], cgemm: ["gemm", "c"], zgemm: ["gemm", "z"],
+    ssymm: ["symm", "s"], dsymm: ["symm", "d"], csymm: ["symm", "c"],
+    zsymm: ["symm", "z"], chemm: ["hemm", "c"], zhemm: ["hemm", "z"],
+    ssyrk: ["syrk", "s"], dsyrk: ["syrk", "d"], csyrk: ["syrk", "c"],
+    zsyrk: ["syrk", "z"], cherk: ["herk", "c"], zherk: ["herk", "z"],
+    ssyr2k: ["syr2k", "s"], dsyr2k: ["syr2k", "d"], csyr2k: ["syr2k", "c"],
+    zsyr2k: ["syr2k", "z"], cher2k: ["her2k", "c"], zher2k: ["her2k", "z"],
+    strmm: ["trmm", "s"], dtrmm: ["trmm", "d"], ctrmm: ["trmm", "c"],
+    ztrmm: ["trmm", "z"], strsm: ["trsm", "s"], dtrsm: ["trsm", "d"],
+    ctrsm: ["trsm", "c"], ztrsm: ["trsm", "z"]
+  };
   /* END routines (report) */
 
   /* Routines by level, then by operation, its precisions side by side
    * in BLAS order (#6): sgemm, dgemm, cgemm, zgemm, then zhemm, zherk,
-   * dsymm. */
+   * dsymm; sasum, dasum, scasum, dzasum, the operation and precision
+   * from routines.txt (#269). */
   var PRECISION = "sdcz";
 
   function routineCompare(a, b) {
+    /* A routine of the table by its operation and precision (#269); one
+     * it does not know, from a file of another version, by its name. */
     function key(name) {
-      var p = PRECISION.indexOf(name.charAt(0));
+      var f = FAMILY[name], p = PRECISION.indexOf(name.charAt(0));
+      if (f) { return [f[0], PRECISION.indexOf(f[1])]; }
       return p < 0 ? [name, 9] : [name.slice(1), p];
     }
     var ka = key(a.name), kb = key(b.name);
@@ -459,9 +500,11 @@ details[open] > summary { margin-bottom: 12px; }
       addResult(entry.file, entry.result);
     });
 
-    /* Legend names: the backend alone when that is unambiguous, then only
-     * as much of label, library version and CPU as it takes to tell series
-     * of the same backend apart. */
+    /* Legend names: the backend, then only as much of label, library
+     * version and CPU as it takes to tell series of the same backend
+     * apart. What was measured other than by default is always named
+     * (#285): a BLIS series run with --trans NT beside an OpenBLAS one
+     * with the defaults is not a comparison of the two libraries. */
     identityOrder.forEach(function (id) {
       var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
       var parts = [id.backend];
@@ -472,11 +515,11 @@ details[open] > summary { margin-bottom: 12px; }
         if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
         if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
         if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
-        if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
-        if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
-        if (differs(function (o) { return o.pad; }) && id.pad) { parts.push("ld + " + id.pad); }
-        if (differs(function (o) { return o.variant; }) && id.variant) { parts.push(id.variant); }
       }
+      if (id.layout === "col") { parts.push("column-major"); }
+      if (id.cache === "cold") { parts.push("cold cache"); }
+      if (id.pad) { parts.push("ld + " + id.pad); }
+      if (id.variant) { parts.push(id.variant); }
       id.name = parts.join(" · ");
     });
 
@@ -1554,7 +1597,7 @@ details[open] > summary { margin-bottom: 12px; }
   function historyGroups(identities) {
     var groups = {}, order = [];
     identities.forEach(function (id) {
-      var key = [id.backend, id.cpu, id.label, id.layout, id.cache, id.pad].join("\u0001");
+      var key = [id.backend, id.cpu, id.label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });
