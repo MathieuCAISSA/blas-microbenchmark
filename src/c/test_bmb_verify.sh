@@ -16,7 +16,7 @@
 # K of its own (-K, #215), shorter and longer than M. Every variant of
 # the arguments a routine takes (--trans, --uplo, --side, --diag: #221,
 # #222) is run, each combination of them: GEMM's four transposes, and
-# two with C in complex; every side, triangle, transpose and diagonal of
+# its nine in complex (#282); every side, triangle, transpose and diagonal of
 # trmm and trsm; and so on. The defaults run in the four layouts, every
 # other variant row-major and column-major padded. Without warm-up
 # (-w 0): a check needs none, and it would cost 0.2 s a run.
@@ -86,7 +86,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $r in [cz]*) t3=N,T,C ;; *) t3=N,T ;; esac
     case $r in
         [sd]gemm) variants=$(combos --trans=NN,NT,TN,TT) ;;
-        [cz]gemm) variants=$(combos --trans=NN,NT,TN,TT,CN,TC) ;;
+        [cz]gemm) variants=$(combos --trans=NN,NT,NC,TN,TT,TC,CN,CT,CC) ;;
         ?gemv | ?gbmv) variants=$(combos --trans=$t3) ;;
         ?trmm | ?trsm) variants=$(combos --side=L,R --uplo=U,L --trans=$t3 --diag=N,U) ;;
         ?trmv | ?trsv | ?tpsv | ?tbsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
