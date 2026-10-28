@@ -256,7 +256,8 @@ bmb_report results/*.json > report.html
 .EE
 .RE
 .SH SEE ALSO
-.BR blas\-microbenchmark (1)
+.BR blas\-microbenchmark (1),
+.BR bmb_suite (1)
 .PP
 The guides \(em installing, comparing libraries, on an HPC cluster,
 ReFrame \(em and this manual online:

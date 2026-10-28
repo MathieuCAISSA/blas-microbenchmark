@@ -68,7 +68,8 @@ Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s 
 1               2048                2048                0.381516047     45.031        0.423780287     4.3
 ```
 
-Every benchmark takes the same options: the sizes to sweep (`-v` for
+Every benchmark takes the same options (a routine refuses an argument it
+does not have, such as `--trans` on `ddot`): the sizes to sweep (`-v` for
 vectors, `-m` and `-M` for matrices), thread counts (`-t 1:8`), a file to
 save to (`-o results.json`, or `.csv`). GEMM also takes a batch of small
 matrices per call (`--batch-count 10000 --batch-mode group`), to compare
@@ -137,7 +138,8 @@ runs them all in one command, a series each in the report.
 | **3** — matrix × matrix | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `ssymm` `ssyrk` `ssyr2k` `strmm` `strsm` | `cgemm` `zgemm` `csymm` `zsymm` `chemm` `zhemm` `csyrk` `zsyrk` `cherk` `zherk` `csyr2k` `zsyr2k` `cher2k` `zher2k` `ctrmm` `ztrmm` `ctrsm` `ztrsm` |
 <!-- END routines (readme) -->
 
-Each is `bmb_<routine>`. Level 1 and 2 report GFLOP/s and GB/s, level 3
+Each is `bmb_<routine>`. Level 1 and 2 report GFLOP/s and GB/s (copy,
+swap and `i?amax` GB/s only), level 3
 GFLOP/s.
 
 ## Install
