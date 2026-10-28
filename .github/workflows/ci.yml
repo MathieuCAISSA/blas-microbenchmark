@@ -1163,7 +1163,8 @@ jobs:
 
       - name: Their results make a report
         run: |
-          find output -name result.json > results.txt
+          # bmb_run's, a routine each: bmb_build_run's are in output too.
+          find output -path '*/bmb_run_*' -name result.json > results.txt
           test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)"
           # shellcheck disable=SC2046
           inst/bin/bmb_report $(cat results.txt) > report.html
