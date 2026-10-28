@@ -88,7 +88,8 @@ a.tile:hover { border-color: var(--axis); }
 a.tile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 nav.toc { margin-top: 40px; }
 nav.toc p { margin: 4px 0; }
-nav.toc a { margin-right: 12px; }
+nav.toc a { margin-right: 12px; color: var(--ink); text-decoration-color: var(--axis); text-underline-offset: 3px; }
+nav.toc a:hover { text-decoration-color: var(--ink); }
 .charts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 12px; }
