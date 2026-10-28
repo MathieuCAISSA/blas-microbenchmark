@@ -83,6 +83,13 @@ section { margin-top: 40px; }
 .tile .value { font-size: 24px; font-weight: 600; margin: 2px 0; }
 .tile .value small { font-size: 13px; font-weight: 400; color: var(--ink-2); }
 .tile .detail { color: var(--muted); font-size: 12px; }
+a.tile { display: block; color: inherit; text-decoration: none; }
+a.tile:hover { border-color: var(--axis); }
+a.tile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+nav.toc { margin-top: 40px; }
+nav.toc p { margin: 4px 0; }
+nav.toc a { margin-right: 12px; color: var(--ink); text-decoration-color: var(--axis); text-underline-offset: 3px; }
+nav.toc a:hover { text-decoration-color: var(--ink); }
 .charts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 12px; }
@@ -427,7 +434,7 @@ details[open] > summary { margin-bottom: 12px; }
           name: r.routine, k: k, level: LEVEL[r.routine] || 0,
           title: r.routine + (k === null ? "" : ", K = " + k.toLocaleString("en-US")),
           anchor: "routine-" + r.routine + (k === null ? "" : "-k" + k),
-          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
+          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null, dim3Label: r.dim3_label || "K",
           series: {}, seriesOrder: [], duplicates: []
         };
       }
@@ -500,21 +507,74 @@ details[open] > summary { margin-bottom: 12px; }
       addResult(entry.file, entry.result);
     });
 
+    /* A sweep of K alone at one M x N (#284), as HPL's updates are
+     * measured: a section per K would each hold a single size and draw
+     * nothing, so they become one section charted against K. Each point
+     * drawn at its K; its runs, which the raw data lists, keep their
+     * dimensions. */
+    var kSections = {};
+    Object.keys(routines).forEach(function (key) {
+      var rt = routines[key];
+      if (rt.k !== null) { (kSections[rt.name] = kSections[rt.name] || []).push(key); }
+    });
+    Object.keys(kSections).forEach(function (name) {
+      var keys = kSections[name], sizes = {}, size = null;
+      keys.forEach(function (key) {
+        routines[key].seriesOrder.forEach(function (s) {
+          pointsOf(s).forEach(function (p) { sizes[p.d1 + "x" + p.d2] = size = p; });
+        });
+      });
+      if (keys.length < 2 || Object.keys(sizes).length !== 1) { return; }
+      var first = routines[keys[0]];
+      var swept = {
+        name: name, k: null, kSweep: { d1: size.d1, d2: size.d2 }, level: first.level,
+        title: name + ", K at " + sizeText(size.d1, size.d2), anchor: "routine-" + name + "-ksweep",
+        dim1Label: first.dim3Label, dim2Label: null, series: {}, seriesOrder: [], duplicates: []
+      };
+      keys.forEach(function (key) {
+        var from = routines[key];
+        from.seriesOrder.forEach(function (s) {
+          var to = swept.series[s.identity.key];
+          if (!to) {
+            to = swept.series[s.identity.key] = { identity: s.identity, points: {} };
+            swept.seriesOrder.push(to);
+          }
+          if (s.peakGflops) { to.peakGflops = s.peakGflops; }
+          if (s.peakGbs) { to.peakGbs = s.peakGbs; }
+          pointsOf(s).forEach(function (p) {
+            var q = {}, f;
+            for (f in p) { if (Object.prototype.hasOwnProperty.call(p, f)) { q[f] = p[f]; } }
+            q.d1 = p.d3;
+            q.d2 = null;
+            to.points[q.threads + "x" + q.d1] = q;
+          });
+        });
+        swept.duplicates = swept.duplicates.concat(from.duplicates);
+        delete routines[key];
+      });
+      routines[name + " K"] = swept;
+    });
+
     /* Legend names: the backend, then only as much of label, library
      * version and CPU as it takes to tell series of the same backend
-     * apart. What was measured other than by default is always named
-     * (#285): a BLIS series run with --trans NT beside an OpenBLAS one
-     * with the defaults is not a comparison of the two libraries. */
+     * apart: each only if it tells this series from those the parts
+     * before it do not (#287), so that bmb_suite --blas
+     * openblas-0.3.26=... is not also named by its version. What was
+     * measured other than by default is always named (#285): a BLIS
+     * series run with --trans NT beside an OpenBLAS one with the defaults
+     * is not a comparison of the two libraries. */
     identityOrder.forEach(function (id) {
       var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
       var parts = [id.backend];
-      function differs(f) {
-        return same.some(function (o) { return f(o) !== f(id); });
+      var shared = same;
+      function tellsApart(f, text) {
+        if (text && shared.some(function (o) { return f(o) !== f(id); })) { parts.push(text); }
+        shared = shared.filter(function (o) { return f(o) === f(id); });
       }
       if (same.length > 1) {
-        if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
-        if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
-        if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
+        tellsApart(function (o) { return o.label; }, id.label);
+        tellsApart(function (o) { return shortBlas(o.blas); }, id.blas && shortBlas(id.blas));
+        tellsApart(function (o) { return o.cpu; }, cpuName(id.cpu));
       }
       if (id.layout === "col") { parts.push("column-major"); }
       if (id.cache === "cold") { parts.push("cold cache"); }
@@ -1073,6 +1133,23 @@ details[open] > summary { margin-bottom: 12px; }
                pick: function (p) { return p.d2; }, keep: function () { return true; } };
     }
     var a = parens(rt.dim1Label), b = parens(rt.dim2Label);
+    /* A band's K (gbmv, tbsv, #286) is its width, not a matrix's second
+     * dimension: there is no square to slice to. Without -M it is N, the
+     * full band; with it, the K measured at the most N, the largest of
+     * those, and the others in the heatmap. */
+    if (rt.level === 2 && b === "K") {
+      if (all.every(function (p) { return p.d1 === p.d2; })) {
+        return { label: rt.dim1Label, note: b + " = " + a,
+                 pick: function (p) { return p.d1; }, keep: function () { return true; } };
+      }
+      var count = {}, k = null;
+      d2.forEach(function (v) {
+        count[v] = uniqSorted(all.filter(function (p) { return p.d2 === v; }).map(function (p) { return p.d1; })).length;
+        if (k === null || count[v] >= count[k]) { k = v; }
+      });
+      return { label: rt.dim1Label, note: rt.dim2Label + " = " + k.toLocaleString("en-US") + "; the other " + b + " are in the heatmap",
+               pick: function (p) { return p.d1; }, keep: function (p) { return p.d2 === k; } };
+    }
     var grid = all.some(function (p) { return p.d1 !== p.d2; });
     return { label: (a && b) ? "Size (" + a + "=" + b + ")" : rt.dim1Label + " = " + rt.dim2Label,
              note: grid ? "square matrices only; the other shapes are in the heatmap" : "square matrices",
@@ -1150,13 +1227,17 @@ details[open] > summary { margin-bottom: 12px; }
     function build(field, title, unit) {
       var kinds = {};
       /* Level 3 against its peak (#251): a line at each series' peak at
-       * this thread count, and each point's percentage of it. */
-      var peaks = {};
+       * this thread count, and each point's percentage of it. A routine
+       * with no FLOPs, which gets no roofline, a line at the bandwidth
+       * on its GB/s chart instead (#288). */
+      var peaks = {}, bandwidths = {};
       var series = list.map(function (s) {
         var pts = s.points.filter(function (p) { return p[field] !== undefined; });
         var repeated = pts.some(function (p) { return runSpread(p, field).n > 1; });
         var peak = (field === "gflops" && rt.level === 3) ? peakOf(rt, s.series) : { gflops: null };
         if (peak.gflops) { peaks[peak.gflops * threads] = true; }
+        var bandwidth = (field === "gbs" && metricField(rt) === "gbs") ? peakOf(rt, s.series).gbs : null;
+        if (bandwidth) { bandwidths[bandwidth] = true; }
         return {
           name: s.identity.name, colour: colour(s.identity),
           points: pts.map(function (p) {
@@ -1175,7 +1256,9 @@ details[open] > summary { margin-bottom: 12px; }
       });
       var yMarkers = Object.keys(peaks).map(function (y) {
         return { y: Number(y), label: "peak, " + plural(threads, "core") + ": " + fmtRate(Number(y)) + " " + unit };
-      });
+      }).concat(Object.keys(bandwidths).map(function (y) {
+        return { y: Number(y), label: "memory bandwidth: " + fmtRate(Number(y)) + " " + unit };
+      }));
       if (!series.some(function (s) { return s.points.length; })) { return; }
       var bands = [kinds.runs ? "band: fastest to slowest run" : "",
                    kinds.quartile ? "band: fastest sample to third quartile" : "",
@@ -1389,6 +1472,20 @@ details[open] > summary { margin-bottom: 12px; }
     return out;
   }
 
+  /* What of the peak a routine's charts use (#288): level 3, the FLOP
+   * rate; levels 1 and 2, the bandwidth, and the FLOP rate as the
+   * roofline's compute roof, which needs the bandwidth to be drawn; a
+   * routine that does no arithmetic, the bandwidth alone. */
+  function peakUsed(rt, peak) {
+    var out = { gflops: peak.gflops, gbs: peak.gbs, gflopsFrom: peak.gflopsFrom, gbsFrom: peak.gbsFrom };
+    if (rt.level === 3) {
+      out.gbs = out.gbsFrom = null;
+    } else if (!peak.gbs || metricField(rt) === "gbs") {
+      out.gflops = out.gflopsFrom = null;
+    }
+    return out;
+  }
+
   /* A point's GFLOP/s in percent of its thread count's peak, or null. */
   function percentOfPeak(p, peak) {
     return (peak.gflops && p.gflops !== undefined) ? 100 * p.gflops / (peak.gflops * p.threads) : null;
@@ -1407,6 +1504,9 @@ details[open] > summary { margin-bottom: 12px; }
     }
     return parts.join("; ");
   }
+
+  /* A point's size as its section names it: its K in a sweep of K (#284). */
+  function pointSize(rt, d1, d2) { return (rt.kSweep ? "K = " : "") + sizeText(d1, d2); }
 
   function sizeText(d1, d2) {
     return d2 === null ? d1.toLocaleString("en-US") : d1.toLocaleString("en-US") + " × " + d2.toLocaleString("en-US");
@@ -1475,7 +1575,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     var series = data.series.map(function (x) {
       return {
-        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + sizeText(x.size.d1, x.size.d2) + ")"),
+        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + pointSize(rt, x.size.d1, x.size.d2) + ")"),
         colour: colour(x.identity),
         points: x.points.map(function (p) { return { x: p.x, y: p.y, extra: Math.round(100 * p.efficiency) + "% of ideal" }; }),
         ideal: x.ideal
@@ -1486,7 +1586,7 @@ details[open] > summary { margin-bottom: 12px; }
       notes: data.notes,
       chart: lineChart({
         title: "Thread scaling",
-        subtitle: (data.chosen ? "at " + sizeText(data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
+        subtitle: (data.chosen ? "at " + pointSize(rt, data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
                   " · dashed: ideal linear scaling",
         xLabel: "Threads", yLabel: unit, yUnit: unit, series: series, yHeadroom: 1.2,
         xFormat: function (x) { return String(x); },
@@ -1597,7 +1697,12 @@ details[open] > summary { margin-bottom: 12px; }
   function historyGroups(identities) {
     var groups = {}, order = [];
     identities.forEach(function (id) {
-      var key = [id.backend, id.cpu, id.label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
+      /* A label that names the version, as bmb_suite --blas
+       * openblas-0.3.26=... does, is taken without it (#287): the
+       * versions so named are one history, not one label each. */
+      var v = versionOf(id.blas);
+      var label = v ? id.label.split(v).join("") : id.label;
+      var key = [id.backend, id.cpu, label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });
@@ -1625,7 +1730,8 @@ details[open] > summary { margin-bottom: 12px; }
     /* Groups of one library differ by label, storage order or machine:
      * the first two name it, the machine goes in the subtitle. */
     var newest = members[members.length - 1].identity;
-    var name = [newest.backend].concat(newest.label ? [newest.label] : [],
+    var label = members.every(function (m) { return m.identity.label === newest.label; }) ? newest.label : "";
+    var name = [newest.backend].concat(label ? [label] : [],
                                        newest.layout === "col" ? ["column-major"] : []).join(" · ");
     var notes = [];
     var absent = members.filter(function (m) { return !m.points.length; });
@@ -1673,7 +1779,8 @@ details[open] > summary { margin-bottom: 12px; }
       ? "History of " + name + ": each version is tested against the one before (Mann-Whitney U on their runs, two-sided, p < " +
         ALPHA + "); \"slower\" marks a regression beyond noise."
       : "History of " + name + ": measure each version several times, into separate files, to tell a regression from noise.");
-    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2, points: points, notes: notes };
+    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2,
+             size: pointSize(rt, at.d1, at.d2), points: points, notes: notes };
   }
 
   function historyChart(data) {
@@ -1682,7 +1789,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     return lineChart({
       title: data.name + " version by version",
-      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + sizeText(data.d1, data.d2) + " · oldest to newest",
+      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + data.size + " · oldest to newest",
       xLabel: "Version", yLabel: unit, yUnit: unit, xLinear: true, endLabels: false,
       xFormat: function (x) { return labels[x - 1]; },
       xHead: function (x) { return data.name + " " + labels[x - 1]; },
@@ -1931,7 +2038,7 @@ details[open] > summary { margin-bottom: 12px; }
     ratioData: ratioData, ratioDomain: ratioDomain, ratioTicks: ratioTicks,
     thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
     heatData: heatData, heatStep: heatStep, STEPS: STEPS,
-    singlePrecision: singlePrecision, peakOf: peakOf, percentOfPeak: percentOfPeak, peakText: peakText,
+    pointSize: pointSize, singlePrecision: singlePrecision, peakOf: peakOf, peakUsed: peakUsed, percentOfPeak: percentOfPeak, peakText: peakText,
     rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks
   };
 
@@ -2020,12 +2127,15 @@ details[open] > summary { margin-bottom: 12px; }
       });
     });
     if (!best) { return; }
-    var tile = el("div", "card tile");
+    /* A link to the routine's section (#289): a suite's page has a
+     * hundred of them. */
+    var tile = el("a", "card tile");
+    tile.href = "#" + rt.anchor;
     tile.appendChild(el("div", "label", rt.title));
     var v = el("div", "value", fmtRate(best[field]) + " ");
     v.appendChild(el("small", null, unit));
     tile.appendChild(v);
-    var size = best.d2 === null ? best.d1.toLocaleString("en-US") : best.d1.toLocaleString("en-US") + " × " + best.d2.toLocaleString("en-US");
+    var size = pointSize(rt, best.d1, best.d2);
     tile.appendChild(el("div", "detail", bestSeries.identity.name + " · " + size + " · " + plural(best.threads, "thread")));
     tiles.appendChild(tile);
   });
@@ -2087,6 +2197,28 @@ details[open] > summary { margin-bottom: 12px; }
   summary.appendChild(prov);
   root.appendChild(summary);
 
+  /* ---- the sections, by level (#289) ---- */
+  if (routineOrder.length > 1) {
+    var toc = el("nav", "toc");
+    toc.setAttribute("aria-label", "Routines");
+    var tocHead = el("div", "section-head");
+    tocHead.appendChild(el("h2", null, "Routines"));
+    toc.appendChild(tocHead);
+    [1, 2, 3, 0].forEach(function (level) {
+      var rts = routineOrder.filter(function (rt) { return rt.level === level; });
+      if (!rts.length) { return; }
+      var line = el("p");
+      line.appendChild(el("strong", null, (level ? "Level " + level : "Other") + ": "));
+      rts.forEach(function (rt) {
+        var a = el("a", null, rt.title);
+        a.href = "#" + rt.anchor;
+        line.appendChild(a);
+      });
+      toc.appendChild(line);
+    });
+    root.appendChild(toc);
+  }
+
   /* ---- one section per routine ---- */
   routineOrder.forEach(function (rt) {
     var sec = el("section");
@@ -2133,13 +2265,19 @@ details[open] > summary { margin-bottom: 12px; }
         var rd = rooflineData(rt, threads);
         if (rd) { made.push(rooflineChart(rt, rd, threads)); }
       }
-      /* Where each series' peak came from (#251). */
+      /* Where each series' peak came from (#251), only as much of it as
+       * the charts use (#288). */
       var peakNotes = [];
+      function peakNote(t) { if (peakNotes.indexOf(t) < 0) { peakNotes.push(t); } }
       rt.seriesOrder.forEach(function (s) {
-        var t = peakText(rt, peakOf(rt, s));
-        if (t && peakNotes.indexOf(t) < 0) { peakNotes.push(t); }
+        var peak = peakOf(rt, s);
+        var t = peakText(rt, peakUsed(rt, peak));
+        if (t) { peakNote("Peak: " + t + "."); }
+        if (peak.gflops && !peak.gbs && rt.level !== 3 && metricField(rt) === "gflops") {
+          peakNote("A FLOP peak alone draws nothing here: the roofline needs the memory bandwidth too (--peak-gbs).");
+        }
       });
-      peakNotes.forEach(function (t) { notes.push("Peak: " + t + "."); });
+      notes = notes.concat(peakNotes);
 
       var rc = ratioChart(rt, res.list, res.slice, threads, referenceFor(rt, reference));
       if (rc) {
@@ -2191,7 +2329,7 @@ details[open] > summary { margin-bottom: 12px; }
        * listed; more are summarised, with the full list one click away. */
       var dups = rt.duplicates;
       function dupText(d) {
-        return d.series.identity.name + ", " + sizeText(d.point.d1, d.point.d2) + " at " +
+        return d.series.identity.name + ", " + pointSize(rt, rt.kSweep ? d.point.d3 : d.point.d1, rt.kSweep ? null : d.point.d2) + " at " +
                plural(d.point.threads, "thread") + ": drawn from " + d.kept + ", " + d.other + " was " +
                d.gap.toFixed(0) + "% slower";
       }
@@ -2203,7 +2341,8 @@ details[open] > summary { margin-bottom: 12px; }
         var det = el("details");
         det.appendChild(el("summary", null, dups.length + " points were measured in more than one file; the fastest is drawn, the others are its runs. Largest gap: " +
                                              worst.gap.toFixed(0) + "% (" + worst.series.identity.name + ", " +
-                                             sizeText(worst.point.d1, worst.point.d2) + ")."));
+                                             pointSize(rt, rt.kSweep ? worst.point.d3 : worst.point.d1,
+                                                       rt.kSweep ? null : worst.point.d2) + ")."));
         var inner = el("ul", "notes");
         dups.forEach(function (d) { inner.appendChild(el("li", null, dupText(d) + ".")); });
         det.appendChild(inner);
@@ -2242,7 +2381,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "GFLOP/s", n: true, v: function (r) { return r.p.gflops; }, f: fmtRate },
     { h: "GB/s", n: true, v: function (r) { return r.p.gbs; }, f: fmtRate },
     { h: "% of peak", n: true, v: function (r) {
-        var pct = percentOfPeak(r.p, peakOf(r.rt, r.s));
+        var pct = r.rt.level === 3 ? percentOfPeak(r.p, peakOf(r.rt, r.s)) : null;
         return pct === null ? undefined : pct;
       }, f: function (v) { return v.toFixed(0) + "%"; } },
     { h: "Median", n: true, v: function (r) { return r.p.median; }, f: fmtTime },

@@ -62,9 +62,11 @@ check_file() {
         return 1
     fi
 
-    v=$(sed -n 's/^  "version": "\([^"]*\)",$/\1/p' "$f" | sed -n 1p)
+    # Each file on standard input: a name such as -d.json, given after
+    # --, would be an option to sed and grep (#282).
+    v=$(sed -n 's/^  "version": "\([^"]*\)",$/\1/p' <"$f" | sed -n 1p)
     if [ -z "$v" ]; then
-        if grep -q '^  "results": \[' "$f" && grep -q '^  "routine": "' "$f"; then
+        if grep -q '^  "results": \[' <"$f" && grep -q '^  "routine": "' <"$f"; then
             say "$f: produced before 0.6.0, when time_s was a mean rather than the" \
                 "fastest sample and no backend was recorded, so it cannot be compared" \
                 "with current results. Re-run the benchmark to include it."
@@ -95,7 +97,7 @@ check_file() {
 
     # The benchmarks only write the file at the end of a run, but a copy can
     # still be cut short.
-    if [ "$(sed -n '$p' "$f")" != "}" ]; then
+    if [ "$(sed -n '$p' <"$f")" != "}" ]; then
         say "$f: incomplete (it does not end with '}'); was it copied in full?"
         return 1
     fi
@@ -239,7 +241,7 @@ printf '<script type="application/json" id="bmb-meta">{"generator": "bmb_report 
 for f in "$@"; do
     printf '<script type="application/json" class="bmb-result">{"file": "%s", "result":\n' \
         "$(json_string "$f")"
-    sed 's#</#<\\/#g' "$f"
+    sed 's#</#<\\/#g' <"$f"
     printf '}</script>\n'
 done
 

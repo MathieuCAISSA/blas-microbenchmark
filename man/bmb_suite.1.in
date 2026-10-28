@@ -140,7 +140,9 @@ Each benchmark is run with
 .B \-\-label
 .IR name ,
 which tells apart two builds of one library (two versions, two
-compilers) in the report, so
+compilers) in the report; a name with the library's version in it
+.RB ( openblas\-0.3.26 )
+lets the report draw the versions' history, so
 .B \-l
 is refused among the options passed on.
 The backend each suite was built for is read from its benchmarks'

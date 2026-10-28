@@ -61,6 +61,7 @@
       })
     };
     if (o.dim2Label) { r.dim2_label = o.dim2Label; }
+    if (o.dim3Label) { r.dim3_label = o.dim3Label; }
     if (o.label) { r.label = o.label; }
     if (o.verified) { r.verified = true; }
     if (o.governor) { r.machine.governor = o.governor; }
@@ -166,6 +167,37 @@
          "#215: the K = 8 section holds the K = 8 points, with their K");
       eq(R.pointsOf(m.routines[0].seriesOrder[0])[0].d3, null, "#215: a point without -K has no K");
       eq(m.identities.length, 1, "#215: K is not part of the series: one library, one series");
+    });
+
+    test("a sweep of K alone", function () {
+      function k(file, rows) {
+        return entry(file, gemm({ dim1Label: "Matrix dim1 (M)", dim3Label: "Matrix dim3 (K)", rows: rows }));
+      }
+      var m = R.buildModel([
+        k("k.json", [[1, 256, 256, 1e-5, 10, null, 8], [1, 256, 256, 2e-5, 12, null, 16],
+                     [2, 256, 256, 1e-5, 20, null, 8], [2, 256, 256, 1e-5, 22, null, 16]]),
+        k("more.json", [[1, 256, 256, 3e-5, 14, null, 32], [1, 256, 256, 5e-5, 15, null, 64]]),
+        k("again.json", [[1, 256, 256, 2.5e-5, 11, null, 16]])
+      ]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm, K at 256 × 256"],
+         "#284: K swept at one M x N is one section, not one per K with a single size each");
+      var rt = m.routines[0];
+      eq([rt.dim1Label, rt.dim2Label, rt.anchor], ["Matrix dim3 (K)", null, "routine-dgemm-ksweep"],
+         "#284: charted against K, with an anchor of its own");
+      eq(R.sizeData(rt, 1).xs, [8, 16, 32, 64], "#284: at 1 thread, a point a K");
+      eq(R.sizeData(rt, 2).xs, [8, 16], "#284: at 2 threads, the Ks measured there");
+      eq(R.pointSize(rt, 64, null), "K = 64", "#284: a point's size is its K");
+      var p16 = R.pointsOf(rt.seriesOrder[0]).filter(function (p) { return p.threads === 1 && p.d1 === 16; })[0];
+      eq(p16.runs.map(function (q) { return [q.d1, q.d2, q.d3]; }), [[256, 256, 16], [256, 256, 16]],
+         "#284: a K measured twice is one point, whose runs keep their M, N and K for the raw data");
+      eq(rt.duplicates.map(function (d) { return d.point.d3; }), [16], "#284: and the section says it was measured twice");
+
+      m = R.buildModel([k("k.json", [[1, 64, 64, 1e-5, 10, null, 8], [1, 128, 128, 1e-5, 10, null, 8],
+                                     [1, 64, 64, 1e-5, 10, null, 16]])]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm, K = 8", "dgemm, K = 16"],
+         "#284: with more than one M x N, still a section per K");
+      m = R.buildModel([k("k.json", [[1, 256, 256, 1e-5, 10, null, 8]])]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm, K = 8"], "#284: a single K, its own section");
     });
 
     test("merge, AOCL-BLAS builds", function () {
@@ -361,6 +393,32 @@
       eq([s.label, s.pick({ d1: 100, d2: 16 })], ["Matrix dim2 (N)", 16], "a fixed first size is plotted against the second");
     });
 
+    test("band", function () {
+      function band(rows) {
+        return R.buildModel([entry("b.json", { routine: "dgbmv", dim1Label: "Matrix dim1 (N)", dim2Label: "Matrix dim2 (K)",
+                                                rows: rows })]).routines[0];
+      }
+      var rt = band([[1, 64, 64, 1, 1, 1], [1, 256, 256, 1, 1, 1]]);
+      var s = R.sliceForSize(rt, 1);
+      eq([s.label, s.note], ["Matrix dim1 (N)", "K = N"], "#286: a band without -M, against N, K being N: not square matrices");
+      eq(R.sizeData(rt, 1).xs, [64, 256], "#286: and every N on it");
+
+      rt = band([[1, 64, 4, 1, 1, 1], [1, 64, 16, 1, 1, 1], [1, 256, 4, 1, 1, 1], [1, 256, 16, 1, 1, 1], [1, 1024, 4, 1, 1, 1],
+                 [2, 64, 4, 1, 2, 2], [2, 64, 16, 1, 2, 2], [2, 256, 4, 1, 2, 2], [2, 256, 16, 1, 2, 2]]);
+      s = R.sliceForSize(rt, 1);
+      eq([s.label, s.note], ["Matrix dim1 (N)", "Matrix dim2 (K) = 4; the other K are in the heatmap"],
+         "#286: N and K swept, against N at the K measured at the most N");
+      eq(R.sizeData(rt, 1).xs, [64, 256, 1024], "#286: where the square diagonal had one point");
+      eq(R.sliceForSize(rt, 2).note, "Matrix dim2 (K) = 16; the other K are in the heatmap",
+         "#286: at as many N each, the largest K");
+      eq(R.threadData(rt).chosen, { d1: 256, d2: 16 }, "#286: thread scaling at the largest N and K measured at every thread count");
+      var hd = R.heatData(rt, 1);
+      eq([hd.d1s, hd.d2s], [[64, 256, 1024], [4, 16]], "#286: the heatmap, N against K");
+
+      rt = band([[1, 64, 4, 1, 1, 1], [1, 64, 16, 1, 1, 1]]);
+      eq(R.sliceForSize(rt, 1).label, "Matrix dim2 (K)", "#286: one N, against K");
+    });
+
     test("sizeData", function () {
       var m = R.buildModel([entry("g.json", gemv({ rows: [[1, 8, 8, 1, 1, 1], [1, 8, 16, 1, 1, 1], [2, 16, 16, 1, 1, 1], [1, 16, 16, 1, 1, 1]] }))]);
       var rt = m.routines[0];
@@ -532,6 +590,33 @@
     });
 
     /* ---- History of a library (#9) ---- */
+
+    test("bmb_suite's names", function () {
+      function lib(file, version, label, cpu) {
+        return entry(file, gemm({ blas: "OpenBLAS " + version + " Haswell", label: label, cpu: cpu,
+                                  rows: [[1, 64, 64, 1, 10, null], [1, 128, 128, 1, 10, null]] }));
+      }
+      var m = R.buildModel([lib("a.json", "0.3.26", "openblas-0.3.26"), lib("b.json", "0.3.28", "openblas-0.3.28"),
+                            lib("c.json", "0.3.29", "openblas-0.3.29"), lib("t.json", "0.3.26", "turbo")]);
+      eq(names(m.identities), ["openblas · openblas-0.3.26", "openblas · openblas-0.3.28", "openblas · openblas-0.3.29",
+                               "openblas · turbo"],
+         "#287: a series is named by its label, not by its version as well once the label tells it apart");
+      var groups = R.historyGroups(m.identities);
+      eq(groups.map(function (g) { return g.map(function (id) { return id.label; }); }),
+         [["openblas-0.3.26", "openblas-0.3.28", "openblas-0.3.29"]],
+         "#287: labels that name the versions make one history, another label at one of them none of it");
+      eq(R.historyData(routine(m, "dgemm"), groups[0], 1).name, "openblas", "#287: named after the library, not one of its labels");
+
+      m = R.buildModel([lib("a.json", "0.3.26", "turbo"), lib("b.json", "0.3.28", "turbo"), lib("c.json", "0.3.29", "turbo"),
+                        lib("d.json", "0.3.26", "base"), lib("e.json", "0.3.28", "base"), lib("f.json", "0.3.29", "base")]);
+      eq(R.historyGroups(m.identities).map(function (g) { return g[0].label + " " + g.length; }), ["base 3", "turbo 3"],
+         "#287: two labels on the same versions, two conditions: a history each");
+      eq(names(m.identities).slice(0, 2), ["openblas · base · OpenBLAS 0.3.26", "openblas · base · OpenBLAS 0.3.28"],
+         "#287: the version where the label does not tell the series apart");
+
+      m = R.buildModel([lib("a.json", "0.3.26", "a", "CPU one"), lib("b.json", "0.3.26", "b", "CPU two")]);
+      eq(names(m.identities), ["openblas · a", "openblas · b"], "#287: the CPU, told apart by the labels already, left out");
+    });
 
     test("history", function () {
       eq(R.versionOf("OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH Haswell MAX_THREADS=64"), "0.3.26", "version: the first dotted number");
@@ -801,6 +886,29 @@
          "bmb_report's bandwidth alone: the memory roof alone");
 
       eq(R.decadeTicks(0.03, 30), [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20], "log ticks: 1, 2 and 5 times each power of ten");
+    });
+
+    /* ---- The peak where it is used (#288) ---- */
+
+    test("peak used", function () {
+      var m = R.buildModel([
+        entry("g.json", gemm({ peakGflops: 32, peakGbs: 40, rows: [[1, 64, 64, 1, 10, null]] })),
+        entry("a.json", { routine: "daxpy", peakGflops: 32, peakGbs: 40, rows: [[1, 1000, null, 1, 2, 24]] }),
+        entry("d.json", { routine: "ddot", peakGflops: 32, rows: [[1, 1000, null, 1, 2, 16]] }),
+        entry("c.json", { routine: "dcopy", peakGflops: 32, peakGbs: 40, rows: [[1, 1000, null, 1, null, 16]] })
+      ]);
+      function used(name) {
+        var rt = routine(m, name);
+        return R.peakUsed(rt, R.peakOf(rt, rt.seriesOrder[0], { gflops: 0, gbs: 0 }));
+      }
+      eq([used("dgemm").gflops, used("dgemm").gbs], [32, null], "level 3 uses the FLOP peak, not the bandwidth");
+      eq(R.peakText(routine(m, "dgemm"), used("dgemm")), "32.0 GFLOP/s a core, given in the results",
+         "and level 3's note cites the FLOP peak alone");
+      eq([used("daxpy").gflops, used("daxpy").gbs], [32, 40], "levels 1 and 2 use both, as the roofline's two roofs");
+      eq([used("ddot").gflops, used("ddot").gbs], [null, null], "a FLOP peak without a bandwidth draws no roofline: none used");
+      eq([used("dcopy").gflops, used("dcopy").gbs], [null, 40], "a routine with no FLOPs uses the bandwidth alone");
+      eq(R.peakText(routine(m, "dcopy"), used("dcopy")), "40.0 GB/s, given in the results",
+         "and its note cites the bandwidth alone");
     });
 
     /* ---- Formatting ---- */

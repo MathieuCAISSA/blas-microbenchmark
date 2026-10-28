@@ -10,6 +10,9 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `bmb_report`: each summary tile links to its routine's section, and a
+  list of the routines by level comes before the sections (#289), for a
+  `bmb_suite` page of a hundred of them.
 - `--peak-gflops` and `--peak-gbs` (#249): a core's peak FLOP rate in
   the routine's precision, and the machine's memory bandwidth, as the
   user knows them, recorded in every output (`# peak:`,
@@ -19,8 +22,9 @@ releases with the same major version can be compared and read by the same
   given to it with `--peak-gflops` (a core's, in double precision, twice
   it in single) and `--peak-gbs`: level 3's performance chart gets a line
   at the peak of the thread count's cores and each point its percentage
-  of it, levels 1 and 2 a roofline a routine, and each routine says where
-  its peak came from.
+  of it, levels 1 and 2 a roofline a routine, those with no FLOPs a line
+  at the bandwidth (#288), and each routine says the peak it uses and
+  where it came from.
 - `bmb_report <dir>` (#253): a directory stands for every result under
   it, at any depth, in name order.
 - `bmb_suite` (#254), installed beside `bmb_report`: every benchmark, or
@@ -32,7 +36,10 @@ releases with the same major version can be compared and read by the same
 - `bmb_suite --blas <name>=<suite>` (#255), once a library: the
   blas-microbenchmark built for each, an install prefix or a build tree,
   into `<dir>/<name>/`, each benchmark labelled with its name, each
-  result checked to record the backend its suite was built for.
+  result checked to record the backend its suite was built for. A name
+  with the version in it (`openblas-0.3.26`) still makes a history in
+  `bmb_report`, and a series is named by it rather than also by its
+  version (#287).
 - `bmb_suite --blas flexiblas:<name>,...` (#256): one build against
   FlexiBLAS, run once a library with `FLEXIBLAS` set to its name, into
   `<dir>/<name>/`; a name FlexiBLAS does not know refused before
@@ -72,7 +79,8 @@ releases with the same major version can be compared and read by the same
   trsv on a band of K diagonals each side of the main one (gbmv,
   measured square) or off it (tbsv): `-m` is N and `-M` is K. Without
   `-M`, K is N and the band covers the whole matrix; the rates count the
-  band's elements inside it. 104 benchmarks.
+  band's elements inside it. 104 benchmarks. `bmb_report` charts them
+  against N at one K, the others in the heatmap (#286).
 - Batched GEMM (#159): `--batch-count` matrices per call, passed as
   `--batch-mode` says: `loop`, a call per matrix, every library's
   baseline; `group`, one `cblas_?gemm_batch` call (MKL, BLIS, AOCL-BLAS,
@@ -86,7 +94,8 @@ releases with the same major version can be compared and read by the same
   and N with a small K, or tall and skinny products. Without it, K is M
   and the outputs are as before; with it, every output has a third
   dimension, K (`dim3` and `dim3_label` in the JSON), and `bmb_report`
-  draws a section per K. Other routines ignore it, with a warning.
+  draws a section per K, or one charted against K for a sweep of K alone
+  at one M x N (#284). Other routines ignore it, with a warning.
 - `--trans`, `--uplo`, `--side`, `--diag`: the routine's arguments, one
   value per run, as `--layout` (#221). GEMM takes `--trans` (two letters,
   A's then B's: `NT`, `TN`, ...; C for a complex operand) and GEMV one,
@@ -113,6 +122,9 @@ releases with the same major version can be compared and read by the same
   comparison of the two libraries, without a word. Such a series is now
   always named by how it was measured, and so is one run with arguments
   other than the defaults.
+- `bmb_report -- -d.json` (#282): a result file whose name starts with
+  `-`, given after `--`, was taken by `sed` for an option, and no page
+  was written.
 
 ## [1.8.0] - 2026-10-23
 

@@ -104,7 +104,10 @@ the code points at them; the ones easiest to break by accident:
   a key on it would cut every library's history there. The routine's
   arguments other than the defaults (#221, and the batch's, #159) are
   part of both keys too (`variantText`), a file without them counting as
-  the defaults; a GEMM run with `-K` is a section per K (`routineFor`).
+  the defaults; a GEMM run with `-K` is a section per K (`routineFor`),
+  and a sweep of K alone at one M x N, whose sections would each hold
+  one size, one section charted against K (`kSweep`, #284): each point
+  drawn at its K, its runs keeping their dimensions for the raw data.
 - **The section order** is by level, then operation, then precision
   s, d, c, z, the operation and precision taken from `routines.txt`
   (`FAMILY`, written by `routines.sh` beside `LEVEL`): scasum is asum's,
@@ -120,7 +123,10 @@ the code points at them; the ones easiest to break by accident:
   command: series of one library that differ only by version (backend,
   CPU, label, storage order, cache, padding and arguments alike;
   `historyGroups`), three or more
-  of them, two being the comparison chart's. Ordered by the first dotted
+  of them, two being the comparison chart's. A label that names the
+  version, as `bmb_suite --blas openblas-0.3.26=...` gives one, counts
+  without it (#287): the names a suite gives make one history, not one
+  each. Ordered by the first dotted
   number of the version string (`versionOf`, compared number by number,
   so 0.3.9 before 0.3.26), then by the date first measured. At the
   page's thread count, the largest size every version measured. Each
@@ -154,7 +160,10 @@ the code points at them; the ones easiest to break by accident:
   and the raw data; levels 1 and 2 a roofline (`rooflineData`,
   `rooflineChart`): intensity as the point's GFLOP/s over its GB/s, so
   no count is recomputed in the page, log scales, the ridge kept inside
-  the x range. Each routine's section says where its peak came from.
+  the x range; a routine with no FLOPs, a line at the bandwidth on its
+  GB/s chart. Each routine's section says the peak its charts use and
+  where it came from (`peakUsed`, #288), and the percentage of the peak
+  is level 3's alone, in the tooltip and the raw data.
 - **Anything from a result file reaches the DOM through `textContent`**,
   never `innerHTML`: a label is whatever someone typed.
 - **Charts draw at the width they get** and redraw on resize, rather than

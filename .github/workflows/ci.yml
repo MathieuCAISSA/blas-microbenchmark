@@ -178,6 +178,26 @@ jobs:
       - name: Verified at real sizes
         run: .github/scripts/verify-sweep.sh build
 
+      # bmb_suite --blas across two real libraries (#280): this job's BLIS
+      # build and an OpenBLAS one beside it, each result in its library's
+      # directory, recording its backend. Here rather than in the netlib
+      # job: BLIS and OpenBLAS are linked by their own names, where Ubuntu
+      # would turn Netlib's libblas.so.3 into OpenBLAS once it is installed.
+      - name: bmb_suite across two libraries
+        run: |
+          sudo apt-get install -y libopenblas-dev
+          mkdir -p build-openblas
+          (cd build-openblas && ../configure --with-blas-backend=openblas --enable-werror)
+          make -C build-openblas -j"$(nproc)"
+          build/src/suite/bmb_suite --blas blis=build --blas openblas=build-openblas \
+            --routine ddot,dgemm -o two -- -x 0 -i 1 -w 0 -v 64 -m 16
+          for r in ddot dgemm; do
+            grep -q '^  "backend": "blis",$' "two/blis/$r.json"
+            grep -q '^  "backend": "openblas",$' "two/openblas/$r.json"
+          done
+          build/src/report/bmb_report two > two.html
+          test "$(grep -c 'class="bmb-result"' two.html)" -eq 4
+
       - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -764,7 +784,10 @@ jobs:
           done
 
       # --verify at the sizes and thread counts a user measures, against each
-      # library this one build can load.
+      # optimised library this one build can load. NETLIB is the reference
+      # BLAS, which the netlib job sweeps at the same sizes (#282): make
+      # check runs on it here, the sweep would add its minutes for nothing
+      # new.
       - name: Verified at real sizes, once per backend
         run: |
           for b in OPENBLAS-OPENMP BLIS-OPENMP; do
