@@ -533,6 +533,33 @@
 
     /* ---- History of a library (#9) ---- */
 
+    test("bmb_suite's names", function () {
+      function lib(file, version, label, cpu) {
+        return entry(file, gemm({ blas: "OpenBLAS " + version + " Haswell", label: label, cpu: cpu,
+                                  rows: [[1, 64, 64, 1, 10, null], [1, 128, 128, 1, 10, null]] }));
+      }
+      var m = R.buildModel([lib("a.json", "0.3.26", "openblas-0.3.26"), lib("b.json", "0.3.28", "openblas-0.3.28"),
+                            lib("c.json", "0.3.29", "openblas-0.3.29"), lib("t.json", "0.3.26", "turbo")]);
+      eq(names(m.identities), ["openblas · openblas-0.3.26", "openblas · openblas-0.3.28", "openblas · openblas-0.3.29",
+                               "openblas · turbo"],
+         "#287: a series is named by its label, not by its version as well once the label tells it apart");
+      var groups = R.historyGroups(m.identities);
+      eq(groups.map(function (g) { return g.map(function (id) { return id.label; }); }),
+         [["openblas-0.3.26", "openblas-0.3.28", "openblas-0.3.29"]],
+         "#287: labels that name the versions make one history, another label at one of them none of it");
+      eq(R.historyData(routine(m, "dgemm"), groups[0], 1).name, "openblas", "#287: named after the library, not one of its labels");
+
+      m = R.buildModel([lib("a.json", "0.3.26", "turbo"), lib("b.json", "0.3.28", "turbo"), lib("c.json", "0.3.29", "turbo"),
+                        lib("d.json", "0.3.26", "base"), lib("e.json", "0.3.28", "base"), lib("f.json", "0.3.29", "base")]);
+      eq(R.historyGroups(m.identities).map(function (g) { return g[0].label + " " + g.length; }), ["base 3", "turbo 3"],
+         "#287: two labels on the same versions, two conditions: a history each");
+      eq(names(m.identities).slice(0, 2), ["openblas · base · OpenBLAS 0.3.26", "openblas · base · OpenBLAS 0.3.28"],
+         "#287: the version where the label does not tell the series apart");
+
+      m = R.buildModel([lib("a.json", "0.3.26", "a", "CPU one"), lib("b.json", "0.3.26", "b", "CPU two")]);
+      eq(names(m.identities), ["openblas · a", "openblas · b"], "#287: the CPU, told apart by the labels already, left out");
+    });
+
     test("history", function () {
       eq(R.versionOf("OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH Haswell MAX_THREADS=64"), "0.3.26", "version: the first dotted number");
       eq(R.versionOf("FlexiBLAS 3.5.0, OPENBLAS-OPENMP"), "3.5.0", "version: FlexiBLAS's own");

@@ -32,9 +32,9 @@ mkdir "$T"
 #    Frequency column shows;
 #  - dgemm four more times under a third label, so that series has
 #    repeated runs: their band, and the noise test in the comparison;
-#  - dgemm under a fourth label, as three versions of the library (one
-#    run, its version string rewritten, since one version is installed):
-#    the history;
+#  - dgemm as three versions of the library (one run, its version string
+#    rewritten, since one version is installed), each labelled with its
+#    name as bmb_suite --blas labels it: the history (#287);
 #  - dgemv as a grid, at one thread only: the heatmap; with a peak and
 #    a bandwidth, its roofline (#251), as dgemm a's peak gives the level 3
 #    peak line.
@@ -48,8 +48,9 @@ done
 ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label h -o "$T/hist.json" >/dev/null
 for v in 0.3.9 0.3.26 0.3.28; do
     # Netlib, NVPL and ArmPL record no version string: add one.
-    sed -e '/^  "blas": /d' -e '/^  "backend": /a\
+    sed -e '/^  "blas": /d' -e 's/^  "label": "h",$/  "label": "openblas-'"$v"'",/' -e '/^  "backend": /a\
   "blas": "OpenBLAS '"$v"' Haswell",' "$T/hist.json" >"$T/hist-$v.json"
+    grep -q "^  \"label\": \"openblas-$v\",\$" "$T/hist-$v.json" || fail "hist-$v.json: the label was not rewritten"
 done
 rm "$T/hist.json"
 ../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 --peak-gflops 16 --peak-gbs 20 -o "$T/dgemv.json" >/dev/null
