@@ -459,9 +459,11 @@ details[open] > summary { margin-bottom: 12px; }
       addResult(entry.file, entry.result);
     });
 
-    /* Legend names: the backend alone when that is unambiguous, then only
-     * as much of label, library version and CPU as it takes to tell series
-     * of the same backend apart. */
+    /* Legend names: the backend, then only as much of label, library
+     * version and CPU as it takes to tell series of the same backend
+     * apart. What was measured other than by default is always named
+     * (#285): a BLIS series run with --trans NT beside an OpenBLAS one
+     * with the defaults is not a comparison of the two libraries. */
     identityOrder.forEach(function (id) {
       var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
       var parts = [id.backend];
@@ -472,11 +474,11 @@ details[open] > summary { margin-bottom: 12px; }
         if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
         if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
         if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
-        if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
-        if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
-        if (differs(function (o) { return o.pad; }) && id.pad) { parts.push("ld + " + id.pad); }
-        if (differs(function (o) { return o.variant; }) && id.variant) { parts.push(id.variant); }
       }
+      if (id.layout === "col") { parts.push("column-major"); }
+      if (id.cache === "cold") { parts.push("cold cache"); }
+      if (id.pad) { parts.push("ld + " + id.pad); }
+      if (id.variant) { parts.push(id.variant); }
       id.name = parts.join(" · ");
     });
 
