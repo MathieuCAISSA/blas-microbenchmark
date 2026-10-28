@@ -37,7 +37,9 @@ mkdir "$T"
 #    the history;
 #  - dgemv as a grid, at one thread only: the heatmap; with a peak and
 #    a bandwidth, its roofline (#251), as dgemm a's peak gives the level 3
-#    peak line.
+#    peak line;
+#  - dgemm with K swept at one M x N, under a fifth label: one section,
+#    charted against K (#284).
 ../c/level1/double/bmb_ddot -x 0 -i 1 -v 8:64 -o "$T/ddot.json" >/dev/null
 ../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -t 1,2 --label a -c --peak-gflops 16 -o "$T/dgemm-a.json" >/dev/null
 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
@@ -53,6 +55,7 @@ for v in 0.3.9 0.3.26 0.3.28; do
 done
 rm "$T/hist.json"
 ../c/level2/double/bmb_dgemv -x 0 -i 1 -m 8:16 -M 8:16 --peak-gflops 16 --peak-gbs 20 -o "$T/dgemv.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 16 -K 8,16,32 --label k -o "$T/dgemm-k.json" >/dev/null
 
 ./bmb_report "$T"/*.json >"$T/report.html"
 
@@ -128,6 +131,16 @@ grep -E -q 'peak, (1 core: 16.0|2 cores: 32.0) GFLOP/s' "$dom" || fail "no peak 
 grep -q '>% of peak<' "$dom" || fail "no % of peak column in the raw data"
 grep -q 'Peak: 16.0 GFLOP/s a core, given in the results' "$dom" || fail "the page does not say where the peak came from"
 echo "ok   rendered: the roofline, the peak line, the percentages, and where the peak came from"
+
+# K swept at one M x N (#284): one section, its chart against K, where a
+# section per K would each say that only one size was measured.
+grep -q '<section id="routine-dgemm-ksweep">' "$dom" || fail "no section for dgemm's K sweep"
+grep -q '>dgemm, K at 16 × 16<' "$dom" || fail "the K sweep's section is not titled by its M x N"
+grep -q 'axis-title">Matrix dim3 (K)<' "$dom" || fail "no chart against K"
+if grep -q 'Only one size was measured' "$dom"; then
+    fail "a section with only one size: the K sweep was not charted against K"
+fi
+echo "ok   rendered: K swept at one M x N, charted against K"
 
 # The kernels the library chose (#162), beside it, where it says them.
 if grep -q '^  "kernels": ' "$T/ddot.json"; then

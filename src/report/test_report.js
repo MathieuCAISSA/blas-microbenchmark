@@ -61,6 +61,7 @@
       })
     };
     if (o.dim2Label) { r.dim2_label = o.dim2Label; }
+    if (o.dim3Label) { r.dim3_label = o.dim3Label; }
     if (o.label) { r.label = o.label; }
     if (o.verified) { r.verified = true; }
     if (o.governor) { r.machine.governor = o.governor; }
@@ -150,6 +151,35 @@
          "#215: the K = 8 section holds the K = 8 points, with their K");
       eq(R.pointsOf(m.routines[0].seriesOrder[0])[0].d3, null, "#215: a point without -K has no K");
       eq(m.identities.length, 1, "#215: K is not part of the series: one library, one series");
+    });
+
+    test("a sweep of K alone", function () {
+      function k(file, rows) {
+        return entry(file, gemm({ dim1Label: "Matrix dim1 (M)", dim3Label: "Matrix dim3 (K)", rows: rows }));
+      }
+      var m = R.buildModel([
+        k("k.json", [[1, 256, 256, 1e-5, 10, null, 8], [1, 256, 256, 2e-5, 12, null, 16],
+                     [2, 256, 256, 1e-5, 20, null, 8], [2, 256, 256, 1e-5, 22, null, 16]]),
+        k("more.json", [[1, 256, 256, 3e-5, 14, null, 32], [1, 256, 256, 5e-5, 15, null, 64]]),
+        k("again.json", [[1, 256, 256, 2.5e-5, 11, null, 16]])
+      ]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm, K at 256 × 256"],
+         "#284: K swept at one M x N is one section, not one per K with a single size each");
+      var rt = m.routines[0];
+      eq([rt.dim1Label, rt.dim2Label, rt.anchor], ["Matrix dim3 (K)", null, "routine-dgemm-ksweep"],
+         "#284: charted against K, with an anchor of its own");
+      eq(R.sizeData(rt, 1).xs, [8, 16, 32, 64], "#284: at 1 thread, a point a K");
+      eq(R.sizeData(rt, 2).xs, [8, 16], "#284: at 2 threads, the Ks measured there");
+      var p16 = R.pointsOf(rt.seriesOrder[0]).filter(function (p) { return p.threads === 1 && p.d1 === 16; })[0];
+      eq(p16.runs.map(function (q) { return [q.d1, q.d2, q.d3]; }), [[256, 256, 16], [256, 256, 16]],
+         "#284: a K measured twice is one point, whose runs keep their M, N and K for the raw data");
+
+      m = R.buildModel([k("k.json", [[1, 64, 64, 1e-5, 10, null, 8], [1, 128, 128, 1e-5, 10, null, 8],
+                                     [1, 64, 64, 1e-5, 10, null, 16]])]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm, K = 8", "dgemm, K = 16"],
+         "#284: with more than one M x N, still a section per K");
+      m = R.buildModel([k("k.json", [[1, 256, 256, 1e-5, 10, null, 8]])]);
+      eq(m.routines.map(function (rt) { return rt.title; }), ["dgemm, K = 8"], "#284: a single K, its own section");
     });
 
     test("merge, AOCL-BLAS builds", function () {

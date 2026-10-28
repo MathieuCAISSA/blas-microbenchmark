@@ -427,7 +427,7 @@ details[open] > summary { margin-bottom: 12px; }
           name: r.routine, k: k, level: LEVEL[r.routine] || 0,
           title: r.routine + (k === null ? "" : ", K = " + k.toLocaleString("en-US")),
           anchor: "routine-" + r.routine + (k === null ? "" : "-k" + k),
-          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null,
+          dim1Label: r.dim1_label || "dim1", dim2Label: r.dim2_label || null, dim3Label: r.dim3_label || "K",
           series: {}, seriesOrder: [], duplicates: []
         };
       }
@@ -498,6 +498,54 @@ details[open] > summary { margin-bottom: 12px; }
         return;
       }
       addResult(entry.file, entry.result);
+    });
+
+    /* A sweep of K alone at one M x N (#284), as HPL's updates are
+     * measured: a section per K would each hold a single size and draw
+     * nothing, so they become one section charted against K. Each point
+     * drawn at its K; its runs, which the raw data lists, keep their
+     * dimensions. */
+    var kSections = {};
+    Object.keys(routines).forEach(function (key) {
+      var rt = routines[key];
+      if (rt.k !== null) { (kSections[rt.name] = kSections[rt.name] || []).push(key); }
+    });
+    Object.keys(kSections).forEach(function (name) {
+      var keys = kSections[name], sizes = {}, size = null;
+      keys.forEach(function (key) {
+        routines[key].seriesOrder.forEach(function (s) {
+          pointsOf(s).forEach(function (p) { sizes[p.d1 + "x" + p.d2] = size = p; });
+        });
+      });
+      if (keys.length < 2 || Object.keys(sizes).length !== 1) { return; }
+      var first = routines[keys[0]];
+      var swept = {
+        name: name, k: null, kSweep: { d1: size.d1, d2: size.d2 }, level: first.level,
+        title: name + ", K at " + sizeText(size.d1, size.d2), anchor: "routine-" + name + "-ksweep",
+        dim1Label: first.dim3Label, dim2Label: null, series: {}, seriesOrder: [], duplicates: []
+      };
+      keys.forEach(function (key) {
+        var from = routines[key];
+        from.seriesOrder.forEach(function (s) {
+          var to = swept.series[s.identity.key];
+          if (!to) {
+            to = swept.series[s.identity.key] = { identity: s.identity, points: {} };
+            swept.seriesOrder.push(to);
+          }
+          if (s.peakGflops) { to.peakGflops = s.peakGflops; }
+          if (s.peakGbs) { to.peakGbs = s.peakGbs; }
+          pointsOf(s).forEach(function (p) {
+            var q = {}, f;
+            for (f in p) { if (Object.prototype.hasOwnProperty.call(p, f)) { q[f] = p[f]; } }
+            q.d1 = p.d3;
+            q.d2 = null;
+            to.points[q.threads + "x" + q.d1] = q;
+          });
+        });
+        swept.duplicates = swept.duplicates.concat(from.duplicates);
+        delete routines[key];
+      });
+      routines[name + " K"] = swept;
     });
 
     /* Legend names: the backend alone when that is unambiguous, then only
@@ -2023,7 +2071,7 @@ details[open] > summary { margin-bottom: 12px; }
     var v = el("div", "value", fmtRate(best[field]) + " ");
     v.appendChild(el("small", null, unit));
     tile.appendChild(v);
-    var size = best.d2 === null ? best.d1.toLocaleString("en-US") : best.d1.toLocaleString("en-US") + " × " + best.d2.toLocaleString("en-US");
+    var size = (rt.kSweep ? "K = " : "") + sizeText(best.d1, best.d2);
     tile.appendChild(el("div", "detail", bestSeries.identity.name + " · " + size + " · " + plural(best.threads, "thread")));
     tiles.appendChild(tile);
   });
