@@ -29,9 +29,11 @@ mkdir -p "$out"
 
 # name  window width  what  [routine  text in the chart's title]
 #
-# what is "chart" (a chart, found by its routine and title), "summary" (the
-# tiles and the table of where the results came from) or "rawdata" (the
-# raw data table, opened, its first rows fading out).
+# what is "chart" (a chart, found by its routine and title), "chart:<t>"
+# (the same at <t> threads, picked in the section first: the peak line of
+# one core reads better than eight cores of a laptop's mixed ones),
+# "summary" (the tiles and the table of where the results came from) or
+# "rawdata" (the raw data table, opened, its first rows fading out).
 #
 # The page lays charts out to the width they get. At 1200px the line charts
 # sit two to a row, about 540px each; the heatmap spans the whole row, so it
@@ -41,6 +43,8 @@ SHOTS='ddot-size 1200 chart ddot Performance against size
 dgemm-ratio 1200 chart dgemm compared with
 dgemm-threads 1200 chart dgemm Thread scaling
 dgemv-shapes 640 chart dgemv Shapes
+dgemv-roofline 1200 chart dgemv Roofline
+dgemm-peak 1200 chart:1 dgemm Performance against size
 summary 1000 summary
 rawdata 1000 rawdata
 noise-band 1200 chart ddot Performance against size
@@ -105,6 +109,11 @@ var secs = document.querySelectorAll('main section');
 for (var i = 0; i < secs.length; i++) {
   var h = secs[i].querySelector('h2');
   if (!h || h.textContent !== arguments[1]) { continue; }
+  if (arguments[0].indexOf('chart:') === 0) {
+    var sel = secs[i].querySelector('.controls select');
+    if (!sel) { return null; }
+    sel.value = arguments[0].slice(6); sel.dispatchEvent(new Event('change'));
+  }
   var figs = secs[i].querySelectorAll('figure');
   for (var j = 0; j < figs.length; j++) {
     var t = figs[j].querySelector('h3');

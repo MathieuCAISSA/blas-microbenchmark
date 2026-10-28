@@ -258,7 +258,7 @@ directory holding `results/`, so the file names the summary and the raw
 data show are `results/...`, not the paths of your machine:
 
 ```bash
-cd somewhere && bmb_report results/*.json > report.html
+cd somewhere && bmb_report --peak-gflops 76.8 --peak-gbs 120 results/*.json > report.html
 doc/screenshots.sh report.html path/to/doc/images
 ```
 
