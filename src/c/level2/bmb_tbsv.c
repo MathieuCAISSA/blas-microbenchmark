@@ -50,9 +50,11 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     (void) thread_count;
 
-    if (lda == 0) {
+    if (lda == 0) { /* GCOVR_EXCL_BR_LINE: the parser keeps N and K + 1 + --ld-pad within its ceiling, whose square of doubles fits size_t */
+        /* GCOVR_EXCL_START: the parser keeps N and K + 1 + --ld-pad within its ceiling, whose square of doubles fits size_t */
         bmb_bench_too_large();
         return NULL;
+        /* GCOVR_EXCL_STOP */
     }
     ctx = malloc(sizeof(*ctx));
     if (ctx == NULL) {
