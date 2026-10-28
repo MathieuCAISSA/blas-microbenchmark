@@ -698,9 +698,13 @@ static int bmb_check_args(const bmb_benchmark_t *bench, const bmb_options_t *opt
         }
         for (i = 0; i < want; i++) {
             if (strchr(bench->trans_letters, opts->trans[i]) == NULL) {
+                /* The note is for a real routine, named s or d as BLAS
+                 * names them: a complex one refusing C (syrk, syr2k) has
+                 * a transpose without conjugate (#271). */
                 snprintf(msg, sizeof(msg), "--trans: %s takes %s, not %c%s.", bench->routine_name,
                          bench->trans_letters, opts->trans[i],
-                         opts->trans[i] == 'C' ? " (a real matrix's conjugate transpose is T)" : "");
+                         opts->trans[i] == 'C' && strchr("sd", bench->routine_name[0]) != NULL
+                             ? " (a real matrix's conjugate transpose is T)" : "");
                 bmb_log_error(msg);
                 return -1;
             }
