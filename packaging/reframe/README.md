@@ -22,8 +22,8 @@ partition's cores. **Sanity** is the benchmark's own check: it exits 0,
 and its output says every point was verified against a reference
 (`--verify`, the default). The **performance variables** are the rates
 the benchmark measures: `gflops` (GFLOP/s), and `gbytes_per_s` (GB/s) at
-levels 1 and 2. dcopy and dswap have only the second, level 3 only the
-first. Each test is tagged `blas` and `level1`, `level2` or `level3`.
+levels 1 and 2. The copy, swap and `i?amax` routines have only the
+second, level 3 only the first. Each test is tagged `blas` and `level1`, `level2` or `level3`.
 
 ## Running them
 
@@ -54,7 +54,8 @@ For `bmb_build_run`, the fixture's own variables, set as
 | `blas_backend` | `auto` | `--with-blas-backend`; `aocl` and `mkl` need a `version` from 1.5.0 on, and the library found (`AOCL_ROOT`, `MKLROOT`, or `configure_options`) |
 | `configure_options` | none | more `configure` options, comma-separated |
 
-A routine the copy does not have (`strsm` before 1.5.0) is skipped when
+A routine the copy does not have (`strsm` before 1.5.0, 72 of them
+before 1.9.0) is skipped when
 its path is known: under `install_prefix`, or built. On `PATH`, it fails,
 so leave it out with `-x`.
 
