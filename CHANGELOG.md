@@ -19,8 +19,9 @@ releases with the same major version can be compared and read by the same
   given to it with `--peak-gflops` (a core's, in double precision, twice
   it in single) and `--peak-gbs`: level 3's performance chart gets a line
   at the peak of the thread count's cores and each point its percentage
-  of it, levels 1 and 2 a roofline a routine, and each routine says where
-  its peak came from.
+  of it, levels 1 and 2 a roofline a routine, those with no FLOPs a line
+  at the bandwidth (#288), and each routine says the peak it uses and
+  where it came from.
 - `bmb_report <dir>` (#253): a directory stands for every result under
   it, at any depth, in name order.
 - `bmb_suite` (#254), installed beside `bmb_report`: every benchmark, or
