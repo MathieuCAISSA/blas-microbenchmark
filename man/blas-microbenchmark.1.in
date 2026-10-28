@@ -39,7 +39,9 @@ Each
 times one BLAS routine, called through CBLAS, over a sweep
 of sizes and thread counts, and prints one row per point: the time of a
 call and the rate it achieved.
-All of them take the same options.
+All of them take the same options, but for the arguments a routine does
+not have (\fB\-\-trans\fP on ddot, the batch outside GEMM), which it
+refuses.
 They run against the BLAS library chosen when the package was built
 (OpenBLAS, BLIS, AMD AOCL-BLAS, Netlib reference BLAS, NVPL, ArmPL or
 Intel MKL), or, built
@@ -52,7 +54,9 @@ says which.
 .PP
 To compare libraries, build the package once against each and run the
 same command with each build, or build it once against FlexiBLAS and run
-the command under each library; then turn the results into charts with
+the command under each library, or let
+.BR bmb_suite (1)
+run them all; then turn the results into charts with
 .BR bmb_report (1).
 .SS Routines
 Level 1 routines work on vectors, level 2 on a matrix and a vector,
@@ -283,8 +287,9 @@ GEMM takes two letters, A's then B's
 .RB ( NT ,
 .BR TN ,
 \&...);
-GEMV, the triangular routines (trmv, trsv, trmm, trsm) and the rank-k
-updates (syrk, syr2k: N or T; herk: N or C) one.
+GEMV and GBMV, the triangular routines (trmv, trsv, tpsv, tbsv, trmm,
+trsm) and the rank-k updates (syrk, syr2k: N or T; herk, her2k: N or C)
+one.
 The routines without a matrix to transpose refuse it.
 Default:
 .B N
@@ -293,8 +298,8 @@ for GEMM), what every routine always measured.
 .TP
 .BI "\-\-uplo " triangle
 The triangle of a triangular, symmetric or Hermitian matrix the routine
-reads or writes (trmv, trsv, trmm, trsm, symv, syr, syr2, symm, hemm,
-syrk, herk, syr2k):
+reads or writes (trmv, trsv, tpsv, tbsv, trmm, trsm, symv, spmv, hemv,
+syr, her, syr2, her2, symm, hemm, syrk, herk, syr2k, her2k):
 .B U
 or
 .BR L .
@@ -315,7 +320,7 @@ Default:
 .BR L .
 .TP
 .BI "\-\-diag " diagonal
-A triangular matrix's diagonal (trmv, trsv, trmm, trsm):
+A triangular matrix's diagonal (trmv, trsv, tpsv, tbsv, trmm, trsm):
 .B N
 as stored, or
 .B U
@@ -583,8 +588,11 @@ Level 3 results are checked by random projection: for a random vector
 .I C*r
 is compared with
 .IR A*(B*r) ,
-and for dtrsm, strsm and ztrsm the residual
-.I U*(X*r)
+and for trsm, in every precision, the residual
+.I op(A)*(X*r)
+.RI ( X*(op(A)*r)
+with
+.BR "\-\-side R" )
 with
 .IR B*r .
 That takes as long as a level 2 call, where recomputing
@@ -610,8 +618,8 @@ and the element that differs; nothing more is measured, and no
 .B \-o
 file is written.
 The check needs memory for a few vectors the size of the result, and
-for the axpy, swap, gemv and symv routines a copy of the vector they
-write.
+for the routines that write a vector they also read (axpy, swap, rot,
+gemv, gbmv, symv, spmv, hemv) a copy of it.
 .PP
 The check is on by default, as it is in STREAM and HPL: a number from a
 library that computes the wrong thing is worth less than none.
@@ -761,7 +769,7 @@ Every result starts with where it came from:
 # command: bmb_dgemm \-m 512:2048 \-o dgemm.json
 # run: 0.2 s and 1 call of warm\-up, 10 samples, batch size chosen per point, hot cache
 # operands: aligned to 64 bytes, leading dimensions + 0
-# arguments: trans NN
+# arguments: trans NN, batch_count 1, batch_mode loop
 # compiler: gcc 13.3.0, CFLAGS \-g \-O2 \-fopenmp
 # environment: OMP_PROC_BIND=close
 # routine: dgemm
@@ -812,7 +820,9 @@ the operands' alignment and, for the routines with a matrix, the padding
 of their leading dimensions
 .RB ( \-a ", " \-p );
 the routine's arguments, those it takes
-.RB ( \-\-trans ", " \-\-uplo ", " \-\-side ", " \-\-diag ),
+.RB ( \-\-trans ", " \-\-uplo ", " \-\-side ", " \-\-diag ,
+and GEMM's
+.BR \-\-batch\-count ", " \-\-batch\-mode ),
 defaults included;
 the compiler and the CFLAGS the benchmarks were built with (not the BLAS
 library's own);
@@ -1183,6 +1193,7 @@ bmb_report output/*/*/*/*/result.json > report.html
 .RE
 .SH SEE ALSO
 .BR bmb_report (1),
+.BR bmb_suite (1),
 .BR numactl (8),
 .BR taskset (1)
 .PP

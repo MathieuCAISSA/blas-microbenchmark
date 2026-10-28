@@ -1,6 +1,6 @@
 <!-- title: Your first benchmarks -->
 <!-- description: Run a routine, read what it prints, sweep sizes and threads, save the results. -->
-<p>Each BLAS routine has its own benchmark, <code>bmb_&lt;routine&gt;</code>: <code>bmb_dgemm</code> for the matrix product, <code>bmb_ddot</code> for the dot product, and so on, <a href="blas-microbenchmark.html#Routines">32 in all</a>. They all take the same options.</p>
+<p>Each BLAS routine has its own benchmark, <code>bmb_&lt;routine&gt;</code>: <code>bmb_dgemm</code> for the matrix product, <code>bmb_ddot</code> for the dot product, and so on, <a href="blas-microbenchmark.html#Routines">104 in all</a>. They all take the same options, but for the arguments a routine does not have (<code>--trans</code> on <code>ddot</code>), which it refuses.</p>
 
 <h2 id="run">Run one</h2>
 <pre>bmb_dgemm -m 512:2048</pre>
