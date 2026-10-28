@@ -77,6 +77,20 @@ refused 'already holds files' -o "$T/full"
 refused 'is not a directory' -o "$T/file"
 pass "refused, before anything runs: no -o, a bad option or list, a routine or profile unknown, nothing selected, -o, -f or the peak passed on, a directory holding files"
 
+# The paths a run takes rarely (#280): a directory under a file, which
+# cannot be made; a --blas path with a newline; a profile file that cannot
+# be read (root reads it all the same).
+refused "$T/file/x cannot be created" -o "$T/file/x" --routine ddot
+refused "a suite's path contains a newline" -o "$T/none" --blas "x=$T/a
+b"
+if [ "$(id -u)" -ne 0 ]; then
+    printf 'ddot -v 64\n' >"$T/unreadable"
+    chmod 000 "$T/unreadable"
+    refused "nor a file that can be read" -o "$T/none" --profile "$T/unreadable"
+    chmod 644 "$T/unreadable"
+fi
+pass "refused: a directory that cannot be made, a suite's path with a newline, a profile that cannot be read"
+
 # A profile file: a line a level or a routine, comments and blank lines.
 profile() {
     printf '%s\n' "$@" >"$T/profile"
@@ -128,6 +142,28 @@ grep -q "/bmb_ddot -v 256:16777216 -f json" "$T/cmds" || fail "ddot with the ful
 grep -q "/bmb_dgbmv -m 32:4096 -M 32 -f json" "$T/cmds" || fail "dgbmv with the full profile: $(cat "$T/cmds")"
 grep -q "/bmb_dgemm -m 32:2048 -f json" "$T/cmds" || fail "dgemm with the full profile: $(cat "$T/cmds")"
 pass "-n: the commands, the profile's options first, then those passed on, then -f json and -o, a word quoted where it must"
+
+# --peak-gbs is passed on, where --peak-gflops is refused: a pattern for
+# the second that took the first too would refuse it (#280).
+run_n --routine ddot -- --peak-gbs 20 --peak-gbs=30
+grep -q "/bmb_ddot --peak-gbs 20 --peak-gbs=30 -f json" "$T/cmds" || fail "--peak-gbs not passed on: $(cat "$T/cmds")"
+pass "--peak-gbs passed on, in both forms"
+
+# The shipped profiles, run (#280): every command of quick and full under
+# BMB_COUNTS, which measures and allocates nothing, on the x86 fixture,
+# whose frequency gives no warning. Each must exit 0 and its log hold
+# nothing but the counts, the provenance and the table's header: an
+# option a routine refuses, or ignores with a warning, would show.
+for p in quick full; do
+    rm -rf "$T/$p"
+    BMB_COUNTS=1 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
+        $R --profile "$p" -o "$T/$p" >"$T/out" 2>"$T/err" || fail "--profile $p under BMB_COUNTS: $(cat "$T/err")"
+    test "$(ls "$T/$p"/*.log | wc -l)" -eq "$(wc -l <"$T/table")" || fail "--profile $p: not a log a routine"
+    if grep -v -e '^counts: ' -e '^# ' -e '^Thread count ' "$T/$p"/*.log >"$T/said"; then
+        fail "--profile $p: a benchmark said more than its counts: $(head -5 "$T/said")"
+    fi
+done
+pass "the quick and full profiles: each of their $(wc -l <"$T/table") commands runs, without a warning"
 
 # ---- every benchmark, at tiny sizes ----
 profile '# tiny, for make check' '' 'level1 -v 64' 'level2   -m 16  # a comment' 'level3 -m 8' 'dgbmv -m 16 -M 2'
