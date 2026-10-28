@@ -502,17 +502,24 @@ details[open] > summary { margin-bottom: 12px; }
 
     /* Legend names: the backend alone when that is unambiguous, then only
      * as much of label, library version and CPU as it takes to tell series
-     * of the same backend apart. */
+     * of the same backend apart: each only if it tells this series from
+     * those the parts before it do not (#287), so that bmb_suite --blas
+     * openblas-0.3.26=... is not also named by its version. */
     identityOrder.forEach(function (id) {
       var same = identityOrder.filter(function (o) { return o.backend === id.backend; });
       var parts = [id.backend];
+      var shared = same;
       function differs(f) {
         return same.some(function (o) { return f(o) !== f(id); });
       }
+      function tellsApart(f, text) {
+        if (text && shared.some(function (o) { return f(o) !== f(id); })) { parts.push(text); }
+        shared = shared.filter(function (o) { return f(o) === f(id); });
+      }
       if (same.length > 1) {
-        if (differs(function (o) { return o.label; }) && id.label) { parts.push(id.label); }
-        if (differs(function (o) { return shortBlas(o.blas); }) && id.blas) { parts.push(shortBlas(id.blas)); }
-        if (differs(function (o) { return o.cpu; })) { parts.push(cpuName(id.cpu)); }
+        tellsApart(function (o) { return o.label; }, id.label);
+        tellsApart(function (o) { return shortBlas(o.blas); }, id.blas && shortBlas(id.blas));
+        tellsApart(function (o) { return o.cpu; }, cpuName(id.cpu));
         if (differs(function (o) { return o.layout; }) && id.layout === "col") { parts.push("column-major"); }
         if (differs(function (o) { return o.cache; }) && id.cache === "cold") { parts.push("cold cache"); }
         if (differs(function (o) { return o.pad; }) && id.pad) { parts.push("ld + " + id.pad); }
@@ -1595,7 +1602,12 @@ details[open] > summary { margin-bottom: 12px; }
   function historyGroups(identities) {
     var groups = {}, order = [];
     identities.forEach(function (id) {
-      var key = [id.backend, id.cpu, id.label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
+      /* A label that names the version, as bmb_suite --blas
+       * openblas-0.3.26=... does, is taken without it (#287): the
+       * versions so named are one history, not one label each. */
+      var v = versionOf(id.blas);
+      var label = v ? id.label.split(v).join("") : id.label;
+      var key = [id.backend, id.cpu, label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });
@@ -1623,7 +1635,8 @@ details[open] > summary { margin-bottom: 12px; }
     /* Groups of one library differ by label, storage order or machine:
      * the first two name it, the machine goes in the subtitle. */
     var newest = members[members.length - 1].identity;
-    var name = [newest.backend].concat(newest.label ? [newest.label] : [],
+    var label = members.every(function (m) { return m.identity.label === newest.label; }) ? newest.label : "";
+    var name = [newest.backend].concat(label ? [label] : [],
                                        newest.layout === "col" ? ["column-major"] : []).join(" · ");
     var notes = [];
     var absent = members.filter(function (m) { return !m.points.length; });
