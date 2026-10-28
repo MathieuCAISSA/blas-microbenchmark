@@ -199,5 +199,39 @@ grep -q 'class="line"' "$dom" || fail "no line was drawn"
 grep -q 'class="cell"' "$dom" || fail "no heatmap cell was drawn"
 echo "ok   lines and heatmap cells drawn"
 
+# ---- a second page: what 1.9.0 added (#291) ----
+# Arguments other than the defaults, a batch, a packed, a complex and a
+# single-precision routine, and the peak given to bmb_report rather than
+# the results: its FLOP rate doubled in single precision. A page of its
+# own, since each argument makes a series and the first page has its
+# eight colours already.
+P=$T/p2
+mkdir "$P"
+../c/level3/complex16/bmb_zgemm -x 0 -i 1 -m 8:16 --trans CT -o "$P/zgemm.json" >/dev/null
+../c/level3/single/bmb_sgemm -x 0 -i 1 -m 8:16 --batch-count 4 -o "$P/sgemm.json" >/dev/null
+../c/level2/double/bmb_dspmv -x 0 -i 1 -m 8:32 -o "$P/dspmv.json" >/dev/null
+../c/level2/complex/bmb_chemv -x 0 -i 1 -m 8:32 --uplo L -o "$P/chemv.json" >/dev/null
+../c/level1/single/bmb_sdot -x 0 -i 1 -v 64:4096 -o "$P/sdot.json" >/dev/null
+../c/level3/double/bmb_dgemm -x 0 -i 1 -m 8:32 -o "$P/dgemm.json" >/dev/null
+./bmb_report --peak-gflops 16 --peak-gbs 20 "$P" >"$P/report.html"
+render_dom "$P/report.html" "$P/dom.html"
+awk '/<main id="bmb-report">/ { on = 1 } on { print } on && /<\/main>/ { exit }' "$P/dom.html" >"$P/main.html"
+dom=$P/main.html
+test -s "$dom" || fail "page 2: no <main> element"
+if grep -q 'Loading the results\|could not be read\|Only one size was measured\|past eight series' "$dom"; then
+    fail "page 2: the script did not run, a file was not read, a section drew nothing, or a series was not drawn"
+fi
+for r in zgemm sgemm dspmv chemv sdot dgemm; do
+    grep -q "<section id=\"routine-$r\">" "$dom" || fail "page 2: no section for $r"
+done
+for name in 'openblas · trans CT' 'openblas · batch count 4' 'openblas · uplo L'; do
+    grep -q ">$name<" "$dom" || fail "page 2: no series named $name"
+done
+grep -q 'memory roof 20.0 GB/s, compute roof 32.0 GFLOP/s' "$dom" ||
+    fail "page 2: sdot's roofline is not under bmb_report's peak, doubled in single precision"
+grep -q 'given to bmb_report (twice its double-precision figure)' "$dom" || fail "page 2: sdot's note does not say its peak was doubled"
+grep -q 'peak, 1 core: 16.0 GFLOP/s' "$dom" || fail "page 2: no peak line on dgemm's chart from bmb_report's peak"
+echo "ok   rendered: --trans, --uplo and a batch named, packed, complex and single routines, bmb_report's peak doubled in single"
+
 rm -rf "$T"
 echo "all checks passed"
