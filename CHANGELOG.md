@@ -107,6 +107,9 @@ releases with the same major version can be compared and read by the same
   their alpha is kept small so that repeated calls do not drift, and the
   update fell inside the tolerance. Their check now calls with an alpha
   of order 1; the timed calls keep theirs.
+- `bmb_report -- -d.json` (#282): a result file whose name starts with
+  `-`, given after `--`, was taken by `sed` for an option, and no page
+  was written.
 
 ## [1.8.0] - 2026-10-23
 
