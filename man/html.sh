@@ -453,8 +453,8 @@ done
     echo '</section>'
     echo '<section class="Sh">'
     heading 1 json "JSON"
-    echo '<p class="Pp">The JSON holds the same as fields, and is what <a href="bmb_report.html"><b>bmb_report</b>(1)</a> reads. Here with a label, to tell two runs on the same machine apart.</p>'
-    run "bmb_dgemv -m 512 -M 256:512 -l 'turbo off' -o dgemv.json" dgemv.json
+    echo '<p class="Pp">The JSON holds the same as fields, and is what <a href="bmb_report.html"><b>bmb_report</b>(1)</a> reads. Here with a label, to tell two runs on the same machine apart, and the peak as the user knows it, which the report judges the rates by (<code># peak:</code>, <code>peak_gflops_per_core</code> and <code>peak_gbs</code>): a core&#39;s FLOP rate in the routine&#39;s precision and the memory bandwidth, never estimated. The routine&#39;s arguments are recorded with their defaults (<code># arguments:</code>, <code>arguments</code>), so that the report keeps a transposed or a lower-triangle run apart.</p>'
+    run "bmb_dgemv -m 512 -M 256:512 -l 'turbo off' --peak-gflops 32 --peak-gbs 40 -o dgemv.json" dgemv.json
     echo '</section>'
     if have_image summary && have_image rawdata && have_image ddot-size && have_image dgemm-ratio \
         && have_image dgemm-threads && have_image dgemv-shapes && have_image noise-band \
