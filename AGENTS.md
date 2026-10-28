@@ -78,7 +78,9 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
 ```
 
 - One issue, one branch: work that turns out to be two things becomes two
-  issues.
+  issues. Small issues of one area may share a branch and a pull
+  request, which closes each (`Closes #a`, `Closes #b` on lines of their
+  own): a run of CI each costs more than it checks (#305).
 - Every pull request is reviewed against [REVIEWS.md](.github/REVIEWS.md), and
   only against it: each section *ok* or what is wrong, posted on the pull
   request (`gh pr comment`) while CI runs. Fix what it finds before
@@ -86,7 +88,9 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
 - `main` is protected: a pull request cannot be merged until every
   required check passes, and `main` cannot be force-pushed or deleted.
   Every job of `ci.yml` is required except `coverage`, which has no
-  threshold. CodeQL is not required: its pull request check fails on a
+  threshold. On a pull request that changes documentation only, the
+  jobs that build and test a library are skipped, which passes them
+  ([CI](doc/dev/ci.md)). CodeQL is not required: its pull request check fails on a
   new alert in the diff, and its run on `main` while any alert is open
   ([CI](doc/dev/ci.md#static-analysis)). Wait for that check too before
   merging: GitHub lets a pull request through while it still runs, and
@@ -94,8 +98,14 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
   (branch protection settings) when it merges. The repository
   deletes a branch once its pull request is merged; the issue closes
   itself through "Closes #N".
-- Update the branch from `main` (`git merge origin/main`) when `main`
-  moved under it, and let CI run again before merging.
+- A green pull request is merged as it is, not updated from `main` and
+  run again (#305): the runs queue for an hour when several are open, and
+  chaining them made a merge wait for every one before it. When GitHub
+  reports a conflict, merge `main` into the branch, resolve, and let CI
+  run. When `main` changed the same files since the branch left it,
+  merge the branch onto `main` locally and run the tests of those files
+  before merging. After every merge, `main`'s run checks the result; one
+  that fails is fixed before anything else is merged.
 - Dependabot's pull requests (the actions, the Docker image's base) go
   the same way: merge them once CI passes. One that moves the image to
   another Ubuntu release, rather than to a new digest of the same one,

@@ -11,7 +11,49 @@ on:
 permissions:
   contents: read
 
+# A pull request's run is cancelled when a new push supersedes it, to free
+# the runners for the others (#305); a run on main never is.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # Whether a pull request changes documentation only (#305): Markdown,
+  # doc/dev and doc/images, the man pages and the site's guides. Then the
+  # openblas job, whose make check reads every page and link, and the man
+  # job run, and the jobs that build and test a library are skipped. If
+  # this job fails, they all run: a skipped job would pass a required
+  # check. The matrix jobs (browsers, fuzz, docker, spack) always run: a
+  # matrix job skipped whole reports under its bare name, and the checks
+  # required under its matrix names would wait for ever.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.files.outputs.docs_only }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      # A pull request's merge commit against its first parent, the base it
+      # was merged onto: what the pull request changes.
+      - name: Changed files
+        id: files
+        run: |
+          docs_only=false
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            git diff --name-only HEAD^1 HEAD > changed.txt
+            cat changed.txt
+            if [ -s changed.txt ] &&
+               ! grep -Ev '\.md$|^doc/(dev|images)/|^man/site/|^man/[a-z_-]+\.1\.in$' changed.txt >/dev/null; then
+              docs_only=true
+            fi
+          fi
+          echo "docs only: $docs_only"
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+
   # OpenBLAS, the default backend and the BLAS most distributions ship,
   # from Ubuntu's libopenblas-dev. Besides make check and the verify sweep
   # every library job runs, this one checks what needs doing once: that
@@ -142,6 +184,8 @@ jobs:
   # finds by itself, and whose threads -t sets through
   # bli_thread_set_num_threads().
   blis:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -193,6 +237,8 @@ jobs:
   # CBLAS layer (src/c/netlib); the yardstick every optimised library is
   # measured against.
   netlib:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -375,6 +421,8 @@ jobs:
   # two jobs run on GitHub's arm64-hosted runners (free for public repos)
   # instead of ubuntu-latest.
   nvpl:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04-arm
 
     steps:
@@ -436,6 +484,8 @@ jobs:
   # that adds it is fetched from developer.arm.com), on the arm64 runner:
   # see the comment above nvpl.
   armpl:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04-arm
 
     steps:
@@ -496,6 +546,8 @@ jobs:
   # the first -Werror failure this job ever produced was a
   # format-truncation warning invisible at -O2.
   sanitizers:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -567,6 +619,8 @@ jobs:
   # single-threaded one) counts where it runs, and Codecov merges the
   # reports of a commit.
   coverage:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -660,6 +714,8 @@ jobs:
   # where it is, with the reason (.github/scripts/cppcheck.sh). CodeQL runs in its
   # own workflow, codeql.yml.
   cppcheck:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -722,6 +778,8 @@ jobs:
   # Everything runs once per backend from the same build, and the results
   # of two of them must name the library each loaded: two series.
   flexiblas:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     container: fedora:latest
 
@@ -820,6 +878,8 @@ jobs:
   # AOCL_ROOT, as a module would set it. The benchmarks must link its
   # threaded libblis-mt, and -t must change the time.
   aocl:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     env:
       AOCL_COMMIT: 25cad99a6840855ade0a49871197f48ee0e1d317 # 5.3.2
@@ -904,6 +964,8 @@ jobs:
   # thread count (mkl_domain_set_num_threads); the runner's CPU, Intel or
   # AMD, is whatever GitHub gives.
   mkl:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -1071,6 +1133,8 @@ jobs:
   # running that install with no option. ReFrame's list of routines must
   # be the benchmarks the build installs. ReFrame is pinned to a release.
   reframe:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
 
     steps:

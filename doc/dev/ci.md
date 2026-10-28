@@ -21,6 +21,29 @@ every job of `ci.yml` except `coverage`, which is there to be read. A
 new job goes into the required checks (the branch protection settings)
 when it merges, or it can fail without stopping anything.
 
+### Waiting less (#305)
+
+A personal account runs 20 jobs at a time and a pull request starts 32,
+so with several open, runs queue for an hour. Three things keep that
+down:
+
+- **A superseded run is cancelled**: `ci.yml`'s `concurrency` group is
+  the pull request's, and a new push cancels the run in progress. A run
+  on `main` is never cancelled.
+- **A documentation-only pull request builds less**: the `changes` job
+  looks at what the pull request changes. When every file is Markdown,
+  under `doc/dev` or `doc/images`, a man page or a guide of the site,
+  the `openblas` job (whose `make check` reads every page and link) and
+  the `man` job run, and the eleven jobs that build and test a library
+  otherwise are skipped. A skipped job passes a required check, so they
+  run when `changes` fails (`!cancelled()`). The matrix jobs
+  (`browsers`, `fuzz`, `docker`, `spack`) always run: a matrix job
+  skipped whole reports under its bare name, and its checks, required
+  under their matrix names, would never come.
+- **No run again before a merge**: AGENTS.md's "Working on an issue"
+  says when a green pull request needs updating, and when its files'
+  tests run locally instead.
+
 GitHub Actions (`.github/workflows/ci.yml`) runs `./autogen.sh`,
 `configure --enable-werror`, `make`, and `make check` on every pull
 request and push to `main`,
