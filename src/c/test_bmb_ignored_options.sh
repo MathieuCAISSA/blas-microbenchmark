@@ -79,6 +79,8 @@ refused '--trans: dgemv takes one letter' level2/double/bmb_dgemv -m 8 --trans N
 refused '--trans: dgemv takes NT, not C' level2/double/bmb_dgemv -m 8 --trans C
 refused '--trans: dgemm takes NT, not C' level3/double/bmb_dgemm -m 8 --trans NC
 refused '--trans: zherk takes NC, not T' level3/complex16/bmb_zherk -m 8 --trans T
+refused "--trans: dgemv takes NT, not C (a real matrix's conjugate transpose is T)" level2/double/bmb_dgemv -m 8 --trans C
+refused '--trans: zsyrk takes NT, not C\.$' level3/complex16/bmb_zsyrk -m 8 --trans C
 refused '--side: dsyrk has no side to choose' level3/double/bmb_dsyrk -m 8 --side R
 refused '--diag: dsymv has no triangular matrix' level2/double/bmb_dsymv -m 8 --diag U
 refused '--trans: dsymv has no matrix to transpose' level2/double/bmb_dsymv -m 8 --trans T
