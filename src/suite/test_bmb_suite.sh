@@ -3,8 +3,10 @@
 # sizes through a profile file, into one directory that bmb_report then
 # takes whole; what --level, --precision and --routine select; the
 # shipped profiles and a routine's line winning over its level's, through
-# -n; the options passed on, after the profile's, -f and -o last; and
-# what it refuses before anything runs. On stand-in trees, an install's
+# -n; every command of those profiles run under BMB_COUNTS, which
+# measures nothing, without a warning (#280); the options passed on,
+# after the profile's, -f and -o last, --peak-gbs among them; and what
+# it refuses before anything runs. On stand-in trees, an install's
 # layout and a build tree's, made of a few scripts: a benchmark that
 # fails, the next one still run, one that skips, one missing. With --blas
 # (#255): the build tree given twice under two names, a directory and a
