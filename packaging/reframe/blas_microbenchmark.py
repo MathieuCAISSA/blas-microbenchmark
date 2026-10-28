@@ -15,8 +15,9 @@ from reframe.core.builtins import (fixture, parameter, performance_function,
                                    variable)
 
 # Every benchmark and its BLAS level, which picks its size option (-v or
-# -m) and its directory under libexec. CI checks this against the
-# benchmarks a build installs.
+# -m) and its directory under libexec, and the directory of its precision
+# in a build tree (#148). CI checks this against the benchmarks a build
+# installs.
 # BEGIN routines (reframe): written by src/c/routines.sh
 ROUTINES = {
     'sasum': 1, 'dasum': 1, 'scasum': 1, 'dzasum': 1, 'saxpy': 1, 'daxpy': 1,
@@ -38,16 +39,47 @@ ROUTINES = {
     'csyr2k': 3, 'zsyr2k': 3, 'cher2k': 3, 'zher2k': 3, 'strmm': 3, 'dtrmm': 3,
     'ctrmm': 3, 'ztrmm': 3, 'strsm': 3, 'dtrsm': 3, 'ctrsm': 3, 'ztrsm': 3,
 }
+DIRECTORY = {
+    'sasum': 'single', 'dasum': 'double', 'scasum': 'complex',
+    'dzasum': 'complex16', 'saxpy': 'single', 'daxpy': 'double',
+    'caxpy': 'complex', 'zaxpy': 'complex16', 'scopy': 'single',
+    'dcopy': 'double', 'ccopy': 'complex', 'zcopy': 'complex16',
+    'sdot': 'single', 'ddot': 'double', 'cdotc': 'complex',
+    'zdotc': 'complex16', 'cdotu': 'complex', 'zdotu': 'complex16',
+    'snrm2': 'single', 'dnrm2': 'double', 'scnrm2': 'complex',
+    'dznrm2': 'complex16', 'sscal': 'single', 'dscal': 'double',
+    'cscal': 'complex', 'zscal': 'complex16', 'sswap': 'single',
+    'dswap': 'double', 'cswap': 'complex', 'zswap': 'complex16',
+    'isamax': 'single', 'idamax': 'double', 'icamax': 'complex',
+    'izamax': 'complex16', 'srot': 'single', 'drot': 'double',
+    'sgemv': 'single', 'dgemv': 'double', 'cgemv': 'complex',
+    'zgemv': 'complex16', 'sgbmv': 'single', 'dgbmv': 'double',
+    'sger': 'single', 'dger': 'double', 'cgeru': 'complex',
+    'zgeru': 'complex16', 'cgerc': 'complex', 'zgerc': 'complex16',
+    'ssymv': 'single', 'dsymv': 'double', 'chemv': 'complex',
+    'zhemv': 'complex16', 'sspmv': 'single', 'dspmv': 'double',
+    'ssyr': 'single', 'dsyr': 'double', 'cher': 'complex', 'zher': 'complex16',
+    'ssyr2': 'single', 'dsyr2': 'double', 'cher2': 'complex',
+    'zher2': 'complex16', 'strmv': 'single', 'dtrmv': 'double',
+    'ctrmv': 'complex', 'ztrmv': 'complex16', 'strsv': 'single',
+    'dtrsv': 'double', 'ctrsv': 'complex', 'ztrsv': 'complex16',
+    'stpsv': 'single', 'dtpsv': 'double', 'stbsv': 'single', 'dtbsv': 'double',
+    'sgemm': 'single', 'dgemm': 'double', 'cgemm': 'complex',
+    'zgemm': 'complex16', 'ssymm': 'single', 'dsymm': 'double',
+    'csymm': 'complex', 'zsymm': 'complex16', 'chemm': 'complex',
+    'zhemm': 'complex16', 'ssyrk': 'single', 'dsyrk': 'double',
+    'csyrk': 'complex', 'zsyrk': 'complex16', 'cherk': 'complex',
+    'zherk': 'complex16', 'ssyr2k': 'single', 'dsyr2k': 'double',
+    'csyr2k': 'complex', 'zsyr2k': 'complex16', 'cher2k': 'complex',
+    'zher2k': 'complex16', 'strmm': 'single', 'dtrmm': 'double',
+    'ctrmm': 'complex', 'ztrmm': 'complex16', 'strsm': 'single',
+    'dtrsm': 'double', 'ctrsm': 'complex', 'ztrsm': 'complex16',
+}
 # END routines (reframe)
 
-#: The directory each precision's benchmarks are built in (#148), by the
-#: first letter of the routine's name, which is its precision for every
-#: routine here. One named otherwise (idamax, dznrm2) needs its own entry.
-PRECISION = {'s': 'single', 'd': 'double', 'c': 'complex', 'z': 'complex16'}
-
 # The result file's rate fields, as ReFrame performance variables. A
-# benchmark writes only those that apply: no GFLOP/s for dcopy and dswap,
-# no GB/s at level 3.
+# benchmark writes only those that apply: no GFLOP/s for copy, swap and
+# i?amax, no GB/s at level 3.
 RATES = {'gflops': 'GFLOP/s', 'gbytes_per_s': 'GB/s'}
 
 
@@ -276,5 +308,5 @@ class bmb_build_run(bmb_base):
         flat = os.path.join(built, f'bmb_{self.routine}')
         if os.path.exists(flat):
             return flat
-        return os.path.join(built, PRECISION[self.routine[0]],
+        return os.path.join(built, DIRECTORY[self.routine],
                             f'bmb_{self.routine}')
