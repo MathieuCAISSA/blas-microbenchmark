@@ -104,7 +104,10 @@ the code points at them; the ones easiest to break by accident:
   a key on it would cut every library's history there. The routine's
   arguments other than the defaults (#221, and the batch's, #159) are
   part of both keys too (`variantText`), a file without them counting as
-  the defaults; a GEMM run with `-K` is a section per K (`routineFor`).
+  the defaults; a GEMM run with `-K` is a section per K (`routineFor`),
+  and a sweep of K alone at one M x N, whose sections would each hold
+  one size, one section charted against K (`kSweep`, #284): each point
+  drawn at its K, its runs keeping their dimensions for the raw data.
 - **The section order** is by level, then operation, then precision
   s, d, c, z, the operation and precision taken from `routines.txt`
   (`FAMILY`, written by `routines.sh` beside `LEVEL`): scasum is asum's,

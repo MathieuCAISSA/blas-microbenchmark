@@ -170,6 +170,7 @@
          "#284: charted against K, with an anchor of its own");
       eq(R.sizeData(rt, 1).xs, [8, 16, 32, 64], "#284: at 1 thread, a point a K");
       eq(R.sizeData(rt, 2).xs, [8, 16], "#284: at 2 threads, the Ks measured there");
+      eq(R.pointSize(rt, 64, null), "K = 64", "#284: a point's size is its K");
       var p16 = R.pointsOf(rt.seriesOrder[0]).filter(function (p) { return p.threads === 1 && p.d1 === 16; })[0];
       eq(p16.runs.map(function (q) { return [q.d1, q.d2, q.d3]; }), [[256, 256, 16], [256, 256, 16]],
          "#284: a K measured twice is one point, whose runs keep their M, N and K for the raw data");

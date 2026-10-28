@@ -1454,6 +1454,9 @@ details[open] > summary { margin-bottom: 12px; }
     return parts.join("; ");
   }
 
+  /* A point's size as its section names it: its K in a sweep of K (#284). */
+  function pointSize(rt, d1, d2) { return (rt.kSweep ? "K = " : "") + sizeText(d1, d2); }
+
   function sizeText(d1, d2) {
     return d2 === null ? d1.toLocaleString("en-US") : d1.toLocaleString("en-US") + " × " + d2.toLocaleString("en-US");
   }
@@ -1521,7 +1524,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     var series = data.series.map(function (x) {
       return {
-        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + sizeText(x.size.d1, x.size.d2) + ")"),
+        name: x.identity.name + (data.chosen || !x.size ? "" : " (" + pointSize(rt, x.size.d1, x.size.d2) + ")"),
         colour: colour(x.identity),
         points: x.points.map(function (p) { return { x: p.x, y: p.y, extra: Math.round(100 * p.efficiency) + "% of ideal" }; }),
         ideal: x.ideal
@@ -1532,7 +1535,7 @@ details[open] > summary { margin-bottom: 12px; }
       notes: data.notes,
       chart: lineChart({
         title: "Thread scaling",
-        subtitle: (data.chosen ? "at " + sizeText(data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
+        subtitle: (data.chosen ? "at " + pointSize(rt, data.chosen.d1, data.chosen.d2) : "each series at its largest size") +
                   " · dashed: ideal linear scaling",
         xLabel: "Threads", yLabel: unit, yUnit: unit, series: series, yHeadroom: 1.2,
         xFormat: function (x) { return String(x); },
@@ -1719,7 +1722,8 @@ details[open] > summary { margin-bottom: 12px; }
       ? "History of " + name + ": each version is tested against the one before (Mann-Whitney U on their runs, two-sided, p < " +
         ALPHA + "); \"slower\" marks a regression beyond noise."
       : "History of " + name + ": measure each version several times, into separate files, to tell a regression from noise.");
-    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2, points: points, notes: notes };
+    return { name: name, cpu: cpuName(newest.cpu), field: field, threads: threads, d1: at.d1, d2: at.d2,
+             size: pointSize(rt, at.d1, at.d2), points: points, notes: notes };
   }
 
   function historyChart(data) {
@@ -1728,7 +1732,7 @@ details[open] > summary { margin-bottom: 12px; }
     var unit = metricUnit(data.field);
     return lineChart({
       title: data.name + " version by version",
-      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + sizeText(data.d1, data.d2) + " · oldest to newest",
+      subtitle: (data.cpu ? data.cpu + " · " : "") + plural(data.threads, "thread") + " · " + data.size + " · oldest to newest",
       xLabel: "Version", yLabel: unit, yUnit: unit, xLinear: true, endLabels: false,
       xFormat: function (x) { return labels[x - 1]; },
       xHead: function (x) { return data.name + " " + labels[x - 1]; },
@@ -1977,7 +1981,7 @@ details[open] > summary { margin-bottom: 12px; }
     ratioData: ratioData, ratioDomain: ratioDomain, ratioTicks: ratioTicks,
     thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
     heatData: heatData, heatStep: heatStep, STEPS: STEPS,
-    singlePrecision: singlePrecision, peakOf: peakOf, percentOfPeak: percentOfPeak, peakText: peakText,
+    pointSize: pointSize, singlePrecision: singlePrecision, peakOf: peakOf, percentOfPeak: percentOfPeak, peakText: peakText,
     rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks
   };
 
@@ -2071,7 +2075,7 @@ details[open] > summary { margin-bottom: 12px; }
     var v = el("div", "value", fmtRate(best[field]) + " ");
     v.appendChild(el("small", null, unit));
     tile.appendChild(v);
-    var size = (rt.kSweep ? "K = " : "") + sizeText(best.d1, best.d2);
+    var size = pointSize(rt, best.d1, best.d2);
     tile.appendChild(el("div", "detail", bestSeries.identity.name + " · " + size + " · " + plural(best.threads, "thread")));
     tiles.appendChild(tile);
   });
