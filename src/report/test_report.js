@@ -775,6 +775,29 @@
       eq(R.decadeTicks(0.03, 30), [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20], "log ticks: 1, 2 and 5 times each power of ten");
     });
 
+    /* ---- The peak where it is used (#288) ---- */
+
+    test("peak used", function () {
+      var m = R.buildModel([
+        entry("g.json", gemm({ peakGflops: 32, peakGbs: 40, rows: [[1, 64, 64, 1, 10, null]] })),
+        entry("a.json", { routine: "daxpy", peakGflops: 32, peakGbs: 40, rows: [[1, 1000, null, 1, 2, 24]] }),
+        entry("d.json", { routine: "ddot", peakGflops: 32, rows: [[1, 1000, null, 1, 2, 16]] }),
+        entry("c.json", { routine: "dcopy", peakGflops: 32, peakGbs: 40, rows: [[1, 1000, null, 1, null, 16]] })
+      ]);
+      function used(name) {
+        var rt = routine(m, name);
+        return R.peakUsed(rt, R.peakOf(rt, rt.seriesOrder[0], { gflops: 0, gbs: 0 }));
+      }
+      eq([used("dgemm").gflops, used("dgemm").gbs], [32, null], "level 3 uses the FLOP peak, not the bandwidth");
+      eq(R.peakText(routine(m, "dgemm"), used("dgemm")), "32.0 GFLOP/s a core, given in the results",
+         "and level 3's note cites the FLOP peak alone");
+      eq([used("daxpy").gflops, used("daxpy").gbs], [32, 40], "levels 1 and 2 use both, as the roofline's two roofs");
+      eq([used("ddot").gflops, used("ddot").gbs], [null, null], "a FLOP peak without a bandwidth draws no roofline: none used");
+      eq([used("dcopy").gflops, used("dcopy").gbs], [null, 40], "a routine with no FLOPs uses the bandwidth alone");
+      eq(R.peakText(routine(m, "dcopy"), used("dcopy")), "40.0 GB/s, given in the results",
+         "and its note cites the bandwidth alone");
+    });
+
     /* ---- Formatting ---- */
 
     test("formatting", function () {

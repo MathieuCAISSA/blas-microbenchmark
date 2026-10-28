@@ -1107,13 +1107,17 @@ details[open] > summary { margin-bottom: 12px; }
     function build(field, title, unit) {
       var kinds = {};
       /* Level 3 against its peak (#251): a line at each series' peak at
-       * this thread count, and each point's percentage of it. */
-      var peaks = {};
+       * this thread count, and each point's percentage of it. A routine
+       * with no FLOPs, which gets no roofline, a line at the bandwidth
+       * on its GB/s chart instead (#288). */
+      var peaks = {}, bandwidths = {};
       var series = list.map(function (s) {
         var pts = s.points.filter(function (p) { return p[field] !== undefined; });
         var repeated = pts.some(function (p) { return runSpread(p, field).n > 1; });
         var peak = (field === "gflops" && rt.level === 3) ? peakOf(rt, s.series) : { gflops: null };
         if (peak.gflops) { peaks[peak.gflops * threads] = true; }
+        var bandwidth = (field === "gbs" && metricField(rt) === "gbs") ? peakOf(rt, s.series).gbs : null;
+        if (bandwidth) { bandwidths[bandwidth] = true; }
         return {
           name: s.identity.name, colour: colour(s.identity),
           points: pts.map(function (p) {
@@ -1132,7 +1136,9 @@ details[open] > summary { margin-bottom: 12px; }
       });
       var yMarkers = Object.keys(peaks).map(function (y) {
         return { y: Number(y), label: "peak, " + plural(threads, "core") + ": " + fmtRate(Number(y)) + " " + unit };
-      });
+      }).concat(Object.keys(bandwidths).map(function (y) {
+        return { y: Number(y), label: "memory bandwidth: " + fmtRate(Number(y)) + " " + unit };
+      }));
       if (!series.some(function (s) { return s.points.length; })) { return; }
       var bands = [kinds.runs ? "band: fastest to slowest run" : "",
                    kinds.quartile ? "band: fastest sample to third quartile" : "",
@@ -1342,6 +1348,20 @@ details[open] > summary { margin-bottom: 12px; }
     } else if (s.peakGbs > 0) {
       out.gbs = s.peakGbs;
       out.gbsFrom = "results";
+    }
+    return out;
+  }
+
+  /* What of the peak a routine's charts use (#288): level 3, the FLOP
+   * rate; levels 1 and 2, the bandwidth, and the FLOP rate as the
+   * roofline's compute roof, which needs the bandwidth to be drawn; a
+   * routine that does no arithmetic, the bandwidth alone. */
+  function peakUsed(rt, peak) {
+    var out = { gflops: peak.gflops, gbs: peak.gbs, gflopsFrom: peak.gflopsFrom, gbsFrom: peak.gbsFrom };
+    if (rt.level === 3) {
+      out.gbs = out.gbsFrom = null;
+    } else if (!peak.gbs || metricField(rt) === "gbs") {
+      out.gflops = out.gflopsFrom = null;
     }
     return out;
   }
@@ -1888,7 +1908,7 @@ details[open] > summary { margin-bottom: 12px; }
     ratioData: ratioData, ratioDomain: ratioDomain, ratioTicks: ratioTicks,
     thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
     heatData: heatData, heatStep: heatStep, STEPS: STEPS,
-    singlePrecision: singlePrecision, peakOf: peakOf, percentOfPeak: percentOfPeak, peakText: peakText,
+    singlePrecision: singlePrecision, peakOf: peakOf, peakUsed: peakUsed, percentOfPeak: percentOfPeak, peakText: peakText,
     rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks
   };
 
@@ -2090,13 +2110,19 @@ details[open] > summary { margin-bottom: 12px; }
         var rd = rooflineData(rt, threads);
         if (rd) { made.push(rooflineChart(rt, rd, threads)); }
       }
-      /* Where each series' peak came from (#251). */
+      /* Where each series' peak came from (#251), only as much of it as
+       * the charts use (#288). */
       var peakNotes = [];
+      function peakNote(t) { if (peakNotes.indexOf(t) < 0) { peakNotes.push(t); } }
       rt.seriesOrder.forEach(function (s) {
-        var t = peakText(rt, peakOf(rt, s));
-        if (t && peakNotes.indexOf(t) < 0) { peakNotes.push(t); }
+        var peak = peakOf(rt, s);
+        var t = peakText(rt, peakUsed(rt, peak));
+        if (t) { peakNote("Peak: " + t + "."); }
+        if (peak.gflops && !peak.gbs && rt.level !== 3 && metricField(rt) === "gflops") {
+          peakNote("A FLOP peak alone draws nothing here: the roofline needs the memory bandwidth too (--peak-gbs).");
+        }
       });
-      peakNotes.forEach(function (t) { notes.push("Peak: " + t + "."); });
+      notes = notes.concat(peakNotes);
 
       var rc = ratioChart(rt, res.list, res.slice, threads, referenceFor(rt, reference));
       if (rc) {
@@ -2199,7 +2225,7 @@ details[open] > summary { margin-bottom: 12px; }
     { h: "GFLOP/s", n: true, v: function (r) { return r.p.gflops; }, f: fmtRate },
     { h: "GB/s", n: true, v: function (r) { return r.p.gbs; }, f: fmtRate },
     { h: "% of peak", n: true, v: function (r) {
-        var pct = percentOfPeak(r.p, peakOf(r.rt, r.s));
+        var pct = r.rt.level === 3 ? percentOfPeak(r.p, peakOf(r.rt, r.s)) : null;
         return pct === null ? undefined : pct;
       }, f: function (v) { return v.toFixed(0) + "%"; } },
     { h: "Median", n: true, v: function (r) { return r.p.median; }, f: fmtTime },
