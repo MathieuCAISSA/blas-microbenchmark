@@ -10,6 +10,9 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `bmb_report`: each summary tile links to its routine's section, and a
+  list of the routines by level comes before the sections (#289), for a
+  `bmb_suite` page of a hundred of them.
 - `--peak-gflops` and `--peak-gbs` (#249): a core's peak FLOP rate in
   the routine's precision, and the machine's memory bandwidth, as the
   user knows them, recorded in every output (`# peak:`,

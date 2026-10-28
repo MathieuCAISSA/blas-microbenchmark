@@ -36,8 +36,9 @@ Open it with a browser.
 .SS What the page shows
 Each part appears only when the results can support it:
 .IP \(bu 2
-a summary: the best figure for each routine, and where each series came
-from (library and the kernels it chose, CPU, caches, OS, date, the CPU
+a summary: the best figure for each routine, which leads to its section,
+and where each series came from (library and the kernels it chose, CPU,
+caches, OS, date, the CPU
 frequency governor and turbo where the machine exposed them, and how the
 files were run: samples and warm-up, batch size, alignment, compiler and
 CFLAGS, the CPUs allowed, the variables set, with the command lines in a
@@ -45,6 +46,9 @@ tooltip) \(em and whether each series was
 checked against a reference before it was timed, once any was (the
 benchmarks do it unless run with
 .BR \-C );
+.IP \(bu
+with more than one routine, the routines by level, each leading to its
+section;
 .IP \(bu
 performance against size, and for levels 1 and 2 bandwidth against size,
 with the points where a sweep leaves L1, L2 and L3 marked.
