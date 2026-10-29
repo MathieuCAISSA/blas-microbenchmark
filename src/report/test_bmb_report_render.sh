@@ -224,8 +224,11 @@ fi
 for r in zgemm sgemm dspmv chemv sdot dgemm; do
     grep -q "<section id=\"routine-$r\">" "$dom" || fail "page 2: no section for $r"
 done
-for name in 'openblas · trans CT' 'openblas · batch count 4' 'openblas · uplo L'; do
-    grep -q ">$name<" "$dom" || fail "page 2: no series named $name"
+# A series is named after the library the job built with.
+lib=$(sed -n 's/^  "backend": "\(.*\)",$/\1/p' "$P/zgemm.json")
+test -n "$lib" || fail "page 2: zgemm.json records no backend"
+for name in "$lib · trans CT" "$lib · batch count 4" "$lib · uplo L"; do
+    grep -qF ">$name<" "$dom" || fail "page 2: no series named $name"
 done
 grep -q 'memory roof 20.0 GB/s, compute roof 32.0 GFLOP/s' "$dom" ||
     fail "page 2: sdot's roofline is not under bmb_report's peak, doubled in single precision"

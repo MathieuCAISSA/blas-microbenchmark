@@ -83,6 +83,10 @@ it comes from in brackets.
 - [ ] A test looks for the message it expects, never for an empty
   stderr from a run on the real machine: one that exposes its CPU
   frequency adds a warning to every run (a CI runner did, #48).
+- [ ] A test that every library job runs expects what the results
+  record, not the library of the machine it was written on: a series
+  named `openblas` failed the render test in the eight other jobs
+  (#291's first push).
 - [ ] A test that edits or reads a result file does not count on an
   optional field: `blas` is absent under Netlib, NVPL and ArmPL (#9's
   render test rewrote a line that was not there).
