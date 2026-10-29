@@ -1,7 +1,7 @@
 .\" bmb_suite(1). make turns bmb_suite.1.in into bmb_suite.1, then into the
 .\" site's bmb_suite.html; edit the .in. man/test_man_*.sh check it
 .\" against the programs: see doc/dev/documentation.md.
-.TH BMB_SUITE 1 2026-10-27 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.TH BMB_SUITE 1 2026-10-29 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
 .\" No hyphenation, no justification: both hurt in a terminal.
 .nh
 .ds AD l

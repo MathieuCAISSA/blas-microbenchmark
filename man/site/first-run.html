@@ -5,7 +5,7 @@
 <h2 id="run">Run one</h2>
 <pre>bmb_dgemm -m 512:2048</pre>
 <p>This multiplies square matrices of 512, 1024 and 2048 rows, each size timed ten times, and prints one row per size as it goes:</p>
-<pre># blas-microbenchmark 1.8.0
+<pre># blas-microbenchmark 1.9.0
 # backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
 # kernels: Haswell
 # verified: every point, against a reference, before it was timed
@@ -13,19 +13,20 @@
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
-# date: 2026-10-23T12:34:59Z
+# date: 2026-10-29T09:17:41Z
 # affinity: CPUs 0-13
 # command: bmb_dgemm -m 512:2048
 # run: 0.2 s and 1 call of warm-up, 10 samples, batch size chosen per point, hot cache
 # operands: aligned to 64 bytes, leading dimensions + 0
+# arguments: trans NN, batch_count 1, batch_mode loop
 # compiler: gcc 13.3.0, CFLAGS -g -O2 -fopenmp
 # routine: dgemm
 Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s       median [s]      IQR [%]
-1               512                 512                 0.006034826     44.481        0.011482770     33.9
-1               1024                1024                0.044718863     48.022        0.046378110     19.0
-1               2048                2048                0.381516047     45.031        0.423780287     4.3</pre>
+1               512                 512                 0.003908581     68.678        0.004154811     9.1
+1               1024                1024                0.033772171     63.587        0.034789170     4.4
+1               2048                2048                0.272986125     62.933        0.276045337     0.7</pre>
 <ul>
-<li><b>The lines in <code>#</code></b> say where the numbers come from: the library, its exact build and the kernels it chose, the CPU and its caches, the system, the date; then how the run was made: the CPUs it could use, the command, the samples, the compiler, the thread and placement variables set. They go with the results into every file, so that a result is never mistaken for another machine's, and can be measured again.</li>
+<li><b>The lines in <code>#</code></b> say where the numbers come from: the library, its exact build and the kernels it chose, the CPU and its caches, the system, the date; then how the run was made: the CPUs it could use, the command, the samples, the operands, the routine&#39;s arguments (here GEMM&#39;s defaults: no transpose, one matrix), the compiler, the thread and placement variables set. They go with the results into every file, so that a result is never mistaken for another machine's, and can be measured again.</li>
 <li><b><code>verified</code></b>: each point was computed once and checked against a reference before it was timed. A library that gets it wrong stops the run, with exit status 2, instead of looking fast (<a href="checking.html">Checking results</a>).</li>
 <li><b><code>time [s]</code></b> is the time of one call, from the fastest of the ten samples (each one a batch of calls, averaged); <b><code>GFLOP/s</code></b> the rate it makes, from the routine's operation count. Level 1 and 2 routines, limited by memory, also give <b><code>GB/s</code></b> (<a href="measuring.html">How a number is measured</a>).</li>
 <li><b><code>median [s]</code></b> and <b><code>IQR [%]</code></b>: the median of the samples, and how far apart the middle half of them were, as a percentage of it. A large spread says something else was running.</li>
