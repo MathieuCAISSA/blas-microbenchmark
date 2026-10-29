@@ -49,7 +49,7 @@ bmb_dgemm -m 512:2048
 
 ```
 $ bmb_dgemm -m 512:2048
-# blas-microbenchmark 1.8.0
+# blas-microbenchmark 1.9.0
 # backend: openblas (OpenBLAS 0.3.26 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64)
 # kernels: Haswell
 # verified: every point, against a reference, before it was timed
@@ -57,17 +57,18 @@ $ bmb_dgemm -m 512:2048
 # cpu: Intel(R) Core(TM) Ultra 7 155U (14 logical CPUs, 1 NUMA node)
 # caches: L1d 48K, L1i 64K, L2 2M, L3 12M
 # os: Linux 6.6.87.1-microsoft-standard-WSL2 x86_64
-# date: 2026-10-23T12:34:59Z
+# date: 2026-10-29T09:17:41Z
 # affinity: CPUs 0-13
 # command: bmb_dgemm -m 512:2048
 # run: 0.2 s and 1 call of warm-up, 10 samples, batch size chosen per point, hot cache
 # operands: aligned to 64 bytes, leading dimensions + 0
+# arguments: trans NN, batch_count 1, batch_mode loop
 # compiler: gcc 13.3.0, CFLAGS -g -O2 -fopenmp
 # routine: dgemm
 Thread count    Matrix dim1 (M=K)   Matrix dim2 (N)     time [s]        GFLOP/s       median [s]      IQR [%]
-1               512                 512                 0.006034826     44.481        0.011482770     33.9
-1               1024                1024                0.044718863     48.022        0.046378110     19.0
-1               2048                2048                0.381516047     45.031        0.423780287     4.3
+1               512                 512                 0.003908581     68.678        0.004154811     9.1
+1               1024                1024                0.033772171     63.587        0.034789170     4.4
+1               2048                2048                0.272986125     62.933        0.276045337     0.7
 ```
 
 Every benchmark takes the same options (a routine refuses an argument it
