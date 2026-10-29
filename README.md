@@ -27,8 +27,10 @@
 - **Eight BLAS libraries**: OpenBLAS, BLIS, AMD AOCL-BLAS, Intel MKL,
   NVPL, ArmPL, Netlib, or all those FlexiBLAS can load, from one build.
 - **One page of charts**, `bmb_report`: performance against size with the
-  caches marked, libraries side by side, thread scaling, and how far
-  repeated runs spread. A single HTML file, which opens offline.
+  caches marked, libraries side by side, thread scaling, how far
+  repeated runs spread, and, given the machine's peak, a roofline for
+  levels 1 and 2 and the peak on level 3's charts. A single HTML file,
+  which opens offline.
 - **Made for HPC sites**: a Spack package, a Docker image (Apptainer
   too), and ReFrame tests.
 
@@ -85,7 +87,8 @@ bmb_ddot  -v 1024:16777216           -o results/ddot-openblas.json
 bmb_dgemm -m 128:2048 -t 1:8         -o results/dgemm-openblas.json
 bmb_dgemv -m 256:4096 -M 256:4096    -o results/dgemv-openblas.json
 # ... the same three from a build against BLIS, as *-blis.json
-bmb_report results/*.json > report.html
+# a core's peak in double precision and the memory bandwidth, as you know them:
+bmb_report --peak-gflops 76.8 --peak-gbs 120 results/*.json > report.html
 firefox report.html
 ```
 
@@ -96,7 +99,7 @@ firefox report.html
 </picture>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-ratio-dark.png">
-  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.45 and x1 depending on size" width="49%">
+  <img src="doc/images/dgemm-ratio-light.png" alt="dgemm, BLIS relative to OpenBLAS at 8 threads, between x0.8 and x1.15 depending on size" width="49%">
 </picture>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-threads-dark.png">
@@ -106,11 +109,20 @@ firefox report.html
   <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemv-shapes-dark.png">
   <img src="doc/images/dgemv-shapes-light.png" alt="dgemv heatmaps of GFLOP/s over M and N from 256 to 4096, OpenBLAS and BLIS side by side" width="49%">
 </picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemv-roofline-dark.png">
+  <img src="doc/images/dgemv-roofline-light.png" alt="dgemv roofline: each size's GFLOP/s against its FLOPs a byte, OpenBLAS and BLIS, under a 120 GB/s memory roof" width="49%">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="doc/images/dgemm-peak-dark.png">
+  <img src="doc/images/dgemm-peak-light.png" alt="dgemm GFLOP/s against size at 1 thread, OpenBLAS and BLIS, under a line at one core's peak, 76.8 GFLOP/s" width="49%">
+</picture>
 </p>
 
 *The commands above, run on a laptop (Intel Core Ultra 7 155U, WSL2)
-against OpenBLAS 0.3.26 and BLIS 0.9.0: what the page draws, not a verdict
-on either library.*
+against OpenBLAS 0.3.26 and BLIS 0.9.0, its peak taken from Intel's
+figures (a P-core at 4.8 GHz, 16 FLOPs a cycle; LPDDR5x-7467 on two
+channels): what the page draws, not a verdict on either library.*
 
 Run each command several times, into separate files, and the page also
 shows how far the runs spread, and which differences are beyond that

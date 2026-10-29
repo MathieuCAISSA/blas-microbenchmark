@@ -122,6 +122,20 @@
       eq(m.identities.length, 2, "#221: --trans NT is a series of its own; NN and a file from before --trans are one");
       eq(names(m.identities), ["openblas", "openblas · trans NT"],
          "#221: the series that differs is named by its arguments, the defaults' by nothing");
+
+      function args(a) { return { cache: "hot", arguments: a }; }
+      m = R.buildModel([
+        entry("old.json", { routine: "dtrsm", rows: [[1, 64, 64, 1e-5, 10, null]] }),
+        entry("d.json", { routine: "dtrsm", run: args({ side: "L", uplo: "U", trans: "N", diag: "N" }),
+                          rows: [[1, 128, 128, 1e-5, 10, null]] }),
+        entry("v.json", gemv({ run: args({ trans: "N" }), rows: [[1, 64, 64, 1e-5, 1, 8]] })),
+        entry("w.json", gemv({ rows: [[1, 128, 128, 1e-5, 1, 8]] }))
+      ]);
+      eq(names(m.identities), ["openblas"],
+         "#291: side L, uplo U, trans N, diag N and gemv's single N are the defaults: one series with a file from before them");
+      eq(names(R.buildModel([entry("u.json", { routine: "dtrsm", run: args({ side: "R", uplo: "L", diag: "U" }),
+                                                rows: [[1, 64, 64, 1e-5, 10, null]] })]).identities),
+         ["openblas · uplo L, side R, diag U"], "#291: and each other value names the series");
     });
 
     test("conditions always named", function () {

@@ -453,15 +453,15 @@ done
     echo '</section>'
     echo '<section class="Sh">'
     heading 1 json "JSON"
-    echo '<p class="Pp">The JSON holds the same as fields, and is what <a href="bmb_report.html"><b>bmb_report</b>(1)</a> reads. Here with a label, to tell two runs on the same machine apart.</p>'
-    run "bmb_dgemv -m 512 -M 256:512 -l 'turbo off' -o dgemv.json" dgemv.json
+    echo '<p class="Pp">The JSON holds the same as fields, and is what <a href="bmb_report.html"><b>bmb_report</b>(1)</a> reads. Here with a label, to tell two runs on the same machine apart, and the peak as the user knows it, which the report judges the rates by (<code># peak:</code>, <code>peak_gflops_per_core</code> and <code>peak_gbs</code>): a core&#39;s FLOP rate in the routine&#39;s precision and the memory bandwidth, never estimated. The routine&#39;s arguments are recorded with their defaults (<code># arguments:</code>, <code>arguments</code>), so that the report keeps a transposed or a lower-triangle run apart.</p>'
+    run "bmb_dgemv -m 512 -M 256:512 -l 'turbo off' --peak-gflops 32 --peak-gbs 40 -o dgemv.json" dgemv.json
     echo '</section>'
     if have_image summary && have_image rawdata && have_image ddot-size && have_image dgemm-ratio \
         && have_image dgemm-threads && have_image dgemv-shapes && have_image noise-band \
-        && have_image noise-ratio; then
+        && have_image noise-ratio && have_image dgemv-roofline && have_image dgemm-peak; then
         echo '<section class="Sh">'
         heading 1 report "The report"
-        echo '<p class="Pp"><code>bmb_report results/*.json &gt; report.html</code> makes one page of all of them. These are from results measured on a laptop (Intel Core Ultra 7 155U, WSL2), with OpenBLAS 0.3.26 and BLIS 0.9.0: they show what the page draws, not which library is faster.</p>'
+        echo '<p class="Pp"><code>bmb_report --peak-gflops 76.8 --peak-gbs 120 results/*.json &gt; report.html</code> makes one page of all of them, judged by the machine&#39;s peak as its user knows it. These are from results measured on a laptop (Intel Core Ultra 7 155U, WSL2), with OpenBLAS 0.3.26 and BLIS 0.9.0: they show what the page draws, not which library is faster.</p>'
         heading 2 summary "Summary"
         echo '<p class="Pp">The best figure for each routine, and where every series came from.</p>'
         picture summary "The report's summary: the best GFLOP/s for ddot, dgemv and dgemm, and a table of the library, CPU, caches, OS, date and files of each series" "The summary and the provenance of each series."
@@ -472,6 +472,8 @@ done
         picture dgemm-ratio "dgemm, BLIS relative to OpenBLAS at 8 threads, on a log scale around x1" "Each library against the reference."
         picture dgemm-threads "dgemm GFLOP/s at 1, 2, 4 and 8 threads, with ideal scaling dashed" "Thread scaling, against ideal."
         picture dgemv-shapes "dgemv heatmaps of GFLOP/s over M and N, OpenBLAS and BLIS" "Every shape of a two-dimension sweep."
+        picture dgemv-roofline "dgemv roofline: each size's GFLOP/s against its FLOPs a byte, OpenBLAS and BLIS, under the memory roof" "Levels 1 and 2 against the roofs."
+        picture dgemm-peak "dgemm GFLOP/s against size at 1 thread, OpenBLAS and BLIS, under a line at one core's peak, 76.8 GFLOP/s" "Level 3 against the peak."
         echo '</div>'
         heading 2 noise "Repeated runs"
         echo '<p class="Pp">The same ddot command run four times with each library, each run into its own file: a band shows how far the runs spread, and the comparison tells a difference within that noise (a hollow point) from one beyond it (see <a href="bmb_report.html#Repeated_runs_and_noise">Repeated runs and noise</a>).</p>'

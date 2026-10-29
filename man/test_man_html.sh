@@ -114,13 +114,19 @@ grep -q "^  \"version\": \"$PACKAGE_VERSION\",\$" "$o" || fail "outputs.html doe
 test "$(grep -c '^\$ bmb_d[a-z0-9]* ' "$o")" -eq 3 || fail "outputs.html does not show the three benchmark commands"
 grep -q '^Thread count' "$o" || fail "outputs.html shows no table header"
 grep -q '^thread_count,' "$o" || fail "outputs.html shows no CSV header"
+# The JSON's run gives a peak and records the routine's arguments (#291).
+grep -q '^  "peak_gflops_per_core": 32,$' "$o" && grep -q '^  "peak_gbs": 40,$' "$o" ||
+    fail "outputs.html's JSON shows no peak"
+grep -q '^    "arguments": {' "$o" || fail "outputs.html's JSON shows no arguments"
 # The report's screenshots come with a git checkout (doc/images), not with
 # a release tarball.
 if [ -d "${srcdir:-.}/../doc/images" ]; then
     for id in report summary charts noise raw; do
         grep -q "id=\"$id\"" "$o" || fail "outputs.html has no $id section, although doc/images is there"
     done
-    test "$(grep -c '<img ' "$o")" -eq 8 || fail "outputs.html does not show the eight screenshots of the report"
+    # One a shot doc/screenshots.sh takes.
+    shots=$(sed -n "/^SHOTS='/,/'\$/p" "${srcdir:-.}/../doc/screenshots.sh" | wc -l)
+    test "$(grep -c '<img ' "$o")" -eq "$shots" || fail "outputs.html does not show the $shots screenshots of the report"
 fi
 ok "outputs.html shows this version's table, CSV and JSON, and the report when doc/images is there"
 

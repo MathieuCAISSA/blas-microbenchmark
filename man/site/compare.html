@@ -17,15 +17,18 @@ FLEXIBLAS=BLIS-OPENMP bmb_dgemm -m 128:2048 -t 1:8 -o results/dgemm-blis.json</p
 <h2 id="report">Make the report</h2>
 <pre>bmb_report results/*.json &gt; report.html
 firefox report.html</pre>
+<p>Give it the machine&#39;s peak as you know it, a core&#39;s FLOP rate in double precision and the memory bandwidth, and it judges the rates by it: <code>bmb_report --peak-gflops 76.8 --peak-gbs 120 results/*.json &gt; report.html</code>. It is never estimated.</p>
 <p>The page is a single file, with nothing to fetch: it opens offline, and can be sent as is. For each routine, it shows what the results can support:</p>
 <ul>
 <li>performance, and bandwidth for levels 1 and 2, against size, with the points where the data leaves the L1, L2 and L3 caches marked;</li>
 <li>each library against a reference (OpenBLAS, or one you choose on the page), on a log scale where twice as slow and twice as fast sit at the same distance;</li>
 <li>thread scaling against ideal;</li>
 <li>a heatmap of every shape, for sweeps over two dimensions (<code>-m</code> and <code>-M</code>);</li>
+<li>given the peak, a roofline for levels 1 and 2, each size under the memory and compute roofs, and a line at the peak on level 3&#39;s performance chart;</li>
 <li>a summary, and every row of every file, sortable.</li>
 </ul>
 <!-- picture dgemm-ratio | dgemm, BLIS relative to OpenBLAS at 8 threads, on a log scale around x1 | Each library against the reference. -->
+<!-- picture dgemv-roofline | dgemv roofline: each size's GFLOP/s against its FLOPs a byte, OpenBLAS and BLIS, under the memory roof | Levels 1 and 2 against the roofs. -->
 <p>The <a href="outputs.html">Outputs</a> page shows each part.</p>
 
 <h2 id="suite">The whole suite at once</h2>
