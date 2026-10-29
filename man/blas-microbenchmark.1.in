@@ -89,7 +89,8 @@ double,
 single complex,
 .B z
 double complex.
-Every operation is measured in every precision BLAS has it in: single
+Every operation is measured in every precision BLAS has it in, but rot,
+gbmv, tbsv and tpsv, in real precision only: single
 precision moves half the bytes and fits twice as many numbers in a
 vector register, and a complex multiply\-add does four times the
 arithmetic of a real one on twice the data.
@@ -269,8 +270,8 @@ How the matrices are stored and passed to CBLAS:
 A library may handle the two differently: CBLAS row-major calls are
 often turned into column-major ones on the transposed problem, so a
 Fortran program can see other numbers than the default does.
-The problem is the same either way (the same sizes, the upper triangle,
-no transpose); only its storage changes.
+The problem is the same either way (the same sizes, triangle and
+transpose); only its storage changes.
 Ignored, with a warning, by the vector routines.
 Default: row.
 .TP

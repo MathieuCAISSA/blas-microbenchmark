@@ -25,7 +25,9 @@ reports are about input that someone else could supply:
   self-contained, with every value inserted as text);
 - command-line input that makes a benchmark read or write out of bounds,
   or allocate far more than it reports (sizes are checked before any
-  allocation).
+  allocation);
+- a profile file or a `--blas` path that makes `bmb_suite` run something
+  other than the benchmarks of the suite it names.
 
 A benchmark being slow, or a BLAS library misbehaving, is not a security
 problem: please open a normal issue.

@@ -249,7 +249,7 @@ right, not that they are readable.
 ## The README's images
 
 `doc/images/` holds the screenshots of a report shown by the README (the
-four charts) and by the site (those, the summary, the raw data table,
+six charts) and by the site (those, the summary, the raw data table,
 and two charts of repeated runs), each in light and dark (`<picture>`
 picks one by the reader's theme). They are real results, made by the
 commands in the README's report section, and `doc/screenshots.sh`
@@ -278,7 +278,7 @@ doc/screenshots.sh report.html path/to/doc/images noise-band noise-ratio
 It drives Firefox over WebDriver and screenshots each element on its own
 at twice the CSS resolution, so nothing around it gets in; it opens the
 raw data table and fades it out after its first rows. The
-README shows the four as a 2×2 grid, so they need about the same
+README shows the six as a 3×2 grid, so they need about the same
 proportions: the heatmap, which spans a whole row of the page, is taken at
 a narrower window than the line charts (the width is per chart, in
 `SHOTS`). Redo the

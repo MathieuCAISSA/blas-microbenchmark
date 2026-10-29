@@ -356,7 +356,8 @@ details[open] > summary { margin-bottom: 12px; }
    * (test_report.js) exercise.                                         *
    *                                                                    *
    * A series is routine + identity, where the identity is backend +    *
-   * BLAS version string + CPU + label (#1, decision 1). Files sharing  *
+   * BLAS version string + CPU + label (#1, decision 1), with layout,   *
+   * cache, padding and arguments (#7, #160, #163, #221). Files sharing *
    * a series merge into one curve; a point measured in more than one   *
    * file keeps the fastest, as the benchmarks already do between       *
    * samples, and the duplicate is recorded so the page can say so.     *
@@ -1427,7 +1428,7 @@ details[open] > summary { margin-bottom: 12px; }
   }
 
   /* The figure a routine is judged by: GFLOP/s, or GB/s for the two that
-   * do no arithmetic (dcopy, dswap). */
+   * do no arithmetic (copy, swap, i?amax). */
   function metricField(rt) {
     var flops = rt.seriesOrder.some(function (s) {
       return pointsOf(s).some(function (p) { return p.gflops !== undefined; });

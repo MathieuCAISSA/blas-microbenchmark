@@ -112,7 +112,7 @@ dtbsv \-m 32:4096 \-M 32
 .EE
 .RE
 .PP
-The band routines get a band of 32 elements: by default, theirs is as
+The band routines get K = 32 diagonals: by default, K is N, a band as
 wide as the matrix.
 .SS Several libraries
 The benchmarks measure the library they were built against: a

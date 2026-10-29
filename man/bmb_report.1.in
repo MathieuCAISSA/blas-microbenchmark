@@ -92,8 +92,8 @@ and
 .BR \-M ;
 .IP \(bu
 the raw data, every row of every file, sortable, with whether each point
-was checked when any was, and its percentage of the peak when there is
-one.
+was checked when any was, and, for level 3, its percentage of the peak
+when there is one.
 .PP
 The charts come in a section per routine, level 1 first; within a level,
 operations come in alphabetical order, each one's precisions together in
