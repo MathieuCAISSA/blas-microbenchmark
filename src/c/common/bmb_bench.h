@@ -31,7 +31,7 @@ typedef void (*bmb_bench_teardown_fn)(void *ctx);
  * operation counts (2*M*N*K for gemm, K*N*(N+1) for syrk, ...): a count of
  * the arithmetic the routine is defined to perform, not of the
  * instructions a given implementation issues. NULL for routines that do no
- * arithmetic at all (dcopy, dswap). */
+ * arithmetic at all (copy, swap, i?amax). */
 typedef double (*bmb_bench_flops_fn)(size_t dim1, size_t dim2);
 
 /* Optional. Bytes one call has to move at minimum -- each operand read

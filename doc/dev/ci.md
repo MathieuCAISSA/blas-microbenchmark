@@ -23,7 +23,8 @@ when it merges, or it can fail without stopping anything.
 
 ### Waiting less (#305)
 
-A personal account runs 20 jobs at a time and a pull request starts 32,
+A personal account runs 20 jobs at a time and a pull request starts
+about 30,
 so with several open, runs queue for an hour. Three things keep that
 down:
 

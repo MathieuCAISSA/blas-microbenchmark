@@ -135,7 +135,8 @@ and links to the pages before and after it in the menu):
   `src/c`, so `make` comes before `make html`) as it builds the page, and
   shows each command exactly as it ran — they are always this version's
   output, from the machine that built the site. Keep those runs small.
-  Below them, the report's summary, four charts and raw data, as
+  Below them, the report's summary, six charts, the two of repeated
+  runs and the raw data, as
   screenshots from `doc/images`.
 - `development.html` lists every test and every CI job (`man/devpage.sh`).
   A test is described by **the first paragraph of its header comment**,
