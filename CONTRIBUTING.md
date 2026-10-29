@@ -36,9 +36,10 @@ lists every test and every CI job.
 
 ## Working on a change
 
-Every change has an issue and a branch of its own, named after it
+Every change has an issue and a branch named after it
 (`issue-<N>-<short-name>`), and reaches `main` through a pull request whose
-description says `Closes #<N>`. `main` only accepts a pull request once
+description says `Closes #<N>`; small issues of one area may share a
+branch and a pull request, which closes each. `main` only accepts a pull request once
 every required CI job passes (all but `coverage`). The details are in
 [AGENTS.md, Working on an issue](AGENTS.md#working-on-an-issue).
 
@@ -60,7 +61,9 @@ runs. The essentials:
 - The change is in the `[Unreleased]` section of
   [CHANGELOG.md](CHANGELOG.md) if a user would notice it.
 
-Every pull request runs the full CI; it has to pass before merging.
+Every pull request runs the CI, and it has to pass before merging; one
+that changes documentation only skips the jobs that build and test a
+library.
 
 Adding a BLAS routine or a backend has its own checklist:
 [a routine](doc/dev/benchmarks.md#adding-a-new-blas-routine-benchmark),

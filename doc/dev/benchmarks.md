@@ -62,7 +62,7 @@ to pass CBLAS (`CblasRowMajor` or `CblasColMajor`, kept in an `int`,
 since the enum's name differs between libraries) and its leading
 dimensions — the number of columns of a matrix row-major, of rows
 column-major (`dgemm`: `lda` is K or M, `ldb` N or K, `ldc` N or M). The
-problem stays the same: same sizes, same triangle, no transpose; only
+problem stays the same: same sizes, same triangle and transpose; only
 its storage changes, and the fills are the same either way. `verify()`
 passes the order to `bmb_verify_matvec()`, which reads element (i, j)
 where that order puts it. A triangular or symmetric matrix must not be
@@ -131,9 +131,12 @@ rest of level 3 since #201, level 2 since #202, level 1 since #203, each
 checked to give exactly what its own file did (the corrupted check's values to the
 digit, the counts, the copies `--cache cold` takes, every field the
 clock does not change). The table has listed every precision BLAS has
-of each family since #226, #228 and #230. A family BLAS has in one
-kind of precision only stops at an `#error` if asked for the other: ger,
-symv, syr, syr2 and dot are real (their complex counterparts, geru and
+of each family since #226, #228 and #230, but for rot, gbmv, tbsv and
+tpsv, real only here: csrot and zdrot are not in every CBLAS, and the
+complex band and packed solves are not written yet. A family BLAS has
+in one kind of precision only, or that is real only here, stops at an
+`#error` if asked for the other: ger, symv, syr, syr2, dot and spmv
+are real, and rot, gbmv, tbsv and tpsv here (their complex counterparts, geru and
 gerc, hemv, her, her2, dotc and dotu, are families of their own), dotc,
 dotu, geru, gerc, hemv, her and her2 complex. hemv, her and her2 have
 sources of their own (#238): their real counterparts' checks are
@@ -354,8 +357,11 @@ runs before `autoreconf`:
 - the NAME line of `man/blas-microbenchmark.1.in`, and its two tables:
   the routines by level, and which dimension `-m` and `-M` are;
 - the README's table of the benchmarks;
-- the `LEVEL` table of `src/report/report.html`, which orders the
-  report's sections and names each routine's level;
+- the `LEVEL` and `FAMILY` tables of `src/report/report.html`, which
+  name each routine's level and its operation and precision, the
+  report's sections ordered by them;
+- `DIRECTORY` in `packaging/reframe/blas_microbenchmark.py`, each
+  routine's precision directory;
 - `ROUTINES` in `packaging/reframe/blas_microbenchmark.py`;
 - `ROUTINES` in `src/suite/bmb_suite.sh`, what `--level`, `--precision`
   and `--routine` select from.
@@ -394,7 +400,7 @@ result with a reference from `bmb_verify.h`:
   `A*(B*r)` for a probe vector `r`, O(N^2) instead of O(N^3); trsm, trsv,
   tpsv and tbsv by their residual; `dger`, `dsyr`, `dsyr2` by projecting the
   whole matrix, which also covers the triangle they must not touch;
-  `dsyrk`/`dsyr2k` project their untouched strictly lower part before and
+  `dsyrk`/`dsyr2k` project the triangle they must not touch before and
   after the call, and require it identical to the bit.
 
 Every reference comes with the size of its terms (`|A||x|` for `A*x`), and
