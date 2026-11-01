@@ -79,6 +79,12 @@ jobs:
           cd build
           ../configure --enable-werror
 
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 
@@ -213,6 +219,13 @@ jobs:
           mkdir -p build
           cd build
           ../configure --with-blas-backend=blis --enable-werror
+
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -1084,6 +1097,13 @@ jobs:
           cd build
           ../configure --with-blas-backend=mkl --enable-werror
 
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 
@@ -1334,7 +1354,7 @@ jobs:
       - name: The installed tests run their own install
         run: |
           reframe -c inst/share/blas-microbenchmark/reframe/blas_microbenchmark.py \
-            -n 'bmb_run%routine=(dgemm|ddot)' -S level1_size=100000 -S level3_size=128 \
+            -n 'bmb_run%routine=(dgemm|ddot)$' -S level1_size=100000 -S level3_size=128 \
             -S num_threads=2 -r --report-file=installed-run.json
           python3 - <<'EOF'
           import json, os
@@ -1349,12 +1369,12 @@ jobs:
       - name: A reference it cannot meet, and an unverified run, fail it
         run: |
           echo '{"generic": {"dgemm": {"gflops": [1e9, -0.1, null]}}}' > strict.json
-          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm$' \
                -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
                -S reference_file=strict.json -r --report-file=strict-run.json; then
             echo "a reference of 1e9 GFLOP/s was met"; exit 1
           fi
-          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm$' \
                -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
                -S bmb_options=-C -r --report-file=unverified-run.json; then
             echo "a run with -C passed"; exit 1
@@ -1369,7 +1389,7 @@ jobs:
 
       - name: bmb_build_run on this commit's tarball
         run: |
-          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)' \
+          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)$' \
             -S bmb_tarball.tarball="$(ls build/blas-microbenchmark-*.tar.gz)" \
             -S level1_size=100000 -S level3_size=128 -S num_threads=2 \
             -r --report-file=build-run.json
@@ -1384,8 +1404,10 @@ jobs:
       - name: Their results make a report
         run: |
           find bmb-run-output -name result.json > results.txt
-          test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)" ||
-            { echo "$(wc -l < results.txt) results, not a routine each"; exit 1; }
+          # A result a routine that passed: a skipped extension (#171) writes none.
+          want=$(python3 -c "import json; print(sum(c['result'] == 'pass' for c in json.load(open('run.json'))['runs'][0]['testcases']))")
+          test "$(wc -l < results.txt)" -eq "$want" ||
+            { echo "$(wc -l < results.txt) results, not one a routine that passed ($want)"; exit 1; }
           # shellcheck disable=SC2046
           inst/bin/bmb_report $(cat results.txt) > report.html
           grep -qi '^<!doctype html>' report.html

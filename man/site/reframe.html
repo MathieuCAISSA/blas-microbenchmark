@@ -12,7 +12,7 @@
 <p>Run from where they were installed, the tests run that install's benchmarks, with nothing to set:</p>
 <pre>R=/usr/local/share/blas-microbenchmark/reframe
 reframe -C site-config.py -c $R/blas_microbenchmark.py -n 'bmb_run' -r</pre>
-<p>With Spack, <code>R=$(spack location -i blas-microbenchmark)/share/blas-microbenchmark/reframe</code>. <code>-n 'bmb_run%routine=dgemm'</code> runs one routine, <code>-t level3</code> one level.</p>
+<p>With Spack, <code>R=$(spack location -i blas-microbenchmark)/share/blas-microbenchmark/reframe</code>. <code>-n 'bmb_run%routine=dgemm$'</code> runs one routine (without <code>$</code>, dgemmt too), <code>-t level3</code> one level.</p>
 
 <h2 id="variables">Sizes, threads and the rest</h2>
 <p><code>-S</code> sets the tests' variables:</p>

@@ -592,7 +592,7 @@ AS_IF([test -n "$bmb_batch_header"], [
       [bmb_cv_gemm_batch_strided=yes], [bmb_cv_gemm_batch_strided=no])])
   dnl Extensions of the BLAS (#171): the same header and the same rule.
   dnl axpby: OpenBLAS, MKL, BLIS, AOCL-BLAS; gemmt: MKL, NVPL, AOCL-BLAS,
-  dnl OpenBLAS from 0.3.27, whose library had it before its header did.
+  dnl BLIS, OpenBLAS from 0.3.27, whose library had it before its header did.
   AC_CACHE_CHECK([for cblas_?axpby], [bmb_cv_axpby],
     [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
       [[(void) &cblas_saxpby; (void) &cblas_daxpby;

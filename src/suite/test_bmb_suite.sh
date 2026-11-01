@@ -174,6 +174,7 @@ $R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err
 test -s "$T/out" && fail "bmb_suite wrote to stdout: $(head -3 "$T/out")"
 # An extension of the BLAS the library lacks (#171) is skipped, and said
 # to be: its log, no result.
+# shellcheck disable=SC2034 # read by bmb_missing, in the helper sourced below
 bmb_table=${srcdir:-.}/../c/routines.txt
 . "${srcdir:-.}/../c/test_helper.sh"
 n=0
@@ -302,21 +303,28 @@ test -n "$built" || fail "no backend read from bmb_ddot --version"
 profile 'level1 -v 64'
 $R --blas one="$top" --blas two="$top/src/c" -o "$T/blas" --level 1 --precision d --profile "$T/profile" \
     -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" || fail "the build tree given twice: $(cat "$T/err")"
+# An extension the library lacks (#171) is run, and skipped: no result.
 n=0
+measured=0
 for r in $(awk '$2 == 1 && $3 == "d" { print $1 }' "$T/table"); do
+    n=$((n + 1))
     for name in one two; do
         j=$T/blas/$name/$r.json
+        if bmb_missing "$r"; then
+            test -e "$j" && fail "$r, which this library lacks, has a result: $j"
+            continue
+        fi
         test -s "$j" || fail "no $j"
         grep -q "^  \"label\": \"$name\",\$" "$j" || fail "$j is not labelled $name"
         grep -q "^  \"backend\": \"$built\",\$" "$j" || fail "$j does not record $built"
     done
-    n=$((n + 1))
+    bmb_missing "$r" || measured=$((measured + 1))
 done
 grep -q "^bmb_suite: one: dasum (1/$((2 * n)))\$" "$T/err" || fail "no progress line for one's first: $(head -3 "$T/err")"
 grep -q "^bmb_suite: two: drot ($((2 * n))/$((2 * n)))\$" "$T/err" || fail "no progress line for two's last: $(tail -3 "$T/err")"
 test "$(ls "$T/blas" | tr '\n' ' ')" = "one two " || fail "$T/blas holds more than a directory a name: $(ls "$T/blas")"
 ../report/bmb_report "$T/blas" >"$T/blas.html" 2>"$T/err" || fail "bmb_report refused the two: $(cat "$T/err")"
-test "$(grep -c 'class="bmb-result"' "$T/blas.html")" = $((2 * n)) || fail "the report does not hold both libraries' results"
+test "$(grep -c 'class="bmb-result"' "$T/blas.html")" = $((2 * measured)) || fail "the report does not hold both libraries' results"
 pass "--blas, the build tree twice: a directory, a label each, every result recording $built; bmb_report takes both"
 
 # The forms of a suite, through -n: an install prefix, the directory of

@@ -22,6 +22,7 @@ typedef struct {
 static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 {
     bmb_ctx_t *ctx;
+    size_t i;
 
     (void) dim2;
     (void) thread_count;
@@ -33,8 +34,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     ctx->n = (bmb_int) dim1;
     /* Repeated calls take y towards alpha / (1 - beta) * x, a third of x
-     * here: it never over- or underflows, whatever --iterations. A beta of
-     * exactly 1 would let a library call axpy instead. */
+     * here, whatever --iterations: no element of x is 0 (below), where y
+     * would be taken to 0 through the denormals. A beta of exactly 1 would
+     * let a library call axpy instead. */
     bmb_set_scalar(ctx->alpha, BMB_R(0.25), BMB_R(0.0));
     bmb_set_scalar(ctx->beta, BMB_R(0.25), BMB_R(0.0));
     ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
@@ -48,6 +50,10 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
 
     bmb_fill(ctx->x, dim1, 0, 31);
     bmb_fill(ctx->y, dim1, 7, 53);
+    /* Half a step off the fill's grid, which has a 0 in every hundred. */
+    for (i = 0; i < BMB_PARTS * dim1; i++) {
+        ctx->x[i] += BMB_R(0.005);
+    }
 
     return ctx;
 }

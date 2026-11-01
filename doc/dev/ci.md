@@ -117,7 +117,10 @@ storage orders, on
 that job's library; then each argument other than its default, one at a
 time, over the routines that take it (a transposed GEMM, a lower or
 right-side triangle, herk with C), GEMM with a K of its own and batched
-in each mode, a mode the library has not being a skip (#277). `make
+in each mode, a mode the library has not being a skip (#277), and so
+is an extension of the BLAS it lacks (#171): `openblas`, `blis` and
+`mkl` check first that `configure` found those their library has
+(axpby, gemmt), so that a broken probe cannot skip them everywhere. `make
 check` runs `--verify` on tiny sizes only, and
 a tolerance too tight for a real size, or a library that is only wrong
 once it splits the work between threads, would get through it. Every

@@ -9,7 +9,7 @@
 /* sgemmt, dgemmt, cgemmt and zgemmt, one per precision (bmb_prec.h): C (N
  * x N) = alpha * op(A) * op(B) + beta * C in the triangle --uplo gives,
  * op(A) N x K, op(B) K x N, as --trans gives them. An extension of the
- * BLAS (#171) that MKL, NVPL, AOCL-BLAS and OpenBLAS (from 0.3.27) have;
+ * BLAS (#171) that MKL, NVPL, AOCL-BLAS, BLIS and OpenBLAS (from 0.3.27) have;
  * a build whose library does not is skipped. dim1 = N, dim2 = K. */
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
