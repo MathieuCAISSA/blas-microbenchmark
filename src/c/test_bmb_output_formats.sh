@@ -243,6 +243,6 @@ grep -q '^Frequency: governor performance, turbo off$' version.txt \
     || fail "-V did not describe the x86 fixture's frequency: $(cat version.txt)"
 rm -f version.txt
 
-rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt fmtp.json fmtp.txt fmtp.csv freq.txt freq.err freq.csv freq.json stat.csv stat.json \
+rm -f fmt.csv fmt.json ints.txt fmt1.json fmtl.json fmtl.txt fmtp.json fmtp.txt fmtp.csv freq.txt freq.err freq.csv freq.json stat.csv stat.json \
     k.csv k.txt k.dims k.json args.json args.txt
 echo "ok   output formats"
