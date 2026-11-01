@@ -15,6 +15,32 @@ How each BLAS library is found, linked and named. Start at
 | Intel MKL | `--with-blas-backend=mkl` | CI, `mkl` job (oneAPI from Intel's apt repository) |
 | GPU libraries (cuBLAS, rocBLAS, MAGMA, …) | — | Planned for 2.0 (#87) |
 
+`--enable-ilp64` (#172) builds against the library's 64-bit integer
+interface instead, for OpenBLAS (`ilp64` job: Ubuntu's
+libopenblas64-pthread-dev) and MKL (`mkl` job, a second build); any other
+backend is refused, rather than built against an interface the
+benchmarks would pass the wrong integers to:
+
+- **OpenBLAS**: Debian and Ubuntu's `openblas64-<variant>` include and
+  library directories are probed, as BLIS's are, then `libopenblas64` or
+  `libopenblas` (a `+ilp64` build keeps the name); its `cblas.h` must
+  make `blasint` 8 bytes, or `configure` refuses it. Ubuntu 24.04's
+  package ships its `openblas64_config.h` as `openblas_config.h`, which
+  its `cblas.h` does not find: the `ilp64` job links it under the name
+  asked for.
+- **MKL**: `-DMKL_ILP64` and `libmkl_gf_ilp64` in place of `_lp64`.
+
+The benchmarks pass every dimension, increment and leading dimension as
+`bmb_int` (`bmb_prec.h`): the library's own type in an ILP64 build,
+`MKL_INT` or `blasint`, which are `long long` and `long` and so not each
+other's for the batched calls' arrays; `int` otherwise. The parser then
+takes a vector past 2^31 elements, up to what two of 16 bytes can be
+sized to (`SIZE_MAX / 32`); the matrices' ceiling, the square that
+`size_t` can size, is below 2^31 either way. `--version` and every result
+say the width (`Integers:`, `# integers: 64-bit (ILP64)`,
+`"blas_int_bits"`). `test_bmb_size_limits.sh` checks the vector past 2^31
+under `BMB_COUNTS`, which allocates nothing: run, it would be 16 GB.
+
 Every backend is reached through the CBLAS interface, so the same
 `bmb_<family>.c` files link against whichever one `configure` picks; only
 `configure.ac`'s detection logic and `bmb_threads.c`'s thread-control

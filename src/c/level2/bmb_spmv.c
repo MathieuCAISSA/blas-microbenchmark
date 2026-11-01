@@ -18,7 +18,7 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int n;
+    bmb_int n;
     char uplo; /* --uplo: the triangle A keeps */
     bmb_real_t alpha;
     bmb_real_t beta;
@@ -40,7 +40,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) n;
+    ctx->n = (bmb_int) n;
     ctx->uplo = bmb_bench_uplo();
     ctx->alpha = BMB_R(1.0);
     ctx->beta = BMB_R(0.0);

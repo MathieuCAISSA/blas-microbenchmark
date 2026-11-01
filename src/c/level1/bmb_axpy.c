@@ -10,7 +10,7 @@
 /* saxpy, daxpy, caxpy and zaxpy, one per precision (bmb_prec.h): y +=
  * alpha * x. */
 typedef struct {
-    int n;
+    bmb_int n;
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t *x;
     bmb_real_t *y;
@@ -28,7 +28,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) dim1;
+    ctx->n = (bmb_int) dim1;
     /* Small, so that repeated calls (Y += alpha*X) never over/underflow,
      * regardless of --iterations. */
     bmb_set_scalar(ctx->alpha, BMB_R(1.0e-6), BMB_R(1.0e-6));

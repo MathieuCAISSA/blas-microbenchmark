@@ -31,6 +31,12 @@ it comes from in brackets.
   file using POSIX functions ([code style](../AGENTS.md#code-style)).
 - [ ] `common/` stays generic: shapes, alpha values and resets belong to
   the routine's file; no exported function without a caller.
+- [ ] A macro from `config.h` (`HAVE_*`, `BMB_*`) tested by `#if` is seen
+  where it is tested: the file, or a header it includes, includes
+  `config.h`, or the test is false without a word. `BMB_ILP64` reached
+  one benchmark source of 31, the others giving a 64-bit library `int`
+  dimensions (#172); `bmb_prec.h` now includes it and asserts the
+  width.
 - [ ] Comments say why, not what.
 - [ ] No pointer arithmetic before the pointer is checked: offsets into
   a `malloc` result are computed after its NULL check (every `verify()`

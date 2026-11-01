@@ -33,7 +33,7 @@
 #endif
 
 typedef struct {
-    int n;
+    bmb_int n;
     bmb_real_t *x;
     bmb_real_t *y;
     bmb_real_t dot[2];
@@ -51,7 +51,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) dim1;
+    ctx->n = (bmb_int) dim1;
     ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     ctx->y = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     if (ctx->x == NULL || ctx->y == NULL) {
@@ -106,7 +106,7 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_real_t result[2];
     double got[2], want[2] = {0.0, 0.0}, scale[2];
     double sum = 0.0;
-    int i;
+    bmb_int i;
 
     call(ctx);
     result[0] = ctx->dot[0];

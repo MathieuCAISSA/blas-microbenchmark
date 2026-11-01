@@ -19,6 +19,8 @@
 
 #define _POSIX_C_SOURCE 200809L
 
+#include <config.h>
+
 #include <dirent.h>
 #include <getopt.h>
 #include <limits.h>
@@ -60,16 +62,22 @@ static size_t size_ceiling(void)
     return x < (size_t) INT_MAX ? x : (size_t) INT_MAX;
 }
 
-static void check_range(const bmb_range_t *range)
+/* A vector's (#172): in an ILP64 build, as many 16-byte elements as two
+ * vectors of them can be sized to; otherwise the matrices'. */
+static size_t vector_ceiling(void)
 {
-    static size_t ceiling;
+#if defined(BMB_ILP64)
+    return SIZE_MAX / (2 * 16);
+#else
+    return size_ceiling();
+#endif
+}
+
+static void check_range(const bmb_range_t *range, size_t ceiling)
+{
     char buf[80];
     size_t i;
     size_t size;
-
-    if (ceiling == 0) {
-        ceiling = size_ceiling();
-    }
 
     check(range->count >= 1, "a range with no point");
     check(range->count <= BMB_MAX_SWEEP_POINTS, "a range with too many points");
@@ -100,11 +108,17 @@ static size_t max_point(const bmb_range_t *range)
 
 static void check_options(const bmb_options_t *opts)
 {
-    check_range(&opts->vector_size);
-    check_range(&opts->matrix_dim1);
-    check_range(&opts->matrix_dim2);
-    check_range(&opts->matrix_dim3);
-    check_range(&opts->thread_count);
+    static size_t ceiling, vectors;
+
+    if (ceiling == 0) {
+        ceiling = size_ceiling();
+        vectors = vector_ceiling();
+    }
+    check_range(&opts->vector_size, vectors);
+    check_range(&opts->matrix_dim1, ceiling);
+    check_range(&opts->matrix_dim2, ceiling);
+    check_range(&opts->matrix_dim3, ceiling);
+    check_range(&opts->thread_count, ceiling);
 
     check(opts->iterations >= 1, "no iteration");
     check(strspn(opts->trans, "NTC") == strlen(opts->trans) && strlen(opts->trans) <= 2

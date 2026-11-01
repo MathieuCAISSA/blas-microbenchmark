@@ -10,7 +10,7 @@
 /* sscal, dscal, cscal and zscal, one per precision (bmb_prec.h): x =
  * alpha * x, x restored from x0 before every timed batch. */
 typedef struct {
-    int n;
+    bmb_int n;
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t *x0; /* template */
     bmb_real_t *x;  /* working buffer, restored by reset() before each call */
@@ -29,7 +29,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) dim1;
+    ctx->n = (bmb_int) dim1;
     /* Deliberately not exactly 1.0: some BLAS implementations special-case
      * alpha == 1 as a no-op fast path, which would not reflect real work.
      * Of modulus below 1, complex or not. */

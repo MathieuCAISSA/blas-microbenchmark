@@ -999,6 +999,61 @@ jobs:
             build/**/*.sh.log
           if-no-files-found: ignore
 
+  # The ILP64 build (#172): OpenBLAS's 64-bit integer interface, from
+  # Ubuntu's libopenblas64-pthread-dev, whose cblas.h includes an
+  # openblas64_config.h the package does not ship -- it ships the same
+  # file as openblas_config.h -- so it is linked under the name asked for.
+  # make check and the real-size sweep, as the openblas job runs them;
+  # the version must say 64-bit integers.
+  ilp64:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config libopenblas64-pthread-dev
+          d=/usr/include/x86_64-linux-gnu/openblas64-pthread
+          [ -e "$d/openblas64_config.h" ] || sudo ln -s openblas_config.h "$d/openblas64_config.h"
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-blas-backend=openblas --enable-ilp64 --enable-werror
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: Provenance
+        run: |
+          build/src/c/level1/double/bmb_ddot --version | tee version.txt
+          grep -q '^Integers: 64-bit (ILP64)$' version.txt
+          ldd build/src/c/level3/double/bmb_dgemm | grep -q libopenblas64
+
+      - name: make check
+        run: make -C build check
+
+      - name: Verified at real sizes
+        run: .github/scripts/verify-sweep.sh build
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-logs-ilp64
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore
+
   # Intel oneAPI MKL, the BLAS most x86 clusters measure against, from
   # Intel's apt repository: its current release, as sites install it. The
   # benchmarks link its GNU OpenMP threading layer and set its BLAS
@@ -1042,6 +1097,17 @@ jobs:
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
         run: .github/scripts/verify-sweep.sh build
+
+      # MKL's ILP64 interface too (#172): libmkl_gf_ilp64, MKL_INT 64-bit.
+      - name: ILP64, make check
+        run: |
+          mkdir -p build-ilp64
+          cd build-ilp64
+          ../configure --with-blas-backend=mkl --enable-ilp64 --enable-werror
+          make -j"$(nproc)"
+          src/c/level1/double/bmb_ddot --version | tee version.txt
+          grep -q '^Integers: 64-bit (ILP64)$' version.txt
+          make check
 
       - name: Upload test logs
         if: always()

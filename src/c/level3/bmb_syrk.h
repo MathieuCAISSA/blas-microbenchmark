@@ -34,10 +34,10 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int lda;
-    int ldc;
-    int n;
-    int k;
+    bmb_int lda;
+    bmb_int ldc;
+    bmb_int n;
+    bmb_int k;
     char uplo, trans;
     bmb_real_t alpha[BMB_PARTS]; /* the real part alone for herk */
     bmb_real_t beta[BMB_PARTS];
@@ -71,16 +71,16 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) n;
-    ctx->k = (int) k;
+    ctx->n = (bmb_int) n;
+    ctx->k = (bmb_int) k;
     ctx->uplo = bmb_bench_uplo();
     ctx->trans = trans;
     bmb_set_scalar(ctx->alpha, BMB_R(1.0), BMB_R(0.0));
     bmb_set_scalar(ctx->beta, BMB_R(0.0), BMB_R(0.0)); /* verify() relies on it */
     ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = (int) lda;
-    ctx->ldc = (int) ldc;
+    ctx->lda = (bmb_int) lda;
+    ctx->ldc = (bmb_int) ldc;
     ctx->a = bmb_bench_alloc(outa * lda * BMB_ELEM_BYTES);
     ctx->c = bmb_bench_alloc(n * ldc * BMB_ELEM_BYTES);
     if (ctx->a == NULL || ctx->c == NULL) {
