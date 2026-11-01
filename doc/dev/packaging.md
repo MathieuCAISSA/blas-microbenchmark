@@ -13,7 +13,9 @@ On HPC clusters, software comes from Spack rather than from tarballs.
 `repo.yaml`). It holds one package, `blas-microbenchmark`.
 `spack-repo-index.yaml`, at the top of the repository because that is
 where Spack looks in a clone, tells Spack where the package repository
-is when it is added by its git URL:
+is when it is added by its git URL; `tests/test_spack_repo_index.sh`
+checks that each of its paths holds a Spack repository (#283), since
+the `spack` job adds the repository by its path:
 
 ```bash
 spack repo add https://github.com/MathieuCAISSA/blas-microbenchmark.git

@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Shared assertions for the per-routine smoke tests, sourced as:
 #     . "${srcdir:-.}/../test_helper.sh"
 #

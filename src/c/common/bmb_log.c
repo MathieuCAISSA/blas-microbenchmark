@@ -7,7 +7,6 @@
 #include "bmb_log.h"
 
 #define BMB_COLOR_RESET   "\033[0m"
-#define BMB_COLOR_DEBUG   "\033[36m" /* cyan */
 #define BMB_COLOR_WARNING "\033[33m" /* yellow */
 #define BMB_COLOR_ERROR   "\033[31m" /* red */
 
@@ -31,15 +30,6 @@ static void bmb_log_format(FILE *stream, const char *message, const char *color)
     } else {
         fprintf(stream, "%s\n", message);
     }
-}
-
-void bmb_log_debug(const char *message)
-{
-#ifdef BMB_DEBUG
-    bmb_log_format(stderr, message, BMB_COLOR_DEBUG);
-#else
-    (void) message;
-#endif
 }
 
 void bmb_log_warning(const char *message)

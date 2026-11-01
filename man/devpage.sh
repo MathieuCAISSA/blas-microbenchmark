@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Sourced by html.sh. development_body TOP writes the body of the site's
 # development.html -- the tests, and what CI runs -- to standard output.
 #

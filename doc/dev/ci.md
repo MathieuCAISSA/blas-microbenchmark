@@ -75,7 +75,11 @@ The `browsers` job builds with OpenBLAS and runs only `src/report`'s tests,
 once in Firefox (through geckodriver) and once in Edge, both preinstalled
 on the runner image — Edge is installed from Microsoft's repository if it
 ever stops being. It exists because Firefox is the browser users are told
-to use, and Chrome passing says nothing about it.
+to use, and Chrome passing says nothing about it. Its Firefox leg also
+runs `doc/screenshots.sh` on a report of tiny runs and requires every
+image it takes (#283): the script finds each chart by its title, and a
+change to the page that loses one would otherwise go unseen until the
+images are next redone.
 
 The `man` job runs the man page tests in a Fedora container: another
 groff and man-db build than Ubuntu's, plus mandoc for its lint, with
@@ -83,6 +87,8 @@ groff and man-db build than Ubuntu's, plus mandoc for its lint, with
 builds without `--enable-werror`, since Fedora's newer GCC is not what it
 is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
 it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
+It then runs `make html`, as `pages.yml` does on `main`, where the tests
+run `html.sh` alone (#283).
 
 The `spack` job builds the Spack package with Spack, against OpenBLAS,
 BLIS, AOCL-BLAS, Netlib, FlexiBLAS and MKL, from this commit's tarball and from the
@@ -222,7 +228,12 @@ test takes:
   with no precision `bmb_prec.h` stops at its `#error`, so a run over the
   tree would leave the family unread (#200). To run it locally, after
   configure: `.github/scripts/cppcheck.sh build` (`apt install cppcheck`, or
-  `pip install cppcheck`).
+  `pip install cppcheck`). The same job runs shellcheck over every shell
+  script in git, at warning level and above (#283): a finding is fixed,
+  or disabled on the line with the reason (`# shellcheck disable=SC2086 #
+  ...`); a file that is sourced says its shell (`# shellcheck shell=sh`).
+  Locally: `git ls-files -z '*.sh' | xargs -0 shellcheck -S warning`
+  (`apt install shellcheck`, or `pip install shellcheck-py`).
 - CodeQL (`codeql.yml`, its own workflow) builds the code and runs
   GitHub's security and quality queries, which follow data across
   functions. It runs on every pull request and push to `main`, and

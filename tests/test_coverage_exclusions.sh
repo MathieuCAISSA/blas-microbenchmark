@@ -41,6 +41,7 @@ for f in $files; do
             printf "count %d %d\n", n, bad
         }' "$f")
     echo "$out" | grep -v '^count ' || true
+    # shellcheck disable=SC2046 # the counts, split on purpose
     set -- $(echo "$out" | sed -n 's/^count //p')
     n=$((n + $1))
     bad=$((bad + $2))

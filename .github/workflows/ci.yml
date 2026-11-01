@@ -367,6 +367,32 @@ jobs:
           BMB_BROWSER: ${{ matrix.browser }}
         run: make -C build/src/report check
 
+      # doc/screenshots.sh finds each chart by its title (#283): a change to
+      # the page that loses one fails here, not when the images are next
+      # redone. Tiny runs under two labels, so that every chart it takes
+      # is drawn; the repeated runs' two from a page of their own.
+      - name: doc/screenshots.sh takes every image
+        if: matrix.browser == 'firefox'
+        run: |
+          b=build/src/c
+          r=$PWD/build/src/report/bmb_report
+          mkdir -p shots/results shots/noise/results
+          for l in a b; do
+            $b/level1/double/bmb_ddot -x 0 -i 1 -w 0 -v 1024:65536 -l $l -o shots/results/ddot-$l.json >/dev/null
+            $b/level3/double/bmb_dgemm -x 0 -i 1 -w 0 -m 32:128 -t 1,2 -l $l -o shots/results/dgemm-$l.json >/dev/null
+            $b/level2/double/bmb_dgemv -x 0 -i 1 -w 0 -m 32:128 -M 32:128 -l $l -o shots/results/dgemv-$l.json >/dev/null
+            for i in 1 2; do
+              $b/level1/double/bmb_ddot -x 0 -i 3 -w 0 -v 1024:65536 -l $l -o shots/noise/results/ddot-$l-$i.json >/dev/null
+            done
+          done
+          (cd shots && "$r" --peak-gflops 32 --peak-gbs 40 results > report.html)
+          (cd shots/noise && "$r" results > report.html)
+          doc/screenshots.sh shots/report.html shots/img
+          doc/screenshots.sh shots/noise/report.html shots/img noise-band noise-ratio
+          want=$(( $(sed -n "/^SHOTS='/,/'\$/p" doc/screenshots.sh | wc -l) * 2 ))
+          test "$(find shots/img -name '*.png' -size +1k | wc -l)" -eq "$want"
+          echo "all $want screenshots taken"
+
       # A SKIP would be make check passing with the page unchecked.
       - name: The page was checked in ${{ matrix.browser }}
         run: |
@@ -428,6 +454,13 @@ jobs:
         env:
           BMB_MAN_STRICT: 1
         run: make -C build/man check
+
+      # The site as pages.yml makes it on main (#283): make html, not
+      # html.sh alone, which the tests run.
+      - name: make html
+        run: |
+          make -C build html
+          test -s build/man/html/index.html && test -s build/man/html/development.html
 
       - name: Upload test logs
         if: always()
@@ -744,7 +777,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config cppcheck
+          sudo apt-get install -y autoconf automake libtool libopenblas-dev pkg-config cppcheck shellcheck
 
       - name: autoreconf
         run: ./autogen.sh
@@ -760,6 +793,13 @@ jobs:
         run: |
           cppcheck --version
           .github/scripts/cppcheck.sh build
+
+      # The shell scripts, at warning level and above (#283): a finding is
+      # fixed, or disabled where it is with the reason, as REVIEWS.md asks.
+      - name: shellcheck
+        run: |
+          shellcheck --version | sed -n 2p
+          git ls-files -z '*.sh' | xargs -0 shellcheck -S warning
 
   # The command-line parser fuzzed, on inputs no test wrote: ClusterFuzzLite
   # builds src/c/common/fuzz_bmb_options.c with libFuzzer (.clusterfuzzlite/),

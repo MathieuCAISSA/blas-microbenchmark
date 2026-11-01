@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Sourced by the tests that run the page in a browser:
 #
 #     . "${srcdir:-.}/browser.sh"

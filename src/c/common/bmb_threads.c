@@ -80,9 +80,7 @@ static const char *const *bmb_thread_env_vars(size_t *count)
 void bmb_threads_set(unsigned int count)
 {
 #if defined(BMB_NO_THREAD_CONTROL)
-    if (count > 1) {
-        bmb_log_debug("This BLAS backend is single-threaded; --thread-count is ignored.");
-    }
+    (void) count;
 #elif defined(HAVE_FLEXIBLAS_API)
     flexiblas_set_num_threads((int) count);
 #elif defined(HAVE_MKL_DOMAIN_SET_NUM_THREADS)
@@ -94,10 +92,7 @@ void bmb_threads_set(unsigned int count)
 #elif defined(HAVE_OMP_SET_NUM_THREADS)
     omp_set_num_threads((int) count);
 #else
-    if (count > 1) {
-        bmb_log_debug("The underlying BLAS backend does not expose a runtime "
-                       "thread-count API; --thread-count is ignored.");
-    }
+    (void) count;
 #endif
 }
 
