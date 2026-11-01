@@ -795,7 +795,7 @@
       eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · star"],
          "a run of instances is its own series, named so, beside threads at the same count");
       eq(routine(m, "ddot").seriesOrder.length, 2, "and a curve of its own at that count");
-      eq(R.runText({ star: { cpus: "0,2,4,6" } }), "star: an instance a core, CPUs 0,2,4,6",
+      eq(R.runText({ star: { cpus: "0,2,4,6" } }), "star: an instance a core, on the first of CPUs 0,2,4,6",
          "the Run column says the instances' CPUs");
       var p = R.pointsOf(routine(m, "ddot").seriesOrder[1])[0];
       eq(R.percentOfPeak(p, { gflops: 10 }), 75, "its rate, the instances' sum, is judged by as many cores' peak");

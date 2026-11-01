@@ -491,7 +491,7 @@ weighing what the fix costs.
   it.
 
 - **Star mode (#173).** `--star` forks the instances in
-  `bmb_star.c`, one per `-t` count, each pinned with
+  `bmb_star.c`, N for a `-t` count of N, each pinned with
   `sched_setaffinity` before it allocates, so its operands are first
   touched on its core. Processes, not threads: an instance has its own
   library state, and none waits on a lock the library takes for

@@ -151,7 +151,9 @@ typedef struct {
 } bmb_star_shared_t;
 
 static bmb_star_shared_t *bmb_star_shm;
+#if defined(__linux__)
 static size_t bmb_star_shm_size;
+#endif
 static unsigned int bmb_star_count;
 static int bmb_star_index = -1;
 static int bmb_star_pipe[2] = {-1, -1};
@@ -242,13 +244,12 @@ int bmb_star_exit_code(int status)
     return (status == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+#if defined(__linux__)
 static void bmb_star_release(void)
 {
-#if defined(__linux__)
     if (bmb_star_shm != NULL) {
         munmap(bmb_star_shm, bmb_star_shm_size);
     }
-#endif
     bmb_star_shm = NULL;
     if (bmb_star_pipe[0] >= 0) {
         close(bmb_star_pipe[0]);
@@ -260,6 +261,7 @@ static void bmb_star_release(void)
     free(bmb_star_pids);
     bmb_star_pids = NULL;
 }
+#endif
 
 #if defined(__linux__)
 /* Stops the instances still running: one that is waiting at a barrier for
@@ -309,16 +311,20 @@ int bmb_star_start(unsigned int instances, const int *cpus)
 
     bmb_star_count = instances;
     bmb_star_on = cpus;
+    bmb_star_pids = calloc(instances, sizeof(*bmb_star_pids));
+    if (bmb_star_pids == NULL) {
+        bmb_log_error("--star: out of memory while starting the instances.");
+        return -2;
+    }
     bmb_star_shm_size = sizeof(*bmb_star_shm) + instances * sizeof(double);
     bmb_star_shm = mmap(NULL, bmb_star_shm_size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    bmb_star_pids = calloc(instances, sizeof(*bmb_star_pids));
-    if (bmb_star_shm == MAP_FAILED || bmb_star_pids == NULL || pipe(bmb_star_pipe) != 0) { /* GCOVR_EXCL_BR_LINE: out of memory or file descriptors */
+    if (bmb_star_shm == MAP_FAILED || pipe(bmb_star_pipe) != 0) { /* GCOVR_EXCL_BR_LINE: a page or a pipe, only out of memory or file descriptors */
         if (bmb_star_shm == MAP_FAILED) { /* GCOVR_EXCL_BR_LINE: out of memory */
             bmb_star_shm = NULL; /* GCOVR_EXCL_LINE: out of memory */
         }
-        bmb_log_error("--star: the instances could not be set up (out of memory or file descriptors)."); /* GCOVR_EXCL_LINE: out of memory or file descriptors */
-        bmb_star_release(); /* GCOVR_EXCL_LINE: out of memory or file descriptors */
-        return -2; /* GCOVR_EXCL_LINE: out of memory or file descriptors */
+        bmb_log_error("--star: the instances could not be set up (out of memory or file descriptors)."); /* GCOVR_EXCL_LINE: a page or a pipe, only out of memory or file descriptors */
+        bmb_star_release(); /* GCOVR_EXCL_LINE: a page or a pipe, only out of memory or file descriptors */
+        return -2; /* GCOVR_EXCL_LINE: a page or a pipe, only out of memory or file descriptors */
     }
     atomic_init(&bmb_star_shm->arrived, 0);
     atomic_init(&bmb_star_shm->generation, 0);

@@ -430,20 +430,34 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     bmb_threads_set(threads);
 
     /* Under --star, a point one instance could not set up is skipped by
-     * all, as each instance goes through the same steps. */
+     * all, as each instance goes through the same steps; what went wrong
+     * is told by the first instance it went wrong in. */
+    if (star) {
+        bmb_log_hold();
+    }
     times = malloc(capacity * sizeof(*times));
     if (times == NULL) {
         bmb_log_error("Out of memory while allocating timing buffer.");
     }
     r = (times == NULL) ? -1 : bmb_operands_setup(bench, opts, threads, dim1, dim2, bmb_llc, &ops);
     if (bmb_star_max(r != 0) != 0) {
+        if (star) {
+            const int me = bmb_star_instance();
+            const int first = -(int) bmb_star_max(-(double) (r != 0 ? me : BMB_STAR_MAX));
+
+            bmb_log_release(r != 0 && first == me);
+        }
         if (r == 0) {
             bmb_operands_free(bench, &ops);
         }
         free(times);
         return -1;
     }
-    if (ops.cold) {
+    if (star) {
+        bmb_log_release(0);
+    }
+    /* Once a run, or under --star once by instance 0. */
+    if (ops.cold && bmb_star_instance() <= 0) {
         bmb_warn_partly_warm(bench, dim1, dim2, bmb_llc);
     }
 

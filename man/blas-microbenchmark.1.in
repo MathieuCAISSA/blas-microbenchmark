@@ -1008,7 +1008,10 @@ with
 .BR \-\-star :
 an object whose
 .B cpus
-lists the CPUs the instances are pinned to, in order),
+lists the CPUs the instances are pinned to, in order:
+.I N
+instances take the first
+.IR N ),
 .BR align ,
 .B ld_pad
 (for the routines with a matrix),

@@ -30,10 +30,12 @@ fi
 
 # Two instances: the header says how they ran, the rows are at 2, and
 # the JSON records the CPUs they were pinned to.
-$B --star -t 2 -x 0 -w 0 -i 3 -v 4096 -o "$T/star.json" >"$T/star.txt" 2>"$T/star.err" \
+# 65536: a call long enough that the JSON's time, to the nanosecond,
+# does not round the rate by more than the check allows.
+$B --star -t 2 -x 0 -w 0 -i 3 -v 65536 -o "$T/star.json" >"$T/star.txt" 2>"$T/star.err" \
     || fail "--star -t 2 failed: `cat "$T/star.err"`"
 grep -q '^# star: ' "$T/star.txt" || fail "the text has no star line"
-rows=`grep -c '^2  *4096 ' "$T/star.txt" || true`
+rows=`grep -c '^2  *65536 ' "$T/star.txt" || true`
 test "$rows" -eq 1 || fail "the text has $rows rows at 2 instances, expected 1"
 grep -q '"star": {"cpus": "[0-9][0-9,-]*"}' "$T/star.json" || fail "the JSON has no star block"
 
@@ -42,7 +44,7 @@ grep -q '"star": {"cpus": "[0-9][0-9,-]*"}' "$T/star.json" || fail "the JSON has
 awk '/"time_s":/ { gsub(/[",]/, ""); t = $2 }
      /"gflops":/ { gsub(/[",]/, ""); g = $2 }
      END {
-         want = 2 * 2 * 4096 / t / 1e9
+         want = 2 * 2 * 65536 / t / 1e9
          d = (g - want) / want
          if (d < 0) d = -d
          exit !(t > 0 && d < 1e-3)
@@ -64,6 +66,18 @@ told=`grep -c 'Wrong result' "$T/wrong.err" || true`
 test "$told" -eq 1 || fail "a wrong result was told $told times, expected once"
 grep -q 'instance 0 of 2, on CPU [0-9]' "$T/wrong.err" || fail "the wrong result does not name its instance"
 
+# A warning is told once, not by each instance: --cache cold short of a
+# generated machine's 64M last-level cache at a tiny size.
+C=$T/machine/sys/devices/system/cpu/cpu0/cache/index0
+mkdir -p "$C"
+printf '3\n' >"$C/level"
+printf 'Unified\n' >"$C/type"
+printf '64M\n' >"$C/size"
+BMB_MACHINE_ROOT=$PWD/$T/machine $B --star -t 2 -x 0 -w 0 -i 1 -k cold -v 64 >/dev/null 2>"$T/cold.err" \
+    || fail "--star --cache cold failed: `cat "$T/cold.err"`"
+told=`grep -c 'partly warm' "$T/cold.err" || true`
+test "$told" -eq 1 || fail "the partly warm warning was told $told times, expected once: `cat "$T/cold.err"`"
+
 # BMB_COUNTS measures nothing, so starts nothing: one count a point.
 BMB_COUNTS=1 $B --star -t 2 -v 64 >/dev/null 2>"$T/counts.err" || fail "BMB_COUNTS under --star failed"
 counts=`grep -c '^counts:' "$T/counts.err" || true`
@@ -75,4 +89,4 @@ if grep -q '^# star' "$T/plain.txt"; then
     fail "a run without --star has a star line"
 fi
 
-echo "ok   --star: $cores cores; instances refused past them, rates summed, a wrong result told once"
+echo "ok   --star: $cores cores; instances refused past them, rates summed, a wrong result and a warning told once"
