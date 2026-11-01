@@ -490,6 +490,25 @@ weighing what the fix costs.
   since a small cold vector waits for memory more than it streams from
   it.
 
+- **Star mode (#173).** `--star` forks the instances in
+  `bmb_star.c`, one per `-t` count, each pinned with
+  `sched_setaffinity` before it allocates, so its operands are first
+  touched on its core. Processes, not threads: an instance has its own
+  library state, and none waits on a lock the library takes for
+  another's call. They agree through a page shared before `fork()`: a
+  barrier that spins (each has its core, and one woken by the kernel
+  starts tens of microseconds late) and `bmb_star_max()`, the largest of
+  a value each passes, which every step that decides what is measured
+  goes through, so that all take the same steps: a setup that failed in
+  one, a wrong result, the batch, each sample's time. A sample is the
+  slowest instance's time; the stopping rules of `-T`, `-e` and `-E` see
+  the same samples in all, and so stop together. Instance 0 sends its
+  rows down a pipe to the calling process, which prints and saves them
+  and measures nothing. An instance that ends before all have reached
+  `bmb_star_finish()`'s barrier (killed, or an `exit()` in the library)
+  would leave the others waiting forever: the calling process stops
+  them, and each dies with it (`PR_SET_PDEATHSIG`). `BMB_COUNTS` starts
+  no instance.
 - **The clock is not free.** An empty timed region costs tens of
   nanoseconds. `bmb_bench.c` therefore times a *batch* of calls and divides,
   with the batch size calibrated per data point (two passes: the first

@@ -12,6 +12,7 @@
 #include "bmb_machine.h"
 #include "bmb_print.h"
 #include "bmb_result.h"
+#include "bmb_star.h"
 #include "bmb_threads.h"
 #include "bmb_timer.h"
 
@@ -241,26 +242,38 @@ static size_t bmb_dim3;
 
 /* --verify, for one point: one call on the operands about to be timed,
  * checked against a reference. 0 when the result is right, -2 when it is
- * wrong, -1 when it could not be checked. */
+ * wrong, -1 when it could not be checked. Under --star, what all the
+ * instances agree on: the worst any found, told by the first that found
+ * it, which names itself and its CPU (a core of its own may be what
+ * computes wrong). */
 static int bmb_verify_point(const bmb_benchmark_t *bench, void *ctx,
                             unsigned int thread_count, size_t dim1, size_t dim2)
 {
     char what[512];
     char where[256];
+    char who[96];
     char msg[1024];
+    const int instance = bmb_star_instance();
     int v;
+    int worst;
+    int first;
 
-    if (bmb_dim3 != 0) {
-        snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %s %zu, %u thread%s",
-                 bench->routine_name, bench->dim1_label_dim3, dim1, bench->dim2_label, dim2,
-                 bench->dim3_label, bmb_dim3, thread_count, thread_count == 1 ? "" : "s");
-    } else if (bench->dim2_label != NULL) {
-        snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %u thread%s", bench->routine_name,
-                 bench->dim1_label, dim1, bench->dim2_label, dim2,
-                 thread_count, thread_count == 1 ? "" : "s");
+    if (instance >= 0) {
+        snprintf(who, sizeof(who), "instance %d of %u, on CPU %d", instance, thread_count,
+                 bmb_star_cpu());
     } else {
-        snprintf(where, sizeof(where), "%s, %s %zu, %u thread%s", bench->routine_name,
-                 bench->dim1_label, dim1, thread_count, thread_count == 1 ? "" : "s");
+        snprintf(who, sizeof(who), "%u thread%s", thread_count, thread_count == 1 ? "" : "s");
+    }
+    if (bmb_dim3 != 0) {
+        snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %s %zu, %s",
+                 bench->routine_name, bench->dim1_label_dim3, dim1, bench->dim2_label, dim2,
+                 bench->dim3_label, bmb_dim3, who);
+    } else if (bench->dim2_label != NULL) {
+        snprintf(where, sizeof(where), "%s, %s %zu, %s %zu, %s", bench->routine_name,
+                 bench->dim1_label, dim1, bench->dim2_label, dim2, who);
+    } else {
+        snprintf(where, sizeof(where), "%s, %s %zu, %s", bench->routine_name,
+                 bench->dim1_label, dim1, who);
     }
 
     if (bench->reset != NULL) {
@@ -270,15 +283,24 @@ static int bmb_verify_point(const bmb_benchmark_t *bench, void *ctx,
     v = bench->verify(ctx, what, sizeof(what));
     if (v < 0) {
         snprintf(msg, sizeof(msg), "%s: the result could not be checked (out of memory).", where);
-        bmb_log_error(msg);
-        return -1;
-    }
-    if (v > 0) {
+        v = -1;
+    } else if (v > 0) {
         snprintf(msg, sizeof(msg), "Wrong result: %s: %s. Nothing measured from here on.", where, what);
-        bmb_log_error(msg);
-        return -2;
+        v = -2;
     }
-    return 0;
+
+    worst = -(int) bmb_star_max((double) -v);
+    if (worst == 0) {
+        return 0;
+    }
+    /* The lowest instance that found the worst: every instance takes part,
+     * those that did not find it with an index none has. */
+    first = (instance < 0) ? instance
+                           : -(int) bmb_star_max(-(double) (v == worst ? instance : BMB_STAR_MAX));
+    if (v == worst && first == instance) {
+        bmb_log_error(msg);
+    }
+    return worst;
 }
 
 static void bmb_operands_free(const bmb_benchmark_t *bench, bmb_operands_t *ops)
@@ -390,7 +412,7 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
                         unsigned int thread_count, size_t dim1, size_t dim2,
                         bmb_result_row_t *row)
 {
-    bmb_operands_t ops;
+    bmb_operands_t ops = {NULL, 0, 0, 0};
     double *times;
     double total = 0.0;
     const int adaptive = opts->min_time > 0.0 || opts->max_spread > 0.0;
@@ -399,11 +421,26 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     unsigned int batch;
     unsigned int i, n;
     unsigned int check = BMB_SPREAD_SAMPLES;
+    /* Under --star, thread_count is the instances, each of one thread. */
+    const int star = bmb_star_instance() >= 0;
+    const unsigned int threads = star ? 1 : thread_count;
+    int r;
     int v;
 
-    bmb_threads_set(thread_count);
+    bmb_threads_set(threads);
 
-    if (bmb_operands_setup(bench, opts, thread_count, dim1, dim2, bmb_llc, &ops) != 0) {
+    /* Under --star, a point one instance could not set up is skipped by
+     * all, as each instance goes through the same steps. */
+    times = malloc(capacity * sizeof(*times));
+    if (times == NULL) {
+        bmb_log_error("Out of memory while allocating timing buffer.");
+    }
+    r = (times == NULL) ? -1 : bmb_operands_setup(bench, opts, threads, dim1, dim2, bmb_llc, &ops);
+    if (bmb_star_max(r != 0) != 0) {
+        if (r == 0) {
+            bmb_operands_free(bench, &ops);
+        }
+        free(times);
         return -1;
     }
     if (ops.cold) {
@@ -416,6 +453,7 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
         v = bmb_verify_point(bench, ops.ctx[0], thread_count, dim1, dim2);
         if (v != 0) {
             bmb_operands_free(bench, &ops);
+            free(times);
             return v;
         }
         /* Under --cache cold, the copy --verify called is restored and
@@ -442,26 +480,24 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
         (void) bmb_time_batch(bench, &ops, 1);
     }
 
-    times = malloc(capacity * sizeof(*times));
-    if (times == NULL) {
-        bmb_log_error("Out of memory while allocating timing buffer.");
-        bmb_operands_free(bench, &ops);
-        return -1;
-    }
-
     /* A routine whose operand must be restored before every call is timed
      * one call at a time, whatever -b says: N calls in a row would run on
      * an operand drifting towards infinity or denormals (#48). */
     batch = (opts->batch != 0 && !bench->reset_every_call) ? opts->batch
                                                            : bmb_choose_batch(bench, &ops);
+    /* Under --star, the largest any instance chose: each batch is then
+     * long enough in all. */
+    batch = (unsigned int) bmb_star_max((double) batch);
 
     /* Each sample is the mean over `batch` calls. reset() runs before the
      * batch, or after it under --cache cold, never inside it: restoring an
      * operand is bookkeeping, and for dtrmm/dtrsm it is an O(M*N) copy that
      * would otherwise be a large part of what gets reported as the
-     * routine's time. */
+     * routine's time. Under --star, every instance starts each batch at
+     * once, leaving the barrier together, and the sample is the slowest's
+     * time, which they all then hold and judge the same. */
     for (n = 0; n < capacity;) {
-        times[n] = bmb_time_batch(bench, &ops, batch);
+        times[n] = bmb_star_max(bmb_time_batch(bench, &ops, batch));
         total += times[n++] * (double) batch;
         if (n >= opts->iterations && bmb_samples_enough(opts, times, n, total, &check)) {
             break;
@@ -481,15 +517,18 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
 
     /* Rates come from the reported time, i.e. the fastest sample. GFLOP/s
      * and GB/s are decimal (1e9), as they conventionally are for compute
-     * and bandwidth figures. */
+     * and bandwidth figures. Under --star, the instances' sum: each did
+     * the work in the time the slowest took. */
     row->gflops = 0.0;
     row->gbytes_s = 0.0;
     if (row->time_s > 0.0) { /* GCOVR_EXCL_BR_LINE: a call too short for the clock to resolve: not on Linux's nanosecond clock */
+        const double copies = star ? (double) thread_count : 1.0;
+
         if (bench->flops != NULL) {
-            row->gflops = bench->flops(dim1, dim2) / row->time_s / 1.0e9;
+            row->gflops = copies * bench->flops(dim1, dim2) / row->time_s / 1.0e9;
         }
         if (bench->bytes != NULL) {
-            row->gbytes_s = bench->bytes(dim1, dim2) / row->time_s / 1.0e9;
+            row->gbytes_s = copies * bench->bytes(dim1, dim2) / row->time_s / 1.0e9;
         }
     }
 
@@ -535,6 +574,10 @@ static int bmb_record(const bmb_benchmark_t *bench, const bmb_options_t *opts,
     if (r != 0) {
         return r;
     }
+    /* Under --star, the calling process prints and keeps it. */
+    if (bmb_star_instance() >= 0) {
+        return (bmb_star_instance() == 0) ? bmb_star_send(&row) : 0;
+    }
 
     bmb_print_txt_row(stdout, rs, &row);
 
@@ -571,6 +614,98 @@ static int bmb_record_k(const bmb_benchmark_t *bench, const bmb_options_t *opts,
         }
     }
     return r;
+}
+
+static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opts,
+                           unsigned int thread_count, bmb_result_set_t *rs);
+
+/* --star (#173): the CPUs the instances are pinned to, one a core, and
+ * the same as a list for the results. */
+static int bmb_star_cpus[BMB_STAR_MAX];
+static int bmb_star_cpu_count;
+static char bmb_star_cpu_list[8 * BMB_STAR_MAX];
+
+/* A row an instance sent, printed and kept as bmb_record() does. */
+static int bmb_star_row(const bmb_result_row_t *row, void *arg)
+{
+    bmb_result_set_t *rs = arg;
+
+    bmb_print_txt_row(stdout, rs, row);
+    if (bmb_result_set_add(rs, row) != 0) { /* GCOVR_EXCL_BR_LINE: out of memory */
+        bmb_log_error("Out of memory while recording results."); /* GCOVR_EXCL_LINE: out of memory */
+        return -1; /* GCOVR_EXCL_LINE: out of memory */
+    }
+    return 0;
+}
+
+/* One thread count under --star: as many instances, each measuring the
+ * sweep, instance 0 sending its rows here. In an instance, its status. */
+static int bmb_sweep_star(const bmb_benchmark_t *bench, const bmb_options_t *opts,
+                          unsigned int instances, bmb_result_set_t *rs)
+{
+    int i;
+
+    /* What is buffered would be written again by every instance. */
+    fflush(stdout);
+    fflush(stderr);
+    i = bmb_star_start(instances, bmb_star_cpus);
+    if (i == -2) { /* GCOVR_EXCL_BR_LINE: out of memory, file descriptors or processes */
+        return -1; /* GCOVR_EXCL_LINE: out of memory, file descriptors or processes */
+    }
+    if (i >= 0) {
+        int r = bmb_sweep_dim1(bench, opts, instances, rs);
+
+        bmb_star_finish();
+        return r;
+    }
+    return bmb_star_wait(bmb_star_row, rs);
+}
+
+/* Checks --star against the cores this process may run on, before the
+ * header: -t's counts are instances, one a core, and without -t there is
+ * one on each. 0, or -1 (logged). */
+static int bmb_star_check(bmb_options_t *opts)
+{
+    char msg[256];
+    size_t i;
+    size_t at = 0;
+
+    bmb_star_cpu_count = bmb_star_cpus_at("", NULL, bmb_star_cpus, BMB_STAR_MAX);
+    if (bmb_star_cpu_count == 0) { /* GCOVR_EXCL_BR_LINE: the calling process's own affinity can always be read on Linux */
+        bmb_log_error("--star: the CPUs this process may run on cannot be read."); /* GCOVR_EXCL_LINE: the calling process's own affinity can always be read on Linux */
+        return -1; /* GCOVR_EXCL_LINE: the calling process's own affinity can always be read on Linux */
+    }
+    if (!opts->thread_count_set) {
+        bmb_range_set_single(&opts->thread_count, (size_t) bmb_star_cpu_count);
+    }
+    for (i = 0; i < opts->thread_count.count; i++) {
+        if (opts->thread_count.values[i] > (size_t) bmb_star_cpu_count) {
+            snprintf(msg, sizeof(msg),
+                     "--star: %zu instances, but this process may run on %d core%s: "
+                     "each instance has a core of its own.",
+                     opts->thread_count.values[i], bmb_star_cpu_count,
+                     bmb_star_cpu_count == 1 ? "" : "s");
+            bmb_log_error(msg);
+            return -1;
+        }
+    }
+
+    /* "0-3,8", consecutive CPUs as a range. */
+    for (i = 0; i < (size_t) bmb_star_cpu_count; i++) {
+        size_t j = i;
+
+        while (j + 1 < (size_t) bmb_star_cpu_count && bmb_star_cpus[j + 1] == bmb_star_cpus[j] + 1) {
+            j++;
+        }
+        at += (size_t) snprintf(bmb_star_cpu_list + at, sizeof(bmb_star_cpu_list) - at, "%s%d",
+                                i == 0 ? "" : ",", bmb_star_cpus[i]);
+        if (j > i) {
+            at += (size_t) snprintf(bmb_star_cpu_list + at, sizeof(bmb_star_cpu_list) - at, "%s%d",
+                                    j == i + 1 ? "," : "-", bmb_star_cpus[j]);
+        }
+        i = j;
+    }
+    return 0;
 }
 
 static int bmb_sweep_dim1(const bmb_benchmark_t *bench, const bmb_options_t *opts,
@@ -862,7 +997,16 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     }
     bmb_counts_only = counts != NULL && counts[0] != '\0' && counts[0] != '0';
     bmb_warn_unused_options(bench, &opts);
-    bmb_threads_resolve(&opts);
+    /* Under --star, each instance's library is given one thread, whatever
+     * the variables say: they would not count instances. */
+    if (opts.star) {
+        if (bmb_star_check(&opts) != 0) {
+            bmb_options_free(&opts);
+            return EXIT_FAILURE;
+        }
+    } else {
+        bmb_threads_resolve(&opts);
+    }
     {
         int checked = bmb_check_args(bench, &opts);
 
@@ -937,6 +1081,7 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.min_time = opts.min_time;
     rs.max_spread = opts.max_spread;
     rs.max_time = opts.max_time;
+    rs.star_cpus = opts.star ? bmb_star_cpu_list : NULL;
     bmb_align = opts.align;
     bmb_ld_pad = opts.ld_pad;
     if (!bench->use_vector_range) {
@@ -950,7 +1095,19 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         int r;
 
         bmb_warm_pending = opts.warmup_time > 0.0;
-        r = bmb_sweep_dim1(bench, &opts, thread_count, &rs);
+        /* BMB_COUNTS measures nothing, so has nothing to run at once. */
+        if (opts.star && !bmb_counts_only) {
+            r = bmb_sweep_star(bench, &opts, thread_count, &rs);
+            if (bmb_star_instance() >= 0) {
+                /* An instance's rows went to the calling process, which
+                 * prints and saves them. */
+                bmb_result_set_free(&rs);
+                bmb_options_free(&opts);
+                return bmb_star_exit_code(r);
+            }
+        } else {
+            r = bmb_sweep_dim1(bench, &opts, thread_count, &rs);
+        }
 
         if (r == -2) {
             status = BMB_EXIT_WRONG_RESULT;

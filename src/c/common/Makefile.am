@@ -13,6 +13,7 @@ libbmbcommon_a_SOURCES = \
 	bmb_print.c bmb_print.h \
 	bmb_threads.c bmb_threads.h \
 	bmb_bench.c bmb_bench.h \
+	bmb_star.c bmb_star.h \
 	bmb_verify.c bmb_verify.h \
 	bmb_prec.h
 
@@ -48,6 +49,11 @@ test_bmb_print_LDADD = libbmbcommon.a
 # architecture and container, so it is checked on every CI runner.
 test_bmb_machine_SOURCES = test_bmb_machine.c
 test_bmb_machine_LDADD = libbmbcommon.a
+
+# Which CPUs --star pins its instances to, over generated sysfs trees.
+check_PROGRAMS += test_bmb_star
+test_bmb_star_SOURCES = test_bmb_star.c
+test_bmb_star_LDADD = libbmbcommon.a
 
 # The parser again, on inputs nobody wrote: a libFuzzer target that
 # ClusterFuzzLite runs (.clusterfuzzlite/), built here with a main of its

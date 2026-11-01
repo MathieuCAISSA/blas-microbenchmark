@@ -27,6 +27,15 @@ releases with the same major version can be compared and read by the same
   blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark`.
   The Docker image has `python3` and runs `bmb_mcp` (`docker run -i`); the
   Spack package depends on Python at run time and tests the server.
+- `--star` (#173): `-t`'s counts as instances of one thread, each a
+  process pinned to a core of its own (the first CPU of each core in the
+  affinity), all measured at once, as HPC Challenge's "star" mode: how a
+  machine shares its memory bandwidth, or what its cores reach together,
+  under one job per core. A sample is the slowest instance's time; the
+  rates are the instances' sum. Without `-t`, one instance a core; more
+  instances than cores is refused. The text has a `# star:` line, the
+  JSON's run block `star` with the CPUs, and `bmb_report` draws such a
+  run as a series of its own.
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.
