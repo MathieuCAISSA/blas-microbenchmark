@@ -70,5 +70,6 @@
 "--batch-mode="
 "--peak-gflops="
 "--peak-gbs="
+"--star"
 "group"
 "strided"
