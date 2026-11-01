@@ -208,3 +208,8 @@ const char *bmb_build_kernels(void)
     }
 }
 #endif
+
+unsigned int bmb_build_int_bits(void)
+{
+    return BMB_BLAS_INT_BITS;
+}

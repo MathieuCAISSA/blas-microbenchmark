@@ -29,6 +29,20 @@ for field in '"version": "' '"backend": "' '"routine": "dgemm"' '"time_s":' '"gf
     grep -q "$field" fmt.json || fail "json carries no $field field"
 done
 
+# The width of the integers the library takes (#172): 64 and a line of
+# its own in an ILP64 build, 32 otherwise.
+level3/double/bmb_dgemm -x 0 -i 1 -m 8 >ints.txt 2>/dev/null || fail "the run for the integers line failed"
+if grep -q '^#define BMB_ILP64 1$' "${top_builddir:?top_builddir is not set}/config.h"; then
+    grep -q '^  "blas_int_bits": 64,$' fmt.json || fail "an ILP64 build: the json does not say 64-bit integers"
+    grep -qx '# integers: 64-bit (ILP64)' ints.txt || fail "an ILP64 build: the table does not say 64-bit integers"
+else
+    grep -q '^  "blas_int_bits": 32,$' fmt.json || fail "the json does not say 32-bit integers"
+    if grep -q '^# integers:' ints.txt; then
+        fail "an LP64 build has an integers line"
+    fi
+fi
+echo "ok   the width of the library's integers, in the json, and in the table of an ILP64 build"
+
 # No dim3 without -K: GEMM's output is as it always was (#215).
 if grep -q '"dim3' fmt.json; then
     fail "dgemm without -K writes a dim3"
@@ -229,6 +243,6 @@ grep -q '^Frequency: governor performance, turbo off$' version.txt \
     || fail "-V did not describe the x86 fixture's frequency: $(cat version.txt)"
 rm -f version.txt
 
-rm -f fmt.csv fmt.json fmt1.json fmtl.json fmtl.txt fmtp.json fmtp.txt fmtp.csv freq.txt freq.err freq.csv freq.json stat.csv stat.json \
+rm -f fmt.csv fmt.json ints.txt fmt1.json fmtl.json fmtl.txt fmtp.json fmtp.txt fmtp.csv freq.txt freq.err freq.csv freq.json stat.csv stat.json \
     k.csv k.txt k.dims k.json args.json args.txt
 echo "ok   output formats"

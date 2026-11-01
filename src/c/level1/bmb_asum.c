@@ -10,7 +10,7 @@
  * The result is real for a complex vector too, which BLAS names for both
  * precisions (BMB_CBLAS_REAL). */
 typedef struct {
-    int n;
+    bmb_int n;
     bmb_real_t *x;
     volatile bmb_real_t sink;
 } bmb_ctx_t;
@@ -27,7 +27,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) dim1;
+    ctx->n = (bmb_int) dim1;
     ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     if (ctx->x == NULL) {
         free(ctx);
@@ -76,7 +76,7 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     bmb_real_t result;
     double got, want, sum = 0.0;
-    int i;
+    bmb_int i;
 
     call(ctx);
     result = ctx->sink;

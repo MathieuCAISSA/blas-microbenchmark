@@ -27,6 +27,12 @@ releases with the same major version can be compared and read by the same
   blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark`.
   The Docker image has `python3` and runs `bmb_mcp` (`docker run -i`); the
   Spack package depends on Python at run time and tests the server.
+- `configure --enable-ilp64` (#172): the library's 64-bit integer
+  interface, OpenBLAS's (Debian's `libopenblas64`, or a build with
+  `INTERFACE64=1`) or MKL's; any other backend is refused. A vector may
+  then hold more than 2^31 elements. `--version` (`Integers:`) and every
+  result (`# integers: 64-bit (ILP64)`, `"blas_int_bits"` in the JSON,
+  which every build now writes) say the width.
 - `--star` (#173): `-t`'s counts as instances of one thread, each a
   process pinned to a core of its own (the first CPU of each core in the
   affinity), all measured at once, as HPC Challenge's "star" mode: how a

@@ -28,6 +28,10 @@ void bmb_build_backend_name(const char *library, char *buf, size_t size);
  * both say "openblas" -- 0.3.20 and 0.3.29 do not perform alike. */
 const char *bmb_build_blas_version(void);
 
+/* The width of the integers the library takes (#172): 64 in an ILP64
+ * build (configure --enable-ilp64), 32 otherwise. */
+unsigned int bmb_build_int_bits(void);
+
 /* The kernels the library's dispatch chose at run time, as the library
  * names them: "Haswell" (OpenBLAS's core), "zen3" (BLIS's and AOCL-BLAS's
  * configuration), "AVX2" (MKL's code branch). Since SME, AMX and AVX10,

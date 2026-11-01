@@ -35,7 +35,7 @@ down:
   looks at what the pull request changes. When every file is Markdown,
   under `doc/dev` or `doc/images`, a man page or a guide of the site,
   the `openblas` job (whose `make check` reads every page and link) and
-  the `man` job run, and the eleven jobs that build and test a library
+  the `man` job run, and the twelve jobs that build and test a library
   otherwise are skipped. A skipped job passes a required check, so they
   run when `changes` fails (`!cancelled()`). The matrix jobs
   (`browsers`, `docker`, `spack`) always run: a matrix job
@@ -108,8 +108,8 @@ routines against the benchmarks; see [packaging](packaging.md#in-ci-2).
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
-The nine jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
-`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`) also run `.github/scripts/verify-sweep.sh` ("Verified at
+The ten jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
+`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`, `ilp64`) also run `.github/scripts/verify-sweep.sh` ("Verified at
 real sizes"): every benchmark, as many as `routines.txt` lists (#281), checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on

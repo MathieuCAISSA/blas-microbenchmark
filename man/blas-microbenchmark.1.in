@@ -463,7 +463,8 @@ file, otherwise csv.
 Show a summary of the options.
 .TP
 .B "\-V, \-\-version"
-Show the version, the BLAS library and the machine, without running
+Show the version, the BLAS library, the width of the integers it takes
+(32\-bit, or 64\-bit in an ILP64 build), and the machine, without running
 anything.
 .SS Sweeps
 The four size options each take a
@@ -858,6 +859,11 @@ where MKL names none, as on AMD CPUs).
 On a CPU with SME, AMX or AVX10 the path changes the numbers, and two
 files from the same library can only be told apart by it.
 Netlib, NVPL, ArmPL and FlexiBLAS do not say, and the line is left out.
+A build against the library's 64\-bit integer interface (ILP64,
+.B configure \-\-enable\-ilp64
+with OpenBLAS or MKL) adds the line
+.BR "# integers: 64\-bit (ILP64)" ;
+in it, a vector may hold more than 2^31 elements.
 The caches show where a sweep leaves each level.
 The frequency line gives the CPU frequency governor (several, joined by
 .BR / ,
@@ -962,6 +968,8 @@ one object holding the same information as fields:
 .BR backend ,
 .BR blas ,
 .BR kernels ,
+.B blas_int_bits
+(32, or 64 in an ILP64 build),
 .BR label ,
 .B peak_gflops_per_core
 and

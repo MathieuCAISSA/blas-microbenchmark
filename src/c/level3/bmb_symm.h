@@ -31,11 +31,11 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int lda;
-    int ldb; /* B's and C's: they have the same shape */
-    int m;
-    int n;
-    int na; /* A's order: M on the left, N on the right */
+    bmb_int lda;
+    bmb_int ldb; /* B's and C's: they have the same shape */
+    bmb_int m;
+    bmb_int n;
+    bmb_int na; /* A's order: M on the left, N on the right */
     char side, uplo;
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t beta[BMB_PARTS];
@@ -69,17 +69,17 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->na = (int) na;
+    ctx->na = (bmb_int) na;
     ctx->side = bmb_bench_side();
     ctx->uplo = bmb_bench_uplo();
-    ctx->m = (int) m;
-    ctx->n = (int) n;
+    ctx->m = (bmb_int) m;
+    ctx->n = (bmb_int) n;
     bmb_set_scalar(ctx->alpha, BMB_R(1.0), BMB_R(0.0));
     bmb_set_scalar(ctx->beta, BMB_R(0.0), BMB_R(0.0)); /* verify() relies on it */
     ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = (int) lda;
-    ctx->ldb = (int) ldb;
+    ctx->lda = (bmb_int) lda;
+    ctx->ldb = (bmb_int) ldb;
     ctx->a = bmb_bench_alloc(na * lda * BMB_ELEM_BYTES);
     ctx->b = bmb_bench_alloc(outb * ldb * BMB_ELEM_BYTES);
     ctx->c = bmb_bench_alloc(outb * ldb * BMB_ELEM_BYTES);
