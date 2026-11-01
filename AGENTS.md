@@ -190,6 +190,7 @@ the test.
 | | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the variables a result records (against `bmb_run_variables`), the exit statuses, the commands in the examples |
 | | `test_man_html.sh` | the site `html.sh` builds: every page of its menu there and in every page's menu, every section of blas-microbenchmark(1) on exactly one of its pages, the guides' commands running programs that exist with options they take, every link leading to a file and an anchor of the site or to https, nothing loaded from elsewhere, every section in its page's table of contents, the pages linked to each other, every option of `--help` in the manual's pages, the outputs page showing this version's table, CSV and JSON (and the report's screenshots in a git checkout); `html.sh` fails without mandoc or without the benchmarks |
 | | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report`, `man bmb_suite`, `man bmb_mcp` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
+| | `test_man_skills.sh` | the skills (`skills/*/SKILL.md`): the front matter of the Agent Skills format, a name that is its directory's and a description; every command in a code block runs a program that exists with options it takes; every `bmb_mcp` tool named is one it lists (not checked without `python3`) |
 
 Some tests SKIP where what they need is missing: `test_bmb_mcp.sh`
 without `python3`, the two browser tests
@@ -254,6 +255,9 @@ src/suite/       # bmb_suite, which runs the suite into one directory of
                  # results, and its test
 src/mcp/         # bmb_mcp, the MCP server agents run the benchmarks
                  # through, and its test
+skills/          # the skills (SKILL.md, the Agent Skills format) that
+                 # tell an agent how to measure, compare and read
+                 # results, installed in $(pkgdatadir)/skills
 man/             # the man pages, blas-microbenchmark(1), bmb_report(1),
                  # bmb_suite(1) and bmb_mcp(1), html.sh and devpage.sh, which make the
                  # documentation site, site.css, its stylesheet, and

@@ -85,7 +85,7 @@ options_of() {
 }
 
 # check_commands FILE: every command in FILE, one per line, that runs a
-# benchmark, bmb_report or bmb_suite runs one that exists, with options it
+# benchmark, bmb_report, bmb_suite or bmb_mcp runs one that exists, with options it
 # takes (after bmb_suite's --, a benchmark's);
 # commands_checked is set to how many it checked. Not in a $(...): there, a fail
 # would only end the subshell.
@@ -98,6 +98,12 @@ check_commands() {
             case $1 in
                 bmb_report) prog=$REPORT ;;
                 bmb_suite) prog=$SUITE ;;
+                # Its --help needs python3; without it, its commands
+                # are not checked.
+                bmb_mcp)
+                    command -v python3 >/dev/null 2>&1 || { shift; continue; }
+                    prog=$MCP
+                    ;;
                 bmb_*) prog=$(bin_of "${1#bmb_}") ;;
                 *) shift; continue ;;
             esac

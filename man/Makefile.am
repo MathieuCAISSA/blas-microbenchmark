@@ -74,7 +74,7 @@ AM_TESTS_ENVIRONMENT = \
 
 # The guides of the site (html.sh): its pages that are not man pages.
 SITE_GUIDES = site/blas.html site/install.html site/first-run.html site/compare.html \
-	site/backends.html site/hpc.html site/reframe.html
+	site/backends.html site/hpc.html site/reframe.html site/agents.html
 
 EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in bmb_suite.1.in bmb_mcp.1.in man_helper.sh html.sh devpage.sh site.css \
 	$(SITE_GUIDES) $(TESTS)

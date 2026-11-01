@@ -17,6 +17,11 @@ releases with the same major version can be compared and read by the same
   it starts (its arguments, its operands against the memory, its threads
   against the CPUs, every path inside the results directory) and
   stopped at a time cap. Python 3, standard library only; `bmb_mcp(1)`.
+- Skills (#263), installed in `$(pkgdatadir)/skills`: `blas-benchmark`,
+  `blas-compare` and `blas-results`, in the Agent Skills format, which
+  tell an agent how to measure a routine, compare libraries and read the
+  results as this project does, with `bmb_mcp`'s tools or the commands.
+  A guide on the site, "With an AI agent".
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.

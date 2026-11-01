@@ -164,6 +164,7 @@ Guides|compare|Compare libraries
 Guides|backends|The BLAS libraries
 Guides|hpc|On an HPC cluster
 Guides|reframe|ReFrame tests
+Guides|agents|With an AI agent
 The benchmarks|blas-microbenchmark|Overview
 The benchmarks|options|Options
 The benchmarks|measuring|How a number is measured
@@ -541,6 +542,7 @@ rm -f "$out/development.body"
                 backends) d="The eight libraries it builds against, how each is found and threaded." ;;
                 hpc) d="Modules, Spack, Slurm, pinning and NUMA, Apptainer." ;;
                 reframe) d="Every benchmark as a ReFrame test, with your references." ;;
+                agents) d="bmb_mcp and the skills: an AI agent measuring as the project does." ;;
                 blas-microbenchmark) d="The manual: every option, how a number is measured, threads, outputs." ;;
                 bmb_suite) d="The whole suite, or a selection, at a profile's sizes, into one directory." ;;
                 bmb_report) d="The manual of the report: series, charts, repeated runs and noise." ;;
