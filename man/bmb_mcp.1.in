@@ -141,6 +141,16 @@ No thread count is above the number of CPUs the process may use.
 Every path, and every name given, is inside the results directory, and
 a result already there is not overwritten.
 .PP
+.BR run_suite 's
+.B blas
+names suites by their paths, and runs their benchmarks: they are
+programs, which
+.BR bmb_suite (1)
+reads the backend of by running them.
+Configure the client to ask before it calls
+.BR run_suite ,
+or give it only paths of installs you trust.
+.PP
 A run that goes past the time cap is stopped.
 A benchmark that fails, a wrong result included, is the tool's error,
 with the benchmark's message: the server goes on.
