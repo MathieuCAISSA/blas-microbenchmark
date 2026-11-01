@@ -41,7 +41,7 @@
 /* The routine's arguments (#221) have no short option: past the
  * characters, so that getopt_long tells them apart. */
 enum { BMB_OPT_TRANS = 256, BMB_OPT_UPLO, BMB_OPT_SIDE, BMB_OPT_DIAG, BMB_OPT_BATCH_COUNT,
-       BMB_OPT_BATCH_MODE, BMB_OPT_PEAK_GFLOPS, BMB_OPT_PEAK_GBS };
+       BMB_OPT_BATCH_MODE, BMB_OPT_PEAK_GFLOPS, BMB_OPT_PEAK_GBS, BMB_OPT_STAR };
 
 const char *bmb_batch_mode_name(int mode)
 {
@@ -82,6 +82,7 @@ static const struct option bmb_long_options[] = {
     {"matrix-dim2",    required_argument, NULL, 'M'},
     {"matrix-dim3",    required_argument, NULL, 'K'},
     {"thread-count",   required_argument, NULL, 't'},
+    {"star",           no_argument,       NULL, BMB_OPT_STAR},
     {"statistics",     no_argument,       NULL, 's'},
     {"verify",         no_argument,       NULL, 'c'},
     {"no-verify",      no_argument,       NULL, 'C'},
@@ -536,6 +537,7 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
 
     bmb_range_set_single(&opts->thread_count, BMB_DEFAULT_THREADS);
     opts->thread_count_set = 0;
+    opts->star = 0;
 
     opts->statistics = 0;
     /* On by default, as STREAM and HPL check theirs: a number from a
@@ -787,6 +789,10 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             }
             break;
 
+        case BMB_OPT_STAR:
+            opts->star = 1;
+            break;
+
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
                 return BMB_OPTIONS_ERROR;
@@ -880,6 +886,10 @@ void bmb_options_print_help(const char *prog_name)
         "  -K, --matrix-dim3 <sweep>     GEMM's K (default: K = M at every point; with -K,\n"
         "                                 every combination with the other sizes is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
+        "      --star                    run -t's counts as instances of one thread instead,\n"
+        "                                 each on a core of its own, all at once; the rates\n"
+        "                                 are their sum (default: off; with it, -t is one\n"
+        "                                 instance a core)\n"
         "  -s, --statistics              add the mean, stddev and slowest sample, and in the\n"
         "                                 table the batch size (default: off)\n"
         "  -c, --verify                  check each point's result against a reference before\n"

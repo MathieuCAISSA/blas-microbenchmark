@@ -35,6 +35,7 @@ void bmb_result_set_init(bmb_result_set_t *rs, const char *routine_name,
     rs->min_time = 0.0;
     rs->max_spread = 0.0;
     rs->max_time = 0.0;
+    rs->star_cpus = NULL;
     rs->has_stats = has_stats;
     rs->has_flops = has_flops;
     rs->has_bytes = has_bytes;

@@ -411,14 +411,17 @@ details[open] > summary { margin-bottom: 12px; }
        * that a file from before them, which has none, and a run with the
        * defaults are the same series. */
       var variant = variantText(r.run && r.run.arguments);
+      /* --star (#173): instances of one thread, each on its core, not a
+       * call split across threads; at the same count, another thing. */
+      var star = (r.run && r.run.star) ? "star" : "";
       var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache, pad,
-                 variant].join("\u0001");
+                 variant, star].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
           cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, pad: pad,
-          variant: variant, machine: machine,
+          variant: variant, star: star, machine: machine,
           versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: [], kernels: []
         };
         identityOrder.push(id);
@@ -584,6 +587,7 @@ details[open] > summary { margin-bottom: 12px; }
       if (id.cache === "cold") { parts.push("cold cache"); }
       if (id.pad) { parts.push("ld + " + id.pad); }
       if (id.variant) { parts.push(id.variant); }
+      if (id.star) { parts.push("star"); }
       id.name = parts.join(" · ");
     });
 
@@ -696,6 +700,7 @@ details[open] > summary { margin-bottom: 12px; }
                  ", " + (run.warmup_time ? run.warmup_time + " s and " : "") + plural(run.warmup, "warm-up call") +
                  (run.batch ? ", batches of " + plural(run.batch, "call") : ""));
     }
+    if (run.star) { parts.push("star: an instance a core, on the first of CPUs " + run.star.cpus); }
     if (run.align) { parts.push("aligned to " + run.align + " bytes"); }
     if (run.compiler) { parts.push(run.compiler + (run.cflags ? " " + run.cflags : "")); }
     if (run.cpus_allowed) { parts.push("CPUs " + run.cpus_allowed); }
@@ -1711,7 +1716,7 @@ details[open] > summary { margin-bottom: 12px; }
        * versions so named are one history, not one label each. */
       var v = versionOf(id.blas);
       var label = v ? id.label.split(v).join("") : id.label;
-      var key = [id.backend, id.cpu, label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
+      var key = [id.backend, id.cpu, label, id.layout, id.cache, id.pad, id.variant, id.star].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });

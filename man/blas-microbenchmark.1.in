@@ -258,6 +258,19 @@ Default: 1.
 See
 .BR THREADS .
 .TP
+.B "\-\-star"
+Run each count of
+.B \-t
+as that many instances of one thread instead, each a process pinned to a
+core of its own, all measured at once; the rates are their sum.
+Without
+.BR \-t ,
+one instance on each core this process may run on.
+Default: off.
+See
+.BR THREADS ,
+under Star mode.
+.TP
 .B "\-s, \-\-statistics"
 Also report, per point, the mean of the samples, their standard deviation
 (over the samples as measured, divided by
@@ -694,6 +707,62 @@ a Slurm job, a cpuset), capped by the CPU quota of its cgroup (cgroup v2
 which
 .B docker run \-\-cpus
 sets).
+.SS Star mode
+A run at one thread measures a core with the machine's caches and memory
+to itself; a run at several, how the library splits one call.
+Neither is what a machine running an independent job on each core gets,
+as MPI ranks or the jobs of a task farm run: HPC Challenge's "star" mode.
+.B \-\-star
+measures that: each count
+.I N
+of
+.B \-t
+runs
+.I N
+copies of the benchmark, each a process of its own, its library given
+one thread whatever the environment says, pinned to a core of its own:
+the first CPU of each core this process may run on (its affinity), in
+order, so that two never share a core's threads.
+Each instance makes its own operands, on its own core, and checks them
+under
+.BR \-\-verify .
+.PP
+The instances start each sample together and a sample lasts until the
+slowest is done: its time is the slowest instance's, and the GFLOP/s and
+GB/s are the
+.I N
+instances' work over that time.
+They agree on everything else: the batch, the largest any chose; the
+samples, as
+.BR \-T ,
+.B \-e
+and
+.B \-E
+judge the slowest's times; a point one could not set up is skipped by all;
+a wrong result in one ends the run, told by the first instance that found
+it, which names its CPU.
+On a machine whose cores differ (performance and efficiency cores), the
+slowest core sets the time.
+.PP
+.RS
+.EX
+$ bmb_ddot \-\-star \-t 1,2,4,8 \-v 100000:10000000
+.EE
+.RE
+.PP
+shows how the memory bandwidth is shared as instances are added; a level
+3 routine, the rate the cores reach together, against
+.I N
+cores' peak
+.RB ( \-\-peak\-gflops ).
+More instances than cores is refused.
+The results say how they were measured: a
+.B # star:
+line with the CPUs, and
+.B star
+in the JSON's run block;
+.B bmb_report
+draws them as a series of their own.
 .SH HARDWARE COUNTERS
 GFLOP/s and GB/s say how fast, not why.
 Hardware counters \(em instructions, cycles, cache misses, the
@@ -952,6 +1021,15 @@ with
 .BR max_time ,
 .B cache
 .RB ( hot " or " cold ),
+.B star
+(under
+.BR \-\-star :
+an object whose
+.B cpus
+lists the CPUs the instances are pinned to, in order:
+.I N
+instances take the first
+.IR N ),
 .BR align ,
 .B ld_pad
 (for the routines with a matrix),

@@ -35,8 +35,10 @@ if ldd "$probe" 2>/dev/null | grep -q 'libasan\.'; then
     exit 77
 fi
 # counted FILE: the count the library put on stderr, or nothing.
+# The most any process made: under --star, each instance counts on from
+# the calling process's count where it forked.
 counted() {
-    sed -n 's/^bmb_failalloc: \([0-9][0-9]*\) allocations$/\1/p' "$1"
+    sed -n 's/^bmb_failalloc: \([0-9][0-9]*\) allocations$/\1/p' "$1" | sort -n | tail -n 1
 }
 LD_PRELOAD=$L BMB_ALLOC_COUNT=1 "$probe" -x 0 -i 1 -m 8 >/dev/null 2>"$T/err" || true
 if [ -z "$(counted "$T/err")" ]; then
@@ -104,6 +106,15 @@ if grep -q '^#define HAVE_CBLAS_GEMM_BATCH 1$' "${top_builddir:?top_builddir is 
 fi
 batch=$((runs - batch))
 
+# --star (#173): an allocation fails in every instance at once, which all
+# skip the point, and in the calling process after they started; where
+# two instances cannot run, not tried.
+star=$runs
+if BMB_COUNTS=1 level1/double/bmb_ddot --star -t 2 -v 16 >/dev/null 2>&1; then
+    each_allocation level1/double/bmb_ddot -x 0 -i 1 -v 16 --star -t 2
+fi
+star=$((runs - star))
+
 test "$n" -eq "$(grep -c '^[a-z]' "${srcdir:-.}/routines.txt")" || fail "$n benchmarks found, not the routines of routines.txt"
 rm -rf "$T"
-echo "ok   $n benchmarks, and dgemm under --cache cold ($cold) and in a group call ($batch), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"
+echo "ok   $n benchmarks, dgemm under --cache cold ($cold) and in a group call ($batch), and ddot under --star ($star), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"

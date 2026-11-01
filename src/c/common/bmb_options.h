@@ -68,6 +68,8 @@ typedef struct {
 
     bmb_range_t thread_count; /* -t, --thread-count */
     int thread_count_set;     /* whether -t/--thread-count was given */
+    int star;                 /* --star (#173): -t's counts are instances
+                               * of one thread, each on a core of its own */
 
     int statistics;           /* -s, --statistics */
     int verify;               /* -c, --verify */

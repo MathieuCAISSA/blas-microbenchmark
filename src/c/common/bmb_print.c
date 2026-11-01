@@ -171,6 +171,11 @@ static void bmb_print_run(FILE *out, const bmb_result_set_t *rs, const bmb_machi
         fprintf(out, "batch size chosen per point, ");
     }
     fprintf(out, "%s cache\n", rs->cache_cold ? "cold" : "hot");
+    if (rs->star_cpus != NULL) {
+        fprintf(out, "# star: the threads are instances of one thread, each pinned to a core of its "
+                "own, the first of CPUs %s; a sample is the slowest instance's time, the rates "
+                "are their sum\n", rs->star_cpus);
+    }
     fprintf(out, "# operands: aligned to %u bytes", rs->align);
     if (rs->layout != NULL && !rs->packed) {
         fprintf(out, ", leading dimensions + %u", rs->ld_pad);
@@ -520,6 +525,10 @@ static void bmb_print_json_run(FILE *out, const bmb_result_set_t *rs, const bmb_
         fprintf(out, "    \"batch\": %u,\n", rs->batch);
     }
     fprintf(out, "    \"cache\": \"%s\",\n", rs->cache_cold ? "cold" : "hot");
+    if (rs->star_cpus != NULL) {
+        fprintf(out, "    \"star\": {");
+        fprintf(out, "\"cpus\": \"%s\"},\n", rs->star_cpus);
+    }
     fprintf(out, "    \"align\": %u,\n", rs->align);
     if (rs->layout != NULL && !rs->packed) {
         fprintf(out, "    \"ld_pad\": %u,\n", rs->ld_pad);
