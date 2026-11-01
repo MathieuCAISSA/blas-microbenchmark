@@ -1,6 +1,8 @@
 #include <cblas.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bmb_bench.h"
 #include "bmb_prec.h"
@@ -22,6 +24,7 @@ typedef struct {
     char uplo, ta, tb;
     bmb_real_t alpha[BMB_PARTS];
     bmb_real_t beta[BMB_PARTS];
+    size_t sa, sb; /* A's and B's elements, leading dimensions in */
     bmb_real_t *a; /* op(A) is N x K */
     bmb_real_t *b; /* op(B) is K x N */
     bmb_real_t *c; /* N x N, the triangle --uplo gives written */
@@ -68,6 +71,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->lda = (bmb_int) lda;
     ctx->ldb = (bmb_int) ldb;
     ctx->ldc = (bmb_int) ldc;
+    ctx->sa = outa * lda;
+    ctx->sb = outb * ldb;
     ctx->a = bmb_bench_alloc(outa * lda * BMB_ELEM_BYTES);
     ctx->b = bmb_bench_alloc(outb * ldb * BMB_ELEM_BYTES);
     ctx->c = bmb_bench_alloc(n * ldc * BMB_ELEM_BYTES);
@@ -167,7 +172,9 @@ static void op_at(const bmb_real_t *x, int col, size_t ld, char op, size_t i, si
  * grows by one column a row, from the last row up (the lower one, from
  * the first down). The other triangle's strict part, which the call must
  * not touch, is projected before and after it and must come out the same
- * to the bit. */
+ * to the bit; so must A and B, which it only reads: OpenBLAS before 0.3.30
+ * conjugated B in place where op(B) is B^H (OpenMathLib/OpenBLAS#5143),
+ * and said so only as a wrong C. */
 static int verify(void *vctx, char *msg, size_t size)
 {
     bmb_ctx_t *ctx = vctx;
@@ -176,20 +183,33 @@ static int verify(void *vctx, char *msg, size_t size)
     const int upper = ctx->uplo == 'U';
     const int strict = upper ? BMB_VERIFY_LOWER_STRICT : BMB_VERIFY_UPPER_STRICT;
     double *r = malloc(((7 * p + 3) * n + (2 * p + 1) * k) * sizeof(double));
+    bmb_real_t *a0 = malloc((ctx->sa + ctx->sb) * BMB_ELEM_BYTES);
     int ok;
 
-    if (r == NULL) {
+    if (r == NULL || a0 == NULL) {
+        free(r);
+        free(a0);
         return -1;
     }
+    bmb_real_t *b0 = a0 + BMB_PARTS * ctx->sa;
     double *y1 = r + p * n, *y1abs = y1 + p * n, *y2 = y1abs + n, *y2abs = y2 + p * n;
     double *l0 = y2abs + n, *lp = l0 + p * n, *labs = lp + p * n;
     double *want = labs + n, *scale = want + p * n;
     double *s = scale + p * n, *sabs = s + p * k;
 
+    memcpy(a0, ctx->a, ctx->sa * BMB_ELEM_BYTES);
+    memcpy(b0, ctx->b, ctx->sb * BMB_ELEM_BYTES);
     bmb_verify_probe(r, p * n);
     bmb_matvec(strict, ctx->col, n, n, ctx->c, (size_t) ctx->ldc, r, NULL, l0, labs);
     if (!bmb_verify_skip()) {
         call(ctx);
+    }
+    if (memcmp(a0, ctx->a, ctx->sa * BMB_ELEM_BYTES) != 0 || memcmp(b0, ctx->b, ctx->sb * BMB_ELEM_BYTES) != 0) {
+        snprintf(msg, size, "the call changed %s, which it must only read",
+                 memcmp(a0, ctx->a, ctx->sa * BMB_ELEM_BYTES) != 0 ? "A" : "B");
+        free(r);
+        free(a0);
+        return 1;
     }
     bmb_perturb(&ctx->c[0]);
     bmb_matvec(upper ? BMB_VERIFY_UPPER : BMB_VERIFY_LOWER, ctx->col, n, n, ctx->c,
@@ -251,6 +271,7 @@ static int verify(void *vctx, char *msg, size_t size)
                               lp, l0, NULL, p * n, 0.0, msg, size);
     }
     free(r);
+    free(a0);
     return !ok;
 }
 

@@ -639,7 +639,8 @@ gives a wrong
 for almost every
 .IR r .
 Routines that update one triangle are also checked to leave the other
-as it was.
+as it was; gemmt, to leave A and B as they were, which OpenBLAS before
+0.3.30 did not, conjugating one in place.
 .PP
 The tolerance is a bound on rounding error, proportional to the number
 of terms in each element and to their magnitudes: a correct library is

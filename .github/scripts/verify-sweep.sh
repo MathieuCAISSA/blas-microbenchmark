@@ -26,6 +26,8 @@ set -e
 B=${1:?usage: $0 BUILD_DIR}
 failed=0
 n=0
+# bmb_known_wrong: a library's known bug, which --verify must catch.
+. "$(dirname "$0")/../../src/c/test_helper.sh"
 
 # check WHAT ARG...: the benchmark $f, run with --verify and ARG..., said
 # ok, skip (exit 77) or FAIL.
@@ -34,6 +36,16 @@ check() {
     shift
     rc=0
     "$f" -x 0 -w 0 -i 1 -c "$@" >/dev/null 2>"$B/verify-sweep.err" || rc=$?
+    known=$(bmb_known_wrong "$f" "${name#bmb_}" "$@")
+    if [ -n "$known" ] && { [ "$rc" -ne 0 ] || [ "${known#maybe }" = "$known" ]; }; then
+        if [ "$rc" -eq 2 ] && grep -qF "${known#maybe }" "$B/verify-sweep.err"; then
+            echo "ok   $name $what: this library's known bug, caught"
+        else
+            echo "FAIL $name $what: a known bug of this library (bmb_known_wrong), not caught as such (exit $rc): $(cat "$B/verify-sweep.err")"
+            failed=$((failed + 1))
+        fi
+        return
+    fi
     case $rc in
         0) echo "ok   $name $what" ;;
         77) echo "skip $name $what: $(tail -n 1 "$B/verify-sweep.err")" ;;
