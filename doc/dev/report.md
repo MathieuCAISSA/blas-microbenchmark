@@ -1,6 +1,7 @@
 # The report
 
-How `bmb_report` and its page are built and tested. Start at
+How `bmb_report` and its page are built and tested, and `bmb_suite`
+and `bmb_mcp`, which run the benchmarks for it. Start at
 [AGENTS.md](../../AGENTS.md).
 
 `bmb_report results/*.json > report.html` turns any number of JSON results
@@ -76,6 +77,34 @@ backend `--version` gives, `flexiblas/` and the name in lower case (as
 `bmb_build_backend_name()` writes it), before anything runs. The
 stand-in FlexiBLAS of `test_bmb_suite.sh` is a script that answers so;
 the `flexiblas` CI job runs the real one.
+
+## bmb_mcp
+
+`src/mcp/bmb_mcp.py` is an MCP server (#262): an agent's client starts
+it and talks to it on stdio, JSON-RPC 2.0 a line (`initialize`,
+`tools/list`, `tools/call`, `ping`). Python 3, standard library only,
+so that it runs wherever Python does; `make` substitutes the version
+and `$(pkglibexecdir)`, and it finds the benchmarks, `bmb_suite` and
+`bmb_report` as `bmb_suite` does: a build tree's, or those installed
+with it. Its list of routines, with each one's sizes and family, is
+written by `src/c/routines.sh`.
+
+Its tools take fields, never a command line, and map each to the long
+option it stands for (`FLAGS`). Everything is checked before a run,
+with a message an agent can act on: the arguments, by running the
+benchmark under `BMB_COUNTS` first, which parses them as a run would and
+counts each point's operands without allocating; the largest point
+against the memory limit (a quarter of `MemAvailable` by default); the
+thread counts against the CPUs the process may use; every path inside
+the results directory, with no result overwritten. A run is stopped at
+the time cap. A failed benchmark is the tool's error, not the server's.
+
+`test_bmb_mcp.sh` drives it through stdin: every tool on the build tree
+at tiny sizes, each refusal, and the memory limit, the time cap and a
+wrong result from servers of their own, their limits lowered rather
+than the sizes raised, so that a broken check still runs something
+small. The `openblas` job starts the installed one and runs a benchmark
+through it.
 
 ## The page
 

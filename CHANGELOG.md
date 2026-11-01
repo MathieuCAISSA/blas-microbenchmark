@@ -9,6 +9,15 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- `bmb_mcp` (#262), installed beside `bmb_report` and `bmb_suite`: an MCP
+  server, so that an AI agent lists the routines, describes the machine,
+  runs a benchmark or the suite, reads a result and makes the report,
+  through tools whose arguments are fields. Every run is checked before
+  it starts (its arguments, its operands against the memory, its threads
+  against the CPUs, every path inside the results directory) and
+  stopped at a time cap. Python 3, standard library only; `bmb_mcp(1)`.
+
 ### Fixed
 - `bmb_report`'s roofline labelled a log tick below 0.01 with two
   decimals, 0.005 as "0.01" (#290): such a tick now keeps its one

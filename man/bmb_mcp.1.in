@@ -1,0 +1,163 @@
+.\" bmb_mcp(1). make turns bmb_mcp.1.in into bmb_mcp.1, then into the
+.\" site's bmb_mcp.html; edit the .in. man/test_man_*.sh check it
+.\" against the programs: see doc/dev/documentation.md.
+.TH BMB_MCP 1 2026-11-01 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.\" No hyphenation, no justification: both hurt in a terminal.
+.nh
+.ds AD l
+.ad l
+.SH NAME
+bmb_mcp \- an MCP server over blas\-microbenchmark, for AI agents
+.SH SYNOPSIS
+.B bmb_mcp
+.RB [ \-\-results\-dir
+.IR dir ]
+.RB [ \-\-time\-cap
+.IR seconds ]
+.RB [ \-\-memory\-limit
+.IR bytes ]
+.SH DESCRIPTION
+.B bmb_mcp
+lets an AI agent use the benchmarks of
+.BR blas\-microbenchmark (1):
+list the routines, describe the machine, run a benchmark or the suite,
+read a result and make the report.
+It is a Model Context Protocol server: the agent's client starts it and
+talks to it on its standard input and output, a JSON\-RPC 2.0 message a
+line, and it is not run by hand.
+.PP
+A tool's arguments are fields, never a command line: a routine, its
+sizes and threads, its arguments
+.RB ( trans ,
+.BR uplo ,
+\&...), the run's options.
+Every run is checked before it starts, and refused with a message that
+says what to do instead (see
+.BR LIMITS );
+every result is verified against a reference, as the benchmarks do by
+default.
+.PP
+.B bmb_mcp
+finds the benchmarks as
+.BR bmb_suite (1)
+does: those of the build tree it is in, or those installed with it, in
+.IR @pkglibexecdir@ .
+It needs Python 3, and nothing else.
+.SH OPTIONS
+.TP
+.BI \-\-results\-dir " dir"
+Where the results and the reports go, created if need be, and the only
+place a tool reads from or writes to.
+Default:
+.IR ./bmb\-results .
+.TP
+.BI \-\-time\-cap " seconds"
+The longest a run may take: one that goes past is stopped, and the tool
+says so.
+Default: 900.
+.TP
+.BI \-\-memory\-limit " bytes"
+The most memory a run's operands may take.
+Default: a quarter of the memory the system says is available.
+.TP
+.B "\-h, \-\-help"
+Show a summary of the usage.
+.TP
+.B "\-V, \-\-version"
+Show the version.
+.SH TOOLS
+.TP
+.B list_routines
+The routines, filtered by level, precision or family: each one's level,
+precision, family, and what
+.BR \-v ,
+.BR \-m ,
+.B \-M
+and
+.B \-K
+are for it.
+.TP
+.B describe_machine
+What
+.B \-\-version
+says: the BLAS library and its version, the kernels it chose, the CPU,
+caches, frequency and OS; with the CPUs this process may use, the memory
+limit, the results directory and the time cap.
+.TP
+.B run_benchmark
+One routine's benchmark, with its sizes
+.RB ( vector_size ,
+.BR dim1 ,
+.BR dim2 ,
+.BR dim3 ),
+.BR threads ,
+the routine's arguments, and the run's options
+.RB ( layout ,
+.BR cache ,
+.BR iterations ,
+.BR min_time ,
+.BR label ,
+.BR peak_gflops ,
+\&...), each named as the long option it stands for.
+The result goes into the results directory as JSON, named
+.IR routine \- n .json
+or as
+.BR name ;
+the tool returns a row a point (threads, sizes, time, median, IQR,
+GFLOP/s, GB/s), whether it was verified, and the warnings.
+.TP
+.B run_suite
+.BR bmb_suite (1)
+into a directory of the results directory: every routine, or some
+levels, precisions or routines, at a profile's sizes, for one library
+or several
+.RB ( blas ,
+.BR flexiblas ).
+It returns a line a result, with its best rate, and the benchmarks that
+failed.
+.TP
+.B read_result
+A result file of the results directory, summarised as
+.B run_benchmark
+does.
+.TP
+.B make_report
+.BR bmb_report (1)
+on a directory of the results directory, a peak given or not; it
+returns the page's path.
+.SH LIMITS
+Each is checked before anything runs.
+.IP \(bu 2
+A run's arguments are those the benchmark takes: they are first given
+to it with
+.BR BMB_COUNTS ,
+which checks them and counts each point's operands without measuring or
+allocating anything.
+.IP \(bu
+The largest point's operands fit within the memory limit.
+.IP \(bu
+No thread count is above the number of CPUs the process may use.
+.IP \(bu
+Every path, and every name given, is inside the results directory, and
+a result already there is not overwritten.
+.PP
+A run that goes past the time cap is stopped.
+A benchmark that fails, a wrong result included, is the tool's error,
+with the benchmark's message: the server goes on.
+.SH EXAMPLES
+A client that reads its servers from JSON, such as Claude Code's
+.IR .mcp.json ,
+starts it with:
+.PP
+.RS
+.EX
+{"mcpServers": {"blas\-microbenchmark":
+    {"command": "bmb_mcp", "args": ["\-\-results\-dir", "bmb\-results"]}}}
+.EE
+.RE
+.SH EXIT STATUS
+0 when the client closes its end; 2 on a usage error.
+.SH SEE ALSO
+.BR blas\-microbenchmark (1),
+.BR bmb_suite (1),
+.BR bmb_report (1)

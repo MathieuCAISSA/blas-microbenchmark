@@ -1,6 +1,6 @@
 #!/bin/sh
 # Installs the man pages into a staging root and opens them the way a user
-# would: man blas-microbenchmark, man bmb_report, man bmb_suite, and man bmb_<routine> for
+# would: man blas-microbenchmark, man bmb_report, man bmb_suite, man bmb_mcp, and man bmb_<routine> for
 # every benchmark, through its alias. Then uninstalls, and checks nothing
 # is left behind.
 #
@@ -28,7 +28,8 @@ show() {
 show blas-microbenchmark | grep -q '^BLAS-MICROBENCHMARK(1)' || fail "man blas-microbenchmark: $(cat "$T/man.err")"
 show bmb_report | grep -q '^BMB_REPORT(1)' || fail "man bmb_report: $(cat "$T/man.err")"
 show bmb_suite | grep -q '^BMB_SUITE(1)' || fail "man bmb_suite: $(cat "$T/man.err")"
-ok "man blas-microbenchmark, man bmb_report and man bmb_suite open the pages"
+show bmb_mcp | grep -q '^BMB_MCP(1)' || fail "man bmb_mcp: $(cat "$T/man.err")"
+ok "man blas-microbenchmark, man bmb_report, man bmb_suite and man bmb_mcp open the pages"
 
 for r in $ROUTINES; do
     test -f "$stage$man1dir/bmb_$r.1" || fail "no alias page for bmb_$r"

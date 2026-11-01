@@ -131,12 +131,14 @@ jobs:
           P=stage/opt/bmb-test
           test -x $P/bin/bmb_report
           test -x $P/bin/bmb_suite
+          test -x $P/bin/bmb_mcp
           test -x $P/libexec/blas-microbenchmark/level1/bmb_ddot
           test -x $P/libexec/blas-microbenchmark/level2/bmb_dgemv
           test -x $P/libexec/blas-microbenchmark/level3/bmb_dgemm
           test -f $P/share/man/man1/blas-microbenchmark.1
           test -f $P/share/man/man1/bmb_report.1
           test -f $P/share/man/man1/bmb_suite.1
+          test -f $P/share/man/man1/bmb_mcp.1
           grep -qx '.so man1/blas-microbenchmark.1' $P/share/man/man1/bmb_dgemm.1
           # The page gives the install path, as the reader sees it.
           MANPAGER=cat MANWIDTH=200 man -l $P/share/man/man1/blas-microbenchmark.1 \
@@ -152,6 +154,13 @@ jobs:
           test -s runs/ddot.json && test -s runs/dgemm.json
           /opt/bmb-test/bin/bmb_report runs > runs.html
           test "$(grep -c 'class="bmb-result"' runs.html)" = 2
+          # So does bmb_mcp: its tools, and a benchmark it runs (#262).
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"run_benchmark","arguments":{"routine":"ddot","vector_size":"64","iterations":1,"warmup_time":0}}}' \
+            | /opt/bmb-test/bin/bmb_mcp --results-dir mcp > mcp.out
+          grep -q '"name": "run_benchmark"' mcp.out
+          grep -q '"verified": true' mcp.out
+          test -s mcp/ddot-1.json
 
       - name: Upload test logs
         if: always()

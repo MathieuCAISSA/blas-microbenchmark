@@ -6,10 +6,11 @@
 # make check -- unless BMB_MAN_STRICT is set, as in the CI job dedicated to
 # the man pages, where a SKIP would let the pages go unchecked.
 
-PAGES="blas-microbenchmark.1 bmb_report.1 bmb_suite.1"
+PAGES="blas-microbenchmark.1 bmb_report.1 bmb_suite.1 bmb_mcp.1"
 BENCH=../src/c/level3/double/bmb_dgemm
 REPORT=../src/report/bmb_report
 SUITE=../src/suite/bmb_suite
+MCP=../src/mcp/bmb_mcp
 
 fail() {
     echo "FAIL: $*"
