@@ -17,6 +17,9 @@ releases with the same major version can be compared and read by the same
   it starts (its arguments, its operands against the memory, its threads
   against the CPUs, every path inside the results directory) and
   stopped at a time cap. Python 3, standard library only; `bmb_mcp(1)`.
+- A guide on the site, "What BLAS is" (#314): the interface and its
+  libraries, the three levels and what limits each, the four precisions,
+  and what each family of routines computes.
 
 ### Fixed
 - `bmb_report`'s roofline labelled a log tick below 0.01 with two

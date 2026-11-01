@@ -157,6 +157,7 @@ toc() {
 # guides are site/<page>.html; the manual's pages are cut from
 # blas-microbenchmark(1) by manual_page_of; the rest are built below.
 MENU='Getting started|index|Home
+Getting started|blas|What BLAS is
 Getting started|install|Install
 Getting started|first-run|Your first benchmarks
 Guides|compare|Compare libraries
@@ -533,6 +534,7 @@ rm -f "$out/development.body"
     printf '%s\n' "$MENU" | awk -F'|' '$2 != "index" && ($1 == "Getting started" || $1 == "Guides" || $2 == "blas-microbenchmark" || $2 == "bmb_suite" || $2 == "bmb_report" || $2 == "outputs") { print $2 "|" $3 }' \
         | while IFS='|' read -r p t; do
             case $p in
+                blas) d="The BLAS in five minutes: its levels, its precisions, what each routine computes." ;;
                 install) d="From a release, with Spack, in a container, from git; checking the download." ;;
                 first-run) d="Run a routine, read what it prints, sweep sizes and threads, save the results." ;;
                 compare) d="Measure several libraries, or runs, and see them side by side." ;;
