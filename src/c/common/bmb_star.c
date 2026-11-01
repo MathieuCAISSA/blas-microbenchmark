@@ -150,10 +150,9 @@ typedef struct {
     double slot[];
 } bmb_star_shared_t;
 
-static bmb_star_shared_t *bmb_star_shm;
 #if defined(__linux__)
+static bmb_star_shared_t *bmb_star_shm;
 static size_t bmb_star_shm_size;
-#endif
 static unsigned int bmb_star_count;
 static int bmb_star_index = -1;
 static int bmb_star_pipe[2] = {-1, -1};
@@ -235,6 +234,34 @@ int bmb_star_send(const bmb_result_row_t *row)
     }
     return 0;
 }
+#else
+/* Without Linux's affinity no instance is started (bmb_star_start), so
+ * this process is never one. */
+int bmb_star_instance(void)
+{
+    return -1;
+}
+
+int bmb_star_cpu(void)
+{
+    return -1;
+}
+
+double bmb_star_max(double v)
+{
+    return v;
+}
+
+void bmb_star_finish(void)
+{
+}
+
+int bmb_star_send(const bmb_result_row_t *row)
+{
+    (void) row;
+    return -1;
+}
+#endif
 
 int bmb_star_exit_code(int status)
 {
