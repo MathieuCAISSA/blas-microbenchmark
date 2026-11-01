@@ -24,7 +24,8 @@ echo "ok   every list is the table's"
 files='src/c/routines.txt src/c/routines.sh src/c/level1/Makefile.am
 src/c/level2/Makefile.am src/c/level3/Makefile.am man/Makefile.am
 man/blas-microbenchmark.1.in README.md src/report/report.html
-packaging/reframe/blas_microbenchmark.py src/suite/bmb_suite.sh'
+packaging/reframe/blas_microbenchmark.py src/suite/bmb_suite.sh
+src/mcp/bmb_mcp.py'
 fresh() {
     rm -rf "$T"
     # shellcheck disable=SC2086 # one word per file, none with a space
@@ -45,10 +46,10 @@ fi
 n=$(grep -c 'is not the table' "$T/out")
 # Every list but level 1's and level 2's Makefile.am, the man page's three
 # counted apart.
-test "$n" = 9 || fail "zfake in the table alone: $n lists stale, not 9: $(cat "$T/out")"
+test "$n" = 10 || fail "zfake in the table alone: $n lists stale, not 10: $(cat "$T/out")"
 grep -q '^+	complex16/bmb_zfake$' "$T/out" ||
     fail "the stale level 3 Makefile.am's difference does not add zfake: $(cat "$T/out")"
-echo "ok   a routine in the table alone: the 9 lists it belongs in stale"
+echo "ok   a routine in the table alone: the 10 lists it belongs in stale"
 
 sh "$T/src/c/routines.sh" "$T" >/dev/null || fail "routines.sh could not write the lists"
 sh "$T/src/c/routines.sh" --check "$T" >"$T/out" 2>&1 ||

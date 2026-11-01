@@ -149,6 +149,11 @@ block() {
             } else if (kind == "suite") {
                 for (i = 1; i <= n; i++) { all = all " " name[i] ":" level[i] ":" prec[i] }
                 printf "ROUTINES=\047\n%s\047\n", wrap(substr(all, 2), 79, "    ", "    ", "")
+            } else if (kind == "mcp") {
+                # For list_routines in bmb_mcp: what the sizes of each are,
+                # and its family, as the table gives them.
+                for (i = 1; i <= n; i++) { all = all " " name[i] ":" level[i] ":" prec[i] ":" sizes[i] ":" family[i] }
+                printf "ROUTINES = \"\"\"\n%s\"\"\"\n", wrap(substr(all, 2), 79, "    ", "    ", "")
             } else if (kind == "report" || kind == "reframe") {
                 # A line per level at least; \001 keeps a name and its
                 # level on one line.
@@ -234,4 +239,5 @@ update README.md readme
 update src/report/report.html report
 update packaging/reframe/blas_microbenchmark.py reframe
 update src/suite/bmb_suite.sh suite
+update src/mcp/bmb_mcp.py mcp
 exit "$status"
