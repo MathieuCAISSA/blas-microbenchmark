@@ -122,7 +122,9 @@ call, they measure nothing and exit 77, saying which call is missing
 .BR "EXIT STATUS" ).
 gemmt takes
 .B \-\-trans
-for A and B, as GEMM does.
+for A and B, as GEMM does, and calls cblas_?gemmtr where the library
+has it, the name the Reference BLAS gave it, under which MKL deprecates
+cblas_?gemmt.
 .PP
 Level 1 routines are sized with
 .BR \-v .

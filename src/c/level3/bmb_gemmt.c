@@ -88,12 +88,20 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     return ctx;
 }
 
+/* gemmtr where the library has it: the Reference BLAS's name for it from
+ * LAPACK 3.12, and MKL's, which deprecates gemmt (to go in 2029). */
+#if defined(HAVE_CBLAS_GEMMTR)
+#define BMB_GEMMT_CALL gemmtr
+#else
+#define BMB_GEMMT_CALL gemmt
+#endif
+
 static void call(void *vctx)
 {
 #if defined(HAVE_CBLAS_GEMMT)
     bmb_ctx_t *ctx = vctx;
 
-    BMB_CBLAS(gemmt)(ctx->order, BMB_CBLAS_UPLO(ctx->uplo), BMB_CBLAS_TRANS(ctx->ta),
+    BMB_CBLAS(BMB_GEMMT_CALL)(ctx->order, BMB_CBLAS_UPLO(ctx->uplo), BMB_CBLAS_TRANS(ctx->ta),
                      BMB_CBLAS_TRANS(ctx->tb), ctx->n, ctx->k, BMB_SCALAR(ctx->alpha),
                      (const void *) ctx->a, ctx->lda, (const void *) ctx->b, ctx->ldb,
                      BMB_SCALAR(ctx->beta), (void *) ctx->c, ctx->ldc);
@@ -258,7 +266,7 @@ int main(int argc, char *argv[])
     bench.args = BMB_ARG_UPLO | BMB_ARG_TRANS2;
     bench.trans_letters = BMB_TRANS_LETTERS;
 #if !defined(HAVE_CBLAS_GEMMT)
-    bench.missing = "cblas_?gemmt";
+    bench.missing = "cblas_?gemmt or cblas_?gemmtr";
 #endif
     bench.setup = setup;
     bench.call = call;

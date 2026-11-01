@@ -1102,7 +1102,8 @@ jobs:
       - name: The extensions it has, found
         run: |
           grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
-            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMTR 1$' build/config.h
 
       - name: make
         run: make -C build -j"$(nproc)"
