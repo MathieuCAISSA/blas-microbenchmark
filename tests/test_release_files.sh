@@ -2,7 +2,8 @@
 # Checks that CHANGELOG.md and CITATION.cff agree with the version being
 # built: a -dev version has an [Unreleased] section; a release has its own
 # dated section, and is the version CITATION.cff cites, on the same date.
-# Between releases, CITATION.cff cites the latest released version.
+# Between releases, CITATION.cff cites the latest released version. The
+# Claude Code plugin's manifest gives the version being built.
 #
 # Both files are easy to forget when cutting a release, and a citation of
 # the wrong version is worse than none.
@@ -52,5 +53,14 @@ for key in cff-version message title authors license repository-code; do
     grep -q "^$key:" "$S/CITATION.cff" || fail "CITATION.cff has no $key"
 done
 ok "CITATION.cff cites $cited, released $cited_date"
+
+# The plugin's version (#264), which a client shows; .claude-plugin/ is
+# not in the tarball.
+plugin=$S/.claude-plugin/plugin.json
+if [ -f "$plugin" ]; then
+    pv=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' "$plugin")
+    test "$pv" = "$V" || fail ".claude-plugin/plugin.json gives version '$pv', and this is $V"
+    ok ".claude-plugin/plugin.json gives version $V"
+fi
 
 echo "all checks passed"

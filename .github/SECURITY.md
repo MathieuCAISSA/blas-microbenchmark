@@ -27,7 +27,13 @@ reports are about input that someone else could supply:
   or allocate far more than it reports (sizes are checked before any
   allocation);
 - a profile file or a `--blas` path that makes `bmb_suite` run something
-  other than the benchmarks of the suite it names.
+  other than the benchmarks of the suite it names;
+- a request to `bmb_mcp`, which an agent writes and a prompt can steer,
+  that makes it read or write outside its results directory, run
+  something other than the benchmarks, or get past its memory, thread or
+  time limits. `run_suite`'s `blas` runs the benchmarks of the suites it
+  names, by path, as `bmb_suite --blas` does: that is what it is for,
+  and `bmb_mcp(1)` says so.
 
 A benchmark being slow, or a BLAS library misbehaving, is not a security
 problem: please open a normal issue.

@@ -21,7 +21,7 @@ changing it:
 |---|---|
 | a benchmark, `src/c/common`, timing, rates, `--verify` | [doc/dev/benchmarks.md](doc/dev/benchmarks.md) |
 | `configure.ac`, a BLAS library, `bmb_threads.c`, `bmb_build.c`, `bmb_machine.c`, `src/c/netlib`, `src/c/mkl` | [doc/dev/backends.md](doc/dev/backends.md) |
-| `bmb_report`, `bmb_suite`, `src/report`, `src/suite`, `doc/images` | [doc/dev/report.md](doc/dev/report.md) |
+| `bmb_report`, `bmb_suite`, `bmb_mcp`, `src/report`, `src/suite`, `src/mcp`, `doc/images` | [doc/dev/report.md](doc/dev/report.md) |
 | the README, `--help`, `man/`, the site | [doc/dev/documentation.md](doc/dev/documentation.md) |
 | `.github/` | [doc/dev/ci.md](doc/dev/ci.md) |
 | `packaging/`, `spack-repo-index.yaml` | [doc/dev/packaging.md](doc/dev/packaging.md) |
@@ -176,21 +176,25 @@ the test.
 | | `test_bmb_report_render.sh` | the page in a real browser: every chart draws; the Verified and Frequency columns; a series run four times gets its band, the noise test and a raw row per run; three versions of a library get a history; files with a run block get the Run column and the samples' band; the kernels the library chose, beside it; a roofline with its roofs, a level 3 peak line, the percentages in the raw data, and where the peak came from; each routine's section linked from its summary tile and from the list of routines by level; dcopy's bandwidth as a line, its note citing it alone, no percentage in a level 2 row; a `-K` sweep at one M x N charted against K; a band charted against N at one K; on a second page (#291), series named by `--trans`, `--uplo` and a batch, a packed, a complex and a single-precision routine, and `bmb_report`'s peak doubled in single precision |
 | | `test_bmb_report_js.sh` | the page's logic, unit by unit (`test_report.js`), including the Mann-Whitney p-values against an independent count; a cold series kept apart, in the charts and the history; a padded series kept apart too; the kernels a series ran, listed, not splitting it; a GEMM run with `-K`, a section per K, and K swept alone at one M x N, one section against K; a band (gbmv, tbsv) sliced against N at one K, its thread scaling and heatmap; a non-default `--trans`, a series of its own, named by it, a file from before the arguments one with the defaults; a series measured other than by default (column-major, cold, padded, other arguments) named so even alone of its backend; names that leave out what a part before them tells apart, and a label naming the version kept out of the history's key (#287); a batch, by its count and mode; the peak, from the results or given to `bmb_report` (twice in single precision), where it came from, a point's percentage of its cores' peak, the roofline's points, roofs and ranges, none without a bandwidth or FLOPs; the peak each level uses (#288) |
 | `src/suite` | `test_bmb_suite.sh` | `bmb_suite`: every benchmark of the build tree at tiny sizes through a profile file, a JSON and a log each, then `bmb_report` on the directory; every command of the `quick` and `full` profiles run under `BMB_COUNTS` on the x86 fixture, saying nothing but its counts (#280); `--level`, `--precision`, `--routine` and the shipped profiles through `-n`, a routine's line winning over its level's, the options passed on after the profile's and before `-f json -o`; each refusal before anything runs (no `-o`, a directory holding files or that cannot be made, a bad list, an unknown routine or profile, a profile that cannot be read, a profile line neither a level nor a routine or given twice, `-o`, `-f` or `--peak-gflops` passed on, a `--blas` path with a newline), `--peak-gbs` passed on; on stand-in trees, an install's layout and a build tree's, a missing routine left out or, asked for, refused, a failure said with its log and the others run (exit 1), a skip; `--blas` (#255): the build tree given twice under two names, a directory and a label each, every result recording the build's backend, then `bmb_report` on both; an install prefix, the directory of its levels and a build tree as suites; a result recording another backend than its suite's `--version`, a failure; a bad or repeated name, a path with no suite, a backend unread, a label passed on, refused; `--blas flexiblas:` (#256), on a stand-in FlexiBLAS: `FLEXIBLAS` set a library, a directory and a label each, beside a `<name>=<suite>`, a library it does not know and a suite not built against it refused; on the build tree, the library loaded now in the `flexiblas` job, refused elsewhere |
-| `tests` | `test_release_files.sh` | `CHANGELOG.md` and `CITATION.cff` agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
+| `src/mcp` | `test_bmb_mcp.sh` | `bmb_mcp`, through its stdin as a client drives it: the handshake, every tool on the build tree at tiny sizes (the routines, the machine, a benchmark run and read back, the suite, the report), each refusal before anything runs (a path outside the results directory, more threads than CPUs, a name taken, an argument the tool or the benchmark does not take), a run past the memory limit, one past the time cap, a wrong result, and messages that are not requests; SKIPs without `python3` |
+| `tests` | `test_release_files.sh` | `CHANGELOG.md`, `CITATION.cff` and the plugin's manifest agree with the version: an `[Unreleased]` section for a `-dev` one, a dated section for a release, which `CITATION.cff` cites on the same date |
 | | `test_editorconfig.sh` | every text file in git follows `.editorconfig`: UTF-8, LF, a final newline, no trailing whitespace, spaces to indent (a tab first in `Makefile.am`); SKIPs outside a git checkout |
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
 | | `test_configure_paths.sh` | `--with-blas-incpath`/`--with-blas-libpath` come first in the search, ahead of a module's variables and of the directories `configure` probes in a distribution's install (#58): `configure` run per backend, its flags read from `config.log` |
 | | `test_coverage_exclusions.sh` | every coverage exclusion in the C code (`GCOVR_EXCL_*`) gives its reason on its line, and every `START` has its `STOP` |
 | | `test_spack_repo_index.sh` | each path of `spack-repo-index.yaml`, where Spack looks when the repository is added by its git URL, holds a Spack repository: a `repo.yaml` whose namespace is the directory's name, and `packages/`; SKIPs without the index (the tarball) |
-| | `test_routines.sh` | every list of the routines (the levels' and the man pages' `Makefile.am`, the man page's NAME and tables, the README's, the report's `LEVEL` and `FAMILY`, ReFrame's `ROUTINES` and `DIRECTORY`, `bmb_suite`'s) is what `src/c/routines.sh` writes from `src/c/routines.txt`; on a copy, a routine added to the table alone makes the 9 lists it belongs in stale, and a malformed line, a duplicate or a missing marker is refused |
+| | `test_plugin.sh` | the Claude Code plugin (`.claude-plugin/`): the marketplace and plugin manifests are JSON with the fields Claude Code reads, the marketplace's one plugin is the repository under the plugin's name, its MCP server is `bmb_mcp`, its skills are there; SKIPs without `.claude-plugin/` (the tarball) or `python3` |
+| | `test_routines.sh` | every list of the routines (the levels' and the man pages' `Makefile.am`, the man page's NAME and tables, the README's, the report's `LEVEL` and `FAMILY`, ReFrame's `ROUTINES` and `DIRECTORY`, `bmb_suite`'s, `bmb_mcp`'s) is what `src/c/routines.sh` writes from `src/c/routines.txt`; on a copy, a routine added to the table alone makes the 10 lists it belongs in stale, and a malformed line, a duplicate or a missing marker is refused |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
 | | `test_man_options.sh` | the pages list exactly the options of `--help`, with the same numeric defaults |
 | | `test_man_content.sh` | what the page says against what the programs do: routines and their levels, which dimension is which, the sweep examples, the point limit, the JSON fields (against the keys `bmb_print.c` can write, since a run leaves out those that do not apply — `blas` under Netlib, NVPL and ArmPL), the environment variables, the variables a result records (against `bmb_run_variables`), the exit statuses, the commands in the examples |
 | | `test_man_html.sh` | the site `html.sh` builds: every page of its menu there and in every page's menu, every section of blas-microbenchmark(1) on exactly one of its pages, the guides' commands running programs that exist with options they take, every link leading to a file and an anchor of the site or to https, nothing loaded from elsewhere, every section in its page's table of contents, the pages linked to each other, every option of `--help` in the manual's pages, the outputs page showing this version's table, CSV and JSON (and the report's screenshots in a git checkout); `html.sh` fails without mandoc or without the benchmarks |
-| | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report`, `man bmb_suite` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
+| | `test_man_install.sh` | after `make install`, `man blas-microbenchmark`, `man bmb_report`, `man bmb_suite`, `man bmb_mcp` and `man bmb_<routine>` open, with this build's install path; `make uninstall` leaves nothing |
+| | `test_man_skills.sh` | the skills (`skills/*/SKILL.md`): the front matter of the Agent Skills format, a name that is its directory's and a description; every command in a code block runs a program that exists with options it takes; every `bmb_mcp` tool named is one it lists (not checked without `python3`) |
 
-Some tests SKIP where what they need is missing: the two browser tests
+Some tests SKIP where what they need is missing: `test_bmb_mcp.sh`
+without `python3`, the two browser tests
 without a browser (see [Testing the
 page](doc/dev/report.md#testing-the-page)), the man page tests without
 groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
@@ -250,8 +254,13 @@ src/report/      # bmb_report: the script, the HTML template, how the two
                  # the browser tests (browser.sh, test_report.js)
 src/suite/       # bmb_suite, which runs the suite into one directory of
                  # results, and its test
-man/             # the man pages, blas-microbenchmark(1), bmb_report(1)
-                 # and bmb_suite(1), html.sh and devpage.sh, which make the
+src/mcp/         # bmb_mcp, the MCP server agents run the benchmarks
+                 # through, and its test
+skills/          # the skills (SKILL.md, the Agent Skills format) that
+                 # tell an agent how to measure, compare and read
+                 # results, installed in $(pkgdatadir)/skills
+man/             # the man pages, blas-microbenchmark(1), bmb_report(1),
+                 # bmb_suite(1) and bmb_mcp(1), html.sh and devpage.sh, which make the
                  # documentation site, site.css, its stylesheet, and
                  # site/, its guides;
                  # the man page tests and man_helper.sh, what they share
@@ -287,7 +296,8 @@ the LICENSE, CHANGELOG.md, CONTRIBUTING.md, this file (where coding
 agents look), CITATION.cff (where GitHub looks), spack-repo-index.yaml
 (where Spack looks, in a clone added by its URL), the build files
 (`configure.ac`, `Makefile.am`, `autogen.sh`) and the dot files and
-directories (`.clusterfuzzlite/` is where ClusterFuzzLite looks). A new
+directories (`.clusterfuzzlite/` is where ClusterFuzzLite looks,
+`.claude-plugin/` where Claude Code looks for a plugin marketplace). A new
 file goes in one of the directories above.
 
 `common/` builds into a static convenience library (`libbmbcommon.a`, never
@@ -327,8 +337,8 @@ alternatives and kept on purpose, so don't "fix" it:
   bigger annoyance.
 
 The cost is that no benchmark lands in `$PATH`; README.md gives the two
-lines that put the three directories there. The exceptions are the two
-user-facing commands, `bmb_report` and `bmb_suite`, which go to `$(bindir)`
+lines that put the three directories there. The exceptions are the three
+user-facing commands, `bmb_report`, `bmb_suite` and `bmb_mcp`, which go to `$(bindir)`
 — and so follow `--prefix`, `--bindir` and `DESTDIR` like anything else
 Automake installs. `bmb_suite` runs the whole suite (#254); it is not the
 launcher rejected above, and the benchmarks keep their names. CI checks that on every pull request (the `openblas` job's "Install

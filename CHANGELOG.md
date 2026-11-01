@@ -10,6 +10,23 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `bmb_mcp` (#262), installed beside `bmb_report` and `bmb_suite`: an MCP
+  server, so that an AI agent lists the routines, describes the machine,
+  runs a benchmark or the suite, reads a result and makes the report,
+  through tools whose arguments are fields. Every run is checked before
+  it starts (its arguments, its operands against the memory, its threads
+  against the CPUs, every path inside the results directory) and
+  stopped at a time cap. Python 3, standard library only; `bmb_mcp(1)`.
+- Skills (#263), installed in `$(pkgdatadir)/skills`: `blas-benchmark`,
+  `blas-compare` and `blas-results`, in the Agent Skills format, which
+  tell an agent how to measure a routine, compare libraries and read the
+  results as this project does, with `bmb_mcp`'s tools or the commands.
+  A guide on the site, "With an AI agent".
+- A Claude Code plugin (#264): the repository is a plugin marketplace
+  whose plugin brings `bmb_mcp` and the skills, `/plugin install
+  blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark`.
+  The Docker image has `python3` and runs `bmb_mcp` (`docker run -i`); the
+  Spack package depends on Python at run time and tests the server.
 - `configure --enable-ilp64` (#172): the library's 64-bit integer
   interface, OpenBLAS's (Debian's `libopenblas64`, or a build with
   `INTERFACE64=1`) or MKL's; any other backend is refused. A vector may

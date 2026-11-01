@@ -1,0 +1,20 @@
+{
+  "name": "blas-microbenchmark",
+  "version": "1.10.0-dev",
+  "description": "bmb_mcp, an MCP server over the installed blas-microbenchmark suite, and skills to measure, compare and read BLAS results as the project does. Needs blas-microbenchmark installed, with bmb_mcp on PATH.",
+  "author": {
+    "name": "Mathieu Caissa"
+  },
+  "homepage": "https://mathieucaissa.github.io/blas-microbenchmark/agents.html",
+  "repository": "https://github.com/MathieuCAISSA/blas-microbenchmark",
+  "license": "Apache-2.0",
+  "mcpServers": {
+    "blas-microbenchmark": {
+      "command": "bmb_mcp",
+      "args": [
+        "--results-dir",
+        "bmb-results"
+      ]
+    }
+  }
+}
