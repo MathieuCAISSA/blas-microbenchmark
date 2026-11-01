@@ -9,6 +9,11 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Fixed
+- `bmb_report`'s roofline labelled a log tick below 0.01 with two
+  decimals, 0.005 as "0.01" (#290): such a tick now keeps its one
+  significant figure.
+
 ## [1.9.0] - 2026-10-29
 
 ### Added

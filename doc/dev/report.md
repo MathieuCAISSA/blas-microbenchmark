@@ -281,7 +281,8 @@ raw data table and fades it out after its first rows. The
 README shows the six as a 3×2 grid, so they need about the same
 proportions: the heatmap, which spans a whole row of the page, is taken at
 a narrower window than the line charts (the width is per chart, in
-`SHOTS`). Redo the
+`SHOTS`). The `browsers` job runs it on every pull request, on a page of
+tiny runs, so a chart it can no longer find fails there. Redo the
 images whenever the page's look changes, and keep the README's commands,
 and the machine and library versions it names, matching what produced
 them.

@@ -157,7 +157,7 @@ pass "--peak-gbs passed on, in both forms"
 # nothing but the counts, the provenance and the table's header: an
 # option a routine refuses, or ignores with a warning, would show.
 for p in quick full; do
-    rm -rf "$T/$p"
+    rm -rf "${T:?}/$p"
     BMB_COUNTS=1 BMB_MACHINE_ROOT=${srcdir:-.}/../c/common/fixtures/machine/x86 \
         $R --profile "$p" -o "$T/$p" >"$T/out" 2>"$T/err" || fail "--profile $p under BMB_COUNTS: $(cat "$T/err")"
     test "$(ls "$T/$p"/*.log | wc -l)" -eq "$(wc -l <"$T/table")" || fail "--profile $p: not a log a routine"
@@ -173,7 +173,7 @@ $R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err
     fail "the whole suite did not run: $(cat "$T/err")"
 test -s "$T/out" && fail "bmb_suite wrote to stdout: $(head -3 "$T/out")"
 n=0
-while read -r r l p; do
+while read -r r _ p; do
     j=$T/results/$r.json
     test -s "$j" || fail "no $j"
     test -s "$T/results/$r.log" || fail "no $T/results/$r.log"

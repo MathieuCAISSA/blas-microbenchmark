@@ -3,6 +3,8 @@
 # would: man blas-microbenchmark, man bmb_report, man bmb_suite, and man bmb_<routine> for
 # every benchmark, through its alias. Then uninstalls, and checks nothing
 # is left behind.
+#
+# shellcheck disable=SC2154 # mandir, man1dir and pkglibexecdir come from make
 set -e
 . "${srcdir:-.}/man_helper.sh"
 need man "open the installed pages"

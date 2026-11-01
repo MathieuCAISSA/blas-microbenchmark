@@ -88,7 +88,7 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
 - `main` is protected: a pull request cannot be merged until every
   required check passes, and `main` cannot be force-pushed or deleted.
   Every job of `ci.yml` is required except `coverage`, which has no
-  threshold. On a pull request that changes documentation only, the
+  threshold, and so are `fuzz.yml`'s two. On a pull request that changes documentation only, the
   jobs that build and test a library are skipped, which passes them
   ([CI](doc/dev/ci.md)). CodeQL is not required: its pull request check fails on a
   new alert in the diff, and its run on `main` while any alert is open
@@ -181,6 +181,7 @@ the test.
 | | `test_actions_pinned.sh` | every `uses:` in the workflows is pinned to a full commit SHA, with its version in a comment; SKIPs without `.github/` (the tarball) |
 | | `test_configure_paths.sh` | `--with-blas-incpath`/`--with-blas-libpath` come first in the search, ahead of a module's variables and of the directories `configure` probes in a distribution's install (#58): `configure` run per backend, its flags read from `config.log` |
 | | `test_coverage_exclusions.sh` | every coverage exclusion in the C code (`GCOVR_EXCL_*`) gives its reason on its line, and every `START` has its `STOP` |
+| | `test_spack_repo_index.sh` | each path of `spack-repo-index.yaml`, where Spack looks when the repository is added by its git URL, holds a Spack repository: a `repo.yaml` whose namespace is the directory's name, and `packages/`; SKIPs without the index (the tarball) |
 | | `test_routines.sh` | every list of the routines (the levels' and the man pages' `Makefile.am`, the man page's NAME and tables, the README's, the report's `LEVEL` and `FAMILY`, ReFrame's `ROUTINES` and `DIRECTORY`, `bmb_suite`'s) is what `src/c/routines.sh` writes from `src/c/routines.txt`; on a copy, a routine added to the table alone makes the 9 lists it belongs in stale, and a malformed line, a duplicate or a missing marker is refused |
 | | `test_doc_links.sh` | every relative link in the Markdown files leads to a file in git and, for an `#anchor`, to a heading there, as GitHub spells it; SKIPs outside a git checkout |
 | `man` | `test_man_render.sh` | the pages render: placeholders substituted, dated, no groff warning, clean under `mandoc -Tlint`, no command, option or path with a typographic hyphen |
@@ -194,7 +195,7 @@ without a browser (see [Testing the
 page](doc/dev/report.md#testing-the-page)), the man page tests without
 groff or `man`, `test_man_html.sh` without mandoc, `test_editorconfig.sh`
 and `test_doc_links.sh` outside a git checkout, `test_actions_pinned.sh`
-without `.github/`, `test_configure_paths.sh` in a source tree configured
+without `.github/`, `test_spack_repo_index.sh` without the index, `test_configure_paths.sh` in a source tree configured
 in place, `test_bmb_alloc_failures.sh` under AddressSanitizer (the
 `sanitizers` job), `test_bmb_colors.sh` without `script(1)` or a terminal it can open; `test_netlib_cblas` is only built for Netlib. Every
 other test runs anywhere. The mandoc lint is left out, with a
@@ -271,7 +272,7 @@ packaging/docker/
 packaging/reframe/
                  # the ReFrame tests, and how a site runs them; also
                  # distributed, and installed in $(pkgdatadir)/reframe
-.github/         # the workflows (ci, codeql, scorecard, pages, release),
+.github/         # the workflows (ci, fuzz, codeql, scorecard, pages, release),
                  # Codecov's settings (codecov.yml), the issue and pull
                  # request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,

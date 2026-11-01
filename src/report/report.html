@@ -1317,6 +1317,11 @@ details[open] > summary { margin-bottom: 12px; }
    * compute peak when there is one. */
   function roofAt(roof, x) { return roof.gflops ? Math.min(roof.gbs * x, roof.gflops) : roof.gbs * x; }
 
+  /* A log axis' tick, 1, 2 or 5 times a power of ten: as a rate down to
+   * 0.01, below which two decimals would round 0.005 to "0.01" (#290),
+   * with its one significant figure. */
+  function logTick(v) { return v >= 0.01 ? fmtRate(v) : String(Number(v.toPrecision(1))); }
+
   /* 1, 2 and 5 times each power of ten between lo and hi. */
   function decadeTicks(lo, hi) {
     var t = [], k;
@@ -1375,12 +1380,12 @@ details[open] > summary { margin-bottom: 12px; }
         var py = Math.round(sy(v)) + 0.5;
         svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: py, y2: py }, "gridline"));
         var tt = sv("text", { x: m.left - 8, y: sy(v) + 4, "text-anchor": "end" }, "tick");
-        tt.textContent = fmtRate(v);
+        tt.textContent = logTick(v);
         svg.appendChild(tt);
       });
       thinTicks(decadeTicks(data.x[0], data.x[1]), sx, 36).forEach(function (v) {
         var tx = sv("text", { x: sx(v), y: m.top + ih + 18, "text-anchor": "middle" }, "tick");
-        tx.textContent = fmtRate(v);
+        tx.textContent = logTick(v);
         svg.appendChild(tx);
       });
       svg.appendChild(sv("line", { x1: m.left, x2: m.left + iw, y1: m.top + ih + 0.5, y2: m.top + ih + 0.5 }, "axisline"));
@@ -2040,7 +2045,7 @@ details[open] > summary { margin-bottom: 12px; }
     thinTicks: thinTicks, threadData: threadData, threadsWithGrid: threadsWithGrid,
     heatData: heatData, heatStep: heatStep, STEPS: STEPS,
     pointSize: pointSize, singlePrecision: singlePrecision, peakOf: peakOf, peakUsed: peakUsed, percentOfPeak: percentOfPeak, peakText: peakText,
-    rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks
+    rooflineData: rooflineData, roofAt: roofAt, decadeTicks: decadeTicks, logTick: logTick
   };
 
   /* ------------------------------------------------------------------ *

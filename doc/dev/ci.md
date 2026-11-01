@@ -38,7 +38,7 @@ down:
   the `man` job run, and the eleven jobs that build and test a library
   otherwise are skipped. A skipped job passes a required check, so they
   run when `changes` fails (`!cancelled()`). The matrix jobs
-  (`browsers`, `fuzz`, `docker`, `spack`) always run: a matrix job
+  (`browsers`, `docker`, `spack`) always run: a matrix job
   skipped whole reports under its bare name, and its checks, required
   under their matrix names, would never come.
 - **No run again before a merge**: AGENTS.md's "Working on an issue"
@@ -75,7 +75,11 @@ The `browsers` job builds with OpenBLAS and runs only `src/report`'s tests,
 once in Firefox (through geckodriver) and once in Edge, both preinstalled
 on the runner image — Edge is installed from Microsoft's repository if it
 ever stops being. It exists because Firefox is the browser users are told
-to use, and Chrome passing says nothing about it.
+to use, and Chrome passing says nothing about it. Its Firefox leg also
+runs `doc/screenshots.sh` on a report of tiny runs and requires every
+image it takes (#283): the script finds each chart by its title, and a
+change to the page that loses one would otherwise go unseen until the
+images are next redone.
 
 The `man` job runs the man page tests in a Fedora container: another
 groff and man-db build than Ubuntu's, plus mandoc for its lint, with
@@ -83,6 +87,8 @@ groff and man-db build than Ubuntu's, plus mandoc for its lint, with
 builds without `--enable-werror`, since Fedora's newer GCC is not what it
 is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
 it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
+It then runs `make html`, as `pages.yml` does on `main`, where the tests
+run `html.sh` alone (#283).
 
 The `spack` job builds the Spack package with Spack, against OpenBLAS,
 BLIS, AOCL-BLAS, Netlib, FlexiBLAS and MKL, from this commit's tarball and from the
@@ -222,7 +228,12 @@ test takes:
   with no precision `bmb_prec.h` stops at its `#error`, so a run over the
   tree would leave the family unread (#200). To run it locally, after
   configure: `.github/scripts/cppcheck.sh build` (`apt install cppcheck`, or
-  `pip install cppcheck`).
+  `pip install cppcheck`). The same job runs shellcheck over every shell
+  script in git, at warning level and above (#283): a finding is fixed,
+  or disabled on the line with the reason (`# shellcheck disable=SC2086 #
+  ...`); a file that is sourced says its shell (`# shellcheck shell=sh`).
+  Locally: `git ls-files -z '*.sh' | xargs -0 shellcheck -S warning`
+  (`apt install shellcheck`, or `pip install shellcheck-py`).
 - CodeQL (`codeql.yml`, its own workflow) builds the code and runs
   GitHub's security and quality queries, which follow data across
   functions. It runs on every pull request and push to `main`, and
@@ -275,11 +286,16 @@ ASAN_OPTIONS=detect_leaks=1 \
 
 ## Fuzzing
 
-The `fuzz` job runs on pull requests only: [ClusterFuzzLite](https://google.github.io/clusterfuzzlite/)
+The `fuzz` job has a workflow of its own, `fuzz.yml`:
+[ClusterFuzzLite](https://google.github.io/clusterfuzzlite/)
 builds the fuzz targets with clang and libFuzzer in OSS-Fuzz's builder
 image (`.clusterfuzzlite/Dockerfile`, pinned by digest, which Dependabot
-moves; `build.sh`), then fuzzes each for five minutes, once under ASan and
-once under UBSan. There is one target, `fuzz_bmb_options`
+moves; `build.sh`), then fuzzes each, once under ASan and once under
+UBSan: five minutes on a pull request, when the change reaches the
+target's code (`code-change` mode), its two jobs required checks; then
+from the seeds (`batch` mode) ten minutes after each merge to `main`,
+and thirty each week (#276), so that the parser as merged is fuzzed
+past a pull request's five minutes. There is one target, `fuzz_bmb_options`
 (`src/c/common`): the command-line parser, where everything a user types
 arrives. Each input is an argv, split on its NUL bytes; whatever the
 parser accepts is held to what the benchmarks rely on (the checks are
@@ -293,6 +309,8 @@ replays the corpus through the same function in every job, keeps it
 fixed. To replay one input locally: `src/c/common/fuzz_bmb_options FILE`
 from a build directory, ideally a sanitizer build (above).
 
-ClusterFuzzLite keeps no corpus between runs here (that needs a storage
-repository): each run starts from the seeds. OpenSSF Scorecard's
+ClusterFuzzLite keeps no corpus between runs here: that needs a
+repository to keep it in and a token in this one's secrets that writes
+to it, a cost not taken (#276). Each run starts from the seeds, which a
+crash found on `main` joins with its fix, as on a pull request. OpenSSF Scorecard's
 `Fuzzing` check looks for `.clusterfuzzlite/`.

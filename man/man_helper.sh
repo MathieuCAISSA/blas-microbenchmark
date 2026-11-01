@@ -1,3 +1,4 @@
+# shellcheck shell=sh
 # Sourced by the man page tests (test_man_*.sh), from the build directory
 # man/, where make has generated the pages.
 #

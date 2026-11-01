@@ -13,22 +13,23 @@ need mandoc "build the site"
 # With the chart when the checkout has it (a release tarball does not):
 # the checks below hold either way.
 site=$T/site
-IMAGES=${srcdir:-.}/../doc/images srcdir=${srcdir:-.} \
-    "${SHELL:-/bin/sh}" "${srcdir:-.}/html.sh" "$site" "$PACKAGE_VERSION" $PAGES \
+src=${srcdir:-.}
+IMAGES=$src/../doc/images srcdir=$src \
+    "${SHELL:-/bin/sh}" "$src/html.sh" "$site" "$PACKAGE_VERSION" $PAGES \
     >"$T/build.log" 2>&1 || fail "html.sh failed: $(cat "$T/build.log")"
 
 # A site with empty pages must not pass for a site: without mandoc, or
 # when it fails, html.sh fails too. (It once wrote empty pages and said
 # nothing, the failure hidden in a pipe.)
 for bad in "$T/no-such-mandoc" false; do
-    if MANDOC=$bad srcdir=${srcdir:-.} "${SHELL:-/bin/sh}" "${srcdir:-.}/html.sh" "$T/bad" "$PACKAGE_VERSION" $PAGES \
+    if MANDOC=$bad srcdir=$src "${SHELL:-/bin/sh}" "$src/html.sh" "$T/bad" "$PACKAGE_VERSION" $PAGES \
         >/dev/null 2>&1; then
         fail "html.sh succeeded with MANDOC=$bad"
     fi
 done
 ok "html.sh fails when mandoc is missing or fails"
 
-if BENCH_DIR="$T/nowhere" srcdir=${srcdir:-.} "${SHELL:-/bin/sh}" "${srcdir:-.}/html.sh" "$T/bad" "$PACKAGE_VERSION" $PAGES \
+if BENCH_DIR="$T/nowhere" srcdir=$src "${SHELL:-/bin/sh}" "$src/html.sh" "$T/bad" "$PACKAGE_VERSION" $PAGES \
     >/dev/null 2>&1; then
     fail "html.sh succeeded without the benchmarks it runs for outputs.html"
 fi
@@ -68,6 +69,7 @@ for g in "${srcdir:-.}"/site/*.html; do
     awk '/<pre>/ { on = 1; sub(/.*<pre>/, "") } on { line = $0; sub(/<\/pre>.*/, "", line); print line } /<\/pre>/ { on = 0 }' "$g"
 done | sed 's/&lt;/</g; s/&gt;/>/g; s/&amp;/\&/g' >"$T/guide-commands"
 check_commands "$T/guide-commands"
+# shellcheck disable=SC2154 # set by man_helper.sh's check_commands
 test "$commands_checked" -ge 15 || fail "only $commands_checked commands found in the guides"
 ok "the $commands_checked commands in the guides run programs that exist, with options they take"
 

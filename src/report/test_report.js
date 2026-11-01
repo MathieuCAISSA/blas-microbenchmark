@@ -900,6 +900,9 @@
          "bmb_report's bandwidth alone: the memory roof alone");
 
       eq(R.decadeTicks(0.03, 30), [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20], "log ticks: 1, 2 and 5 times each power of ten");
+      eq(R.decadeTicks(0.0004, 0.03).map(R.logTick), ["0.0005", "0.001", "0.002", "0.005", "0.01", "0.02"],
+         "#290: below 0.01, a tick has its one significant figure, 0.005 no longer 0.01");
+      eq([0.1, 2, 50, 200].map(R.logTick), ["0.10", "2.00", "50.0", "200"], "#290: from 0.01, as rates");
     });
 
     /* ---- The peak where it is used (#288) ---- */

@@ -32,7 +32,7 @@ listed: $(echo $listed)"
 
 names=$(section $PAGE NAME)
 for r in $built; do
-    printf '%s\n' "$names" | grep -q "bmb_$r[,\\ ]" || fail "bmb_$r is not in the NAME section"
+    printf '%s\n' "$names" | grep -q "bmb_${r}[,\\ ]" || fail "bmb_$r is not in the NAME section"
 done
 ok "every benchmark built is named in the page and has an alias ($(echo $built | wc -w))"
 
@@ -148,6 +148,7 @@ ok "the page names exactly the $(wc -l <"$T/writable") JSON fields bmb_print.c w
 # ---- environment ------------------------------------------------------
 grep -o '"[A-Z_]*_NUM_THREADS"' "$S/../src/c/common/bmb_threads.c" | tr -d '"' | sort -u >"$T/read"
 section $PAGE ENVIRONMENT | grep -o '[A-Z_]*_NUM_THREADS' | sort -u >"$T/named"
+# shellcheck disable=SC2046 # $(echo $(cat ...)): the words on one line
 cmp -s "$T/read" "$T/named" || fail "the thread-count variables in ENVIRONMENT ($(echo $(cat "$T/named"))) are not the ones bmb_threads.c reads ($(echo $(cat "$T/read")))"
 ok "ENVIRONMENT names the $(wc -l <"$T/read") thread-count variables the code reads"
 
@@ -158,6 +159,7 @@ sed -n '/bmb_run_variables\[\] = {/,/^};/p' "$S/../src/c/common/bmb_print.c" \
 section $PAGE OUTPUT | sed -n '/^The next lines say how the run was made/,/^\.PP/p' \
     | sed -n 's/^\.BR\{0,1\} \([A-Z_]*\)\( .*\)\{0,1\}$/\1/p' | sort >"$T/listed"
 test -s "$T/recorded" || fail "no variables found in bmb_print.c's bmb_run_variables"
+# shellcheck disable=SC2046 # $(echo $(cat ...)): the words on one line
 cmp -s "$T/recorded" "$T/listed" || fail "the variables OUTPUT lists ($(echo $(cat "$T/listed"))) are not the ones bmb_print.c records ($(echo $(cat "$T/recorded")))"
 ok "OUTPUT lists the $(wc -l <"$T/recorded") variables a result records when set"
 
@@ -224,6 +226,7 @@ commands=0
 for page in $PAGES; do
     unescape "$page" | awk '/^\.EX/ { on = 1; next } /^\.EE/ { on = 0 } on' >"$T/examples"
     check_commands "$T/examples"
+    # shellcheck disable=SC2154 # set by man_helper.sh's check_commands
     commands=$((commands + commands_checked))
 done
 test "$commands" -ge 10 || fail "only $commands commands found in the examples"
