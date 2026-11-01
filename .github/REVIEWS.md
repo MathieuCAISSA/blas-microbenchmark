@@ -68,6 +68,12 @@ it comes from in brackets.
   code it guards broken, by a mutation that still compiles
   ([tests](../AGENTS.md#tests)).
 - [ ] Tiny sizes only; nothing allocates more than a few MB.
+- [ ] A test that runs a program under `set -e` reads its exit status
+  where the program can exit 77: passed on, the program's skip becomes
+  the whole test's, SKIP and not FAIL, and nothing after it runs.
+  `test_man_content.sh` skipped that way in a build without gemmt, and
+  only the files it left behind showed it (#171). Compare a run's
+  SKIP lines with `main`'s.
 - [ ] Current formats are generated, not kept as fixtures.
 - [ ] A test that SKIPs where its tool is missing is required to pass
   in at least one CI job.
