@@ -1,0 +1,58 @@
+name: Fuzz
+
+# The command-line parser fuzzed, on inputs no test wrote: ClusterFuzzLite
+# builds src/c/common/fuzz_bmb_options.c with libFuzzer (.clusterfuzzlite/),
+# from its seed corpus and dictionary, then fuzzes it, once under
+# AddressSanitizer and once under UndefinedBehaviorSanitizer. A crash, a
+# sanitizer report or a promise of the parser broken fails the job, with
+# the input that did it. Every job of ci.yml that runs make check replays
+# the corpus.
+#
+# On a pull request, five minutes, when the change reaches the target's
+# code (code-change mode): the jobs are required checks. On main, after
+# each merge and every week, longer runs from the seeds (batch mode), so
+# that the parser as merged is fuzzed past a pull request's five minutes
+# (#276). No corpus is kept between runs: that needs a repository to keep
+# it in and a token that writes to it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A pull request's run is cancelled when a new push supersedes it; a run
+# on main or on the schedule never is.
+concurrency:
+  group: fuzz-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, undefined]
+
+    steps:
+      - name: Build the fuzz targets
+        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          language: c
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sanitizer: ${{ matrix.sanitizer }}
+
+      # Five minutes on a pull request, ten after a merge to main, thirty a
+      # week.
+      - name: Fuzz
+        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fuzz-seconds: ${{ github.event_name == 'pull_request' && 300 || github.event_name == 'schedule' && 1800 || 600 }}
+          mode: ${{ github.event_name == 'pull_request' && 'code-change' || 'batch' }}
+          sanitizer: ${{ matrix.sanitizer }}

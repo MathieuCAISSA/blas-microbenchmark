@@ -23,7 +23,7 @@ jobs:
   # openblas job, whose make check reads every page and link, and the man
   # job run, and the jobs that build and test a library are skipped. If
   # this job fails, they all run: a skipped job would pass a required
-  # check. The matrix jobs (browsers, fuzz, docker, spack) always run: a
+  # check. The matrix jobs (browsers, docker, spack) always run: a
   # matrix job skipped whole reports under its bare name, and the checks
   # required under its matrix names would wait for ever.
   changes:
@@ -800,37 +800,6 @@ jobs:
         run: |
           shellcheck --version | sed -n 2p
           git ls-files -z '*.sh' | xargs -0 shellcheck -S warning
-
-  # The command-line parser fuzzed, on inputs no test wrote: ClusterFuzzLite
-  # builds src/c/common/fuzz_bmb_options.c with libFuzzer (.clusterfuzzlite/),
-  # from its seed corpus and dictionary, then runs it for five minutes,
-  # once under AddressSanitizer and once under UndefinedBehaviorSanitizer.
-  # A crash, a sanitizer report or a promise of the parser broken fails
-  # the job, with the input that did it. On pull requests only; every job
-  # that runs make check replays the corpus.
-  fuzz:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        sanitizer: [address, undefined]
-
-    steps:
-      - name: Build the fuzz targets
-        uses: google/clusterfuzzlite/actions/build_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
-        with:
-          language: c
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          sanitizer: ${{ matrix.sanitizer }}
-
-      - name: Fuzz
-        uses: google/clusterfuzzlite/actions/run_fuzzers@884713a6c30a92e5e8544c39945cd7cb630abcd1 # v1
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          fuzz-seconds: 300
-          mode: code-change
-          sanitizer: ${{ matrix.sanitizer }}
 
   # FlexiBLAS loads the BLAS library at run time (FLEXIBLAS=...), so one
   # build measures several. Debian and Ubuntu do not package it; Fedora

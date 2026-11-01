@@ -88,7 +88,7 @@ gh pr merge --merge          # a merge commit keeps the detailed commits
 - `main` is protected: a pull request cannot be merged until every
   required check passes, and `main` cannot be force-pushed or deleted.
   Every job of `ci.yml` is required except `coverage`, which has no
-  threshold. On a pull request that changes documentation only, the
+  threshold, and so are `fuzz.yml`'s two. On a pull request that changes documentation only, the
   jobs that build and test a library are skipped, which passes them
   ([CI](doc/dev/ci.md)). CodeQL is not required: its pull request check fails on a
   new alert in the diff, and its run on `main` while any alert is open
@@ -272,7 +272,7 @@ packaging/docker/
 packaging/reframe/
                  # the ReFrame tests, and how a site runs them; also
                  # distributed, and installed in $(pkgdatadir)/reframe
-.github/         # the workflows (ci, codeql, scorecard, pages, release),
+.github/         # the workflows (ci, fuzz, codeql, scorecard, pages, release),
                  # Codecov's settings (codecov.yml), the issue and pull
                  # request templates, Dependabot's settings, and the
                  # community files GitHub reads there: CODE_OF_CONDUCT.md,
