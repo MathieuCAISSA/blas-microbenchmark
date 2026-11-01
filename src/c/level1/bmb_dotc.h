@@ -106,7 +106,7 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_real_t result[2];
     double got[2], want[2] = {0.0, 0.0}, scale[2];
     double sum = 0.0;
-    int i;
+    bmb_int i;
 
     call(ctx);
     result[0] = ctx->dot[0];

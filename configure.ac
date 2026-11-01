@@ -172,7 +172,10 @@ AS_IF([test "x$bmb_ilp64" = xyes], [
   AS_CASE(["$bmb_blas_backend"],
     [openblas|mkl], [AC_DEFINE([BMB_ILP64], [1], [Define for the BLAS library's 64-bit integer interface (ILP64).])],
     [AC_MSG_ERROR([--enable-ilp64 is for --with-blas-backend=openblas or mkl, whose 64-bit integer interfaces the benchmarks support (got '$bmb_blas_backend')])])
-])
+  bmb_int_bits=64
+], [bmb_int_bits=32])
+AC_DEFINE_UNQUOTED([BMB_BLAS_INT_BITS], [$bmb_int_bits],
+  [The width of the integers the BLAS library takes: 64 under --enable-ilp64, 32 otherwise.])
 
 dnl Generic hints, applied whatever the backend. Backend-specific ones are
 dnl applied inside each case below, so they take priority over these.

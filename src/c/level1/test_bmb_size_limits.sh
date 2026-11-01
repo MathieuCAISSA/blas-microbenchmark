@@ -30,7 +30,9 @@ refuse ../level2/double/bmb_dgemv -m 99999999999  # past every ceiling
 
 if grep -q '^#define BMB_ILP64 1$' "${top_builddir:?top_builddir is not set}/config.h"; then
     # Counted, never run: 2^31 elements are 16 GB of ddot's operands.
-    BMB_COUNTS=1 ./double/bmb_ddot -v 2147483648 >/dev/null 2>&1 || fail "-v 2147483648 was refused in an ILP64 build"
+    BMB_COUNTS=1 ./double/bmb_ddot -v 2147483648 >/dev/null 2>counts.err || fail "-v 2147483648 was refused in an ILP64 build"
+    grep -q '^counts: ddot 2147483648 ' counts.err || fail "-v 2147483648 was not counted at that size"
+    rm -f counts.err
     refuse ./double/bmb_ddot -v 576460752303423488   # 2^59, past SIZE_MAX / 32
     echo "ok   ILP64: a vector past 2^31 taken (counted, not run), one past what size_t can size refused"
 else

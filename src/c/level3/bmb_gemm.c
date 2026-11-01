@@ -31,7 +31,7 @@ typedef struct {
     bmb_int k;
     char ta; /* --trans: N, T or C, A's */
     char tb; /* B's */
-    int ra, ca, rb, cb; /* A's and B's rows and columns, as stored */
+    bmb_int ra, ca, rb, cb; /* A's and B's rows and columns, as stored */
     bmb_int count;      /* --batch-count */
     int mode;           /* --batch-mode, a bmb_batch_mode_t */
     size_t sa, sb, sc;  /* the elements from one matrix to the next */
@@ -95,10 +95,10 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     ctx->k = (bmb_int) k;
     ctx->ta = ta;
     ctx->tb = tb;
-    ctx->ra = (int) ra;
-    ctx->ca = (int) ca;
-    ctx->rb = (int) rb;
-    ctx->cb = (int) cb;
+    ctx->ra = (bmb_int) ra;
+    ctx->ca = (bmb_int) ca;
+    ctx->rb = (bmb_int) rb;
+    ctx->cb = (bmb_int) cb;
     ctx->count = (bmb_int) count;
     ctx->mode = mode;
     ctx->sa = outa * lda;

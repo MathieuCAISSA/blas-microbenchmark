@@ -9,6 +9,11 @@
  * family goes through what is here; what differs between families stays
  * in their source. */
 
+/* config.h first: whether the build is ILP64 is in it, and a source
+ * that did not include it would give a 64-bit library int dimensions
+ * without a word (#172). */
+#include <config.h>
+
 #include <cblas.h>
 #include <stddef.h>
 
@@ -27,6 +32,14 @@ typedef blasint bmb_int;
 #else
 typedef int bmb_int;
 #endif
+
+/* Configure says the width; a bmb_int of another is a build that would
+ * pass the library the wrong integers. */
+#if !defined(BMB_BLAS_INT_BITS)
+#error "config.h does not define BMB_BLAS_INT_BITS: run configure again"
+#endif
+_Static_assert(sizeof(bmb_int) * 8 == BMB_BLAS_INT_BITS,
+               "bmb_int is not as wide as the integers the library takes");
 
 /* bmb_real_t: the real type, of a real element or of each part of a
  * complex one, real part first, the layout of C99's complex types and of

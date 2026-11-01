@@ -85,7 +85,7 @@ static int verify(void *vctx, char *msg, size_t size)
     bmb_ctx_t *ctx = vctx;
     bmb_real_t result;
     double got, want = 0.0, scale = 0.0;
-    int i;
+    bmb_int i;
 
     call(ctx);
     result = ctx->sink;
