@@ -153,7 +153,9 @@ runs them all in one command, a series each in the report.
 
 Each is `bmb_<routine>`. Level 1 and 2 report GFLOP/s and GB/s (copy,
 swap and `i?amax` GB/s only), level 3
-GFLOP/s.
+GFLOP/s. New to BLAS? [What BLAS is](https://mathieucaissa.github.io/blas-microbenchmark/blas.html)
+says, in five minutes, what the levels, the precisions and each routine
+are.
 
 ## Install
 
