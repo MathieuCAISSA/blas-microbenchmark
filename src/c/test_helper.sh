@@ -15,10 +15,11 @@ bmb_fail() {
 # bmb_missing <routine>: true when the routine is an extension of the
 # BLAS (#171, "ext" in routines.txt) that this build's library does not
 # have (no HAVE_CBLAS_<FAMILY> in config.h), so that its program skips.
-# For the tests of src/c, which run every benchmark: routines.txt is in
-# their srcdir, and top_builddir in their environment.
+# For the tests that run every benchmark: routines.txt is bmb_table, by
+# default in their srcdir (src/c's), and top_builddir in their
+# environment.
 bmb_missing() {
-    bmb_family=`awk -v r="$1" '!/^#/ && $1 == r && $6 == "ext" { print toupper($5) }' "${srcdir:-.}/routines.txt"`
+    bmb_family=`awk -v r="$1" '!/^#/ && $1 == r && $6 == "ext" { print toupper($5) }' "${bmb_table:-${srcdir:-.}/routines.txt}"`
     [ -n "$bmb_family" ] || return 1
     ! grep -q "^#define HAVE_CBLAS_$bmb_family 1\$" "${top_builddir:?top_builddir is not set}/config.h"
 }

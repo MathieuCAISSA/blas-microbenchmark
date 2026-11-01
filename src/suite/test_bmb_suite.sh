@@ -172,25 +172,37 @@ profile '# tiny, for make check' '' 'level1 -v 64' 'level2   -m 16  # a comment'
 $R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" ||
     fail "the whole suite did not run: $(cat "$T/err")"
 test -s "$T/out" && fail "bmb_suite wrote to stdout: $(head -3 "$T/out")"
+# An extension of the BLAS the library lacks (#171) is skipped, and said
+# to be: its log, no result.
+bmb_table=${srcdir:-.}/../c/routines.txt
+. "${srcdir:-.}/../c/test_helper.sh"
 n=0
+skipped=0
 while read -r r _ p; do
     j=$T/results/$r.json
-    test -s "$j" || fail "no $j"
-    test -s "$T/results/$r.log" || fail "no $T/results/$r.log"
-    grep -q "^  \"routine\": \"$r\",$" "$j" || fail "$j is not $r's"
     n=$((n + 1))
+    test -s "$T/results/$r.log" || fail "no $T/results/$r.log"
+    if bmb_missing "$r"; then
+        test -e "$j" && fail "$r, which this library lacks, has a result"
+        grep -q "^bmb_suite: $r: skipped, $r: this build's .* has no cblas_" "$T/err" ||
+            fail "$r's skip not said: $(cat "$T/err")"
+        skipped=$((skipped + 1))
+        continue
+    fi
+    test -s "$j" || fail "no $j"
+    grep -q "^  \"routine\": \"$r\",$" "$j" || fail "$j is not $r's"
 done <"$T/table"
 grep -q '"dim1": 64,' "$T/results/ddot.json" || fail "ddot was not run at the profile's size"
 grep -q '"dim2": 2,' "$T/results/dgbmv.json" || fail "dgbmv was not run with its own line of the profile"
 grep -q '"dim2": 16,' "$T/results/dgemv.json" || fail "dgemv was not run at level 2's size"
 grep -q '"dim1": 8,' "$T/results/zgemm.json" || fail "zgemm was not run at level 3's size"
 grep -q "^bmb_suite: ztrsm ($n/$n)\$" "$T/err" || fail "no progress line for the last one: $(tail -3 "$T/err")"
-test "$(ls "$T/results" | wc -l)" = $((2 * n)) || fail "more in $T/results than a JSON and a log a routine"
-pass "every benchmark ($n) run with the profile file, a JSON and a log each, a progress line each"
+test "$(ls "$T/results" | wc -l)" = $((2 * n - skipped)) || fail "more in $T/results than a JSON and a log a routine"
+pass "every benchmark ($n) run with the profile file, a JSON and a log each, a progress line each, $skipped extensions the library lacks skipped"
 
 ../report/bmb_report "$T/results" >"$T/report.html" 2>"$T/err" || fail "bmb_report refused the directory: $(cat "$T/err")"
-test "$(grep -c 'class="bmb-result"' "$T/report.html")" = "$n" || fail "the report does not hold the $n results"
-pass "bmb_report takes the directory: $n results"
+test "$(grep -c 'class="bmb-result"' "$T/report.html")" = $((n - skipped)) || fail "the report does not hold the $((n - skipped)) results"
+pass "bmb_report takes the directory: $((n - skipped)) results"
 
 # ---- stand-in trees ----
 # fake PATH [BACKEND [RECORDED]]: a stand-in benchmark, a script. It
@@ -247,7 +259,7 @@ set +e
 rc=$?
 set -e
 test "$rc" = 1 || fail "a benchmark failed, and bmb_suite exited $rc, not 1: $(cat "$T/err")"
-grep -q "^bmb_suite: not in $(pwd)/$T/libexec, left out: dasum dcopy " "$T/err" ||
+grep -q "^bmb_suite: not in $(pwd)/$T/libexec, left out: dasum daxpby dcopy " "$T/err" ||
     fail "the routines missing from the install are not said: $(cat "$T/err")"
 grep -q '^bmb_suite: ddot failed (exit 2); the end of .*/ddot.log:$' "$T/err" || fail "ddot's failure not said: $(cat "$T/err")"
 grep -q '^    verification failed: expected 1, got 2$' "$T/err" || fail "ddot's log not shown: $(cat "$T/err")"
