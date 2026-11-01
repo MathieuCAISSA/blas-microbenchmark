@@ -294,6 +294,22 @@ bmb_report output/*/*/*/*/result.json > report.html
 Sizes, threads, references, and building a release in each programming
 environment: [packaging/reframe](packaging/reframe/README.md).
 
+## With an AI agent
+
+`bmb_mcp`, installed beside `bmb_report`, is an MCP server: an agent's
+client starts it, and gets tools to list the routines, describe the
+machine, run a benchmark or the suite, and make the report, every run
+checked against the memory, the CPUs and a time cap, and verified.
+Skills, installed in `share/blas-microbenchmark/skills/`, tell the agent
+how to measure, compare and read results as this project does.
+
+```json
+{"mcpServers": {"blas-microbenchmark": {"command": "bmb_mcp", "args": ["--results-dir", "bmb-results"]}}}
+```
+
+More in the guide [With an AI agent](https://mathieucaissa.github.io/blas-microbenchmark/agents.html)
+and `man bmb_mcp`.
+
 ## Documentation
 
 - **[The manual](https://mathieucaissa.github.io/blas-microbenchmark/)**,

@@ -7,6 +7,16 @@ SUBDIRS = src man
 reframedir = $(pkgdatadir)/reframe
 dist_reframe_DATA = packaging/reframe/blas_microbenchmark.py packaging/reframe/README.md
 
+# The skills (#263): how an agent measures, compares and reads results, in
+# $(pkgdatadir)/skills/<name>/SKILL.md, where clients that read skills
+# look for them.
+skillsbenchmarkdir = $(pkgdatadir)/skills/blas-benchmark
+dist_skillsbenchmark_DATA = skills/blas-benchmark/SKILL.md
+skillscomparedir = $(pkgdatadir)/skills/blas-compare
+dist_skillscompare_DATA = skills/blas-compare/SKILL.md
+skillsresultsdir = $(pkgdatadir)/skills/blas-results
+dist_skillsresults_DATA = skills/blas-results/SKILL.md
+
 EXTRA_DIST = README.md AGENTS.md LICENSE autogen.sh \
 	CHANGELOG.md CONTRIBUTING.md \
 	.github/CODE_OF_CONDUCT.md .github/SECURITY.md .github/REVIEWS.md \

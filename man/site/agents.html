@@ -1,0 +1,20 @@
+<!-- title: With an AI agent -->
+<!-- description: Let an AI agent run the benchmarks: bmb_mcp, an MCP server over the suite, and skills that say how to measure as this project does. -->
+<p>An AI agent can measure, compare and read BLAS results with blas-microbenchmark, through two pieces installed with it: <b><code>bmb_mcp</code></b>, a server that gives the agent tools to run the benchmarks within limits, and <b>skills</b>, which tell it how to measure as this project does.</p>
+
+<h2 id="server">bmb_mcp, the server</h2>
+<p><code>bmb_mcp</code> speaks the Model Context Protocol on its standard input and output: the agent's client starts it. Its tools list the routines, describe the machine, run a benchmark or the suite, read a result, and make the report. Their arguments are fields (a routine, its sizes, its threads, its arguments), never a command line.</p>
+<p>Every run is checked before it starts: its sizes against the memory, its threads against the CPUs, every path inside the results directory; it is stopped at a time cap, and every result is verified against a reference, as the benchmarks do by default. The limits are options of the server:</p>
+<pre>bmb_mcp --results-dir bmb-results --time-cap 600</pre>
+<p>A client that reads its servers from JSON starts it with an entry such as:</p>
+<pre>{"mcpServers": {"blas-microbenchmark": {"command": "bmb_mcp", "args": ["--results-dir", "bmb-results"]}}}</pre>
+<p><code>run_suite</code> with several libraries runs the benchmarks of the installs it is given, by path: have the client ask before it calls it. Everything else is in <a href="bmb_mcp.html">its manual</a>.</p>
+
+<h2 id="skills">The skills</h2>
+<p>Three skills, in the Agent Skills format (a <code>SKILL.md</code> each), installed in <code>share/blas-microbenchmark/skills/</code> under the install prefix:</p>
+<ul>
+<li><b>blas-benchmark</b>: measure one routine right: the machine and its frequency first, sizes across the caches, threads within the CPUs, the checking kept on, every result in a file, and the IQR read before concluding.</li>
+<li><b>blas-compare</b>: compare libraries or versions: one build a library, the same suite for each with <code>bmb_suite --blas</code>, repeated runs, and a difference counted only beyond their noise.</li>
+<li><b>blas-results</b>: read what comes out: time, median and IQR, GFLOP/s against GB/s by level, what a result records, the peak and the roofline, and what makes two results comparable.</li>
+</ul>
+<p>Each uses the server's tools when the agent has them, and the commands otherwise, with the same steps. Point a client that reads skills at that directory, or copy them where it looks.</p>
