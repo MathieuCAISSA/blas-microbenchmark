@@ -75,7 +75,10 @@ runs=0
 for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $b in *.*) continue ;; esac
     test -x "$b" || continue
-    if bmb_missing "${b##*/bmb_}"; then
+    # An extension the library lacks; a call it is known to get wrong
+    # (bmb_known_wrong), which test_bmb_verify.sh holds to its message.
+    known=$(bmb_known_wrong "$b" "${b##*/bmb_}")
+    if bmb_missing "${b##*/bmb_}" || { [ -n "$known" ] && [ "${known#maybe }" = "$known" ]; }; then
         n=$((n + 1))
         continue
     fi

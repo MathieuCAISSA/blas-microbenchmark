@@ -477,8 +477,12 @@ that should have it does not: the rule is then wrong. OpenBLAS's gemmt
 before 0.3.29 filled the other triangle row-major (#4905), and before
 0.3.30 conjugated B in place (#5143), the Fedora FlexiBLAS job's 0.3.29
 among them; FlexiBLAS does not say which OpenBLAS it loaded, so there a
-pass is taken too. A bug nobody has reported upstream is reported
-first; it does not go in the list to make CI green.
+pass is taken too. Its `cblas_?gemm_batch_strided`, from 0.3.31 to
+0.3.34, refuses column-major calls (#5979, fixed for 0.3.35), and its
+complex one does not scale the strides (#6214, reported from here,
+unfixed: no upper bound yet). A development build, `0.3.34.dev`, counts
+as the release it leads to. A bug nobody has reported upstream is
+reported first; it does not go in the list to make CI green.
 
 ## Known measurement limitations
 

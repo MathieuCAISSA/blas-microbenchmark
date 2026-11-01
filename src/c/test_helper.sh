@@ -32,36 +32,60 @@ bmb_missing() {
 # filled the other triangle in row-major (OpenMathLib/OpenBLAS#4905);
 # before 0.3.30, it conjugated the operand op() takes the conjugate
 # transpose of in place, B column-major, A row-major, where A and B
-# change places (#5143). Both are fixed upstream, and a test that still
-# meets them on a fixed version fails.
+# change places (#5143). Its cblas_?gemm_batch_strided, from 0.3.31 to
+# 0.3.34, refused every column-major call and left C as it was (#5979);
+# from 0.3.31, its complex one does not scale the strides to (re, im)
+# pairs, wrong from two matrices on (#6214, reported, not fixed: when it
+# is, the test on the fixed version fails, and the bound goes here). The
+# others are fixed upstream, and a test that still meets them on a fixed
+# version fails.
 bmb_known_wrong() {
     kw_prog=$1
     kw_r=$2
     shift 2
-    case $kw_r in ?gemmt) ;; *) return 0 ;; esac
+    case $kw_r in ?gemmt | ?gemm) ;; *) return 0 ;; esac
     kw_backend=`"$kw_prog" --version 2>/dev/null | sed -n 's/^BLAS backend: //p'`
     case $kw_backend in
         "openblas (OpenBLAS "*)
             kw_maybe=
-            kw_v=`printf '%s\n' "$kw_backend" | sed -n 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \2 \3/p'`
+            # A development build, "0.3.34.dev", has the fixes of the
+            # release it leads to: taken as 0.3.35.
+            kw_v=`printf '%s\n' "$kw_backend" | sed -n -e 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.dev.*/\1 \2 \3 1/p' \
+                -e 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \2 \3 0/p' | sed -n 1p`
             # shellcheck disable=SC2086 # three numbers
             set -- "$@" -- $kw_v
             ;;
-        flexiblas/openblas*) kw_maybe="maybe " ; set -- "$@" -- 0 3 29 ;;
+        flexiblas/openblas*) kw_maybe="maybe " ; set -- "$@" -- 0 3 29 0 ;;
         *) return 0 ;;
     esac
-    kw_trans=NN kw_layout=row
+    kw_trans=NN kw_layout=row kw_mode=loop
     while [ "$1" != -- ]; do
         case $1 in
             --trans=*) kw_trans=${1#--trans=} ;;
             --trans) kw_trans=$2; shift ;;
             --layout=*) kw_layout=${1#--layout=} ;;
             --layout | -L) kw_layout=$2; shift ;;
+            --batch-mode=*) kw_mode=${1#--batch-mode=} ;;
+            --batch-mode) kw_mode=$2; shift ;;
         esac
         shift
     done
     shift
-    kw_at=$(( ${1:-0} * 10000 + ${2:-0} * 100 + ${3:-0} ))
+    kw_at=$(( ${1:-0} * 10000 + ${2:-0} * 100 + ${3:-0} + ${4:-0} ))
+    case $kw_r in
+        [cz]gemm)
+            if [ "$kw_mode" = strided ] && [ "$kw_at" -ge 331 ]; then
+                echo "${kw_maybe}Wrong result: "
+            fi
+            return 0
+            ;;
+        ?gemm)
+            if [ "$kw_mode$kw_layout" = stridedcol ] && [ "$kw_at" -ge 331 ] && [ "$kw_at" -lt 335 ]; then
+                echo "${kw_maybe}Wrong result: "
+            fi
+            return 0
+            ;;
+    esac
     if [ "$kw_layout" = row ] && [ "$kw_at" -lt 329 ]; then
         echo "${kw_maybe}Wrong result: "
     elif [ "$kw_at" -lt 330 ]; then
