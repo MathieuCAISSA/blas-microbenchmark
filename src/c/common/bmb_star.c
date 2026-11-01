@@ -141,6 +141,7 @@ int bmb_star_cpus_at(const char *root, const char *allowed, int *cpus, int max)
     return count;
 }
 
+#if defined(__linux__)
 /* What the instances share: a barrier, and a value each for
  * bmb_star_max(). In memory mapped before fork(), so shared. */
 typedef struct {
@@ -150,7 +151,6 @@ typedef struct {
     double slot[];
 } bmb_star_shared_t;
 
-#if defined(__linux__)
 static bmb_star_shared_t *bmb_star_shm;
 static size_t bmb_star_shm_size;
 static unsigned int bmb_star_count;
