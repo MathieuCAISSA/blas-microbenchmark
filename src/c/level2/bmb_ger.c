@@ -16,9 +16,9 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int lda;
-    int m;
-    int n;
+    bmb_int lda;
+    bmb_int m;
+    bmb_int n;
     bmb_real_t alpha;
     bmb_real_t *a;
     bmb_real_t *x;
@@ -40,14 +40,14 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->m = (int) dim1;
-    ctx->n = (int) dim2;
+    ctx->m = (bmb_int) dim1;
+    ctx->n = (bmb_int) dim2;
     /* Small alpha: A accumulates rank-1 updates across iterations, kept bounded
      * regardless of --iterations. */
     ctx->alpha = BMB_R(1.0e-6);
     ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = (int) lda;
+    ctx->lda = (bmb_int) lda;
     ctx->a = bmb_bench_alloc(outer * lda * BMB_ELEM_BYTES);
     ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     ctx->y = bmb_bench_alloc(dim2 * BMB_ELEM_BYTES);

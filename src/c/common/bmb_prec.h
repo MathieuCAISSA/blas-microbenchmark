@@ -9,9 +9,24 @@
  * family goes through what is here; what differs between families stays
  * in their source. */
 
+#include <cblas.h>
 #include <stddef.h>
 
 #include "bmb_verify.h"
+
+/* bmb_int: the integer the library's CBLAS takes for a dimension, an
+ * increment or a leading dimension (#172). In an ILP64 build (configure
+ * --enable-ilp64, which defines BMB_ILP64) it is the library's own 64-bit
+ * type, MKL_INT or OpenBLAS's blasint: they are long long and long, so
+ * only the library's own makes a pointer to an array of them what the
+ * batched calls read. Otherwise int, as every LP64 CBLAS takes. */
+#if defined(BMB_ILP64) && defined(MKL_INT)
+typedef MKL_INT bmb_int;
+#elif defined(BMB_ILP64)
+typedef blasint bmb_int;
+#else
+typedef int bmb_int;
+#endif
 
 /* bmb_real_t: the real type, of a real element or of each part of a
  * complex one, real part first, the layout of C99's complex types and of

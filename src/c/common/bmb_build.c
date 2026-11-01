@@ -208,3 +208,12 @@ const char *bmb_build_kernels(void)
     }
 }
 #endif
+
+unsigned int bmb_build_int_bits(void)
+{
+#if defined(BMB_ILP64)
+    return 64;
+#else
+    return 32;
+#endif
+}

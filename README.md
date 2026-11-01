@@ -277,6 +277,10 @@ With FlexiBLAS, one build measures every library it can load
 (`FLEXIBLAS=BLIS-OPENMP bmb_dgemm …`), each its own series in the report.
 Fedora packages it; Debian and Ubuntu do not.
 
+`--enable-ilp64` builds against OpenBLAS's or MKL's 64-bit integer
+interface (ILP64), where a vector may hold more than 2^31 elements; the
+results say so (`# integers: 64-bit (ILP64)`).
+
 ## In a test suite: ReFrame
 
 Sites that check their systems with [ReFrame](https://reframe-hpc.readthedocs.io/)

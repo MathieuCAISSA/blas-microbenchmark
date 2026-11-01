@@ -16,7 +16,7 @@
 #endif
 
 typedef struct {
-    int n;
+    bmb_int n;
     bmb_real_t c, s;
     bmb_real_t *x0, *y0; /* templates */
     bmb_real_t *x, *y;   /* working buffers, restored by reset() */
@@ -34,7 +34,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) dim1;
+    ctx->n = (bmb_int) dim1;
     /* A rotation keeps the vectors' norms, but c^2 + s^2 is 1 only to
      * rounding: 1 + 5e-8 in single precision, a growth that would take
      * billions of calls to overflow, and is reset with every batch. */

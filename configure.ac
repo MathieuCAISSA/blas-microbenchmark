@@ -156,6 +156,24 @@ AS_CASE(["$bmb_blas_backend"],
   [auto|openblas|blis|aocl|netlib|nvpl|armpl|flexiblas|mkl], [],
   [AC_MSG_ERROR([--with-blas-backend must be one of: auto, openblas, blis, aocl, netlib, nvpl, armpl, flexiblas, mkl (got '$bmb_blas_backend')])])
 
+dnl ILP64 (#172): the library's interface with 64-bit integers, for a
+dnl vector or a leading dimension past 2^31. OpenBLAS's (built with
+dnl INTERFACE64=1: Debian's libopenblas64, Spack's openblas +ilp64) and
+dnl MKL's are supported; the others are refused rather than built against
+dnl an interface the benchmarks would pass the wrong integers to.
+AC_ARG_ENABLE([ilp64],
+  [AS_HELP_STRING([--enable-ilp64],
+    [use the BLAS library's 64-bit integer interface (ILP64): OpenBLAS's or MKL's (default: no)])],
+  [bmb_ilp64="$enableval"],
+  [bmb_ilp64=no])
+AS_CASE(["$bmb_ilp64"], [yes|no], [],
+  [AC_MSG_ERROR([--enable-ilp64 takes no value (got '$bmb_ilp64')])])
+AS_IF([test "x$bmb_ilp64" = xyes], [
+  AS_CASE(["$bmb_blas_backend"],
+    [openblas|mkl], [AC_DEFINE([BMB_ILP64], [1], [Define for the BLAS library's 64-bit integer interface (ILP64).])],
+    [AC_MSG_ERROR([--enable-ilp64 is for --with-blas-backend=openblas or mkl, whose 64-bit integer interfaces the benchmarks support (got '$bmb_blas_backend')])])
+])
+
 dnl Generic hints, applied whatever the backend. Backend-specific ones are
 dnl applied inside each case below, so they take priority over these.
 BMB_ENV_HINTS([CBLAS])
@@ -164,18 +182,50 @@ BMB_ENV_HINTS([BLAS])
 AS_CASE(["$bmb_blas_backend"],
 
   [openblas], [
+    AS_IF([test "x$bmb_ilp64" = xyes], [
+      dnl Debian and Ubuntu's libopenblas64-*-dev: its own include and
+      dnl library directories, a variant each, as BLIS has (below);
+      dnl -isystem so that the 32-bit cblas.h, if installed too, is not
+      dnl the one found.
+      for bmb_variant in pthread openmp serial; do
+        for bmb_dir in /usr/include/*/openblas64-$bmb_variant; do
+          if test -f "$bmb_dir/cblas.h"; then
+            AC_MSG_NOTICE([found OpenBLAS's ILP64 headers ($bmb_variant) in $bmb_dir])
+            CPPFLAGS="-isystem $bmb_dir $CPPFLAGS"
+            bmb_ob64_libdir=`AS_ECHO(["$bmb_dir"]) | sed 's|/include/|/lib/|'`
+            LDFLAGS="-L$bmb_ob64_libdir -Wl,-rpath,$bmb_ob64_libdir $LDFLAGS"
+            break 2
+          fi
+        done
+      done
+    ])
     BMB_ENV_HINTS([OPENBLAS])
     BMB_USER_PATHS
     AC_CHECK_HEADERS([cblas.h], [], [
       AC_MSG_ERROR([cblas.h not found. Install libopenblas-dev, load your OpenBLAS module (OPENBLAS_ROOT/OPENBLAS_INCDIR are picked up automatically), or pass --with-blas-incpath/CPPFLAGS.])
     ])
-    AC_SEARCH_LIBS([cblas_dgemm], [openblas], [], [
-      AC_MSG_ERROR([libopenblas not found (cblas_dgemm unresolved). Install libopenblas-dev, load your OpenBLAS module (OPENBLAS_ROOT/OPENBLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
+    AS_IF([test "x$bmb_ilp64" = xyes], [
+      dnl libopenblas64 on Debian, libopenblas from a +ilp64 build; its
+      dnl cblas.h must take 64-bit integers, or it is not the ILP64 one.
+      AC_SEARCH_LIBS([cblas_dgemm], [openblas64 openblas], [], [
+        AC_MSG_ERROR([OpenBLAS's ILP64 library not found (cblas_dgemm unresolved). Install libopenblas64-pthread-dev, load an OpenBLAS module built with INTERFACE64=1, or pass --with-blas-incpath/--with-blas-libpath.])
+      ])
+      AC_MSG_CHECKING([whether OpenBLAS's cblas.h takes 64-bit integers])
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <cblas.h>]],
+          [[static char ilp64[sizeof(blasint) == 8 ? 1 : -1]; (void) ilp64;]])],
+        [AC_MSG_RESULT([yes])],
+        [AC_MSG_RESULT([no])
+         AC_MSG_ERROR([this OpenBLAS's cblas.h takes 32-bit integers: --enable-ilp64 needs the ILP64 build (libopenblas64, or INTERFACE64=1)])])
+      AC_CHECK_FUNCS([openblas_set_num_threads openblas_get_config])
+    ], [
+      AC_SEARCH_LIBS([cblas_dgemm], [openblas], [], [
+        AC_MSG_ERROR([libopenblas not found (cblas_dgemm unresolved). Install libopenblas-dev, load your OpenBLAS module (OPENBLAS_ROOT/OPENBLAS_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])
+      ])
+      AC_CHECK_LIB([openblas], [openblas_set_num_threads],
+        [AC_DEFINE([HAVE_OPENBLAS_SET_NUM_THREADS], [1],
+          [Define if openblas_set_num_threads() is available.])])
+      BMB_CHECK_BLAS_VERSION_API([openblas])
     ])
-    AC_CHECK_LIB([openblas], [openblas_set_num_threads],
-      [AC_DEFINE([HAVE_OPENBLAS_SET_NUM_THREADS], [1],
-        [Define if openblas_set_num_threads() is available.])])
-    BMB_CHECK_BLAS_VERSION_API([openblas])
   ],
 
   [blis], [
@@ -423,14 +473,21 @@ AS_CASE(["$bmb_blas_backend"],
     dnl integers, as CBLAS takes): what Intel's link line advisor gives for
     dnl GCC, and the OpenMP runtime GCC's -fopenmp links. mkl_rt would load
     dnl Intel's own OpenMP runtime by default, a second one in the process.
+    dnl With --enable-ilp64, the ILP64 interface (libmkl_gf_ilp64), and
+    dnl MKL_ILP64 for its headers, which then make MKL_INT 64-bit.
+    bmb_mkl_iface=lp64
+    AS_IF([test "x$bmb_ilp64" = xyes], [
+      bmb_mkl_iface=ilp64
+      CPPFLAGS="-DMKL_ILP64 $CPPFLAGS"
+    ])
     bmb_save_LIBS="$LIBS"
-    LIBS="-lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl $LIBS"
+    LIBS="-lmkl_gf_$bmb_mkl_iface -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl $LIBS"
     AC_MSG_CHECKING([for cblas_dgemm in MKL's GNU threading layer])
     AC_LINK_IFELSE([AC_LANG_CALL([], [cblas_dgemm])],
       [AC_MSG_RESULT([yes])],
       [AC_MSG_RESULT([no])
        LIBS="$bmb_save_LIBS"
-       AC_MSG_ERROR([MKL not found (cblas_dgemm unresolved with -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core). Source setvars.sh or load your MKL module (MKLROOT, MKL_ROOT/MKL_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])])
+       AC_MSG_ERROR([MKL not found (cblas_dgemm unresolved with -lmkl_gf_$bmb_mkl_iface -lmkl_gnu_thread -lmkl_core). Source setvars.sh or load your MKL module (MKLROOT, MKL_ROOT/MKL_LIBDIR are picked up automatically), or pass --with-blas-libpath/LDFLAGS.])])
     AC_CHECK_FUNCS([mkl_domain_set_num_threads mkl_get_version_string])
   ],
 

@@ -213,6 +213,10 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
 #if defined(BMB_BUILD_HAS_KERNELS)
     fprintf(out, "# kernels: %s\n", bmb_build_kernels());
 #endif
+    /* Only when it is not what every other build has (#172). */
+    if (bmb_build_int_bits() == 64) {
+        fprintf(out, "# integers: 64-bit (ILP64)\n");
+    }
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
     }
@@ -562,6 +566,7 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
     bmb_print_json_string(out, bmb_build_kernels());
     fprintf(out, ",\n");
 #endif
+    fprintf(out, "  \"blas_int_bits\": %u,\n", bmb_build_int_bits());
     if (rs->label != NULL) {
         fprintf(out, "  \"label\": ");
         bmb_print_json_string(out, rs->label);

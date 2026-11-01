@@ -10,6 +10,8 @@
  * Nothing here runs a benchmark, so sizes near the ceiling are safe to
  * test: they are parsed, never allocated. */
 
+#include <config.h>
+
 #include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -485,10 +487,18 @@ int main(void)
     check_sweep(":", NULL);
     check_sweep("1:", NULL);
 
-    /* ---- the two ceilings ---- */
+    /* ---- the two ceilings (a vector's, which check_sweep gives) ---- */
+#if defined(BMB_ILP64)
+    /* An ILP64 build (#172): past INT_MAX, up to what two vectors of
+     * 16-byte elements can be sized to, SIZE_MAX / 32. Parsed only. */
+    check_sweep("2147483648", "2147483648");
+    check_sweep("576460752303423487", "576460752303423487");
+    check_sweep("576460752303423488", NULL);
+#else
     check_sweep("1518500249", "1518500249");  /* largest size that cannot wrap */
     check_sweep("1518500250", NULL);          /* smallest whose square wraps */
     check_sweep("2147483648", NULL);          /* past INT_MAX */
+#endif
     check_sweep("99999999999999999999", NULL);/* past unsigned long long */
 
     /* ---- the point cap ---- */
@@ -926,6 +936,13 @@ int main(void)
                 bmb_options_t opts;
                 char what[64];
 
+#if defined(BMB_ILP64)
+                /* -v has a ceiling of its own in an ILP64 build (#172),
+                 * which check_sweep tests above. */
+                if (f == 0 && strstr(bad[b], "1518500250") != NULL) {
+                    continue;
+                }
+#endif
                 snprintf(what, sizeof(what), "%s %s is refused", flags[f], bad[b]);
                 if (parse_args(&opts, flags[f], bad[b], ARGS_END) == BMB_OPTIONS_OK) {
                     fail(what, "was accepted");

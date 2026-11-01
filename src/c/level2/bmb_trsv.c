@@ -14,8 +14,8 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int n;
-    int lda;
+    bmb_int n;
+    bmb_int lda;
     char uplo, trans, diag; /* --uplo, --trans, --diag */
     bmb_real_t *a;  /* N x N, in the order of --layout, the triangle --uplo gives used */
     bmb_real_t *x0; /* template */
@@ -53,8 +53,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) n;
-    ctx->lda = (int) lda;
+    ctx->n = (bmb_int) n;
+    ctx->lda = (bmb_int) lda;
     ctx->uplo = bmb_bench_uplo();
     ctx->trans = bmb_bench_trans(0);
     ctx->diag = bmb_bench_diag();

@@ -165,6 +165,8 @@ ROUTINE_TESTS = \
 # one per routine, then those of the whole level.
 TESTS = $(ROUTINE_TESTS) \
 	test_bmb_size_limits.sh
+# test_bmb_size_limits.sh reads config.h for an ILP64 build (#172).
+AM_TESTS_ENVIRONMENT = top_builddir='$(top_builddir)'; export top_builddir;
 
 EXTRA_DIST = $(TESTS)
 

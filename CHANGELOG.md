@@ -10,6 +10,12 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `configure --enable-ilp64` (#172): the library's 64-bit integer
+  interface, OpenBLAS's (Debian's `libopenblas64`, or a build with
+  `INTERFACE64=1`) or MKL's; any other backend is refused. A vector may
+  then hold more than 2^31 elements. `--version` (`Integers:`) and every
+  result (`# integers: 64-bit (ILP64)`, `"blas_int_bits"` in the JSON,
+  which every build now writes) say the width.
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.

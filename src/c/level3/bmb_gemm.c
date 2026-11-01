@@ -23,16 +23,16 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int lda;
-    int ldb;
-    int ldc;
-    int m;
-    int n;
-    int k;
+    bmb_int lda;
+    bmb_int ldb;
+    bmb_int ldc;
+    bmb_int m;
+    bmb_int n;
+    bmb_int k;
     char ta; /* --trans: N, T or C, A's */
     char tb; /* B's */
     int ra, ca, rb, cb; /* A's and B's rows and columns, as stored */
-    int count;          /* --batch-count */
+    bmb_int count;      /* --batch-count */
     int mode;           /* --batch-mode, a bmb_batch_mode_t */
     size_t sa, sb, sc;  /* the elements from one matrix to the next */
     /* A group call's arrays, one group: its arguments, and a pointer per
@@ -40,8 +40,9 @@ typedef struct {
      * whose name differs between libraries: they are ints here, as the
      * order is, which every ABI makes the size of the enum, and passed
      * as void *. */
-    int ta_arr[1], tb_arr[1], m_arr[1], n_arr[1], k_arr[1];
-    int lda_arr[1], ldb_arr[1], ldc_arr[1], size_arr[1];
+    int ta_arr[1], tb_arr[1];
+    bmb_int m_arr[1], n_arr[1], k_arr[1];
+    bmb_int lda_arr[1], ldb_arr[1], ldc_arr[1], size_arr[1];
     const bmb_real_t **pa, **pb;
     bmb_real_t **pc;
     bmb_real_t alpha[BMB_PARTS];
@@ -89,16 +90,16 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->m = (int) m;
-    ctx->n = (int) n;
-    ctx->k = (int) k;
+    ctx->m = (bmb_int) m;
+    ctx->n = (bmb_int) n;
+    ctx->k = (bmb_int) k;
     ctx->ta = ta;
     ctx->tb = tb;
     ctx->ra = (int) ra;
     ctx->ca = (int) ca;
     ctx->rb = (int) rb;
     ctx->cb = (int) cb;
-    ctx->count = (int) count;
+    ctx->count = (bmb_int) count;
     ctx->mode = mode;
     ctx->sa = outa * lda;
     ctx->sb = outb * ldb;
@@ -110,9 +111,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     bmb_set_scalar(ctx->beta, BMB_R(0.0), BMB_R(0.0)); /* verify() relies on it */
     ctx->col = col;
     ctx->order = ctx->col ? CblasColMajor : CblasRowMajor;
-    ctx->lda = (int) lda;
-    ctx->ldb = (int) ldb;
-    ctx->ldc = (int) ldc;
+    ctx->lda = (bmb_int) lda;
+    ctx->ldb = (bmb_int) ldb;
+    ctx->ldc = (bmb_int) ldc;
     ctx->a = bmb_bench_alloc(count * ctx->sa * BMB_ELEM_BYTES);
     ctx->b = bmb_bench_alloc(count * ctx->sb * BMB_ELEM_BYTES);
     ctx->c = bmb_bench_alloc(count * ctx->sc * BMB_ELEM_BYTES);
@@ -144,13 +145,13 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         }
         ctx->ta_arr[0] = BMB_CBLAS_TRANS(ta);
         ctx->tb_arr[0] = BMB_CBLAS_TRANS(tb);
-        ctx->m_arr[0] = (int) m;
-        ctx->n_arr[0] = (int) n;
-        ctx->k_arr[0] = (int) k;
-        ctx->lda_arr[0] = (int) lda;
-        ctx->ldb_arr[0] = (int) ldb;
-        ctx->ldc_arr[0] = (int) ldc;
-        ctx->size_arr[0] = (int) count;
+        ctx->m_arr[0] = (bmb_int) m;
+        ctx->n_arr[0] = (bmb_int) n;
+        ctx->k_arr[0] = (bmb_int) k;
+        ctx->lda_arr[0] = (bmb_int) lda;
+        ctx->ldb_arr[0] = (bmb_int) ldb;
+        ctx->ldc_arr[0] = (bmb_int) ldc;
+        ctx->size_arr[0] = (bmb_int) count;
     }
 
     for (i = 0; i < count; i++) {
@@ -182,9 +183,9 @@ static void call(void *vctx)
     if (ctx->mode == BMB_BATCH_STRIDED) {
         BMB_CBLAS(gemm_batch_strided)(ctx->order, BMB_CBLAS_TRANS(ctx->ta), BMB_CBLAS_TRANS(ctx->tb),
                                       ctx->m, ctx->n, ctx->k, BMB_SCALAR(ctx->alpha),
-                                      (const void *) ctx->a, ctx->lda, (int) ctx->sa,
-                                      (const void *) ctx->b, ctx->ldb, (int) ctx->sb,
-                                      BMB_SCALAR(ctx->beta), (void *) ctx->c, ctx->ldc, (int) ctx->sc,
+                                      (const void *) ctx->a, ctx->lda, (bmb_int) ctx->sa,
+                                      (const void *) ctx->b, ctx->ldb, (bmb_int) ctx->sb,
+                                      BMB_SCALAR(ctx->beta), (void *) ctx->c, ctx->ldc, (bmb_int) ctx->sc,
                                       ctx->count);
         return;
     }
