@@ -22,6 +22,11 @@ releases with the same major version can be compared and read by the same
   tell an agent how to measure a routine, compare libraries and read the
   results as this project does, with `bmb_mcp`'s tools or the commands.
   A guide on the site, "With an AI agent".
+- A Claude Code plugin (#264): the repository is a plugin marketplace
+  whose plugin brings `bmb_mcp` and the skills, `/plugin install
+  blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark`.
+  The Docker image has `python3` and runs `bmb_mcp` (`docker run -i`); the
+  Spack package depends on Python at run time and tests the server.
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.

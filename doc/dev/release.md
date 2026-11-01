@@ -80,8 +80,9 @@ routine waits for the next minor.
 1. **Version**: set `AC_INIT` in `configure.ac` to `X.Y.Z`, dropping the
    `-dev`. In `CHANGELOG.md`, turn `[Unreleased]` into
    `[X.Y.Z] - YYYY-MM-DD` (and its link at the bottom); in `CITATION.cff`,
-   set `version` and `date-released` to the same. `test_release_files.sh`
-   fails until the three agree.
+   set `version` and `date-released` to the same, and the `version` of
+   `.claude-plugin/plugin.json`. `test_release_files.sh` fails until they
+   agree.
 2. **Man pages**: if one changed since the last release, set the date in
    its `.TH` line (`man/*.1.in`) to today.
 3. **README**: replace the Quick start output with what the new version
@@ -112,7 +113,7 @@ routine waits for the next minor.
    (1.6.0), make the package public first: its Package settings on
    GitHub, since a workflow creates it private.
 7. **Back to development**: on another short branch and pull request,
-   set `AC_INIT` to the next minor version with `-dev` (`X.(Y+1).0-dev`;
+   set `AC_INIT`, and the plugin's `version`, to the next minor version with `-dev` (`X.(Y+1).0-dev`;
    after a patch release X.Y.Z, the X.(Y+1).0-dev `main` was at before),
    add an empty `[Unreleased]` section to `CHANGELOG.md`, and add the
    release to the Spack package with the checksum the release published

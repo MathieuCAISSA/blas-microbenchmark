@@ -65,7 +65,8 @@ methods on an installed spec:
 | `test_benchmarks` | every benchmark, at a tiny size, says its result was verified |
 | `test_report` | `bmb_report` turns a result file into a page carrying it |
 | `test_bmb_suite` | `bmb_suite` runs two benchmarks of the install into a directory, which `bmb_report` takes; skipped before 1.9.0 |
-| `test_man_pages` | the three pages (`bmb_suite.1` from 1.9.0), and an alias per benchmark |
+| `test_bmb_mcp` | `bmb_mcp` lists its tools and runs a benchmark through them, verified; skipped before 1.10.0 (#264), from which the package depends on Python at run time |
+| `test_man_pages` | the pages (`bmb_suite.1` from 1.9.0, `bmb_mcp.1` from 1.10.0), and an alias per benchmark |
 
 Each was seen to fail: a corrupted result (`BMB_VERIFY_CORRUPT=1`), a
 library expected under another prefix, an empty report, a missing alias
@@ -199,10 +200,13 @@ history, the build directories and what `autoreconf` makes again.
 
 The `docker` job builds the image for each of the four backends, then
 runs, from it: every benchmark with `--verify`, in both storage orders,
-on 1 and 2 threads; `man` for each of the three pages; a result written
+on 1 and 2 threads; `man` for each of the four pages; a result written
 to a mounted directory as the runner's user, turned into a page by
 `bmb_report`; `bmb_suite` on ddot and dgemm into a mounted directory,
-and `bmb_report` on that directory (#279); and the warning
+and `bmb_report` on that directory (#279); `bmb_mcp` run with `docker
+run -i`, as a client runs it, listing its tools and running a benchmark
+into a mounted directory (#264), which needs the image's `python3`; and
+the warning
 under `--cpus 1` and `--cpuset-cpus 0,1`, and its absence under
 `--cpus 2` with `-t 2`. Once (the `openblas` leg), hadolint checks the
 Dockerfile, and Apptainer converts the saved image to a SIF file and
@@ -235,6 +239,26 @@ its image would redistribute Intel's libraries, under Intel's licence.
   it public, once; `release.md` says so in step 6.
 - It is the publishing workflow OpenSSF Scorecard's `Packaging` check
   looks for (`docker … push`).
+
+## The Claude Code plugin
+
+`.claude-plugin/` makes the repository a Claude Code plugin marketplace
+(#264), with one plugin, the repository itself (`"source": "./"`):
+`plugin.json` declares `bmb_mcp` as its MCP server, run from `PATH`, and
+the skills of `skills/` come with it. It needs blas-microbenchmark
+installed; `bmb_mcp`'s first error says how to get it. A user adds it
+with:
+
+```text
+/plugin install blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark
+```
+
+`tests/test_plugin.sh` checks the two manifests (the fields Claude Code
+reads, the paths, the server), `test_release_files.sh` the plugin's
+version against the build's, which the release sets (release.md, steps
+1 and 7). Claude Code's own `claude plugin validate . --strict` passes
+on it, with one notice: the plugin directory's listing would want an
+icon, which installing it does not.
 
 ## The ReFrame tests
 
