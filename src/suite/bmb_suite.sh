@@ -19,17 +19,18 @@ set -f
 # BEGIN routines (suite): written by src/c/routines.sh
 ROUTINES='
     sasum:1:s dasum:1:d scasum:1:c dzasum:1:z saxpy:1:s daxpy:1:d caxpy:1:c
-    zaxpy:1:z scopy:1:s dcopy:1:d ccopy:1:c zcopy:1:z sdot:1:s ddot:1:d
-    cdotc:1:c zdotc:1:z cdotu:1:c zdotu:1:z snrm2:1:s dnrm2:1:d scnrm2:1:c
-    dznrm2:1:z sscal:1:s dscal:1:d cscal:1:c zscal:1:z sswap:1:s dswap:1:d
-    cswap:1:c zswap:1:z isamax:1:s idamax:1:d icamax:1:c izamax:1:z srot:1:s
-    drot:1:d sgemv:2:s dgemv:2:d cgemv:2:c zgemv:2:z sgbmv:2:s dgbmv:2:d
-    sger:2:s dger:2:d cgeru:2:c zgeru:2:z cgerc:2:c zgerc:2:z ssymv:2:s
-    dsymv:2:d chemv:2:c zhemv:2:z sspmv:2:s dspmv:2:d ssyr:2:s dsyr:2:d
-    cher:2:c zher:2:z ssyr2:2:s dsyr2:2:d cher2:2:c zher2:2:z strmv:2:s
-    dtrmv:2:d ctrmv:2:c ztrmv:2:z strsv:2:s dtrsv:2:d ctrsv:2:c ztrsv:2:z
-    stpsv:2:s dtpsv:2:d stbsv:2:s dtbsv:2:d sgemm:3:s dgemm:3:d cgemm:3:c
-    zgemm:3:z ssymm:3:s dsymm:3:d csymm:3:c zsymm:3:z chemm:3:c zhemm:3:z
+    zaxpy:1:z saxpby:1:s daxpby:1:d caxpby:1:c zaxpby:1:z scopy:1:s dcopy:1:d
+    ccopy:1:c zcopy:1:z sdot:1:s ddot:1:d cdotc:1:c zdotc:1:z cdotu:1:c
+    zdotu:1:z snrm2:1:s dnrm2:1:d scnrm2:1:c dznrm2:1:z sscal:1:s dscal:1:d
+    cscal:1:c zscal:1:z sswap:1:s dswap:1:d cswap:1:c zswap:1:z isamax:1:s
+    idamax:1:d icamax:1:c izamax:1:z srot:1:s drot:1:d sgemv:2:s dgemv:2:d
+    cgemv:2:c zgemv:2:z sgbmv:2:s dgbmv:2:d sger:2:s dger:2:d cgeru:2:c
+    zgeru:2:z cgerc:2:c zgerc:2:z ssymv:2:s dsymv:2:d chemv:2:c zhemv:2:z
+    sspmv:2:s dspmv:2:d ssyr:2:s dsyr:2:d cher:2:c zher:2:z ssyr2:2:s dsyr2:2:d
+    cher2:2:c zher2:2:z strmv:2:s dtrmv:2:d ctrmv:2:c ztrmv:2:z strsv:2:s
+    dtrsv:2:d ctrsv:2:c ztrsv:2:z stpsv:2:s dtpsv:2:d stbsv:2:s dtbsv:2:d
+    sgemm:3:s dgemm:3:d cgemm:3:c zgemm:3:z sgemmt:3:s dgemmt:3:d cgemmt:3:c
+    zgemmt:3:z ssymm:3:s dsymm:3:d csymm:3:c zsymm:3:z chemm:3:c zhemm:3:z
     ssyrk:3:s dsyrk:3:d csyrk:3:c zsyrk:3:z cherk:3:c zherk:3:z ssyr2k:3:s
     dsyr2k:3:d csyr2k:3:c zsyr2k:3:z cher2k:3:c zher2k:3:z strmm:3:s dtrmm:3:d
     ctrmm:3:c ztrmm:3:z strsm:3:s dtrsm:3:d ctrsm:3:c ztrsm:3:z

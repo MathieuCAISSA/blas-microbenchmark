@@ -29,6 +29,18 @@ follows the same shape (see
    `footprint(dim1, dim2)`: the bytes of the operands one call touches,
    for `--cache cold`; level 3 declares it, having no `bytes`.
 
+An extension of the BLAS (#171), a call some libraries have and others
+not (`axpby`, `gemmt`), is marked `ext` in `routines.txt`. `configure`
+probes for it as for the batched GEMM, declared in the header and
+defined in the library, all four precisions, and defines
+`HAVE_CBLAS_<FAMILY>`. Its source compiles the call only under that
+define, and otherwise sets `missing` to the call's name: the program is
+built and installed whatever the library, so that the install's layout
+and the packages' lists do not depend on it, and skips (exit 77) with a
+message, but under `BMB_COUNTS`, which calls nothing. Its tests begin
+with `bmb_skip_missing`, and the tests of `src/c` that run every
+benchmark pass it over with `bmb_missing` (`test_helper.sh`).
+
 Every operand comes from `bmb_bench_alloc()`, aligned as `--align` says,
 never from `malloc` (#163); the context itself, and `verify()`'s scratch,
 may. A matrix gets its leading dimension from `bmb_bench_ld(outer,

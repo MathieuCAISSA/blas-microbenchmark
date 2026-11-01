@@ -84,6 +84,8 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
     case $name in
         bmb_[sd]gemm) args="--trans=NT --trans=TN --trans=TT" ;;
         bmb_[cz]gemm) args="--trans=NT --trans=NC --trans=TN --trans=TT --trans=TC --trans=CN --trans=CT --trans=CC" ;;
+        bmb_[sd]gemmt) args="--uplo=L --trans=NT --trans=TN --trans=TT" ;;
+        bmb_[cz]gemmt) args="--uplo=L --trans=NC --trans=TN --trans=CT --trans=CC" ;;
         bmb_?gemv | bmb_?gbmv) args=$trans ;;
         bmb_?trmm | bmb_?trsm) args="--side=R --uplo=L $trans --diag=U" ;;
         bmb_?trmv | bmb_?trsv | bmb_?tpsv | bmb_?tbsv) args="--uplo=L $trans --diag=U" ;;

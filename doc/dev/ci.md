@@ -103,7 +103,8 @@ Apptainer; see [packaging](packaging.md#in-ci-1).
 
 The `reframe` job runs the ReFrame tests on an install and on this
 commit's tarball, with references met and not, and checks their list of
-routines against the benchmarks; see [packaging](packaging.md#in-ci-2).
+routines against the benchmarks; every test passes, but an extension of
+the BLAS the library lacks (#171), which skips; see [packaging](packaging.md#in-ci-2).
 
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.

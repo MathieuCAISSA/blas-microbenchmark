@@ -59,6 +59,10 @@ before 1.9.0) is skipped when
 its path is known: under `install_prefix`, or built. On `PATH`, it fails,
 so leave it out with `-x`.
 
+An extension of the BLAS the library does not have (`axpby`, `gemmt`;
+their programs exist, and exit 77 saying which call is missing) is
+skipped after it runs, the program's message as the reason.
+
 `-n 'bmb_run%routine=dgemm'` selects one routine; `-t level3` one level.
 
 ## References

@@ -861,6 +861,13 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
         bmb_range_set_single(&opts.matrix_dim1, BMB_DEFAULT_LEVEL3_SIZE);
     }
     bmb_counts_only = counts != NULL && counts[0] != '\0' && counts[0] != '0';
+    if (bench->missing != NULL && !bmb_counts_only) {
+        snprintf(advice, sizeof(advice), "%s: this build's %s has no %s; nothing measured.",
+                 bench->routine_name, bmb_build_backend(), bench->missing);
+        bmb_log_warning(advice);
+        bmb_options_free(&opts);
+        return BMB_EXIT_SKIPPED;
+    }
     bmb_warn_unused_options(bench, &opts);
     bmb_threads_resolve(&opts);
     {
