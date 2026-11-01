@@ -1109,6 +1109,8 @@ jobs:
           grep -q 'bmb_report' man.txt
           docker run --rm -e MANPAGER=cat bmb man bmb_suite > man.txt
           grep -q 'bmb_suite' man.txt
+          docker run --rm -e MANPAGER=cat bmb man bmb_mcp > man.txt
+          grep -q 'bmb_mcp' man.txt
 
       - name: Results to a mounted directory, then the report
         run: |
@@ -1134,6 +1136,19 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/runs:/results" bmb \
             bmb_report suite > suite.html
           test "$(grep -c 'class="bmb-result"' suite.html)" -eq 2
+
+      # bmb_mcp in the image (#264), as a client runs it: docker run -i, its
+      # requests on stdin, its results in a mounted directory.
+      - name: bmb_mcp, its tools and a benchmark through it
+        run: |
+          mkdir mcp
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"run_benchmark","arguments":{"routine":"ddot","vector_size":"64","iterations":1,"warmup_time":0}}}' \
+            | docker run --rm -i --user "$(id -u):$(id -g)" -v "$PWD/mcp:/results" bmb \
+                bmb_mcp --results-dir /results > mcp.out
+          grep -q '"name": "run_benchmark"' mcp.out
+          grep -q '"verified": true' mcp.out
+          test -s mcp/ddot-1.json
 
       # Netlib takes no thread count, so there is nothing to warn about.
       - name: A CPU quota or affinity smaller than -t is warned about

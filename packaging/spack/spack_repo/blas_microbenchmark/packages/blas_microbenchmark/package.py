@@ -2,8 +2,10 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import json
 import os
 import re
+import subprocess
 from glob import glob
 
 from spack_repo.builtin.build_systems.autotools import AutotoolsPackage
@@ -50,6 +52,8 @@ class BlasMicrobenchmark(AutotoolsPackage):
 
     depends_on("c", type="build")
     depends_on("blas")
+    # bmb_mcp, the MCP server agents use, is Python 3, standard library only.
+    depends_on("python@3.6:", type="run", when="@1.10:")
 
     # A git checkout has no configure: autoreconf makes it.
     depends_on("autoconf", type="build", when="@main")
@@ -191,11 +195,35 @@ class BlasMicrobenchmark(AutotoolsPackage):
         out = report("runs", output=str, error=str.split)
         assert out.count('class="bmb-result"') == 2, "the page does not carry both results"
 
+    def test_bmb_mcp(self):
+        """start bmb_mcp, list its tools, and run a benchmark through it"""
+        if self.spec.satisfies("@:1.9"):
+            raise SkipTest("bmb_mcp came with 1.10.0")
+        requests = "\n".join(json.dumps(r) for r in [
+            {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+                "name": "run_benchmark",
+                "arguments": {"routine": "ddot", "vector_size": "64",
+                              "iterations": 1, "warmup_time": 0}}},
+        ]) + "\n"
+        done = subprocess.run(
+            [self.prefix.bin.bmb_mcp, "--results-dir", "mcp"], input=requests,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=300,
+        )
+        replies = {r["id"]: r for r in map(json.loads, done.stdout.splitlines())}
+        tools = [t["name"] for t in replies[1]["result"]["tools"]]
+        assert "run_benchmark" in tools, f"bmb_mcp lists {tools}"
+        run = replies[2]["result"]
+        assert not run["isError"], f"run_benchmark failed: {run['content']}"
+        assert run["structuredContent"]["verified"], "run_benchmark did not check its result"
+
     def test_man_pages(self):
         """check the manual pages, an alias per benchmark included"""
         man1 = self.prefix.share.man.man1
         pages = ["blas-microbenchmark.1", "bmb_report.1"]
         if not self.spec.satisfies("@:1.8"):
             pages.append("bmb_suite.1")
+        if not self.spec.satisfies("@:1.9"):
+            pages.append("bmb_mcp.1")
         for page in pages + [os.path.basename(b) + ".1" for b in self._benchmarks()]:
             assert os.path.isfile(join_path(man1, page)), f"no {page} in {man1}"

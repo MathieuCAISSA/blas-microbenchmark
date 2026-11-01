@@ -303,9 +303,20 @@ checked against the memory, the CPUs and a time cap, and verified.
 Skills, installed in `share/blas-microbenchmark/skills/`, tell the agent
 how to measure, compare and read results as this project does.
 
+In Claude Code, the repository is a plugin marketplace whose plugin
+brings both, once blas-microbenchmark is installed:
+
+```text
+/plugin install blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark
+```
+
+For another client, the server's entry:
+
 ```json
 {"mcpServers": {"blas-microbenchmark": {"command": "bmb_mcp", "args": ["--results-dir", "bmb-results"]}}}
 ```
+
+In a container: `docker run --rm -i -v "$PWD:/results" $IMAGE bmb_mcp`.
 
 More in the guide [With an AI agent](https://mathieucaissa.github.io/blas-microbenchmark/agents.html)
 and `man bmb_mcp`.

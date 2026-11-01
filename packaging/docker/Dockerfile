@@ -70,12 +70,12 @@ FROM ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b
 ARG BLAS_BACKEND=openblas
 
 LABEL org.opencontainers.image.title="blas-microbenchmark" \
-      org.opencontainers.image.description="BLAS microbenchmarks, one executable per routine, bmb_suite and bmb_report" \
+      org.opencontainers.image.description="BLAS microbenchmarks, one executable per routine, bmb_suite, bmb_report and bmb_mcp" \
       org.opencontainers.image.source="https://github.com/MathieuCAISSA/blas-microbenchmark" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 # The minimized image diverts man to a stub that only says so; man-db's
-# own is put back. The results go to /results, which belongs to bmb,
+# own is put back. python3 runs bmb_mcp, the MCP server (#264). The results go to /results, which belongs to bmb,
 # 1001 (ubuntu is 1000): numeric, so that the host can resolve it.
 # hadolint ignore=DL3008,SC2086
 RUN case "$BLAS_BACKEND" in \
@@ -85,7 +85,7 @@ RUN case "$BLAS_BACKEND" in \
         mkl) blas=libgomp1 ;; \
     esac \
     && apt-get update \
-    && apt-get install -y --no-install-recommends $blas man-db less \
+    && apt-get install -y --no-install-recommends $blas man-db less python3 \
     && rm -rf /var/lib/apt/lists/* \
     && if [ -e /usr/bin/man.REAL ]; then \
         rm /usr/bin/man && dpkg-divert --quiet --remove --rename /usr/bin/man; \
@@ -101,6 +101,7 @@ ENV PATH=/usr/local/libexec/blas-microbenchmark/level1:/usr/local/libexec/blas-m
 # Every library the benchmarks load is here, MKL's kernels included: one
 # tiny verified run per level.
 RUN bmb_ddot --version \
+    && bmb_mcp --version \
     && bmb_ddot -x 0 -i 1 -v 64 >/dev/null \
     && bmb_dgemv -x 0 -i 1 -m 32 >/dev/null \
     && bmb_dgemm -x 0 -i 1 -m 32 >/dev/null \

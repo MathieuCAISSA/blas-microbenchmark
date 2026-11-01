@@ -1,0 +1,12 @@
+{
+  "name": "blas-microbenchmark",
+  "owner": { "name": "Mathieu Caissa" },
+  "description": "Benchmark BLAS libraries with blas-microbenchmark, from an AI agent",
+  "plugins": [
+    {
+      "name": "blas-microbenchmark",
+      "source": "./",
+      "description": "bmb_mcp, an MCP server over the installed suite, and skills to measure, compare and read BLAS results as the project does"
+    }
+  ]
+}

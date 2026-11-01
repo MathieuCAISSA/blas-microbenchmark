@@ -245,6 +245,9 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/runs:/results" bmb \
             bmb_report suite > suite.html
           test "$(grep -c 'class="bmb-result"' suite.html)" -eq 2
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+            | docker run --rm -i bmb bmb_mcp --results-dir /tmp/mcp > mcp.out
+          grep -q '"name": "run_benchmark"' mcp.out
 
       # X.Y.Z-<backend> for each; X.Y.Z and latest are the OpenBLAS one.
       - name: Push to ghcr.io

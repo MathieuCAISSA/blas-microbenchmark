@@ -8,6 +8,9 @@
 <pre>bmb_mcp --results-dir bmb-results --time-cap 600</pre>
 <p>A client that reads its servers from JSON starts it with an entry such as:</p>
 <pre>{"mcpServers": {"blas-microbenchmark": {"command": "bmb_mcp", "args": ["--results-dir", "bmb-results"]}}}</pre>
+<p>In Claude Code, the repository is a plugin marketplace: its plugin brings the server and the skills below, once blas-microbenchmark is installed and <code>bmb_mcp</code> on <code>PATH</code>:</p>
+<pre>/plugin install blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark</pre>
+<p>From the Docker image, a client runs <code>docker run --rm -i -v "$PWD:/results" ghcr.io/mathieucaissa/blas-microbenchmark bmb_mcp</code> as its command.</p>
 <p><code>run_suite</code> with several libraries runs the benchmarks of the installs it is given, by path: have the client ask before it calls it. Everything else is in <a href="bmb_mcp.html">its manual</a>.</p>
 
 <h2 id="skills">The skills</h2>
