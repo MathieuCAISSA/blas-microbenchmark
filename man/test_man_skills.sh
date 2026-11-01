@@ -46,3 +46,6 @@ if command -v python3 >/dev/null 2>&1; then
 else
     echo "note no python3 to run bmb_mcp: the tools the skills name are not checked"
 fi
+
+rm -rf "$T"
+echo "all checks passed"
