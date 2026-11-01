@@ -66,7 +66,7 @@ clean-local:
 	rm -rf html
 
 TESTS = test_man_render.sh test_man_options.sh test_man_content.sh test_man_install.sh \
-	test_man_html.sh
+	test_man_html.sh test_man_skills.sh
 AM_TESTS_ENVIRONMENT = \
 	ROUTINES='$(ROUTINES)' MAKE='$(MAKE)' mandir='$(mandir)' \
 	man1dir='$(man1dir)' pkglibexecdir='$(pkglibexecdir)' PACKAGE_VERSION='$(PACKAGE_VERSION)'; \
