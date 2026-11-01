@@ -1,0 +1,77 @@
+<!-- title: What BLAS is -->
+<!-- description: The BLAS in five minutes: what it is, its three levels, its four precisions, and what each routine computes. -->
+<p>blas-microbenchmark measures the routines of the BLAS. This page says what those are, enough to read a result: what a routine computes, what its letters mean, and why some reach a hundred GFLOP/s where others stay at a few.</p>
+
+<h2 id="what">An interface, many libraries</h2>
+<p>The BLAS (Basic Linear Algebra Subprograms) is a standard set of vector and matrix operations, fixed in the 1970s and 1980s: add a multiple of one vector to another, multiply a matrix by a vector, multiply two matrices, solve a triangular system. Every numerical code that does linear algebra calls them, directly or through LAPACK, NumPy, Julia or a solver, and does not care who wrote them.</p>
+<p>So many libraries implement the same interface, each tuned its own way: <b>OpenBLAS</b>, <b>BLIS</b> and AMD's <b>AOCL-BLAS</b> built on it, Intel's <b>MKL</b>, NVIDIA's <b>NVPL</b>, Arm's <b>ArmPL</b>, and <b>Netlib</b>'s reference implementation, written for clarity rather than speed. The same program runs against any of them; how fast it runs depends on which. That is what these benchmarks measure (<a href="backends.html">The BLAS libraries</a>).</p>
+<p>The benchmarks call the BLAS through <b>CBLAS</b>, its C interface: <code>cblas_dgemm(...)</code>, with the storage order of the matrices as an argument (row-major, as C stores them, or column-major, as Fortran does; <code>--layout</code>).</p>
+
+<h2 id="levels">Three levels</h2>
+<p>The routines come in three levels, by what they work on. The level decides what limits them: the memory, or the arithmetic.</p>
+<table class="grid">
+<tr><th>Level</th><th>Works on</th><th>Example</th><th>FLOPs a byte (double)</th><th>Limited by</th></tr>
+<tr><td>1</td><td>vectors</td><td><code>daxpy</code>: y &larr; &alpha;x + y</td><td>2n for 24n: 1/12</td><td>memory bandwidth</td></tr>
+<tr><td>2</td><td>a matrix and vectors</td><td><code>dgemv</code>: y &larr; &alpha;Ax + &beta;y</td><td>2n&sup2; for 8n&sup2;: 1/4</td><td>memory bandwidth</td></tr>
+<tr><td>3</td><td>matrices</td><td><code>dgemm</code>: C &larr; &alpha;AB + &beta;C</td><td>2n&sup3; for 24n&sup2;: n/12</td><td>arithmetic, once n is large</td></tr>
+</table>
+<p>A level 1 or 2 routine reads each number once and does one or two operations with it: it waits for the memory, and its GB/s says more than its GFLOP/s. A level 3 routine uses each number n times: a good library keeps the operands in the caches and the vector units busy, and approaches the processor's peak. That is why the report draws a roofline for levels 1 and 2, and the peak for level 3 (<a href="bmb_report.html#The_peak">The peak</a>).</p>
+<pre>bmb_daxpy -v 1024:16777216
+bmb_dgemm -m 256:2048</pre>
+<p>Run both: daxpy's rate falls as the vectors leave each cache, dgemm's rises with the size.</p>
+
+<h2 id="precisions">Four precisions</h2>
+<p>A routine's first letter is its precision:</p>
+<table class="grid">
+<tr><th>Letter</th><th>Precision</th><th>Bytes an element</th></tr>
+<tr><td><code>s</code></td><td>single, 32-bit real</td><td>4</td></tr>
+<tr><td><code>d</code></td><td>double, 64-bit real</td><td>8</td></tr>
+<tr><td><code>c</code></td><td>single complex</td><td>8</td></tr>
+<tr><td><code>z</code></td><td>double complex</td><td>16</td></tr>
+</table>
+<ul>
+<li><b>Single</b> moves half the bytes of double and fits twice as many numbers in a vector register: it can run about twice as fast, at about 7 significant digits rather than 16.</li>
+<li><b>Complex</b> numbers are pairs of reals. A complex multiply-add is four multiplies and four adds, eight FLOPs on two numbers, where a real one is two FLOPs on one: four times the arithmetic on twice the data. A complex level 3 routine is therefore more compute-bound than its real counterpart.</li>
+<li><b>Two letters</b> name a routine that takes one precision and returns another: <code>scasum</code> sums a single complex vector into a single real, <code>dznrm2</code> takes the norm of a double complex vector. <code>i?amax</code> returns an index: <code>idamax</code>.</li>
+</ul>
+<p>The FLOPs and bytes the benchmarks count follow these conventions, so that a GFLOP/s is comparable across precisions and libraries (<a href="measuring.html">How a number is measured</a>).</p>
+
+<h2 id="routines">The routines</h2>
+<p>A routine is a precision and an operation, a <i>family</i>: <code>dgemm</code> is gemm in double. &alpha; and &beta; are scalars, x and y vectors, A, B and C matrices; Aᵀ is A transposed, Aᴴ its conjugate transpose.</p>
+
+<h3 id="level1">Level 1: vectors</h3>
+<table class="grid">
+<tr><th>Family</th><th>Computes</th></tr>
+<tr><td>axpy</td><td>y &larr; &alpha;x + y</td></tr>
+<tr><td>scal</td><td>x &larr; &alpha;x</td></tr>
+<tr><td>copy, swap</td><td>y &larr; x; x &harr; y (no arithmetic: only GB/s)</td></tr>
+<tr><td>dot</td><td>xᵀy (real); <b>dotu</b> xᵀy and <b>dotc</b> xᴴy (complex)</td></tr>
+<tr><td>nrm2</td><td>&#8214;x&#8214;&#8322;, the Euclidean norm, without overflow</td></tr>
+<tr><td>asum</td><td>&Sigma;|x&#7522;| (for a complex x, |re| + |im|)</td></tr>
+<tr><td>iamax</td><td>the index of the largest |x&#7522;| (no arithmetic counted)</td></tr>
+<tr><td>rot</td><td>applies a plane rotation to the pairs (x&#7522;, y&#7522;)</td></tr>
+</table>
+
+<h3 id="level2">Level 2: a matrix and vectors</h3>
+<table class="grid">
+<tr><th>Family</th><th>Computes</th></tr>
+<tr><td>gemv</td><td>y &larr; &alpha;Ax + &beta;y, or with Aᵀ or Aᴴ (<code>--trans</code>)</td></tr>
+<tr><td>gbmv</td><td>the same with A a <b>band</b> matrix: only K diagonals each side of the main one are stored (<code>-M</code> is K)</td></tr>
+<tr><td>symv, hemv</td><td>y &larr; &alpha;Ax + &beta;y with A symmetric (real) or Hermitian (complex), one triangle stored (<code>--uplo</code>); <b>spmv</b> with that triangle <b>packed</b>, column after column, without the other half</td></tr>
+<tr><td>ger</td><td>A &larr; &alpha;xyᵀ + A, a rank-1 update; <b>geru</b> and <b>gerc</b> (xyᴴ) in complex</td></tr>
+<tr><td>syr, her</td><td>A &larr; &alpha;xxᵀ + A (xxᴴ), on one triangle; <b>syr2</b>, <b>her2</b>: &alpha;xyᵀ + &alpha;yxᵀ + A</td></tr>
+<tr><td>trmv</td><td>x &larr; Ax with A triangular (<code>--uplo</code>, <code>--trans</code>, <code>--diag</code>: a unit diagonal, not stored)</td></tr>
+<tr><td>trsv</td><td>solves Ax = b for x, in place, A triangular; <b>tpsv</b> with A packed, <b>tbsv</b> with A banded</td></tr>
+</table>
+
+<h3 id="level3">Level 3: matrices</h3>
+<table class="grid">
+<tr><th>Family</th><th>Computes</th></tr>
+<tr><td>gemm</td><td>C &larr; &alpha;AB + &beta;C, each of A and B transposed or not (<code>--trans NT</code>, &hellip;). The routine most of linear algebra spends its time in. <code>-K</code> sets the inner dimension apart; <code>--batch-count</code> does many at once</td></tr>
+<tr><td>symm, hemm</td><td>C &larr; &alpha;AB + &beta;C with A symmetric or Hermitian, on the left or the right (<code>--side</code>)</td></tr>
+<tr><td>syrk, herk</td><td>C &larr; &alpha;AAᵀ + &beta;C (AAᴴ), on one triangle of C: a rank-k update</td></tr>
+<tr><td>syr2k, her2k</td><td>C &larr; &alpha;ABᵀ + &alpha;BAᵀ + &beta;C, the rank-2k update</td></tr>
+<tr><td>trmm</td><td>B &larr; &alpha;AB with A triangular, on either side</td></tr>
+<tr><td>trsm</td><td>solves AX = &alpha;B for X, A triangular: the core of LU and Cholesky solves</td></tr>
+</table>
+<p>Not every family exists in every precision: dot, ger, symv, syr, syr2 and spmv are real, their complex counterparts are dotu and dotc, geru and gerc, hemv, her, her2; and here rot, gbmv, tbsv and tpsv are measured in real precision only. <a href="blas-microbenchmark.html">The manual</a> lists the 104 benchmarks by level, with what <code>-m</code>, <code>-M</code> and <code>-K</code> are for each, and <a href="options.html">Options</a> the arguments each takes.</p>
