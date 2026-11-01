@@ -75,6 +75,15 @@ ok "bmb_report.1 documents exactly the $(wc -l <"$T/help") options of --help"
 compare options "$SUITE" bmb_suite.1
 ok "bmb_suite.1 documents exactly the $(wc -l <"$T/help") options of --help"
 
+if command -v python3 >/dev/null 2>&1; then
+    compare options "$MCP" bmb_mcp.1
+    ok "bmb_mcp.1 documents exactly the $(wc -l <"$T/help") options of --help"
+    compare defaults "$MCP" bmb_mcp.1
+    ok "bmb_mcp.1 gives the same $(wc -l <"$T/help") numeric default as --help"
+else
+    echo "note no python3 to run bmb_mcp --help: bmb_mcp.1 not compared"
+fi
+
 # The benchmarks share one parser, so one of them speaks for all; but the
 # page says so, and that is worth checking too.
 for b in ../src/c/level1/double/bmb_ddot ../src/c/level2/double/bmb_dgemv; do

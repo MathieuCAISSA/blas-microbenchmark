@@ -174,6 +174,7 @@ The benchmarks|output|Output
 The benchmarks|environment|Exit status and environment
 The benchmarks|examples|Examples
 Run and report|bmb_suite|bmb_suite
+Run and report|bmb_mcp|bmb_mcp
 Run and report|bmb_report|bmb_report
 Run and report|outputs|What they produce
 Project|development|Development'

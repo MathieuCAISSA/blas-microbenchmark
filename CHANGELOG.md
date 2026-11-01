@@ -10,6 +10,13 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- `bmb_mcp` (#262), installed beside `bmb_report` and `bmb_suite`: an MCP
+  server, so that an AI agent lists the routines, describes the machine,
+  runs a benchmark or the suite, reads a result and makes the report,
+  through tools whose arguments are fields. Every run is checked before
+  it starts (its arguments, its operands against the memory, its threads
+  against the CPUs, every path inside the results directory) and
+  stopped at a time cap. Python 3, standard library only; `bmb_mcp(1)`.
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.

@@ -363,6 +363,8 @@ runs before `autoreconf`:
 - `DIRECTORY` in `packaging/reframe/blas_microbenchmark.py`, each
   routine's precision directory;
 - `ROUTINES` in `packaging/reframe/blas_microbenchmark.py`;
+- `ROUTINES` in `src/mcp/bmb_mcp.py`, with each routine's sizes and
+  family, what `list_routines` gives;
 - `ROUTINES` in `src/suite/bmb_suite.sh`, what `--level`, `--precision`
   and `--routine` select from.
 

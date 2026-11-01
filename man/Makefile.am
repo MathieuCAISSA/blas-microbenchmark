@@ -6,7 +6,7 @@
 # each / is followed by \: -- a place groff may break the line, invisible
 # otherwise -- so that a long --prefix wraps instead of overflowing.
 
-man1_MANS = blas-microbenchmark.1 bmb_report.1 bmb_suite.1
+man1_MANS = blas-microbenchmark.1 bmb_report.1 bmb_suite.1 bmb_mcp.1
 CLEANFILES = $(man1_MANS)
 
 # One alias page per benchmark, so that "man bmb_dgemm" opens the shared
@@ -42,6 +42,9 @@ bmb_report.1: $(srcdir)/bmb_report.1.in Makefile
 bmb_suite.1: $(srcdir)/bmb_suite.1.in Makefile
 	$(AM_V_GEN)$(SUBST) $(srcdir)/bmb_suite.1.in >$@.tmp && mv -f $@.tmp $@
 
+bmb_mcp.1: $(srcdir)/bmb_mcp.1.in Makefile
+	$(AM_V_GEN)$(SUBST) $(srcdir)/bmb_mcp.1.in >$@.tmp && mv -f $@.tmp $@
+
 install-data-hook:
 	for r in $(ROUTINES); do \
 	    echo '.so man1/blas-microbenchmark.1' >"$(DESTDIR)$(man1dir)/bmb_$$r.1" || exit 1; \
@@ -73,5 +76,5 @@ AM_TESTS_ENVIRONMENT = \
 SITE_GUIDES = site/blas.html site/install.html site/first-run.html site/compare.html \
 	site/backends.html site/hpc.html site/reframe.html
 
-EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in bmb_suite.1.in man_helper.sh html.sh devpage.sh site.css \
+EXTRA_DIST = blas-microbenchmark.1.in bmb_report.1.in bmb_suite.1.in bmb_mcp.1.in man_helper.sh html.sh devpage.sh site.css \
 	$(SITE_GUIDES) $(TESTS)
