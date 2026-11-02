@@ -48,8 +48,10 @@ precision's, does not apply. sbgemm is compiled as single precision, C's
 and the accumulation's; its A and B are `uint16_t`, the fill rounded to
 bfloat16, and its check projects through float copies of them: a
 product of two bfloat16 values is exact in float, so single precision's
-tolerance for K terms is all that is left. There is no library with it
-on the Ubuntu runners but MKL; the `mkl` job checks it was found. To
+tolerance for K terms is all that is left. The `mkl` and `armpl` jobs
+check they found it; Ubuntu's OpenBLAS is built without it. A and B go
+to the call as `void *`, ArmPL typing a bfloat16 as `__bf16` where the
+others take a 16-bit integer. To
 try it elsewhere, build OpenBLAS with `make BUILD_BFLOAT16=1` and give
 `configure` its prefix (`--with-blas-incpath`, `--with-blas-libpath`).
 On a CPU without bfloat16 units (AVX512_BF16, AMX), OpenBLAS falls back

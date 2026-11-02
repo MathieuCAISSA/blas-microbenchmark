@@ -587,6 +587,14 @@ jobs:
           cd build
           ../configure --with-blas-backend=armpl --enable-werror
 
+      # The extensions of the BLAS this library has (#171, #322), built
+      # to be measured: a broken probe would skip them, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_SBGEMM 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 

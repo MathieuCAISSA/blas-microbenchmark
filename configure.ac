@@ -621,7 +621,7 @@ void (*volatile bmb_p)(void);]],
       [bmb_cv_gemmt=yes], [bmb_cv_gemmt=no])])
   dnl A GEMM of bfloat16 inputs into float (#322): OpenBLAS's cblas_sbgemm,
   dnl defined when it was built with BUILD_BFLOAT16 (its header declares it
-  dnl either way), and MKL's cblas_gemm_bf16bf16f32, with the same
+  dnl either way) and ArmPL's, and MKL's cblas_gemm_bf16bf16f32, with the same
   dnl arguments.
   AC_CACHE_CHECK([for cblas_sbgemm], [bmb_cv_sbgemm],
     [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>

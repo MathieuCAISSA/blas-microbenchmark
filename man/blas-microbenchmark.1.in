@@ -130,7 +130,7 @@ sbgemm is a GEMM whose A and B are in bfloat16 (8 bits of significand)
 and C, and the accumulation, in float: OpenBLAS's cblas_sbgemm, where it
 was built with
 .BR BUILD_BFLOAT16 ,
-or MKL's cblas_gemm_bf16bf16f32.
+ArmPL's, or MKL's cblas_gemm_bf16bf16f32.
 It is an extension too, skipped where the library has neither.
 Its operands are the fill every routine uses, rounded to bfloat16;
 .B \-\-verify

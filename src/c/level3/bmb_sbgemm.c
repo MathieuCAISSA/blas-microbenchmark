@@ -13,9 +13,9 @@
 /* sbgemm (#322): C = alpha * op(A) * op(B) + beta * C, A and B in
  * bfloat16, C and the accumulation in float, as machine-learning and
  * mixed-precision codes call it: OpenBLAS's cblas_sbgemm (built with
- * BUILD_BFLOAT16), MKL's cblas_gemm_bf16bf16f32, which take the same
- * arguments. An extension of the BLAS (#171); a build whose library has
- * neither is skipped. Compiled as single precision (bmb_prec.h), C's.
+ * BUILD_BFLOAT16) and ArmPL's, MKL's cblas_gemm_bf16bf16f32, which take
+ * the same arguments. An extension of the BLAS (#171); a build whose
+ * library has none is skipped. Compiled as single precision (bmb_prec.h), C's.
  * dim1 = M, dim2 = N, K apart under -K, as GEMM's. */
 #if defined(HAVE_CBLAS_GEMM_BF16BF16F32)
 #define BMB_BF16_GEMM cblas_gemm_bf16bf16f32
@@ -135,13 +135,16 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
     return ctx;
 }
 
+/* A and B passed as void *: OpenBLAS and MKL type a bfloat16 as a 16-bit
+ * integer, ArmPL as the compiler's __bf16, the same bits. */
 static void call(void *vctx)
 {
 #if defined(HAVE_CBLAS_SBGEMM)
     bmb_ctx_t *ctx = vctx;
 
     BMB_BF16_GEMM(ctx->order, BMB_CBLAS_TRANS(ctx->ta), BMB_CBLAS_TRANS(ctx->tb), ctx->m, ctx->n, ctx->k,
-                  ctx->alpha, ctx->a, ctx->lda, ctx->b, ctx->ldb, ctx->beta, ctx->c, ctx->ldc);
+                  ctx->alpha, (const void *) ctx->a, ctx->lda, (const void *) ctx->b, ctx->ldb, ctx->beta,
+                  ctx->c, ctx->ldc);
 #else
     (void) vctx;
 #endif

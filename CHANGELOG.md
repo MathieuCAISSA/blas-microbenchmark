@@ -23,8 +23,8 @@ releases with the same major version can be compared and read by the same
   filled the other triangle row-major (#4905); `--verify` stops on both.
 - `sbgemm` (#322): a GEMM of bfloat16 A and B into a float C, accumulated
   in float, through OpenBLAS's `cblas_sbgemm` (built with
-  `BUILD_BFLOAT16`) or MKL's `cblas_gemm_bf16bf16f32`, skipped where the
-  library has neither. `--verify` checks it against the bfloat16 values
+  `BUILD_BFLOAT16`) and ArmPL's, or MKL's `cblas_gemm_bf16bf16f32`,
+  skipped where the library has none. `--verify` checks it against the bfloat16 values
   it was given, with single precision's tolerance for K additions. Every
   result records the types (`# types: bf16 inputs, fp32 accumulation and
   output`, `"types"` in the JSON); `bmb_report` judges it by the peak its
