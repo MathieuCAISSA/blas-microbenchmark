@@ -79,6 +79,12 @@ jobs:
           cd build
           ../configure --enable-werror
 
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 
@@ -213,6 +219,13 @@ jobs:
           mkdir -p build
           cd build
           ../configure --with-blas-backend=blis --enable-werror
+
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -999,6 +1012,61 @@ jobs:
             build/**/*.sh.log
           if-no-files-found: ignore
 
+  # The ILP64 build (#172): OpenBLAS's 64-bit integer interface, from
+  # Ubuntu's libopenblas64-pthread-dev, whose cblas.h includes an
+  # openblas64_config.h the package does not ship -- it ships the same
+  # file as openblas_config.h -- so it is linked under the name asked for.
+  # make check and the real-size sweep, as the openblas job runs them;
+  # the version must say 64-bit integers.
+  ilp64:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y autoconf automake libtool pkg-config libopenblas64-pthread-dev
+          d=/usr/include/x86_64-linux-gnu/openblas64-pthread
+          [ -e "$d/openblas64_config.h" ] || sudo ln -s openblas_config.h "$d/openblas64_config.h"
+
+      - name: autoreconf
+        run: ./autogen.sh
+
+      - name: configure
+        run: |
+          mkdir -p build
+          cd build
+          ../configure --with-blas-backend=openblas --enable-ilp64 --enable-werror
+
+      - name: make
+        run: make -C build -j"$(nproc)"
+
+      - name: Provenance
+        run: |
+          build/src/c/level1/double/bmb_ddot --version | tee version.txt
+          grep -q '^Integers: 64-bit (ILP64)$' version.txt
+          ldd build/src/c/level3/double/bmb_dgemm | grep -q libopenblas64
+
+      - name: make check
+        run: make -C build check
+
+      - name: Verified at real sizes
+        run: .github/scripts/verify-sweep.sh build
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-logs-ilp64
+          path: |
+            build/**/test-suite.log
+            build/**/*.sh.log
+          if-no-files-found: ignore
+
   # Intel oneAPI MKL, the BLAS most x86 clusters measure against, from
   # Intel's apt repository: its current release, as sites install it. The
   # benchmarks link its GNU OpenMP threading layer and set its BLAS
@@ -1029,6 +1097,14 @@ jobs:
           cd build
           ../configure --with-blas-backend=mkl --enable-werror
 
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMTR 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 
@@ -1042,6 +1118,17 @@ jobs:
       # job's library: make check only uses tiny ones.
       - name: Verified at real sizes
         run: .github/scripts/verify-sweep.sh build
+
+      # MKL's ILP64 interface too (#172): libmkl_gf_ilp64, MKL_INT 64-bit.
+      - name: ILP64, make check
+        run: |
+          mkdir -p build-ilp64
+          cd build-ilp64
+          ../configure --with-blas-backend=mkl --enable-ilp64 --enable-werror
+          make -j"$(nproc)"
+          src/c/level1/double/bmb_ddot --version | tee version.txt
+          grep -q '^Integers: 64-bit (ILP64)$' version.txt
+          make check
 
       - name: Upload test logs
         if: always()
@@ -1090,16 +1177,23 @@ jobs:
         run: |
           docker run --rm -e WANT="$(grep -c '^[a-z]' src/c/routines.txt)" bmb sh -ec '
             n=0
+            skipped=0
             for b in /usr/local/libexec/blas-microbenchmark/level*/bmb_*; do
+              rc=0
               case $b in
-                */level1/*) "$b" -x 0 -i 1 -t 1,2 -v 1000 >/dev/null ;;
-                *) "$b" -x 0 -i 1 -t 1,2 -m 48 --layout col >/dev/null
-                   "$b" -x 0 -i 1 -t 1,2 -m 48 >/dev/null ;;
+                */level1/*) "$b" -x 0 -i 1 -t 1,2 -v 1000 >/dev/null || rc=$? ;;
+                *) "$b" -x 0 -i 1 -t 1,2 -m 48 --layout col >/dev/null || rc=$?
+                   [ "$rc" -ne 0 ] || "$b" -x 0 -i 1 -t 1,2 -m 48 >/dev/null || rc=$? ;;
               esac
-              n=$((n + 1))
+              # 77: an extension of the BLAS the library lacks (#171), which says so.
+              case $rc in
+                0) n=$((n + 1)) ;;
+                77) skipped=$((skipped + 1)) ;;
+                *) exit "$rc" ;;
+              esac
             done
-            test "$n" -eq "$WANT"
-            echo "all $n benchmarks verified"'
+            test $((n + skipped)) -eq "$WANT"
+            echo "all $n benchmarks verified, $skipped extensions the library lacks skipped"'
 
       - name: Man pages
         run: |
@@ -1239,13 +1333,19 @@ jobs:
           WANT=$(grep -c '^[a-z]' src/c/routines.txt) python3 - <<'EOF'
           import json, os
           cases = json.load(open('run.json'))['runs'][0]['testcases']
-          assert len(cases) == int(os.environ['WANT']) and all(c['result'] == 'pass' for c in cases), cases
+          # An extension of the BLAS this OpenBLAS lacks (#171) skips, nothing else.
+          ext = {l.split()[0] for l in open('src/c/routines.txt')
+                 if not l.startswith('#') and l.split()[5:] == ['ext']}
+          assert len(cases) == int(os.environ['WANT']), cases
+          assert all(c['result'] == 'pass' or (c['result'] == 'skip' and c['routine'] in ext)
+                     for c in cases), [(c['routine'], c['result']) for c in cases if c['result'] != 'pass']
           perf = {c['routine']: c['perfvalues'] for c in cases}
           assert perf['dgemm']['generic:default:gflops'][1] == 0.001, perf['dgemm']
           assert set(perf['dcopy']) == {'generic:default:gbytes_per_s'}, perf['dcopy']
           assert set(perf['ddot']) == {'generic:default:gflops', 'generic:default:gbytes_per_s'}
           assert set(perf['dgemm']) == {'generic:default:gflops'}, perf['dgemm']
-          print(len(cases), 'routines passed, their rates and references as expected')
+          print(sum(c['result'] == 'pass' for c in cases), 'routines passed,',
+                sum(c['result'] == 'skip' for c in cases), 'extensions skipped, the rates and references as expected')
           EOF
 
       # make install puts the tests beside the benchmarks; run from there,
@@ -1255,7 +1355,7 @@ jobs:
       - name: The installed tests run their own install
         run: |
           reframe -c inst/share/blas-microbenchmark/reframe/blas_microbenchmark.py \
-            -n 'bmb_run%routine=(dgemm|ddot)' -S level1_size=100000 -S level3_size=128 \
+            -n 'bmb_run%routine=(dgemm|ddot)$' -S level1_size=100000 -S level3_size=128 \
             -S num_threads=2 -r --report-file=installed-run.json
           python3 - <<'EOF'
           import json, os
@@ -1270,12 +1370,12 @@ jobs:
       - name: A reference it cannot meet, and an unverified run, fail it
         run: |
           echo '{"generic": {"dgemm": {"gflops": [1e9, -0.1, null]}}}' > strict.json
-          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm$' \
                -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
                -S reference_file=strict.json -r --report-file=strict-run.json; then
             echo "a reference of 1e9 GFLOP/s was met"; exit 1
           fi
-          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm$' \
                -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
                -S bmb_options=-C -r --report-file=unverified-run.json; then
             echo "a run with -C passed"; exit 1
@@ -1290,7 +1390,7 @@ jobs:
 
       - name: bmb_build_run on this commit's tarball
         run: |
-          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)' \
+          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)$' \
             -S bmb_tarball.tarball="$(ls build/blas-microbenchmark-*.tar.gz)" \
             -S level1_size=100000 -S level3_size=128 -S num_threads=2 \
             -r --report-file=build-run.json
@@ -1305,8 +1405,10 @@ jobs:
       - name: Their results make a report
         run: |
           find bmb-run-output -name result.json > results.txt
-          test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)" ||
-            { echo "$(wc -l < results.txt) results, not a routine each"; exit 1; }
+          # A result a routine that passed: a skipped extension (#171) writes none.
+          want=$(python3 -c "import json; print(sum(c['result'] == 'pass' for c in json.load(open('run.json'))['runs'][0]['testcases']))")
+          test "$(wc -l < results.txt)" -eq "$want" ||
+            { echo "$(wc -l < results.txt) results, not one a routine that passed ($want)"; exit 1; }
           # shellcheck disable=SC2046
           inst/bin/bmb_report $(cat results.txt) > report.html
           grep -qi '^<!doctype html>' report.html

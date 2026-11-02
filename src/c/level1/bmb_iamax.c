@@ -10,7 +10,7 @@
  * complex one, the first if several; 0-based, as CBLAS gives it. BLAS
  * puts the i before the precision (BMB_CBLAS_INDEX). */
 typedef struct {
-    int n;
+    bmb_int n;
     size_t max; /* where setup() put the largest element */
     bmb_real_t *x;
     volatile size_t sink;
@@ -28,7 +28,7 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) dim1;
+    ctx->n = (bmb_int) dim1;
     ctx->x = bmb_bench_alloc(dim1 * BMB_ELEM_BYTES);
     if (ctx->x == NULL) {
         free(ctx);

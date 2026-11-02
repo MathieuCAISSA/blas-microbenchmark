@@ -22,9 +22,9 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int lda;   /* 2K + 1, and --ld-pad */
-    int n;
-    int k;
+    bmb_int lda;   /* 2K + 1, and --ld-pad */
+    bmb_int n;
+    bmb_int k;
     char trans; /* --trans: N or T */
     bmb_real_t alpha;
     bmb_real_t beta;
@@ -61,9 +61,9 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) n;
-    ctx->k = (int) k;
-    ctx->lda = (int) lda;
+    ctx->n = (bmb_int) n;
+    ctx->k = (bmb_int) k;
+    ctx->lda = (bmb_int) lda;
     ctx->trans = bmb_bench_trans(0);
     ctx->alpha = BMB_R(1.0);
     ctx->beta = BMB_R(0.0);

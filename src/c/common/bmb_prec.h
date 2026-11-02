@@ -9,9 +9,37 @@
  * family goes through what is here; what differs between families stays
  * in their source. */
 
+/* config.h first: whether the build is ILP64 is in it, and a source
+ * that did not include it would give a 64-bit library int dimensions
+ * without a word (#172). */
+#include <config.h>
+
+#include <cblas.h>
 #include <stddef.h>
 
 #include "bmb_verify.h"
+
+/* bmb_int: the integer the library's CBLAS takes for a dimension, an
+ * increment or a leading dimension (#172). In an ILP64 build (configure
+ * --enable-ilp64, which defines BMB_ILP64) it is the library's own 64-bit
+ * type, MKL_INT or OpenBLAS's blasint: they are long long and long, so
+ * only the library's own makes a pointer to an array of them what the
+ * batched calls read. Otherwise int, as every LP64 CBLAS takes. */
+#if defined(BMB_ILP64) && defined(MKL_INT)
+typedef MKL_INT bmb_int;
+#elif defined(BMB_ILP64)
+typedef blasint bmb_int;
+#else
+typedef int bmb_int;
+#endif
+
+/* Configure says the width; a bmb_int of another is a build that would
+ * pass the library the wrong integers. */
+#if !defined(BMB_BLAS_INT_BITS)
+#error "config.h does not define BMB_BLAS_INT_BITS: run configure again"
+#endif
+_Static_assert(sizeof(bmb_int) * 8 == BMB_BLAS_INT_BITS,
+               "bmb_int is not as wide as the integers the library takes");
 
 /* bmb_real_t: the real type, of a real element or of each part of a
  * complex one, real part first, the layout of C99's complex types and of

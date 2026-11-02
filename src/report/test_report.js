@@ -707,6 +707,13 @@
         v("f.json", "0.3.28", base, transposed)
       ]);
       eq(R.historyGroups(m.identities).length, 2, "and by their arguments (#221, #269): TN and NN are two histories");
+
+      var star = { run: { star: { cpus: "0-3" } } };
+      m = R.buildModel([
+        v("a.json", "0.3.9", base), v("b.json", "0.3.26", base), v("c.json", "0.3.28", base),
+        v("d.json", "0.3.9", base, star), v("e.json", "0.3.26", base, star), v("f.json", "0.3.28", base, star)
+      ]);
+      eq(R.historyGroups(m.identities).length, 2, "and by --star (#173): instances and threads are two histories");
     });
 
     /* ---- FlexiBLAS (#5) ---- */
@@ -776,6 +783,22 @@
       eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · ld + 8"],
          "--ld-pad (#163): a padded run is its own series, named so");
       eq(byName(m, "openblas").files, ["old.json", "zero.json"], "files without a padding merge with unpadded ones");
+    });
+
+    /* ---- --star (#173) ---- */
+
+    test("star", function () {
+      var m = R.buildModel([
+        entry("threads.json", { run: { cache: "hot" }, rows: [[4, 4096, null, 1e-6, 32, 256]] }),
+        entry("star.json", { run: { cache: "hot", star: { cpus: "0,2,4,6" } }, rows: [[4, 4096, null, 1e-6, 30, 240]] })
+      ]);
+      eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · star"],
+         "a run of instances is its own series, named so, beside threads at the same count");
+      eq(routine(m, "ddot").seriesOrder.length, 2, "and a curve of its own at that count");
+      eq(R.runText({ star: { cpus: "0,2,4,6" } }), "star: an instance a core, on the first of CPUs 0,2,4,6",
+         "the Run column says the instances' CPUs");
+      var p = R.pointsOf(routine(m, "ddot").seriesOrder[1])[0];
+      eq(R.percentOfPeak(p, { gflops: 10 }), 75, "its rate, the instances' sum, is judged by as many cores' peak");
     });
 
     /* ---- The CPU frequency (#3) ---- */

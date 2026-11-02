@@ -200,7 +200,8 @@ history, the build directories and what `autoreconf` makes again.
 
 The `docker` job builds the image for each of the four backends, then
 runs, from it: every benchmark with `--verify`, in both storage orders,
-on 1 and 2 threads; `man` for each of the four pages; a result written
+on 1 and 2 threads, an extension of the BLAS the library lacks skipped
+(#171); `man` for each of the four pages; a result written
 to a mounted directory as the runner's user, turned into a page by
 `bmb_report`; `bmb_suite` on ddot and dgemm into a mounted directory,
 and `bmb_report` on that directory (#279); `bmb_mcp` run with `docker

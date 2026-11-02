@@ -22,6 +22,8 @@
 # (-w 0): a check needs none, and it would cost 0.2 s a run.
 # Tiny sizes only (see AGENTS.md).
 set -e
+# bmb_missing: an extension this build's library does not have (#171).
+. "${srcdir:-.}/test_helper.sh"
 
 T=verify-test.d
 
@@ -57,11 +59,16 @@ combos() {
 }
 
 n=0
+known_wrong=0
 for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     name=$(basename "$b")
     case $name in *.*) continue ;; esac
     [ -f "$b" ] && [ -x "$b" ] || continue
     r=${name#bmb_}
+    if bmb_missing "$r"; then
+        n=$((n + 1))
+        continue
+    fi
     case $b in
         level1/*) sizes="-v 7,64,1000" ;;
         *)
@@ -69,7 +76,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
                 sgemm | dgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
                 # gbmv's and tbsv's -M is the band's K, 5 and past N.
                 ?gemv | ?gbmv | ?tbsv | ?ger | ?geru | ?gerc | ?symm | ?hemm \
-                    | ?syrk | ?herk | ?syr2k | ?her2k | ?trmm | ?trsm) sizes="-m 7,33,64 -M 5,64" ;;
+                    | ?syrk | ?herk | ?syr2k | ?her2k | ?trmm | ?trsm | ?gemmt) sizes="-m 7,33,64 -M 5,64" ;;
                 *) sizes="-m 7,33,64" ;;
             esac
             ;;
@@ -87,6 +94,8 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $r in
         [sd]gemm) variants=$(combos --trans=NN,NT,TN,TT) ;;
         [cz]gemm) variants=$(combos --trans=NN,NT,NC,TN,TT,TC,CN,CT,CC) ;;
+        [sd]gemmt) variants=$(combos --uplo=U,L --trans=NN,NT,TN,TT) ;;
+        [cz]gemmt) variants=$(combos --uplo=U,L --trans=NN,NT,NC,TN,TT,TC,CN,CT,CC) ;;
         ?gemv | ?gbmv) variants=$(combos --trans=$t3) ;;
         ?trmm | ?trsm) variants=$(combos --side=L,R --uplo=U,L --trans=$t3 --diag=N,U) ;;
         ?trmv | ?trsv | ?tpsv | ?tbsv) variants=$(combos --uplo=U,L --trans=$t3 --diag=N,U) ;;
@@ -114,8 +123,21 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
                 lo="--layout $layout --ld-pad $pad"
             fi
 
+            # A library known to get this wrong (bmb_known_wrong): its
+            # check must say so, and nothing else is asked of it.
+            # shellcheck disable=SC2086 # options, split on purpose
+            known=$(bmb_known_wrong "$b" "$r" $lo $tr)
+            rc=0
+            "$b" -x 0 -w 0 -i 1 -t $threads -c $lo $tr $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err" || rc=$?
+            if [ -n "$known" ] && { [ "$rc" -ne 0 ] || [ "${known#maybe }" = "$known" ]; }; then
+                test "$rc" -eq 2 || fail "$name $lo $tr: a library known to get it wrong, and exit $rc, not 2: $(cat "$T/$r.err")"
+                grep -qF "${known#maybe }" "$T/$r.err" || fail "$name $lo $tr: not '${known#maybe }': $(cat "$T/$r.err")"
+                known_wrong=$((known_wrong + 1))
+                continue
+            fi
+
             # Right results: verified, and said so.
-            if ! "$b" -x 0 -w 0 -i 1 -t $threads -c $lo $tr $sizes -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err"; then
+            if [ "$rc" -ne 0 ]; then
                 fail "$name $lo $tr --verify failed on a correct library: $(cat "$T/$r.err")"
             fi
             grep -q '^# verified: ' "$T/$r.out" || fail "$name --verify does not say the results were verified"
@@ -143,6 +165,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     n=$((n + 1))
 done
 test "$n" -eq "$(grep -c '^[a-z]' "${srcdir:-.}/routines.txt")" || fail "$n benchmarks found, not the routines of routines.txt"
+[ "$known_wrong" -eq 0 ] || echo "ok   $known_wrong runs on this library's known bugs, each caught as such (bmb_known_wrong)"
 echo "ok   all $n benchmarks pass --verify, in both layouts, padded or not, where they have a matrix, with every --trans they take, and each one's check catches a corrupted result"
 
 # A check that sees the call at all (#239): with BMB_VERIFY_SKIP set, a

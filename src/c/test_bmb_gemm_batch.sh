@@ -24,6 +24,8 @@ has() {
 
 rm -rf "$T"
 mkdir "$T"
+# bmb_known_wrong: a library's known bug, which --verify must catch.
+. "${srcdir:-.}/test_helper.sh"
 
 modes=loop
 missing=
@@ -33,14 +35,30 @@ if has HAVE_CBLAS_GEMM_BATCH_STRIDED; then modes="$modes strided"; else missing=
 for b in level3/single/bmb_sgemm level3/double/bmb_dgemm level3/complex/bmb_cgemm level3/complex16/bmb_zgemm; do
     r=${b##*/bmb_}
     for mode in $modes; do
+        trans=
         for args in "--layout row --trans NN" "--layout col --trans TN -p 3"; do
             # shellcheck disable=SC2086 # the options, split on purpose
+            known=$(bmb_known_wrong "$b" "$r" --batch-mode "$mode" $args)
+            rc=0
+            # shellcheck disable=SC2086 # the options, split on purpose
             "$b" -x 0 -w 0 -i 1 -m 7,20 -M 5 -K 3,9 --batch-count 4 --batch-mode "$mode" $args \
-                -o "$T/$r.json" >"$T/$r.out" 2>"$T/$r.err" ||
-                fail "$r --batch-mode $mode $args failed: $(cat "$T/$r.err")"
-            grep -q '^# verified: ' "$T/$r.out" || fail "$r --batch-mode $mode $args is not verified"
+                -o "$T/$r-run.json" >"$T/$r-run.out" 2>"$T/$r.err" || rc=$?
+            if [ -n "$known" ] && { [ "$rc" -ne 0 ] || [ "${known#maybe }" = "$known" ]; }; then
+                test "$rc" -eq 2 && grep -qF "${known#maybe }" "$T/$r.err" ||
+                    fail "$r --batch-mode $mode $args: this library's known bug, not caught as such (exit $rc): $(cat "$T/$r.err")"
+                continue
+            fi
+            test "$rc" -eq 0 || fail "$r --batch-mode $mode $args failed: $(cat "$T/$r.err")"
+            grep -q '^# verified: ' "$T/$r-run.out" || fail "$r --batch-mode $mode $args is not verified"
+            mv "$T/$r-run.out" "$T/$r.out"
+            mv "$T/$r-run.json" "$T/$r.json"
+            trans=${args##*--trans }
+            trans=${trans%% *}
         done
-        grep -q "^# arguments: trans TN, batch_count 4, batch_mode $mode\$" "$T/$r.out" ||
+        # What it records, from a run that measured; none where the
+        # library is known to get every one of them wrong.
+        [ -n "$trans" ] || continue
+        grep -q "^# arguments: trans $trans, batch_count 4, batch_mode $mode\$" "$T/$r.out" ||
             fail "$r --batch-mode $mode: the table does not say the batch: $(grep '^# arg' "$T/$r.out")"
         grep -q "\"batch_count\": 4, \"batch_mode\": \"$mode\"" "$T/$r.json" ||
             fail "$r --batch-mode $mode: the json does not say the batch"

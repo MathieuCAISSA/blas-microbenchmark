@@ -169,28 +169,64 @@ pass "the quick and full profiles: each of their $(wc -l <"$T/table") commands r
 
 # ---- every benchmark, at tiny sizes ----
 profile '# tiny, for make check' '' 'level1 -v 64' 'level2   -m 16  # a comment' 'level3 -m 8' 'dgbmv -m 16 -M 2'
-$R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" ||
-    fail "the whole suite did not run: $(cat "$T/err")"
+# An extension of the BLAS the library lacks (#171) is skipped, and said
+# to be: its log, no result. A routine the library is known to get wrong
+# at the defaults (bmb_known_wrong) fails, and is all that does.
+# shellcheck disable=SC2034 # read by bmb_missing, in the helper sourced below
+bmb_table=${srcdir:-.}/../c/routines.txt
+. "${srcdir:-.}/../c/test_helper.sh"
+known=
+while read -r r l p; do
+    ! bmb_missing "$r" || continue
+    case $p in s) d=single ;; d) d=double ;; c) d=complex ;; *) d=complex16 ;; esac
+    kw=$(bmb_known_wrong "../c/level$l/$d/bmb_$r" "$r")
+    if [ -n "$kw" ] && [ "${kw#maybe }" = "$kw" ]; then
+        known="$known $r"
+    fi
+done <"$T/table"
+rc=0
+$R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" || rc=$?
+if [ -n "$known" ]; then
+    test "$rc" -eq 1 && grep -qx "bmb_suite: failed:$known" "$T/err" ||
+        fail "the whole suite, with this library's known bugs in$known: exit $rc, $(grep 'failed:' "$T/err")"
+else
+    test "$rc" -eq 0 || fail "the whole suite did not run: $(cat "$T/err")"
+fi
 test -s "$T/out" && fail "bmb_suite wrote to stdout: $(head -3 "$T/out")"
 n=0
+skipped=0
 while read -r r _ p; do
     j=$T/results/$r.json
-    test -s "$j" || fail "no $j"
-    test -s "$T/results/$r.log" || fail "no $T/results/$r.log"
-    grep -q "^  \"routine\": \"$r\",$" "$j" || fail "$j is not $r's"
     n=$((n + 1))
+    test -s "$T/results/$r.log" || fail "no $T/results/$r.log"
+    case " $known " in
+        *" $r "*)
+            test -e "$j" && fail "$r, which this library is known to get wrong, has a result"
+            skipped=$((skipped + 1))
+            continue
+            ;;
+    esac
+    if bmb_missing "$r"; then
+        test -e "$j" && fail "$r, which this library lacks, has a result"
+        grep -q "^bmb_suite: $r: skipped, $r: this build's .* has no cblas_" "$T/err" ||
+            fail "$r's skip not said: $(cat "$T/err")"
+        skipped=$((skipped + 1))
+        continue
+    fi
+    test -s "$j" || fail "no $j"
+    grep -q "^  \"routine\": \"$r\",$" "$j" || fail "$j is not $r's"
 done <"$T/table"
 grep -q '"dim1": 64,' "$T/results/ddot.json" || fail "ddot was not run at the profile's size"
 grep -q '"dim2": 2,' "$T/results/dgbmv.json" || fail "dgbmv was not run with its own line of the profile"
 grep -q '"dim2": 16,' "$T/results/dgemv.json" || fail "dgemv was not run at level 2's size"
 grep -q '"dim1": 8,' "$T/results/zgemm.json" || fail "zgemm was not run at level 3's size"
 grep -q "^bmb_suite: ztrsm ($n/$n)\$" "$T/err" || fail "no progress line for the last one: $(tail -3 "$T/err")"
-test "$(ls "$T/results" | wc -l)" = $((2 * n)) || fail "more in $T/results than a JSON and a log a routine"
-pass "every benchmark ($n) run with the profile file, a JSON and a log each, a progress line each"
+test "$(ls "$T/results" | wc -l)" = $((2 * n - skipped)) || fail "more in $T/results than a JSON and a log a routine"
+pass "every benchmark ($n) run with the profile file, a JSON and a log each, a progress line each, $skipped skipped (an extension the library lacks) or failed (its known bugs:${known:- none})"
 
 ../report/bmb_report "$T/results" >"$T/report.html" 2>"$T/err" || fail "bmb_report refused the directory: $(cat "$T/err")"
-test "$(grep -c 'class="bmb-result"' "$T/report.html")" = "$n" || fail "the report does not hold the $n results"
-pass "bmb_report takes the directory: $n results"
+test "$(grep -c 'class="bmb-result"' "$T/report.html")" = $((n - skipped)) || fail "the report does not hold the $((n - skipped)) results"
+pass "bmb_report takes the directory: $((n - skipped)) results"
 
 # ---- stand-in trees ----
 # fake PATH [BACKEND [RECORDED]]: a stand-in benchmark, a script. It
@@ -247,7 +283,7 @@ set +e
 rc=$?
 set -e
 test "$rc" = 1 || fail "a benchmark failed, and bmb_suite exited $rc, not 1: $(cat "$T/err")"
-grep -q "^bmb_suite: not in $(pwd)/$T/libexec, left out: dasum dcopy " "$T/err" ||
+grep -q "^bmb_suite: not in $(pwd)/$T/libexec, left out: dasum daxpby dcopy " "$T/err" ||
     fail "the routines missing from the install are not said: $(cat "$T/err")"
 grep -q '^bmb_suite: ddot failed (exit 2); the end of .*/ddot.log:$' "$T/err" || fail "ddot's failure not said: $(cat "$T/err")"
 grep -q '^    verification failed: expected 1, got 2$' "$T/err" || fail "ddot's log not shown: $(cat "$T/err")"
@@ -290,21 +326,28 @@ test -n "$built" || fail "no backend read from bmb_ddot --version"
 profile 'level1 -v 64'
 $R --blas one="$top" --blas two="$top/src/c" -o "$T/blas" --level 1 --precision d --profile "$T/profile" \
     -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" || fail "the build tree given twice: $(cat "$T/err")"
+# An extension the library lacks (#171) is run, and skipped: no result.
 n=0
+measured=0
 for r in $(awk '$2 == 1 && $3 == "d" { print $1 }' "$T/table"); do
+    n=$((n + 1))
     for name in one two; do
         j=$T/blas/$name/$r.json
+        if bmb_missing "$r"; then
+            test -e "$j" && fail "$r, which this library lacks, has a result: $j"
+            continue
+        fi
         test -s "$j" || fail "no $j"
         grep -q "^  \"label\": \"$name\",\$" "$j" || fail "$j is not labelled $name"
         grep -q "^  \"backend\": \"$built\",\$" "$j" || fail "$j does not record $built"
     done
-    n=$((n + 1))
+    bmb_missing "$r" || measured=$((measured + 1))
 done
 grep -q "^bmb_suite: one: dasum (1/$((2 * n)))\$" "$T/err" || fail "no progress line for one's first: $(head -3 "$T/err")"
 grep -q "^bmb_suite: two: drot ($((2 * n))/$((2 * n)))\$" "$T/err" || fail "no progress line for two's last: $(tail -3 "$T/err")"
 test "$(ls "$T/blas" | tr '\n' ' ')" = "one two " || fail "$T/blas holds more than a directory a name: $(ls "$T/blas")"
 ../report/bmb_report "$T/blas" >"$T/blas.html" 2>"$T/err" || fail "bmb_report refused the two: $(cat "$T/err")"
-test "$(grep -c 'class="bmb-result"' "$T/blas.html")" = $((2 * n)) || fail "the report does not hold both libraries' results"
+test "$(grep -c 'class="bmb-result"' "$T/blas.html")" = $((2 * measured)) || fail "the report does not hold both libraries' results"
 pass "--blas, the build tree twice: a directory, a label each, every result recording $built; bmb_report takes both"
 
 # The forms of a suite, through -n: an install prefix, the directory of

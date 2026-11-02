@@ -58,7 +58,10 @@ test "$in_table" -eq "$(echo $built | wc -w)" || fail "the Routines table lists 
 ok "the Routines table puts each of the $in_table routines in its level"
 
 # The table of which dimension is which, against the labels each level 2
-# and 3 benchmark writes in its JSON.
+# and 3 benchmark writes in its JSON. Under BMB_COUNTS, which measures
+# nothing and which an extension the library lacks (#171) still answers
+# where it would skip (exit 77): set -e would take that for the test's
+# own skip, and hide it.
 unescape $PAGE | sed -n '/^Which dimension is which:/,/^\.TE/p' | grep '	' >"$T/dims"
 checked=0
 for r in $built; do
@@ -69,7 +72,7 @@ for r in $built; do
     test "$(printf '%s\n' "$row" | wc -l)" -eq 1 || fail "$r is in the table of dimensions twice"
     want1=$(printf '%s\n' "$row" | sed -n 's/^-m is \([A-Z]\( and [A-Z]\)*\).*/\1/p' | sed 's/ and /=/g')
     want2=$(printf '%s\n' "$row" | sed -n 's/.*-M is \([A-Z]\).*/\1/p')
-    "$b" -x 0 -i 1 -m 8 -o "$T/dims.json" >/dev/null
+    BMB_COUNTS=1 "$b" -x 0 -i 1 -m 8 -o "$T/dims.json" >/dev/null 2>&1
     got1=$(label_of dim1_label "$T/dims.json")
     got2=$(label_of dim2_label "$T/dims.json")
     test "$want1/$want2" = "$got1/$got2" \
@@ -78,7 +81,7 @@ for r in $built; do
     # first what -m is less K.
     want3=$(printf '%s\n' "$row" | sed -n 's/.*-K gives \([A-Z]\) apart.*/\1/p')
     if [ -n "$want3" ]; then
-        "$b" -x 0 -i 1 -m 8 -K 4 -o "$T/dims.json" >/dev/null
+        BMB_COUNTS=1 "$b" -x 0 -i 1 -m 8 -K 4 -o "$T/dims.json" >/dev/null 2>&1
         got1=$(label_of dim1_label "$T/dims.json")
         got3=$(label_of dim3_label "$T/dims.json")
         test "${want1%="$want3"}/$want3" = "$got1/$got3" \

@@ -275,59 +275,62 @@ details[open] > summary { margin-bottom: 12px; }
   /* BEGIN routines (report): written by src/c/routines.sh */
   var LEVEL = {
     sasum: 1, dasum: 1, scasum: 1, dzasum: 1, saxpy: 1, daxpy: 1, caxpy: 1,
-    zaxpy: 1, scopy: 1, dcopy: 1, ccopy: 1, zcopy: 1, sdot: 1, ddot: 1,
-    cdotc: 1, zdotc: 1, cdotu: 1, zdotu: 1, snrm2: 1, dnrm2: 1, scnrm2: 1,
-    dznrm2: 1, sscal: 1, dscal: 1, cscal: 1, zscal: 1, sswap: 1, dswap: 1,
-    cswap: 1, zswap: 1, isamax: 1, idamax: 1, icamax: 1, izamax: 1, srot: 1,
-    drot: 1,
+    zaxpy: 1, saxpby: 1, daxpby: 1, caxpby: 1, zaxpby: 1, scopy: 1, dcopy: 1,
+    ccopy: 1, zcopy: 1, sdot: 1, ddot: 1, cdotc: 1, zdotc: 1, cdotu: 1,
+    zdotu: 1, snrm2: 1, dnrm2: 1, scnrm2: 1, dznrm2: 1, sscal: 1, dscal: 1,
+    cscal: 1, zscal: 1, sswap: 1, dswap: 1, cswap: 1, zswap: 1, isamax: 1,
+    idamax: 1, icamax: 1, izamax: 1, srot: 1, drot: 1,
     sgemv: 2, dgemv: 2, cgemv: 2, zgemv: 2, sgbmv: 2, dgbmv: 2, sger: 2,
     dger: 2, cgeru: 2, zgeru: 2, cgerc: 2, zgerc: 2, ssymv: 2, dsymv: 2,
     chemv: 2, zhemv: 2, sspmv: 2, dspmv: 2, ssyr: 2, dsyr: 2, cher: 2, zher: 2,
     ssyr2: 2, dsyr2: 2, cher2: 2, zher2: 2, strmv: 2, dtrmv: 2, ctrmv: 2,
     ztrmv: 2, strsv: 2, dtrsv: 2, ctrsv: 2, ztrsv: 2, stpsv: 2, dtpsv: 2,
     stbsv: 2, dtbsv: 2,
-    sgemm: 3, dgemm: 3, cgemm: 3, zgemm: 3, ssymm: 3, dsymm: 3, csymm: 3,
-    zsymm: 3, chemm: 3, zhemm: 3, ssyrk: 3, dsyrk: 3, csyrk: 3, zsyrk: 3,
-    cherk: 3, zherk: 3, ssyr2k: 3, dsyr2k: 3, csyr2k: 3, zsyr2k: 3, cher2k: 3,
-    zher2k: 3, strmm: 3, dtrmm: 3, ctrmm: 3, ztrmm: 3, strsm: 3, dtrsm: 3,
-    ctrsm: 3, ztrsm: 3
+    sgemm: 3, dgemm: 3, cgemm: 3, zgemm: 3, sgemmt: 3, dgemmt: 3, cgemmt: 3,
+    zgemmt: 3, ssymm: 3, dsymm: 3, csymm: 3, zsymm: 3, chemm: 3, zhemm: 3,
+    ssyrk: 3, dsyrk: 3, csyrk: 3, zsyrk: 3, cherk: 3, zherk: 3, ssyr2k: 3,
+    dsyr2k: 3, csyr2k: 3, zsyr2k: 3, cher2k: 3, zher2k: 3, strmm: 3, dtrmm: 3,
+    ctrmm: 3, ztrmm: 3, strsm: 3, dtrsm: 3, ctrsm: 3, ztrsm: 3
   };
   var FAMILY = {
     sasum: ["asum", "s"], dasum: ["asum", "d"], scasum: ["asum", "c"],
     dzasum: ["asum", "z"], saxpy: ["axpy", "s"], daxpy: ["axpy", "d"],
-    caxpy: ["axpy", "c"], zaxpy: ["axpy", "z"], scopy: ["copy", "s"],
-    dcopy: ["copy", "d"], ccopy: ["copy", "c"], zcopy: ["copy", "z"],
-    sdot: ["dot", "s"], ddot: ["dot", "d"], cdotc: ["dotc", "c"],
-    zdotc: ["dotc", "z"], cdotu: ["dotu", "c"], zdotu: ["dotu", "z"],
-    snrm2: ["nrm2", "s"], dnrm2: ["nrm2", "d"], scnrm2: ["nrm2", "c"],
-    dznrm2: ["nrm2", "z"], sscal: ["scal", "s"], dscal: ["scal", "d"],
-    cscal: ["scal", "c"], zscal: ["scal", "z"], sswap: ["swap", "s"],
-    dswap: ["swap", "d"], cswap: ["swap", "c"], zswap: ["swap", "z"],
-    isamax: ["iamax", "s"], idamax: ["iamax", "d"], icamax: ["iamax", "c"],
-    izamax: ["iamax", "z"], srot: ["rot", "s"], drot: ["rot", "d"],
-    sgemv: ["gemv", "s"], dgemv: ["gemv", "d"], cgemv: ["gemv", "c"],
-    zgemv: ["gemv", "z"], sgbmv: ["gbmv", "s"], dgbmv: ["gbmv", "d"],
-    sger: ["ger", "s"], dger: ["ger", "d"], cgeru: ["geru", "c"],
-    zgeru: ["geru", "z"], cgerc: ["gerc", "c"], zgerc: ["gerc", "z"],
-    ssymv: ["symv", "s"], dsymv: ["symv", "d"], chemv: ["hemv", "c"],
-    zhemv: ["hemv", "z"], sspmv: ["spmv", "s"], dspmv: ["spmv", "d"],
-    ssyr: ["syr", "s"], dsyr: ["syr", "d"], cher: ["her", "c"],
-    zher: ["her", "z"], ssyr2: ["syr2", "s"], dsyr2: ["syr2", "d"],
-    cher2: ["her2", "c"], zher2: ["her2", "z"], strmv: ["trmv", "s"],
-    dtrmv: ["trmv", "d"], ctrmv: ["trmv", "c"], ztrmv: ["trmv", "z"],
-    strsv: ["trsv", "s"], dtrsv: ["trsv", "d"], ctrsv: ["trsv", "c"],
-    ztrsv: ["trsv", "z"], stpsv: ["tpsv", "s"], dtpsv: ["tpsv", "d"],
-    stbsv: ["tbsv", "s"], dtbsv: ["tbsv", "d"], sgemm: ["gemm", "s"],
-    dgemm: ["gemm", "d"], cgemm: ["gemm", "c"], zgemm: ["gemm", "z"],
-    ssymm: ["symm", "s"], dsymm: ["symm", "d"], csymm: ["symm", "c"],
-    zsymm: ["symm", "z"], chemm: ["hemm", "c"], zhemm: ["hemm", "z"],
-    ssyrk: ["syrk", "s"], dsyrk: ["syrk", "d"], csyrk: ["syrk", "c"],
-    zsyrk: ["syrk", "z"], cherk: ["herk", "c"], zherk: ["herk", "z"],
-    ssyr2k: ["syr2k", "s"], dsyr2k: ["syr2k", "d"], csyr2k: ["syr2k", "c"],
-    zsyr2k: ["syr2k", "z"], cher2k: ["her2k", "c"], zher2k: ["her2k", "z"],
-    strmm: ["trmm", "s"], dtrmm: ["trmm", "d"], ctrmm: ["trmm", "c"],
-    ztrmm: ["trmm", "z"], strsm: ["trsm", "s"], dtrsm: ["trsm", "d"],
-    ctrsm: ["trsm", "c"], ztrsm: ["trsm", "z"]
+    caxpy: ["axpy", "c"], zaxpy: ["axpy", "z"], saxpby: ["axpby", "s"],
+    daxpby: ["axpby", "d"], caxpby: ["axpby", "c"], zaxpby: ["axpby", "z"],
+    scopy: ["copy", "s"], dcopy: ["copy", "d"], ccopy: ["copy", "c"],
+    zcopy: ["copy", "z"], sdot: ["dot", "s"], ddot: ["dot", "d"],
+    cdotc: ["dotc", "c"], zdotc: ["dotc", "z"], cdotu: ["dotu", "c"],
+    zdotu: ["dotu", "z"], snrm2: ["nrm2", "s"], dnrm2: ["nrm2", "d"],
+    scnrm2: ["nrm2", "c"], dznrm2: ["nrm2", "z"], sscal: ["scal", "s"],
+    dscal: ["scal", "d"], cscal: ["scal", "c"], zscal: ["scal", "z"],
+    sswap: ["swap", "s"], dswap: ["swap", "d"], cswap: ["swap", "c"],
+    zswap: ["swap", "z"], isamax: ["iamax", "s"], idamax: ["iamax", "d"],
+    icamax: ["iamax", "c"], izamax: ["iamax", "z"], srot: ["rot", "s"],
+    drot: ["rot", "d"], sgemv: ["gemv", "s"], dgemv: ["gemv", "d"],
+    cgemv: ["gemv", "c"], zgemv: ["gemv", "z"], sgbmv: ["gbmv", "s"],
+    dgbmv: ["gbmv", "d"], sger: ["ger", "s"], dger: ["ger", "d"],
+    cgeru: ["geru", "c"], zgeru: ["geru", "z"], cgerc: ["gerc", "c"],
+    zgerc: ["gerc", "z"], ssymv: ["symv", "s"], dsymv: ["symv", "d"],
+    chemv: ["hemv", "c"], zhemv: ["hemv", "z"], sspmv: ["spmv", "s"],
+    dspmv: ["spmv", "d"], ssyr: ["syr", "s"], dsyr: ["syr", "d"],
+    cher: ["her", "c"], zher: ["her", "z"], ssyr2: ["syr2", "s"],
+    dsyr2: ["syr2", "d"], cher2: ["her2", "c"], zher2: ["her2", "z"],
+    strmv: ["trmv", "s"], dtrmv: ["trmv", "d"], ctrmv: ["trmv", "c"],
+    ztrmv: ["trmv", "z"], strsv: ["trsv", "s"], dtrsv: ["trsv", "d"],
+    ctrsv: ["trsv", "c"], ztrsv: ["trsv", "z"], stpsv: ["tpsv", "s"],
+    dtpsv: ["tpsv", "d"], stbsv: ["tbsv", "s"], dtbsv: ["tbsv", "d"],
+    sgemm: ["gemm", "s"], dgemm: ["gemm", "d"], cgemm: ["gemm", "c"],
+    zgemm: ["gemm", "z"], sgemmt: ["gemmt", "s"], dgemmt: ["gemmt", "d"],
+    cgemmt: ["gemmt", "c"], zgemmt: ["gemmt", "z"], ssymm: ["symm", "s"],
+    dsymm: ["symm", "d"], csymm: ["symm", "c"], zsymm: ["symm", "z"],
+    chemm: ["hemm", "c"], zhemm: ["hemm", "z"], ssyrk: ["syrk", "s"],
+    dsyrk: ["syrk", "d"], csyrk: ["syrk", "c"], zsyrk: ["syrk", "z"],
+    cherk: ["herk", "c"], zherk: ["herk", "z"], ssyr2k: ["syr2k", "s"],
+    dsyr2k: ["syr2k", "d"], csyr2k: ["syr2k", "c"], zsyr2k: ["syr2k", "z"],
+    cher2k: ["her2k", "c"], zher2k: ["her2k", "z"], strmm: ["trmm", "s"],
+    dtrmm: ["trmm", "d"], ctrmm: ["trmm", "c"], ztrmm: ["trmm", "z"],
+    strsm: ["trsm", "s"], dtrsm: ["trsm", "d"], ctrsm: ["trsm", "c"],
+    ztrsm: ["trsm", "z"]
   };
   /* END routines (report) */
 
@@ -408,14 +411,17 @@ details[open] > summary { margin-bottom: 12px; }
        * that a file from before them, which has none, and a run with the
        * defaults are the same series. */
       var variant = variantText(r.run && r.run.arguments);
+      /* --star (#173): instances of one thread, each on its core, not a
+       * call split across threads; at the same count, another thing. */
+      var star = (r.run && r.run.star) ? "star" : "";
       var key = [r.backend, blasKey(r.blas), machine.cpu || "", r.label || "", layout, cache, pad,
-                 variant].join("\u0001");
+                 variant, star].join("\u0001");
       var id = identities[key];
       if (!id) {
         id = identities[key] = {
           key: key, backend: r.backend || "unknown", blas: r.blas || "",
           cpu: machine.cpu || "", label: r.label || "", layout: layout, cache: cache, pad: pad,
-          variant: variant, machine: machine,
+          variant: variant, star: star, machine: machine,
           versions: {}, dates: [], files: [], verifiedFiles: [], frequencies: [], runs: [], commands: [], kernels: []
         };
         identityOrder.push(id);
@@ -581,6 +587,7 @@ details[open] > summary { margin-bottom: 12px; }
       if (id.cache === "cold") { parts.push("cold cache"); }
       if (id.pad) { parts.push("ld + " + id.pad); }
       if (id.variant) { parts.push(id.variant); }
+      if (id.star) { parts.push("star"); }
       id.name = parts.join(" · ");
     });
 
@@ -693,6 +700,7 @@ details[open] > summary { margin-bottom: 12px; }
                  ", " + (run.warmup_time ? run.warmup_time + " s and " : "") + plural(run.warmup, "warm-up call") +
                  (run.batch ? ", batches of " + plural(run.batch, "call") : ""));
     }
+    if (run.star) { parts.push("star: an instance a core, on the first of CPUs " + run.star.cpus); }
     if (run.align) { parts.push("aligned to " + run.align + " bytes"); }
     if (run.compiler) { parts.push(run.compiler + (run.cflags ? " " + run.cflags : "")); }
     if (run.cpus_allowed) { parts.push("CPUs " + run.cpus_allowed); }
@@ -1708,7 +1716,7 @@ details[open] > summary { margin-bottom: 12px; }
        * versions so named are one history, not one label each. */
       var v = versionOf(id.blas);
       var label = v ? id.label.split(v).join("") : id.label;
-      var key = [id.backend, id.cpu, label, id.layout, id.cache, id.pad, id.variant].join("\u0001");
+      var key = [id.backend, id.cpu, label, id.layout, id.cache, id.pad, id.variant, id.star].join("\u0001");
       if (!groups[key]) { groups[key] = []; order.push(key); }
       groups[key].push(id);
     });

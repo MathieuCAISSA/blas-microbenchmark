@@ -35,7 +35,7 @@ down:
   looks at what the pull request changes. When every file is Markdown,
   under `doc/dev` or `doc/images`, a man page or a guide of the site,
   the `openblas` job (whose `make check` reads every page and link) and
-  the `man` job run, and the eleven jobs that build and test a library
+  the `man` job run, and the twelve jobs that build and test a library
   otherwise are skipped. A skipped job passes a required check, so they
   run when `changes` fails (`!cancelled()`). The matrix jobs
   (`browsers`, `docker`, `spack`) always run: a matrix job
@@ -103,20 +103,24 @@ Apptainer; see [packaging](packaging.md#in-ci-1).
 
 The `reframe` job runs the ReFrame tests on an install and on this
 commit's tarball, with references met and not, and checks their list of
-routines against the benchmarks; see [packaging](packaging.md#in-ci-2).
+routines against the benchmarks; every test passes, but an extension of
+the BLAS the library lacks (#171), which skips; see [packaging](packaging.md#in-ci-2).
 
 The site is published by its own workflow, `pages.yml` (see [The
 site](documentation.md#the-site)), not by `ci.yml`.
 
-The nine jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
-`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`) also run `.github/scripts/verify-sweep.sh` ("Verified at
+The ten jobs that test a library (`openblas`, `blis`, `aocl`, `netlib`,
+`nvpl`, `armpl`, `flexiblas`, `mkl`, `sanitizers`, `ilp64`) also run `.github/scripts/verify-sweep.sh` ("Verified at
 real sizes"): every benchmark, as many as `routines.txt` lists (#281), checked at sizes a user measures — a
 few MB per operand — with non-square shapes, 1, 2 and 4 threads and both
 storage orders, on
 that job's library; then each argument other than its default, one at a
 time, over the routines that take it (a transposed GEMM, a lower or
 right-side triangle, herk with C), GEMM with a K of its own and batched
-in each mode, a mode the library has not being a skip (#277). `make
+in each mode, a mode the library has not being a skip (#277), and so
+is an extension of the BLAS it lacks (#171): `openblas`, `blis` and
+`mkl` check first that `configure` found those their library has
+(axpby, gemmt), so that a broken probe cannot skip them everywhere. `make
 check` runs `--verify` on tiny sizes only, and
 a tolerance too tight for a real size, or a library that is only wrong
 once it splits the work between threads, would get through it. Every

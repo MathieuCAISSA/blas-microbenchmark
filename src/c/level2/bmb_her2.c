@@ -20,8 +20,8 @@
 typedef struct {
     int order; /* CblasRowMajor, or CblasColMajor with --layout col */
     int col;   /* 1 with --layout col */
-    int n;
-    int lda;
+    bmb_int n;
+    bmb_int lda;
     char uplo; /* --uplo: the triangle updated */
     bmb_real_t alpha[2];
     bmb_real_t *a;
@@ -49,8 +49,8 @@ static void *setup(size_t dim1, size_t dim2, unsigned int thread_count)
         return NULL;
     }
 
-    ctx->n = (int) n;
-    ctx->lda = (int) lda;
+    ctx->n = (bmb_int) n;
+    ctx->lda = (bmb_int) lda;
     ctx->uplo = bmb_bench_uplo();
     /* Small alpha: A accumulates rank-1 updates across iterations. */
     bmb_set_scalar(ctx->alpha, BMB_R(1.0e-6), BMB_R(1.0e-6));

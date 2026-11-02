@@ -21,11 +21,12 @@ from reframe.core.builtins import (fixture, parameter, performance_function,
 # BEGIN routines (reframe): written by src/c/routines.sh
 ROUTINES = {
     'sasum': 1, 'dasum': 1, 'scasum': 1, 'dzasum': 1, 'saxpy': 1, 'daxpy': 1,
-    'caxpy': 1, 'zaxpy': 1, 'scopy': 1, 'dcopy': 1, 'ccopy': 1, 'zcopy': 1,
-    'sdot': 1, 'ddot': 1, 'cdotc': 1, 'zdotc': 1, 'cdotu': 1, 'zdotu': 1,
-    'snrm2': 1, 'dnrm2': 1, 'scnrm2': 1, 'dznrm2': 1, 'sscal': 1, 'dscal': 1,
-    'cscal': 1, 'zscal': 1, 'sswap': 1, 'dswap': 1, 'cswap': 1, 'zswap': 1,
-    'isamax': 1, 'idamax': 1, 'icamax': 1, 'izamax': 1, 'srot': 1, 'drot': 1,
+    'caxpy': 1, 'zaxpy': 1, 'saxpby': 1, 'daxpby': 1, 'caxpby': 1, 'zaxpby': 1,
+    'scopy': 1, 'dcopy': 1, 'ccopy': 1, 'zcopy': 1, 'sdot': 1, 'ddot': 1,
+    'cdotc': 1, 'zdotc': 1, 'cdotu': 1, 'zdotu': 1, 'snrm2': 1, 'dnrm2': 1,
+    'scnrm2': 1, 'dznrm2': 1, 'sscal': 1, 'dscal': 1, 'cscal': 1, 'zscal': 1,
+    'sswap': 1, 'dswap': 1, 'cswap': 1, 'zswap': 1, 'isamax': 1, 'idamax': 1,
+    'icamax': 1, 'izamax': 1, 'srot': 1, 'drot': 1,
     'sgemv': 2, 'dgemv': 2, 'cgemv': 2, 'zgemv': 2, 'sgbmv': 2, 'dgbmv': 2,
     'sger': 2, 'dger': 2, 'cgeru': 2, 'zgeru': 2, 'cgerc': 2, 'zgerc': 2,
     'ssymv': 2, 'dsymv': 2, 'chemv': 2, 'zhemv': 2, 'sspmv': 2, 'dspmv': 2,
@@ -33,26 +34,28 @@ ROUTINES = {
     'cher2': 2, 'zher2': 2, 'strmv': 2, 'dtrmv': 2, 'ctrmv': 2, 'ztrmv': 2,
     'strsv': 2, 'dtrsv': 2, 'ctrsv': 2, 'ztrsv': 2, 'stpsv': 2, 'dtpsv': 2,
     'stbsv': 2, 'dtbsv': 2,
-    'sgemm': 3, 'dgemm': 3, 'cgemm': 3, 'zgemm': 3, 'ssymm': 3, 'dsymm': 3,
-    'csymm': 3, 'zsymm': 3, 'chemm': 3, 'zhemm': 3, 'ssyrk': 3, 'dsyrk': 3,
-    'csyrk': 3, 'zsyrk': 3, 'cherk': 3, 'zherk': 3, 'ssyr2k': 3, 'dsyr2k': 3,
-    'csyr2k': 3, 'zsyr2k': 3, 'cher2k': 3, 'zher2k': 3, 'strmm': 3, 'dtrmm': 3,
-    'ctrmm': 3, 'ztrmm': 3, 'strsm': 3, 'dtrsm': 3, 'ctrsm': 3, 'ztrsm': 3,
+    'sgemm': 3, 'dgemm': 3, 'cgemm': 3, 'zgemm': 3, 'sgemmt': 3, 'dgemmt': 3,
+    'cgemmt': 3, 'zgemmt': 3, 'ssymm': 3, 'dsymm': 3, 'csymm': 3, 'zsymm': 3,
+    'chemm': 3, 'zhemm': 3, 'ssyrk': 3, 'dsyrk': 3, 'csyrk': 3, 'zsyrk': 3,
+    'cherk': 3, 'zherk': 3, 'ssyr2k': 3, 'dsyr2k': 3, 'csyr2k': 3, 'zsyr2k': 3,
+    'cher2k': 3, 'zher2k': 3, 'strmm': 3, 'dtrmm': 3, 'ctrmm': 3, 'ztrmm': 3,
+    'strsm': 3, 'dtrsm': 3, 'ctrsm': 3, 'ztrsm': 3,
 }
 DIRECTORY = {
     'sasum': 'single', 'dasum': 'double', 'scasum': 'complex',
     'dzasum': 'complex16', 'saxpy': 'single', 'daxpy': 'double',
-    'caxpy': 'complex', 'zaxpy': 'complex16', 'scopy': 'single',
-    'dcopy': 'double', 'ccopy': 'complex', 'zcopy': 'complex16',
-    'sdot': 'single', 'ddot': 'double', 'cdotc': 'complex',
-    'zdotc': 'complex16', 'cdotu': 'complex', 'zdotu': 'complex16',
-    'snrm2': 'single', 'dnrm2': 'double', 'scnrm2': 'complex',
-    'dznrm2': 'complex16', 'sscal': 'single', 'dscal': 'double',
-    'cscal': 'complex', 'zscal': 'complex16', 'sswap': 'single',
-    'dswap': 'double', 'cswap': 'complex', 'zswap': 'complex16',
-    'isamax': 'single', 'idamax': 'double', 'icamax': 'complex',
-    'izamax': 'complex16', 'srot': 'single', 'drot': 'double',
-    'sgemv': 'single', 'dgemv': 'double', 'cgemv': 'complex',
+    'caxpy': 'complex', 'zaxpy': 'complex16', 'saxpby': 'single',
+    'daxpby': 'double', 'caxpby': 'complex', 'zaxpby': 'complex16',
+    'scopy': 'single', 'dcopy': 'double', 'ccopy': 'complex',
+    'zcopy': 'complex16', 'sdot': 'single', 'ddot': 'double',
+    'cdotc': 'complex', 'zdotc': 'complex16', 'cdotu': 'complex',
+    'zdotu': 'complex16', 'snrm2': 'single', 'dnrm2': 'double',
+    'scnrm2': 'complex', 'dznrm2': 'complex16', 'sscal': 'single',
+    'dscal': 'double', 'cscal': 'complex', 'zscal': 'complex16',
+    'sswap': 'single', 'dswap': 'double', 'cswap': 'complex',
+    'zswap': 'complex16', 'isamax': 'single', 'idamax': 'double',
+    'icamax': 'complex', 'izamax': 'complex16', 'srot': 'single',
+    'drot': 'double', 'sgemv': 'single', 'dgemv': 'double', 'cgemv': 'complex',
     'zgemv': 'complex16', 'sgbmv': 'single', 'dgbmv': 'double',
     'sger': 'single', 'dger': 'double', 'cgeru': 'complex',
     'zgeru': 'complex16', 'cgerc': 'complex', 'zgerc': 'complex16',
@@ -65,15 +68,17 @@ DIRECTORY = {
     'dtrsv': 'double', 'ctrsv': 'complex', 'ztrsv': 'complex16',
     'stpsv': 'single', 'dtpsv': 'double', 'stbsv': 'single', 'dtbsv': 'double',
     'sgemm': 'single', 'dgemm': 'double', 'cgemm': 'complex',
-    'zgemm': 'complex16', 'ssymm': 'single', 'dsymm': 'double',
-    'csymm': 'complex', 'zsymm': 'complex16', 'chemm': 'complex',
-    'zhemm': 'complex16', 'ssyrk': 'single', 'dsyrk': 'double',
-    'csyrk': 'complex', 'zsyrk': 'complex16', 'cherk': 'complex',
-    'zherk': 'complex16', 'ssyr2k': 'single', 'dsyr2k': 'double',
-    'csyr2k': 'complex', 'zsyr2k': 'complex16', 'cher2k': 'complex',
-    'zher2k': 'complex16', 'strmm': 'single', 'dtrmm': 'double',
-    'ctrmm': 'complex', 'ztrmm': 'complex16', 'strsm': 'single',
-    'dtrsm': 'double', 'ctrsm': 'complex', 'ztrsm': 'complex16',
+    'zgemm': 'complex16', 'sgemmt': 'single', 'dgemmt': 'double',
+    'cgemmt': 'complex', 'zgemmt': 'complex16', 'ssymm': 'single',
+    'dsymm': 'double', 'csymm': 'complex', 'zsymm': 'complex16',
+    'chemm': 'complex', 'zhemm': 'complex16', 'ssyrk': 'single',
+    'dsyrk': 'double', 'csyrk': 'complex', 'zsyrk': 'complex16',
+    'cherk': 'complex', 'zherk': 'complex16', 'ssyr2k': 'single',
+    'dsyr2k': 'double', 'csyr2k': 'complex', 'zsyr2k': 'complex16',
+    'cher2k': 'complex', 'zher2k': 'complex16', 'strmm': 'single',
+    'dtrmm': 'double', 'ctrmm': 'complex', 'ztrmm': 'complex16',
+    'strsm': 'single', 'dtrsm': 'double', 'ctrsm': 'complex',
+    'ztrsm': 'complex16',
 }
 # END routines (reframe)
 
@@ -140,6 +145,17 @@ class bmb_base(rfm.RunOnlyRegressionTest):
         self.executable_opts = ['-v' if level == 1 else '-m', str(size),
                                 '-t', str(threads), '-o', 'result.json',
                                 *self.bmb_options]
+
+    # An extension of the BLAS (#171, axpby, gemmt) the library does not
+    # have: the benchmark measures nothing, exits 77 and says which call
+    # is missing, which the skip gives as its reason.
+    @run_before('sanity')
+    def skip_missing(self):
+        if self.job.exitcode != 77:
+            return
+        with open(os.path.join(self.stagedir, self.stderr.evaluate())) as err:
+            said = err.read().strip()
+        self.skip(said or f'{self.routine}: not in this build')
 
     # Exit status 2 is a wrong result; the line says every point was
     # checked, which -C would turn off.

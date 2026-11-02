@@ -40,9 +40,9 @@ block() {
         }
         /^#/ || NF == 0 { next }
         {
-            if (NF != 5 || $2 !~ /^[123]$/ || !($3 in dir) || !($4 in size) ||
-                $1 !~ /^[a-z][a-z0-9]*$/ || $5 !~ /^[a-z][a-z0-9]*$/) {
-                printf "routines.txt:%d: not \"routine level precision sizes family\": %s\n", NR, $0 >"/dev/stderr"
+            if ((NF != 5 && !(NF == 6 && $6 == "ext")) || $2 !~ /^[123]$/ || !($3 in dir) ||
+                !($4 in size) || $1 !~ /^[a-z][a-z0-9]*$/ || $5 !~ /^[a-z][a-z0-9]*$/) {
+                printf "routines.txt:%d: not \"routine level precision sizes family [ext]\": %s\n", NR, $0 >"/dev/stderr"
                 bad = 1
                 exit 1
             }

@@ -41,7 +41,7 @@
 /* The routine's arguments (#221) have no short option: past the
  * characters, so that getopt_long tells them apart. */
 enum { BMB_OPT_TRANS = 256, BMB_OPT_UPLO, BMB_OPT_SIDE, BMB_OPT_DIAG, BMB_OPT_BATCH_COUNT,
-       BMB_OPT_BATCH_MODE, BMB_OPT_PEAK_GFLOPS, BMB_OPT_PEAK_GBS };
+       BMB_OPT_BATCH_MODE, BMB_OPT_PEAK_GFLOPS, BMB_OPT_PEAK_GBS, BMB_OPT_STAR };
 
 const char *bmb_batch_mode_name(int mode)
 {
@@ -82,6 +82,7 @@ static const struct option bmb_long_options[] = {
     {"matrix-dim2",    required_argument, NULL, 'M'},
     {"matrix-dim3",    required_argument, NULL, 'K'},
     {"thread-count",   required_argument, NULL, 't'},
+    {"star",           no_argument,       NULL, BMB_OPT_STAR},
     {"statistics",     no_argument,       NULL, 's'},
     {"verify",         no_argument,       NULL, 'c'},
     {"no-verify",      no_argument,       NULL, 'C'},
@@ -267,6 +268,20 @@ static int bmb_range_expand(bmb_range_t *out, size_t min, size_t max, size_t ste
     }
 }
 
+/* The largest vector size (#172). In an ILP64 build, whose library takes
+ * 64-bit integers, the largest n for which two vectors of the largest
+ * elements (16 bytes, double complex) are sized without wrapping size_t:
+ * a vector past 2^31 elements is what that build is for. Otherwise the
+ * ceiling of the other sizes, below INT_MAX. */
+static unsigned long long bmb_max_vector(void)
+{
+#if defined(BMB_ILP64)
+    return (unsigned long long) (SIZE_MAX / 32);
+#else
+    return bmb_max_value();
+#endif
+}
+
 /* Parses one sweep specification:
  *
  *   <max>                a single point
@@ -274,7 +289,7 @@ static int bmb_range_expand(bmb_range_t *out, size_t min, size_t max, size_t ste
  *   <min>:<max>:<step>   linear, in steps of step
  *   <v1>,<v2>,...        exactly these points, in this order
  */
-static int bmb_parse_range(const char *str, bmb_range_t *out)
+static int bmb_parse_range(const char *str, unsigned long long max, bmb_range_t *out)
 {
     char buf[512];
     char *field[3];
@@ -305,7 +320,7 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
                 *comma = '\0';
             }
 
-            status = bmb_parse_uint(p, bmb_max_value(), &value);
+            status = bmb_parse_uint(p, max, &value);
             if (status != BMB_PARSE_OK) {
                 return status;
             }
@@ -337,7 +352,7 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
     }
 
     for (i = 0; i < nfields; i++) {
-        status = bmb_parse_uint(field[i], bmb_max_value(), &bound[i]);
+        status = bmb_parse_uint(field[i], max, &bound[i]);
         if (status != BMB_PARSE_OK) {
             return status;
         }
@@ -360,17 +375,17 @@ static int bmb_parse_range(const char *str, bmb_range_t *out)
 }
 
 /* Parses one range option, reporting what was wrong with it. */
-static int bmb_option_range(const char *str, const char *option, bmb_range_t *out)
+static int bmb_option_range(const char *str, const char *option, unsigned long long max, bmb_range_t *out)
 {
     char msg[256];
 
-    switch (bmb_parse_range(str, out)) {
+    switch (bmb_parse_range(str, max, out)) {
     case BMB_PARSE_OK:
         return 0;
     case BMB_PARSE_RANGE:
         snprintf(msg, sizeof(msg),
                  "Value out of range for %s: every value must be between 1 and %llu.",
-                 option, bmb_max_value());
+                 option, max);
         break;
     case BMB_PARSE_TOO_MANY:
         snprintf(msg, sizeof(msg),
@@ -522,6 +537,7 @@ static void bmb_options_set_defaults(bmb_options_t *opts)
 
     bmb_range_set_single(&opts->thread_count, BMB_DEFAULT_THREADS);
     opts->thread_count_set = 0;
+    opts->star = 0;
 
     opts->statistics = 0;
     /* On by default, as STREAM and HPL check theirs: a number from a
@@ -593,35 +609,35 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             break;
 
         case 'v':
-            if (bmb_option_range(optarg, "--vector-size", &opts->vector_size) != 0) {
+            if (bmb_option_range(optarg, "--vector-size", bmb_max_vector(), &opts->vector_size) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->vector_size_set = 1;
             break;
 
         case 'm':
-            if (bmb_option_range(optarg, "--matrix-dim1", &opts->matrix_dim1) != 0) {
+            if (bmb_option_range(optarg, "--matrix-dim1", bmb_max_value(), &opts->matrix_dim1) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->matrix_dim1_set = 1;
             break;
 
         case 'M':
-            if (bmb_option_range(optarg, "--matrix-dim2", &opts->matrix_dim2) != 0) {
+            if (bmb_option_range(optarg, "--matrix-dim2", bmb_max_value(), &opts->matrix_dim2) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->matrix_dim2_set = 1;
             break;
 
         case 'K':
-            if (bmb_option_range(optarg, "--matrix-dim3", &opts->matrix_dim3) != 0) {
+            if (bmb_option_range(optarg, "--matrix-dim3", bmb_max_value(), &opts->matrix_dim3) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->matrix_dim3_set = 1;
             break;
 
         case 't':
-            if (bmb_option_range(optarg, "--thread-count", &opts->thread_count) != 0) {
+            if (bmb_option_range(optarg, "--thread-count", bmb_max_value(), &opts->thread_count) != 0) {
                 return BMB_OPTIONS_ERROR;
             }
             opts->thread_count_set = 1;
@@ -773,6 +789,10 @@ bmb_options_status_t bmb_options_parse(int argc, char *argv[], bmb_options_t *op
             }
             break;
 
+        case BMB_OPT_STAR:
+            opts->star = 1;
+            break;
+
         case 'l':
             if (bmb_option_label(optarg, &opts->label) != 0) {
                 return BMB_OPTIONS_ERROR;
@@ -866,6 +886,10 @@ void bmb_options_print_help(const char *prog_name)
         "  -K, --matrix-dim3 <sweep>     GEMM's K (default: K = M at every point; with -K,\n"
         "                                 every combination with the other sizes is measured)\n"
         "  -t, --thread-count <sweep>    number of BLAS threads (default: %u)\n"
+        "      --star                    run -t's counts as instances of one thread instead,\n"
+        "                                 each on a core of its own, all at once; the rates\n"
+        "                                 are their sum (default: off; with it, -t is one\n"
+        "                                 instance a core)\n"
         "  -s, --statistics              add the mean, stddev and slowest sample, and in the\n"
         "                                 table the batch size (default: off)\n"
         "  -c, --verify                  check each point's result against a reference before\n"
@@ -935,6 +959,7 @@ void bmb_options_print_version(void)
 #if defined(BMB_BUILD_HAS_KERNELS)
     printf("Kernels: %s\n", bmb_build_kernels());
 #endif
+    printf("Integers: %u-bit (%s)\n", bmb_build_int_bits(), bmb_build_int_bits() == 64 ? "ILP64" : "LP64");
 
     /* The machine as well: CI prints this for every job, which is how one
      * finds out what each runner's CPU actually reports. */

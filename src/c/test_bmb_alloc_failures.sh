@@ -12,6 +12,8 @@
 # (#159). SKIPs where it cannot be preloaded: under
 # AddressSanitizer, whose allocator must come first, and outside glibc.
 set -e
+# bmb_missing: an extension this build's library does not have (#171).
+. "${srcdir:-.}/test_helper.sh"
 
 L=./libbmb_failalloc.so
 T=alloc-failures-test.d
@@ -33,8 +35,10 @@ if ldd "$probe" 2>/dev/null | grep -q 'libasan\.'; then
     exit 77
 fi
 # counted FILE: the count the library put on stderr, or nothing.
+# The most any process made: under --star, each instance counts on from
+# the calling process's count where it forked.
 counted() {
-    sed -n 's/^bmb_failalloc: \([0-9][0-9]*\) allocations$/\1/p' "$1"
+    sed -n 's/^bmb_failalloc: \([0-9][0-9]*\) allocations$/\1/p' "$1" | sort -n | tail -n 1
 }
 LD_PRELOAD=$L BMB_ALLOC_COUNT=1 "$probe" -x 0 -i 1 -m 8 >/dev/null 2>"$T/err" || true
 if [ -z "$(counted "$T/err")" ]; then
@@ -71,6 +75,13 @@ runs=0
 for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $b in *.*) continue ;; esac
     test -x "$b" || continue
+    # An extension the library lacks; a call it is known to get wrong
+    # (bmb_known_wrong), which test_bmb_verify.sh holds to its message.
+    known=$(bmb_known_wrong "$b" "${b##*/bmb_}")
+    if bmb_missing "${b##*/bmb_}" || { [ -n "$known" ] && [ "${known#maybe }" = "$known" ]; }; then
+        n=$((n + 1))
+        continue
+    fi
     case $b in level1/*) flag=-v ;; *) flag=-m ;; esac
     each_allocation "$b" -x 0 -i 1 "$flag" 16
     n=$((n + 1))
@@ -98,6 +109,15 @@ if grep -q '^#define HAVE_CBLAS_GEMM_BATCH 1$' "${top_builddir:?top_builddir is 
 fi
 batch=$((runs - batch))
 
+# --star (#173): an allocation fails in every instance at once, which all
+# skip the point, and in the calling process after they started; where
+# two instances cannot run, not tried.
+star=$runs
+if BMB_COUNTS=1 level1/double/bmb_ddot --star -t 2 -v 16 >/dev/null 2>&1; then
+    each_allocation level1/double/bmb_ddot -x 0 -i 1 -v 16 --star -t 2
+fi
+star=$((runs - star))
+
 test "$n" -eq "$(grep -c '^[a-z]' "${srcdir:-.}/routines.txt")" || fail "$n benchmarks found, not the routines of routines.txt"
 rm -rf "$T"
-echo "ok   $n benchmarks, and dgemm under --cache cold ($cold) and in a group call ($batch), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"
+echo "ok   $n benchmarks, dgemm under --cache cold ($cold) and in a group call ($batch), and ddot under --star ($star), each of their $runs allocations made to fail in turn: exit 1, \"out of memory\", no crash"

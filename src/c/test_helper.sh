@@ -12,6 +12,138 @@ bmb_fail() {
     exit 1
 }
 
+# bmb_missing <routine>: true when the routine is an extension of the
+# BLAS (#171, "ext" in routines.txt) that this build's library does not
+# have (no HAVE_CBLAS_<FAMILY> in config.h), so that its program skips.
+# For the tests that run every benchmark: routines.txt is bmb_table, by
+# default in their srcdir (src/c's), and top_builddir in their
+# environment.
+bmb_missing() {
+    bmb_family=`awk -v r="$1" '!/^#/ && $1 == r && $6 == "ext" { print toupper($5) }' "${bmb_table:-${srcdir:-.}/routines.txt}"`
+    [ -n "$bmb_family" ] || return 1
+    ! grep -q "^#define HAVE_CBLAS_$bmb_family 1\$" "${top_builddir:?top_builddir is not set}/config.h"
+}
+
+# bmb_known_wrong <program> <routine> [options...]: when the library is
+# known to get this call wrong, a pattern of what --verify says of it,
+# which a test then requires in place of a pass; nothing otherwise. For a
+# library whose version cannot be read (an OpenBLAS FlexiBLAS loads),
+# "maybe " before it: a pass, or that. OpenBLAS's gemmt, before 0.3.29,
+# filled the other triangle in row-major (OpenMathLib/OpenBLAS#4905);
+# before 0.3.30, it conjugated the operand op() takes the conjugate
+# transpose of in place, B column-major, A row-major, where A and B
+# change places (#5143). Its cblas_?gemm_batch_strided, from 0.3.31 to
+# 0.3.34, refused every column-major call and left C as it was (#5979);
+# from 0.3.31, its complex one does not scale the strides to (re, im)
+# pairs, wrong from two matrices on (#6214, reported, not fixed: when it
+# is, the test on the fixed version fails, and the bound goes here). The
+# others are fixed upstream, and a test that still meets them on a fixed
+# version fails.
+bmb_known_wrong() {
+    kw_prog=$1
+    kw_r=$2
+    shift 2
+    case $kw_r in ?gemmt | ?gemm) ;; *) return 0 ;; esac
+    kw_backend=`"$kw_prog" --version 2>/dev/null | sed -n 's/^BLAS backend: //p'`
+    case $kw_backend in
+        "openblas (OpenBLAS "*)
+            kw_maybe=
+            # A development build, "0.3.34.dev", has the fixes of the
+            # release it leads to: taken as 0.3.35.
+            kw_v=`printf '%s\n' "$kw_backend" | sed -n -e 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.dev.*/\1 \2 \3 1/p' \
+                -e 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \2 \3 0/p' | sed -n 1p`
+            # shellcheck disable=SC2086 # three numbers
+            set -- "$@" -- $kw_v
+            ;;
+        flexiblas/openblas*) kw_maybe="maybe " ; set -- "$@" -- 0 3 29 0 ;;
+        *) return 0 ;;
+    esac
+    kw_trans=NN kw_layout=row kw_mode=loop
+    while [ "$1" != -- ]; do
+        case $1 in
+            --trans=*) kw_trans=${1#--trans=} ;;
+            --trans) kw_trans=$2; shift ;;
+            --layout=*) kw_layout=${1#--layout=} ;;
+            --layout | -L) kw_layout=$2; shift ;;
+            --batch-mode=*) kw_mode=${1#--batch-mode=} ;;
+            --batch-mode) kw_mode=$2; shift ;;
+        esac
+        shift
+    done
+    shift
+    kw_at=$(( ${1:-0} * 10000 + ${2:-0} * 100 + ${3:-0} + ${4:-0} ))
+    case $kw_r in
+        [cz]gemm)
+            if [ "$kw_mode" = strided ] && [ "$kw_at" -ge 331 ]; then
+                echo "${kw_maybe}Wrong result: "
+            fi
+            return 0
+            ;;
+        ?gemm)
+            if [ "$kw_mode$kw_layout" = stridedcol ] && [ "$kw_at" -ge 331 ] && [ "$kw_at" -lt 335 ]; then
+                echo "${kw_maybe}Wrong result: "
+            fi
+            return 0
+            ;;
+    esac
+    if [ "$kw_layout" = row ] && [ "$kw_at" -lt 329 ]; then
+        echo "${kw_maybe}Wrong result: "
+    elif [ "$kw_at" -lt 330 ]; then
+        case $kw_layout$kw_trans in
+            col?C) echo "${kw_maybe}the call changed B, which it must only read" ;;
+            rowC?) echo "${kw_maybe}the call changed A, which it must only read" ;;
+        esac
+    fi
+}
+
+# bmb_known_wrong_run <program> <routine> [options...]: where the library
+# is known to get the call wrong (bmb_known_wrong), runs it and requires
+# --verify to say so, exit 2, then ends the test there (exit 0): its rows
+# would be those of a library computing the wrong thing.
+bmb_known_wrong_run() {
+    kw_want=`bmb_known_wrong "$@"`
+    [ -n "$kw_want" ] || return 0
+    kw_prog=$1
+    kw_routine=$2
+    shift 2
+    kw_status=0
+    kw_err=`"$kw_prog" -x 0 -w 0 -i 1 "$@" 2>&1 >/dev/null` || kw_status=$?
+    case $kw_want in
+        "maybe "*)
+            [ "$kw_status" -eq 0 ] && return 0
+            kw_want=${kw_want#maybe }
+            ;;
+    esac
+    [ "$kw_status" -eq 2 ] || bmb_fail "$kw_routine: a library known to get it wrong, and exit $kw_status, not 2: $kw_err"
+    case $kw_err in
+        *"$kw_want"*) ;;
+        *) bmb_fail "$kw_routine: not '$kw_want': $kw_err" ;;
+    esac
+    echo "ok   $kw_routine: this library's known bug, caught: $kw_err"
+    exit 0
+}
+
+# bmb_skip_missing <program> <routine> [options...]
+#
+# Exits 77, the test skipped, when the routine is an extension of the
+# BLAS (#171) that this build's library does not have: the program then
+# exits 77 itself, and must say which call is missing. The options are a
+# tiny size, run once where the routine is there.
+bmb_skip_missing() {
+    bmb_prog=$1
+    bmb_routine=$2
+    shift 2
+
+    bmb_status=0
+    bmb_err=`"$bmb_prog" -x 0 -w 0 -i 1 "$@" 2>&1 >/dev/null` || bmb_status=$?
+    if [ "$bmb_status" -eq 77 ]; then
+        echo "$bmb_err" | grep -q "$bmb_routine: this build's .* has no cblas_" \
+            || bmb_fail "$bmb_routine: skipped without saying which call is missing: $bmb_err"
+        echo "SKIP: $bmb_err"
+        exit 77
+    fi
+}
+
 # bmb_check_run <program> <routine> <expected data rows> [options...]
 #
 # Runs the benchmark and checks the shape of what it printed: the routine

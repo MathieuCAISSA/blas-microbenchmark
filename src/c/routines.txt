@@ -17,8 +17,13 @@
 # family: the operation, whose source, src/c/level<level>/bmb_<family>.c,
 # is compiled once for each of its precisions (#166, src/c/common/
 # bmb_prec.h).
+# ext, when there: an extension of the BLAS (#171), cblas_?<family>,
+# which a library may not have. Its program is built all the same, and
+# skips (exit 77) where configure did not find the call
+# (HAVE_CBLAS_<FAMILY> in config.h); the tests that run every benchmark
+# read this column to know which.
 #
-# routine  level  precision  sizes  family
+# routine  level  precision  sizes  family  [ext]
 sasum      1      s          v      asum
 dasum      1      d          v      asum
 scasum     1      c          v      asum
@@ -27,6 +32,10 @@ saxpy      1      s          v      axpy
 daxpy      1      d          v      axpy
 caxpy      1      c          v      axpy
 zaxpy      1      z          v      axpy
+saxpby     1      s          v      axpby   ext
+daxpby     1      d          v      axpby   ext
+caxpby     1      c          v      axpby   ext
+zaxpby     1      z          v      axpby   ext
 scopy      1      s          v      copy
 dcopy      1      d          v      copy
 ccopy      1      c          v      copy
@@ -97,6 +106,10 @@ sgemm      3      s          mkn    gemm
 dgemm      3      d          mkn    gemm
 cgemm      3      c          mkn    gemm
 zgemm      3      z          mkn    gemm
+sgemmt     3      s          nk     gemmt   ext
+dgemmt     3      d          nk     gemmt   ext
+cgemmt     3      c          nk     gemmt   ext
+zgemmt     3      z          nk     gemmt   ext
 ssymm      3      s          mn     symm
 dsymm      3      d          mn     symm
 csymm      3      c          mn     symm

@@ -10,6 +10,17 @@ releases with the same major version can be compared and read by the same
 ## [Unreleased]
 
 ### Added
+- Two extensions of the BLAS (#171): `axpby` (y = alpha x + beta y) and
+  `gemmt` (one triangle of a GEMM), in the four precisions, checked by
+  `--verify` (gemmt's in O(N K), its triangle projected through suffix
+  sums), which calls `cblas_?gemmtr` where the library has it (MKL
+  deprecates `cblas_?gemmt` for it). `configure` finds them in the
+  library's CBLAS (`HAVE_CBLAS_AXPBY`, `HAVE_CBLAS_GEMMT`); where it does not, their
+  programs are installed all the same, and measure nothing: exit 77,
+  saying which call is missing. `routines.txt` marks them `ext`.
+  gemmt's check also requires A and B unchanged: OpenBLAS before 0.3.30
+  conjugated one in place (OpenMathLib/OpenBLAS#5143), and before 0.3.29
+  filled the other triangle row-major (#4905); `--verify` stops on both.
 - `bmb_mcp` (#262), installed beside `bmb_report` and `bmb_suite`: an MCP
   server, so that an AI agent lists the routines, describes the machine,
   runs a benchmark or the suite, reads a result and makes the report,
@@ -27,6 +38,21 @@ releases with the same major version can be compared and read by the same
   blas-microbenchmark --marketplace MathieuCAISSA/blas-microbenchmark`.
   The Docker image has `python3` and runs `bmb_mcp` (`docker run -i`); the
   Spack package depends on Python at run time and tests the server.
+- `configure --enable-ilp64` (#172): the library's 64-bit integer
+  interface, OpenBLAS's (Debian's `libopenblas64`, or a build with
+  `INTERFACE64=1`) or MKL's; any other backend is refused. A vector may
+  then hold more than 2^31 elements. `--version` (`Integers:`) and every
+  result (`# integers: 64-bit (ILP64)`, `"blas_int_bits"` in the JSON,
+  which every build now writes) say the width.
+- `--star` (#173): `-t`'s counts as instances of one thread, each a
+  process pinned to a core of its own (the first CPU of each core in the
+  affinity), all measured at once, as HPC Challenge's "star" mode: how a
+  machine shares its memory bandwidth, or what its cores reach together,
+  under one job per core. A sample is the slowest instance's time; the
+  rates are the instances' sum. Without `-t`, one instance a core; more
+  instances than cores is refused. The text has a `# star:` line, the
+  JSON's run block `star` with the CPUs, and `bmb_report` draws such a
+  run as a series of its own.
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.

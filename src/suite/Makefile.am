@@ -15,6 +15,7 @@ bmb_suite: $(srcdir)/bmb_suite.sh Makefile
 TESTS = test_bmb_suite.sh
 
 # test_bmb_suite.sh checks --version against this build's version.
-AM_TESTS_ENVIRONMENT = PACKAGE_VERSION='$(PACKAGE_VERSION)'; export PACKAGE_VERSION;
+AM_TESTS_ENVIRONMENT = PACKAGE_VERSION='$(PACKAGE_VERSION)'; export PACKAGE_VERSION; \
+	top_builddir='$(top_builddir)'; export top_builddir;
 
 EXTRA_DIST = bmb_suite.sh $(TESTS)

@@ -12,21 +12,23 @@
 .SH NAME
 .\" BEGIN routines (man-name): written by src/c/routines.sh
 blas-microbenchmark, bmb_sasum, bmb_dasum, bmb_scasum, bmb_dzasum,
-bmb_saxpy, bmb_daxpy, bmb_caxpy, bmb_zaxpy, bmb_scopy, bmb_dcopy, bmb_ccopy,
-bmb_zcopy, bmb_sdot, bmb_ddot, bmb_cdotc, bmb_zdotc, bmb_cdotu, bmb_zdotu,
-bmb_snrm2, bmb_dnrm2, bmb_scnrm2, bmb_dznrm2, bmb_sscal, bmb_dscal,
-bmb_cscal, bmb_zscal, bmb_sswap, bmb_dswap, bmb_cswap, bmb_zswap,
-bmb_isamax, bmb_idamax, bmb_icamax, bmb_izamax, bmb_srot, bmb_drot,
-bmb_sgemv, bmb_dgemv, bmb_cgemv, bmb_zgemv, bmb_sgbmv, bmb_dgbmv, bmb_sger,
-bmb_dger, bmb_cgeru, bmb_zgeru, bmb_cgerc, bmb_zgerc, bmb_ssymv, bmb_dsymv,
-bmb_chemv, bmb_zhemv, bmb_sspmv, bmb_dspmv, bmb_ssyr, bmb_dsyr, bmb_cher,
-bmb_zher, bmb_ssyr2, bmb_dsyr2, bmb_cher2, bmb_zher2, bmb_strmv, bmb_dtrmv,
-bmb_ctrmv, bmb_ztrmv, bmb_strsv, bmb_dtrsv, bmb_ctrsv, bmb_ztrsv, bmb_stpsv,
-bmb_dtpsv, bmb_stbsv, bmb_dtbsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm,
-bmb_ssymm, bmb_dsymm, bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk,
-bmb_dsyrk, bmb_csyrk, bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k,
-bmb_dsyr2k, bmb_csyr2k, bmb_zsyr2k, bmb_cher2k, bmb_zher2k, bmb_strmm,
-bmb_dtrmm, bmb_ctrmm, bmb_ztrmm, bmb_strsm, bmb_dtrsm, bmb_ctrsm,
+bmb_saxpy, bmb_daxpy, bmb_caxpy, bmb_zaxpy, bmb_saxpby, bmb_daxpby,
+bmb_caxpby, bmb_zaxpby, bmb_scopy, bmb_dcopy, bmb_ccopy, bmb_zcopy,
+bmb_sdot, bmb_ddot, bmb_cdotc, bmb_zdotc, bmb_cdotu, bmb_zdotu, bmb_snrm2,
+bmb_dnrm2, bmb_scnrm2, bmb_dznrm2, bmb_sscal, bmb_dscal, bmb_cscal,
+bmb_zscal, bmb_sswap, bmb_dswap, bmb_cswap, bmb_zswap, bmb_isamax,
+bmb_idamax, bmb_icamax, bmb_izamax, bmb_srot, bmb_drot, bmb_sgemv,
+bmb_dgemv, bmb_cgemv, bmb_zgemv, bmb_sgbmv, bmb_dgbmv, bmb_sger, bmb_dger,
+bmb_cgeru, bmb_zgeru, bmb_cgerc, bmb_zgerc, bmb_ssymv, bmb_dsymv, bmb_chemv,
+bmb_zhemv, bmb_sspmv, bmb_dspmv, bmb_ssyr, bmb_dsyr, bmb_cher, bmb_zher,
+bmb_ssyr2, bmb_dsyr2, bmb_cher2, bmb_zher2, bmb_strmv, bmb_dtrmv, bmb_ctrmv,
+bmb_ztrmv, bmb_strsv, bmb_dtrsv, bmb_ctrsv, bmb_ztrsv, bmb_stpsv, bmb_dtpsv,
+bmb_stbsv, bmb_dtbsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm,
+bmb_sgemmt, bmb_dgemmt, bmb_cgemmt, bmb_zgemmt, bmb_ssymm, bmb_dsymm,
+bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk, bmb_csyrk,
+bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k, bmb_dsyr2k, bmb_csyr2k,
+bmb_zsyr2k, bmb_cher2k, bmb_zher2k, bmb_strmm, bmb_dtrmm, bmb_ctrmm,
+bmb_ztrmm, bmb_strsm, bmb_dtrsm, bmb_ctrsm,
 bmb_ztrsm \- microbenchmarks for BLAS routines
 .\" END routines (man-name)
 .SH SYNOPSIS
@@ -65,18 +67,19 @@ level 3 on matrices:
 .\" BEGIN routines (man-routines): written by src/c/routines.sh
 .TS
 l l.
-Level 1	sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy scopy
-\&	dcopy ccopy zcopy sdot ddot cdotc zdotc cdotu zdotu snrm2
-\&	dnrm2 scnrm2 dznrm2 sscal dscal cscal zscal sswap dswap
-\&	cswap zswap isamax idamax icamax izamax srot drot
+Level 1	sasum dasum scasum dzasum saxpy daxpy caxpy zaxpy saxpby
+\&	daxpby caxpby zaxpby scopy dcopy ccopy zcopy sdot ddot
+\&	cdotc zdotc cdotu zdotu snrm2 dnrm2 scnrm2 dznrm2 sscal
+\&	dscal cscal zscal sswap dswap cswap zswap isamax idamax
+\&	icamax izamax srot drot
 Level 2	sgemv dgemv cgemv zgemv sgbmv dgbmv sger dger cgeru zgeru
 \&	cgerc zgerc ssymv dsymv chemv zhemv sspmv dspmv ssyr dsyr
 \&	cher zher ssyr2 dsyr2 cher2 zher2 strmv dtrmv ctrmv ztrmv
 \&	strsv dtrsv ctrsv ztrsv stpsv dtpsv stbsv dtbsv
-Level 3	sgemm dgemm cgemm zgemm ssymm dsymm csymm zsymm chemm
-\&	zhemm ssyrk dsyrk csyrk zsyrk cherk zherk ssyr2k dsyr2k
-\&	csyr2k zsyr2k cher2k zher2k strmm dtrmm ctrmm ztrmm strsm
-\&	dtrsm ctrsm ztrsm
+Level 3	sgemm dgemm cgemm zgemm sgemmt dgemmt cgemmt zgemmt ssymm
+\&	dsymm csymm zsymm chemm zhemm ssyrk dsyrk csyrk zsyrk
+\&	cherk zherk ssyr2k dsyr2k csyr2k zsyr2k cher2k zher2k
+\&	strmm dtrmm ctrmm ztrmm strsm dtrsm ctrsm ztrsm
 .TE
 .\" END routines (man-routines)
 .PP
@@ -107,6 +110,22 @@ and the Hermitian counterparts of symv, syr, syr2, symm, syrk and
 syr2k: chemv, zhemv, cher, zher, cher2, zher2, chemm, zhemm, cherk,
 zherk, cher2k and zher2k.
 .PP
+Two are extensions of the BLAS, which libraries add: axpby,
+y = alpha x + beta y (OpenBLAS, MKL, BLIS, AOCL\-BLAS), and gemmt, one
+triangle of a GEMM, C = alpha op(A) op(B) + beta C where
+.B \-\-uplo
+gives it (MKL, NVPL, AOCL\-BLAS, BLIS, OpenBLAS from 0.3.27), for a
+product known to be symmetric, of which half is enough.
+Their programs are installed whatever the library; where it lacks the
+call, they measure nothing and exit 77, saying which call is missing
+(see
+.BR "EXIT STATUS" ).
+gemmt takes
+.B \-\-trans
+for A and B, as GEMM does, and calls cblas_?gemmtr where the library
+has it, the name the Reference BLAS gave it, under which MKL deprecates
+cblas_?gemmt.
+.PP
 Level 1 routines are sized with
 .BR \-v .
 Level 2 and 3 routines are sized with
@@ -126,8 +145,9 @@ strmm dtrmm ctrmm ztrmm	\-m is M, \-M is N
 strsm dtrsm ctrsm ztrsm	\-m is M, \-M is N
 sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N; \-K gives K apart
 sgbmv dgbmv stbsv dtbsv	\-m is N, \-M is K
-ssyrk dsyrk csyrk zsyrk	\-m is N, \-M is K
-cherk zherk ssyr2k	\-m is N, \-M is K
+sgemmt dgemmt cgemmt	\-m is N, \-M is K
+zgemmt ssyrk dsyrk csyrk	\-m is N, \-M is K
+zsyrk cherk zherk ssyr2k	\-m is N, \-M is K
 dsyr2k csyr2k zsyr2k	\-m is N, \-M is K
 cher2k zher2k	\-m is N, \-M is K
 ssymv dsymv chemv zhemv	\-m is N (square; no \-M)
@@ -239,6 +259,19 @@ Number of BLAS threads.
 Default: 1.
 See
 .BR THREADS .
+.TP
+.B "\-\-star"
+Run each count of
+.B \-t
+as that many instances of one thread instead, each a process pinned to a
+core of its own, all measured at once; the rates are their sum.
+Without
+.BR \-t ,
+one instance on each core this process may run on.
+Default: off.
+See
+.BR THREADS ,
+under Star mode.
 .TP
 .B "\-s, \-\-statistics"
 Also report, per point, the mean of the samples, their standard deviation
@@ -450,7 +483,8 @@ file, otherwise csv.
 Show a summary of the options.
 .TP
 .B "\-V, \-\-version"
-Show the version, the BLAS library and the machine, without running
+Show the version, the BLAS library, the width of the integers it takes
+(32\-bit, or 64\-bit in an ILP64 build), and the machine, without running
 anything.
 .SS Sweeps
 The four size options each take a
@@ -605,7 +639,8 @@ gives a wrong
 for almost every
 .IR r .
 Routines that update one triangle are also checked to leave the other
-as it was.
+as it was; gemmt, to leave A and B as they were, which OpenBLAS before
+0.3.30 did not, conjugating one in place.
 .PP
 The tolerance is a bound on rounding error, proportional to the number
 of terms in each element and to their magnitudes: a correct library is
@@ -675,6 +710,62 @@ a Slurm job, a cpuset), capped by the CPU quota of its cgroup (cgroup v2
 which
 .B docker run \-\-cpus
 sets).
+.SS Star mode
+A run at one thread measures a core with the machine's caches and memory
+to itself; a run at several, how the library splits one call.
+Neither is what a machine running an independent job on each core gets,
+as MPI ranks or the jobs of a task farm run: HPC Challenge's "star" mode.
+.B \-\-star
+measures that: each count
+.I N
+of
+.B \-t
+runs
+.I N
+copies of the benchmark, each a process of its own, its library given
+one thread whatever the environment says, pinned to a core of its own:
+the first CPU of each core this process may run on (its affinity), in
+order, so that two never share a core's threads.
+Each instance makes its own operands, on its own core, and checks them
+under
+.BR \-\-verify .
+.PP
+The instances start each sample together and a sample lasts until the
+slowest is done: its time is the slowest instance's, and the GFLOP/s and
+GB/s are the
+.I N
+instances' work over that time.
+They agree on everything else: the batch, the largest any chose; the
+samples, as
+.BR \-T ,
+.B \-e
+and
+.B \-E
+judge the slowest's times; a point one could not set up is skipped by all;
+a wrong result in one ends the run, told by the first instance that found
+it, which names its CPU.
+On a machine whose cores differ (performance and efficiency cores), the
+slowest core sets the time.
+.PP
+.RS
+.EX
+$ bmb_ddot \-\-star \-t 1,2,4,8 \-v 100000:10000000
+.EE
+.RE
+.PP
+shows how the memory bandwidth is shared as instances are added; a level
+3 routine, the rate the cores reach together, against
+.I N
+cores' peak
+.RB ( \-\-peak\-gflops ).
+More instances than cores is refused.
+The results say how they were measured: a
+.B # star:
+line with the CPUs, and
+.B star
+in the JSON's run block;
+.B bmb_report
+draws them as a series of their own.
 .SH HARDWARE COUNTERS
 GFLOP/s and GB/s say how fast, not why.
 Hardware counters \(em instructions, cycles, cache misses, the
@@ -789,6 +880,11 @@ where MKL names none, as on AMD CPUs).
 On a CPU with SME, AMX or AVX10 the path changes the numbers, and two
 files from the same library can only be told apart by it.
 Netlib, NVPL, ArmPL and FlexiBLAS do not say, and the line is left out.
+A build against the library's 64\-bit integer interface (ILP64,
+.B configure \-\-enable\-ilp64
+with OpenBLAS or MKL) adds the line
+.BR "# integers: 64\-bit (ILP64)" ;
+in it, a vector may hold more than 2^31 elements.
 The caches show where a sweep leaves each level.
 The frequency line gives the CPU frequency governor (several, joined by
 .BR / ,
@@ -893,6 +989,8 @@ one object holding the same information as fields:
 .BR backend ,
 .BR blas ,
 .BR kernels ,
+.B blas_int_bits
+(32, or 64 in an ILP64 build),
 .BR label ,
 .B peak_gflops_per_core
 and
@@ -926,6 +1024,15 @@ with
 .BR max_time ,
 .B cache
 .RB ( hot " or " cold ),
+.B star
+(under
+.BR \-\-star :
+an object whose
+.B cpus
+lists the CPUs the instances are pinned to, in order:
+.I N
+instances take the first
+.IR N ),
 .BR align ,
 .B ld_pad
 (for the routines with a matrix),
@@ -1003,8 +1110,9 @@ in which case nothing is written to the
 file;
 77 when
 .B \-\-batch\-mode
-asks for a call the library does not have, which is said on standard
-error: nothing is measured (77 is what
+asks for a call the library does not have, or the routine is an
+extension the library does not have (axpby, gemmt), which is said on
+standard error: nothing is measured (77 is what
 .BR "make check" 's
 test driver takes for a test skipped).
 .SH ENVIRONMENT
