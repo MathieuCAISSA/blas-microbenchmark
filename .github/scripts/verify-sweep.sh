@@ -36,8 +36,9 @@ check() {
     shift
     rc=0
     "$f" -x 0 -w 0 -i 1 -c "$@" >/dev/null 2>"$B/verify-sweep.err" || rc=$?
+    # A skip (77, a call the library lacks) is a skip whatever its version.
     known=$(bmb_known_wrong "$f" "${name#bmb_}" "$@")
-    if [ -n "$known" ] && { [ "$rc" -ne 0 ] || [ "${known#maybe }" = "$known" ]; }; then
+    if [ -n "$known" ] && [ "$rc" -ne 77 ] && { [ "$rc" -ne 0 ] || [ "${known#maybe }" = "$known" ]; }; then
         if [ "$rc" -eq 2 ] && grep -qF "${known#maybe }" "$B/verify-sweep.err"; then
             echo "ok   $name $what: this library's known bug, caught"
         else

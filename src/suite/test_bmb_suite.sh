@@ -169,20 +169,43 @@ pass "the quick and full profiles: each of their $(wc -l <"$T/table") commands r
 
 # ---- every benchmark, at tiny sizes ----
 profile '# tiny, for make check' '' 'level1 -v 64' 'level2   -m 16  # a comment' 'level3 -m 8' 'dgbmv -m 16 -M 2'
-$R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" ||
-    fail "the whole suite did not run: $(cat "$T/err")"
-test -s "$T/out" && fail "bmb_suite wrote to stdout: $(head -3 "$T/out")"
 # An extension of the BLAS the library lacks (#171) is skipped, and said
-# to be: its log, no result.
+# to be: its log, no result. A routine the library is known to get wrong
+# at the defaults (bmb_known_wrong) fails, and is all that does.
 # shellcheck disable=SC2034 # read by bmb_missing, in the helper sourced below
 bmb_table=${srcdir:-.}/../c/routines.txt
 . "${srcdir:-.}/../c/test_helper.sh"
+known=
+while read -r r l p; do
+    ! bmb_missing "$r" || continue
+    case $p in s) d=single ;; d) d=double ;; c) d=complex ;; *) d=complex16 ;; esac
+    kw=$(bmb_known_wrong "../c/level$l/$d/bmb_$r" "$r")
+    if [ -n "$kw" ] && [ "${kw#maybe }" = "$kw" ]; then
+        known="$known $r"
+    fi
+done <"$T/table"
+rc=0
+$R -o "$T/results/" --profile "$T/profile" -- -x 0 -i 1 -w 0 >"$T/out" 2>"$T/err" || rc=$?
+if [ -n "$known" ]; then
+    test "$rc" -eq 1 && grep -qx "bmb_suite: failed:$known" "$T/err" ||
+        fail "the whole suite, with this library's known bugs in$known: exit $rc, $(grep 'failed:' "$T/err")"
+else
+    test "$rc" -eq 0 || fail "the whole suite did not run: $(cat "$T/err")"
+fi
+test -s "$T/out" && fail "bmb_suite wrote to stdout: $(head -3 "$T/out")"
 n=0
 skipped=0
 while read -r r _ p; do
     j=$T/results/$r.json
     n=$((n + 1))
     test -s "$T/results/$r.log" || fail "no $T/results/$r.log"
+    case " $known " in
+        *" $r "*)
+            test -e "$j" && fail "$r, which this library is known to get wrong, has a result"
+            skipped=$((skipped + 1))
+            continue
+            ;;
+    esac
     if bmb_missing "$r"; then
         test -e "$j" && fail "$r, which this library lacks, has a result"
         grep -q "^bmb_suite: $r: skipped, $r: this build's .* has no cblas_" "$T/err" ||
@@ -199,7 +222,7 @@ grep -q '"dim2": 16,' "$T/results/dgemv.json" || fail "dgemv was not run at leve
 grep -q '"dim1": 8,' "$T/results/zgemm.json" || fail "zgemm was not run at level 3's size"
 grep -q "^bmb_suite: ztrsm ($n/$n)\$" "$T/err" || fail "no progress line for the last one: $(tail -3 "$T/err")"
 test "$(ls "$T/results" | wc -l)" = $((2 * n - skipped)) || fail "more in $T/results than a JSON and a log a routine"
-pass "every benchmark ($n) run with the profile file, a JSON and a log each, a progress line each, $skipped extensions the library lacks skipped"
+pass "every benchmark ($n) run with the profile file, a JSON and a log each, a progress line each, $skipped skipped (an extension the library lacks) or failed (its known bugs:${known:- none})"
 
 ../report/bmb_report "$T/results" >"$T/report.html" 2>"$T/err" || fail "bmb_report refused the directory: $(cat "$T/err")"
 test "$(grep -c 'class="bmb-result"' "$T/report.html")" = $((n - skipped)) || fail "the report does not hold the $((n - skipped)) results"
