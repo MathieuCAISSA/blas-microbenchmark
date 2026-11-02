@@ -106,7 +106,7 @@ check(names == ['describe_machine', 'list_routines', 'make_report', 'read_result
 check(all(t['inputSchema'].get('type') == 'object' and t.get('description') for t in tools), 'a tool without a schema or a description')
 check(len(result(3).get('structuredContent', {}).get('routines', [])) == routines, 'list_routines: not every routine')
 d3 = sorted(r['routine'] for r in result(4).get('structuredContent', {}).get('routines', []))
-check(d3 == ['dgemm', 'dsymm', 'dsyr2k', 'dsyrk', 'dtrmm', 'dtrsm'], 'list_routines, level 3, double: %s' % d3)
+check(d3 == ['dgemm', 'dgemmt', 'dsymm', 'dsyr2k', 'dsyrk', 'dtrmm', 'dtrsm'], 'list_routines, level 3, double: %s' % d3)
 check(result(5).get('structuredContent', {}).get('blas_backend'), 'describe_machine: no BLAS backend')
 
 ddot = result(6).get('structuredContent', {})

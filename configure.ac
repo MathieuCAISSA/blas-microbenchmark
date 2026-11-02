@@ -590,6 +590,35 @@ AS_IF([test -n "$bmb_batch_header"], [
       [[(void) &cblas_sgemm_batch_strided; (void) &cblas_dgemm_batch_strided;
         (void) &cblas_cgemm_batch_strided; (void) &cblas_zgemm_batch_strided;]])],
       [bmb_cv_gemm_batch_strided=yes], [bmb_cv_gemm_batch_strided=no])])
+  dnl Extensions of the BLAS (#171): the same header and the same rule.
+  dnl axpby: OpenBLAS, MKL, BLIS, AOCL-BLAS; gemmt: MKL, NVPL, AOCL-BLAS,
+  dnl BLIS, OpenBLAS from 0.3.27, whose library had it before its header did.
+  AC_CACHE_CHECK([for cblas_?axpby], [bmb_cv_axpby],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
+      [[(void) &cblas_saxpby; (void) &cblas_daxpby;
+        (void) &cblas_caxpby; (void) &cblas_zaxpby;]])],
+      [bmb_cv_axpby=yes], [bmb_cv_axpby=no])])
+  dnl gemmtr: gemmt's name in the Reference BLAS from LAPACK 3.12, and
+  dnl MKL's since it deprecated gemmt; taken where the library has it.
+  AC_CACHE_CHECK([for cblas_?gemmtr], [bmb_cv_gemmtr],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
+      [[(void) &cblas_sgemmtr; (void) &cblas_dgemmtr;
+        (void) &cblas_cgemmtr; (void) &cblas_zgemmtr;]])],
+      [bmb_cv_gemmtr=yes], [bmb_cv_gemmtr=no])])
+  AC_CACHE_CHECK([for cblas_?gemmt], [bmb_cv_gemmt],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
+      [[(void) &cblas_sgemmt; (void) &cblas_dgemmt;
+        (void) &cblas_cgemmt; (void) &cblas_zgemmt;]])],
+      [bmb_cv_gemmt=yes], [bmb_cv_gemmt=no])])
+  AS_IF([test "x$bmb_cv_axpby" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_AXPBY], [1],
+      [Define to 1 if the CBLAS declares and defines cblas_?axpby.])])
+  AS_IF([test "x$bmb_cv_gemmtr" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_GEMMTR], [1],
+      [Define to 1 if the CBLAS declares and defines cblas_?gemmtr.])])
+  AS_IF([test "x$bmb_cv_gemmt" = xyes || test "x$bmb_cv_gemmtr" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_GEMMT], [1],
+      [Define to 1 if the CBLAS has gemmt, as cblas_?gemmt or cblas_?gemmtr.])])
   AS_IF([test "x$bmb_cv_gemm_batch" = xyes],
     [AC_DEFINE([HAVE_CBLAS_GEMM_BATCH], [1],
       [Define to 1 if the CBLAS declares and defines cblas_?gemm_batch.])])

@@ -37,7 +37,7 @@ sizes() {
 
 grep -v '^#' "${srcdir:-.}/routines.txt" >"$T/routines" || fail "no routines in routines.txt"
 n=0
-while read -r r level prec kind family; do
+while read -r r level prec kind family _ext; do
     [ -n "$r" ] || continue
     case $prec in s) dir=single ;; d) dir=double ;; c) dir=complex ;; z) dir=complex16 ;; esac
     # shellcheck disable=SC2046 # the size options, split on purpose
@@ -58,6 +58,8 @@ while read -r r level prec kind family; do
             m = $3; n = $4; f = "-"; b = "-"; p = "-"
             if (op == "asum") { f = num(m * parts); b = num(e * m) }
             else if (op == "axpy") { f = num(2 * m * cf); b = num(3 * e * m) }
+            # alpha x + beta y: two products and a sum, 6 + 6 + 2 complex
+            else if (op == "axpby") { f = num((parts == 2 ? 14 : 3) * m); b = num(3 * e * m) }
             else if (op == "copy") { b = num(2 * e * m) }
             else if (op == "dot" || op == "dotc" || op == "dotu") { f = num(2 * m * cf); b = num(2 * e * m) }
             else if (op == "nrm2") { f = num(2 * m * parts); b = num(e * m) }
@@ -87,6 +89,8 @@ while read -r r level prec kind family; do
             else if (op == "trmv" || op == "trsv" || op == "tpsv") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) / 2 + 2 * m)) }
             else if (op == "gemm" || op == "symm" || op == "hemm") { f = num(2 * m * m * n * cf); p = num(e * (m * m + 2 * m * n)) }
             else if (op == "syrk" || op == "herk") { f = num(n * m * (m + 1) * cf); p = num(e * (m * n + m * m)) }
+            # one triangle of a GEMM, its diagonal in: N (N + 1) / 2 elements of K multiply-adds
+            else if (op == "gemmt") { f = num(n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }
             else if (op == "syr2k" || op == "her2k") { f = num(2 * n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }
             else if (op == "trmm" || op == "trsm") { f = num(n * m * (m + 1) * cf); p = num(e * (m * m + m * n)) }
             else { printf "no count for %s in this test: add its formula\n", r; bad = 1; exit 1 }

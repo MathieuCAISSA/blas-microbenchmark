@@ -20,6 +20,10 @@ level1_PROGRAMS = \
 	double/bmb_daxpy \
 	complex/bmb_caxpy \
 	complex16/bmb_zaxpy \
+	single/bmb_saxpby \
+	double/bmb_daxpby \
+	complex/bmb_caxpby \
+	complex16/bmb_zaxpby \
 	single/bmb_scopy \
 	double/bmb_dcopy \
 	complex/bmb_ccopy \
@@ -65,6 +69,14 @@ complex_bmb_caxpy_SOURCES = bmb_axpy.c
 complex_bmb_caxpy_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_zaxpy_SOURCES = bmb_axpy.c
 complex16_bmb_zaxpy_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+single_bmb_saxpby_SOURCES = bmb_axpby.c
+single_bmb_saxpby_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+double_bmb_daxpby_SOURCES = bmb_axpby.c
+double_bmb_daxpby_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
+complex_bmb_caxpby_SOURCES = bmb_axpby.c
+complex_bmb_caxpby_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
+complex16_bmb_zaxpby_SOURCES = bmb_axpby.c
+complex16_bmb_zaxpby_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
 single_bmb_scopy_SOURCES = bmb_copy.c
 single_bmb_scopy_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dcopy_SOURCES = bmb_copy.c
@@ -131,6 +143,10 @@ ROUTINE_TESTS = \
 	double/test_bmb_daxpy.sh \
 	complex/test_bmb_caxpy.sh \
 	complex16/test_bmb_zaxpy.sh \
+	single/test_bmb_saxpby.sh \
+	double/test_bmb_daxpby.sh \
+	complex/test_bmb_caxpby.sh \
+	complex16/test_bmb_zaxpby.sh \
 	single/test_bmb_scopy.sh \
 	double/test_bmb_dcopy.sh \
 	complex/test_bmb_ccopy.sh \

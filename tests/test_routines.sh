@@ -81,12 +81,14 @@ refused() {
     grep -q "$2" "$T/out" || fail "'$1': no '$2' in: $(cat "$T/out")"
     cmp -s "$top/README.md" "$T/README.md" || fail "'$1' was refused after changing the README"
 }
-refused 'zaxpy 1 z v' 'not "routine level precision sizes family"'
-refused 'zaxpy 4 z v axpy' 'not "routine level precision sizes family"'
-refused 'zaxpy 1 q v axpy' 'not "routine level precision sizes family"'
-refused 'zaxpy 1 z mk axpy' 'not "routine level precision sizes family"'
-refused 'zaxpy 1 z v Axpy' 'not "routine level precision sizes family"'
-refused 'zaxpy 1 z v -' 'not "routine level precision sizes family"'
+refused 'zaxpy 1 z v' 'not "routine level precision sizes family \[ext\]"'
+refused 'zaxpy 4 z v axpy' 'not "routine level precision sizes family \[ext\]"'
+refused 'zaxpy 1 q v axpy' 'not "routine level precision sizes family \[ext\]"'
+refused 'zaxpy 1 z mk axpy' 'not "routine level precision sizes family \[ext\]"'
+refused 'zaxpy 1 z v Axpy' 'not "routine level precision sizes family \[ext\]"'
+refused 'zaxpy 1 z v -' 'not "routine level precision sizes family \[ext\]"'
+refused 'zfoo 1 z v foo extra' 'not "routine level precision sizes family \[ext\]"'
+refused 'zfoo 1 z v foo ext ext' 'not "routine level precision sizes family \[ext\]"'
 refused 'ddot 1 d v dot' 'ddot listed twice'
 echo "ok   a malformed line, a routine listed twice: refused"
 

@@ -146,9 +146,9 @@ runs them all in one command, a series each in the report.
 <!-- BEGIN routines (readme): written by src/c/routines.sh -->
 | Level | Double | Single | Complex |
 | --- | --- | --- | --- |
-| **1** — vectors | `dasum` `daxpy` `dcopy` `ddot` `dnrm2` `dscal` `dswap` `idamax` `drot` | `sasum` `saxpy` `scopy` `sdot` `snrm2` `sscal` `sswap` `isamax` `srot` | `scasum` `dzasum` `caxpy` `zaxpy` `ccopy` `zcopy` `cdotc` `zdotc` `cdotu` `zdotu` `scnrm2` `dznrm2` `cscal` `zscal` `cswap` `zswap` `icamax` `izamax` |
+| **1** — vectors | `dasum` `daxpy` `daxpby` `dcopy` `ddot` `dnrm2` `dscal` `dswap` `idamax` `drot` | `sasum` `saxpy` `saxpby` `scopy` `sdot` `snrm2` `sscal` `sswap` `isamax` `srot` | `scasum` `dzasum` `caxpy` `zaxpy` `caxpby` `zaxpby` `ccopy` `zcopy` `cdotc` `zdotc` `cdotu` `zdotu` `scnrm2` `dznrm2` `cscal` `zscal` `cswap` `zswap` `icamax` `izamax` |
 | **2** — matrix × vector | `dgemv` `dgbmv` `dger` `dsymv` `dspmv` `dsyr` `dsyr2` `dtrmv` `dtrsv` `dtpsv` `dtbsv` | `sgemv` `sgbmv` `sger` `ssymv` `sspmv` `ssyr` `ssyr2` `strmv` `strsv` `stpsv` `stbsv` | `cgemv` `zgemv` `cgeru` `zgeru` `cgerc` `zgerc` `chemv` `zhemv` `cher` `zher` `cher2` `zher2` `ctrmv` `ztrmv` `ctrsv` `ztrsv` |
-| **3** — matrix × matrix | `dgemm` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `ssymm` `ssyrk` `ssyr2k` `strmm` `strsm` | `cgemm` `zgemm` `csymm` `zsymm` `chemm` `zhemm` `csyrk` `zsyrk` `cherk` `zherk` `csyr2k` `zsyr2k` `cher2k` `zher2k` `ctrmm` `ztrmm` `ctrsm` `ztrsm` |
+| **3** — matrix × matrix | `dgemm` `dgemmt` `dsymm` `dsyrk` `dsyr2k` `dtrmm` `dtrsm` | `sgemm` `sgemmt` `ssymm` `ssyrk` `ssyr2k` `strmm` `strsm` | `cgemm` `zgemm` `cgemmt` `zgemmt` `csymm` `zsymm` `chemm` `zhemm` `csyrk` `zsyrk` `cherk` `zherk` `csyr2k` `zsyr2k` `cher2k` `zher2k` `ctrmm` `ztrmm` `ctrsm` `ztrsm` |
 <!-- END routines (readme) -->
 
 Each is `bmb_<routine>`. Level 1 and 2 report GFLOP/s and GB/s (copy,

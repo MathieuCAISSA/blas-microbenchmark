@@ -29,6 +29,18 @@ follows the same shape (see
    `footprint(dim1, dim2)`: the bytes of the operands one call touches,
    for `--cache cold`; level 3 declares it, having no `bytes`.
 
+An extension of the BLAS (#171), a call some libraries have and others
+not (`axpby`, `gemmt`), is marked `ext` in `routines.txt`. `configure`
+probes for it as for the batched GEMM, declared in the header and
+defined in the library, all four precisions, and defines
+`HAVE_CBLAS_<FAMILY>`. Its source compiles the call only under that
+define, and otherwise sets `missing` to the call's name: the program is
+built and installed whatever the library, so that the install's layout
+and the packages' lists do not depend on it, and skips (exit 77) with a
+message, but under `BMB_COUNTS`, which calls nothing. Its tests begin
+with `bmb_skip_missing`, and the tests of `src/c` that run every
+benchmark pass it over with `bmb_missing` (`test_helper.sh`).
+
 Every operand comes from `bmb_bench_alloc()`, aligned as `--align` says,
 never from `malloc` (#163); the context itself, and `verify()`'s scratch,
 may. A matrix gets its leading dimension from `bmb_bench_ld(outer,
@@ -452,6 +464,25 @@ syr, syr2, her and her2 keep a small alpha (or one near 1) so that
 repeated calls do not drift; in single precision their update fell
 inside the tolerance, and their `verify()` now calls with an alpha of
 order 1, giving the timed one back after.
+
+**A library that computes wrong** is what `--verify` is for: the
+benchmark stops, exit 2, and the tests take that for a failure, as they
+must for any library CI builds. A bug of a library that its upstream
+has fixed, in versions CI still meets, goes in `bmb_known_wrong`
+(`src/c/test_helper.sh`): the routine, the arguments, the versions
+before the fix, the upstream issue in a comment, and the message
+`--verify` must give. The tests then require that message in place of a
+pass, so the bug is still seen to be caught, and fail once a version
+that should have it does not: the rule is then wrong. OpenBLAS's gemmt
+before 0.3.29 filled the other triangle row-major (#4905), and before
+0.3.30 conjugated B in place (#5143), the Fedora FlexiBLAS job's 0.3.29
+among them; FlexiBLAS does not say which OpenBLAS it loaded, so there a
+pass is taken too. Its `cblas_?gemm_batch_strided`, from 0.3.31 to
+0.3.34, refuses column-major calls (#5979, fixed for 0.3.35), and its
+complex one does not scale the strides (#6214, reported from here,
+unfixed: no upper bound yet). A development build, `0.3.34.dev`, counts
+as the release it leads to. A bug nobody has reported upstream is
+reported first; it does not go in the list to make CI green.
 
 ## Known measurement limitations
 

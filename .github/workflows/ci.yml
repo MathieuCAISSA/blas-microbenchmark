@@ -79,6 +79,12 @@ jobs:
           cd build
           ../configure --enable-werror
 
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 
@@ -213,6 +219,13 @@ jobs:
           mkdir -p build
           cd build
           ../configure --with-blas-backend=blis --enable-werror
+
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -1084,6 +1097,14 @@ jobs:
           cd build
           ../configure --with-blas-backend=mkl --enable-werror
 
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMTR 1$' build/config.h
+
       - name: make
         run: make -C build -j"$(nproc)"
 
@@ -1156,16 +1177,23 @@ jobs:
         run: |
           docker run --rm -e WANT="$(grep -c '^[a-z]' src/c/routines.txt)" bmb sh -ec '
             n=0
+            skipped=0
             for b in /usr/local/libexec/blas-microbenchmark/level*/bmb_*; do
+              rc=0
               case $b in
-                */level1/*) "$b" -x 0 -i 1 -t 1,2 -v 1000 >/dev/null ;;
-                *) "$b" -x 0 -i 1 -t 1,2 -m 48 --layout col >/dev/null
-                   "$b" -x 0 -i 1 -t 1,2 -m 48 >/dev/null ;;
+                */level1/*) "$b" -x 0 -i 1 -t 1,2 -v 1000 >/dev/null || rc=$? ;;
+                *) "$b" -x 0 -i 1 -t 1,2 -m 48 --layout col >/dev/null || rc=$?
+                   [ "$rc" -ne 0 ] || "$b" -x 0 -i 1 -t 1,2 -m 48 >/dev/null || rc=$? ;;
               esac
-              n=$((n + 1))
+              # 77: an extension of the BLAS the library lacks (#171), which says so.
+              case $rc in
+                0) n=$((n + 1)) ;;
+                77) skipped=$((skipped + 1)) ;;
+                *) exit "$rc" ;;
+              esac
             done
-            test "$n" -eq "$WANT"
-            echo "all $n benchmarks verified"'
+            test $((n + skipped)) -eq "$WANT"
+            echo "all $n benchmarks verified, $skipped extensions the library lacks skipped"'
 
       - name: Man pages
         run: |
@@ -1305,13 +1333,19 @@ jobs:
           WANT=$(grep -c '^[a-z]' src/c/routines.txt) python3 - <<'EOF'
           import json, os
           cases = json.load(open('run.json'))['runs'][0]['testcases']
-          assert len(cases) == int(os.environ['WANT']) and all(c['result'] == 'pass' for c in cases), cases
+          # An extension of the BLAS this OpenBLAS lacks (#171) skips, nothing else.
+          ext = {l.split()[0] for l in open('src/c/routines.txt')
+                 if not l.startswith('#') and l.split()[5:] == ['ext']}
+          assert len(cases) == int(os.environ['WANT']), cases
+          assert all(c['result'] == 'pass' or (c['result'] == 'skip' and c['routine'] in ext)
+                     for c in cases), [(c['routine'], c['result']) for c in cases if c['result'] != 'pass']
           perf = {c['routine']: c['perfvalues'] for c in cases}
           assert perf['dgemm']['generic:default:gflops'][1] == 0.001, perf['dgemm']
           assert set(perf['dcopy']) == {'generic:default:gbytes_per_s'}, perf['dcopy']
           assert set(perf['ddot']) == {'generic:default:gflops', 'generic:default:gbytes_per_s'}
           assert set(perf['dgemm']) == {'generic:default:gflops'}, perf['dgemm']
-          print(len(cases), 'routines passed, their rates and references as expected')
+          print(sum(c['result'] == 'pass' for c in cases), 'routines passed,',
+                sum(c['result'] == 'skip' for c in cases), 'extensions skipped, the rates and references as expected')
           EOF
 
       # make install puts the tests beside the benchmarks; run from there,
@@ -1321,7 +1355,7 @@ jobs:
       - name: The installed tests run their own install
         run: |
           reframe -c inst/share/blas-microbenchmark/reframe/blas_microbenchmark.py \
-            -n 'bmb_run%routine=(dgemm|ddot)' -S level1_size=100000 -S level3_size=128 \
+            -n 'bmb_run%routine=(dgemm|ddot)$' -S level1_size=100000 -S level3_size=128 \
             -S num_threads=2 -r --report-file=installed-run.json
           python3 - <<'EOF'
           import json, os
@@ -1336,12 +1370,12 @@ jobs:
       - name: A reference it cannot meet, and an unverified run, fail it
         run: |
           echo '{"generic": {"dgemm": {"gflops": [1e9, -0.1, null]}}}' > strict.json
-          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm$' \
                -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
                -S reference_file=strict.json -r --report-file=strict-run.json; then
             echo "a reference of 1e9 GFLOP/s was met"; exit 1
           fi
-          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm' \
+          if reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_run%routine=dgemm$' \
                -S install_prefix="$PWD/inst" -S level3_size=128 -S num_threads=2 \
                -S bmb_options=-C -r --report-file=unverified-run.json; then
             echo "a run with -C passed"; exit 1
@@ -1356,7 +1390,7 @@ jobs:
 
       - name: bmb_build_run on this commit's tarball
         run: |
-          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)' \
+          reframe -c packaging/reframe/blas_microbenchmark.py -n 'bmb_build_run%routine=(dgemm|ddot|zherk|izamax|dznrm2)$' \
             -S bmb_tarball.tarball="$(ls build/blas-microbenchmark-*.tar.gz)" \
             -S level1_size=100000 -S level3_size=128 -S num_threads=2 \
             -r --report-file=build-run.json
@@ -1371,8 +1405,10 @@ jobs:
       - name: Their results make a report
         run: |
           find bmb-run-output -name result.json > results.txt
-          test "$(wc -l < results.txt)" -eq "$(grep -c '^[a-z]' src/c/routines.txt)" ||
-            { echo "$(wc -l < results.txt) results, not a routine each"; exit 1; }
+          # A result a routine that passed: a skipped extension (#171) writes none.
+          want=$(python3 -c "import json; print(sum(c['result'] == 'pass' for c in json.load(open('run.json'))['runs'][0]['testcases']))")
+          test "$(wc -l < results.txt)" -eq "$want" ||
+            { echo "$(wc -l < results.txt) results, not one a routine that passed ($want)"; exit 1; }
           # shellcheck disable=SC2046
           inst/bin/bmb_report $(cat results.txt) > report.html
           grep -qi '^<!doctype html>' report.html

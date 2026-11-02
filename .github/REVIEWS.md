@@ -68,6 +68,16 @@ it comes from in brackets.
   code it guards broken, by a mutation that still compiles
   ([tests](../AGENTS.md#tests)).
 - [ ] Tiny sizes only; nothing allocates more than a few MB.
+- [ ] A new routine whose name extends another's (dgemmt, dgemm's) is
+  looked for wherever routines are picked by name: a pattern that is a
+  regular expression is anchored (ReFrame's `-n 'bmb_run%routine=dgemm$'`),
+  a list compared whole is updated (#171 broke three CI steps so).
+- [ ] A test that runs a program under `set -e` reads its exit status
+  where the program can exit 77: passed on, the program's skip becomes
+  the whole test's, SKIP and not FAIL, and nothing after it runs.
+  `test_man_content.sh` skipped that way in a build without gemmt, and
+  only the files it left behind showed it (#171). Compare a run's
+  SKIP lines with `main`'s.
 - [ ] Current formats are generated, not kept as fixtures.
 - [ ] A test that SKIPs where its tool is missing is required to pass
   in at least one CI job.

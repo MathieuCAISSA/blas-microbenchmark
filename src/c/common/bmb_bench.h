@@ -103,6 +103,12 @@ typedef struct {
      * run, 1u << each bmb_batch_mode_t; a mode the library has no call
      * for is skipped (exit 77), never measured as something else. */
     unsigned int batch_modes;
+    /* An extension of the BLAS (#171) this build's library does not have:
+     * the call it lacks, "cblas_?axpby", and the run is skipped (exit
+     * 77) with a message saying so. NULL for a routine the build has.
+     * Under BMB_COUNTS the counts are written all the same: they call
+     * nothing. */
+    const char *missing;
 
     bmb_bench_setup_fn setup;
     bmb_bench_call_fn call;

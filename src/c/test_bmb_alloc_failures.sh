@@ -12,6 +12,8 @@
 # (#159). SKIPs where it cannot be preloaded: under
 # AddressSanitizer, whose allocator must come first, and outside glibc.
 set -e
+# bmb_missing: an extension this build's library does not have (#171).
+. "${srcdir:-.}/test_helper.sh"
 
 L=./libbmb_failalloc.so
 T=alloc-failures-test.d
@@ -73,6 +75,13 @@ runs=0
 for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $b in *.*) continue ;; esac
     test -x "$b" || continue
+    # An extension the library lacks; a call it is known to get wrong
+    # (bmb_known_wrong), which test_bmb_verify.sh holds to its message.
+    known=$(bmb_known_wrong "$b" "${b##*/bmb_}")
+    if bmb_missing "${b##*/bmb_}" || { [ -n "$known" ] && [ "${known#maybe }" = "$known" ]; }; then
+        n=$((n + 1))
+        continue
+    fi
     case $b in level1/*) flag=-v ;; *) flag=-m ;; esac
     each_allocation "$b" -x 0 -i 1 "$flag" 16
     n=$((n + 1))

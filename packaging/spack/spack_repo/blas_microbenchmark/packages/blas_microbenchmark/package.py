@@ -167,7 +167,13 @@ class BlasMicrobenchmark(AutotoolsPackage):
             size = ["-v", "64"] if level == "level1" else ["-m", "16"]
             with test_part(self, f"test_benchmarks_{name}", purpose=f"{name} is verified"):
                 bench = which(path, required=True)
-                out = bench("-x", "0", "-i", "1", *size, output=str.split, error=str.split)
+                out = bench("-x", "0", "-i", "1", *size, output=str.split, error=str.split,
+                            ignore_errors=(77,))
+                # An extension of the BLAS the library lacks (axpby, gemmt,
+                # from 1.10): measures nothing, exits 77, says which call.
+                if bench.returncode == 77:
+                    assert "has no cblas_" in out, f"{name} skipped without saying why: {out}"
+                    continue
                 assert "# verified: " in out, f"{name} did not check its result: {out}"
 
     def test_report(self):

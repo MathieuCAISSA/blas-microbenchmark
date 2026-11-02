@@ -10,6 +10,8 @@
 # cold and checked; refused where the cache size cannot be read. Tiny
 # sizes only.
 set -e
+# bmb_missing: an extension this build's library does not have (#171).
+. "${srcdir:-.}/test_helper.sh"
 
 T=cache-test.d
 
@@ -75,6 +77,13 @@ n=0
 for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     case $b in *.*) continue ;; esac
     test -x "$b" || continue
+    # An extension the library lacks; a call it is known to get wrong
+    # (bmb_known_wrong), which test_bmb_verify.sh holds to its message.
+    known=$(bmb_known_wrong "$b" "${b##*/bmb_}")
+    if bmb_missing "${b##*/bmb_}" || { [ -n "$known" ] && [ "${known#maybe }" = "$known" ]; }; then
+        n=$((n + 1))
+        continue
+    fi
     case $b in level1/*) flag=-v ;; *) flag=-m ;; esac
     BMB_MACHINE_ROOT=$M "$b" -x 1 -i 2 -c -k cold "$flag" 16 >/dev/null 2>"$T/err" \
         || fail "$b -k cold failed: $(cat "$T/err")"
