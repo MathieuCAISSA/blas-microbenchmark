@@ -21,6 +21,14 @@ releases with the same major version can be compared and read by the same
   gemmt's check also requires A and B unchanged: OpenBLAS before 0.3.30
   conjugated one in place (OpenMathLib/OpenBLAS#5143), and before 0.3.29
   filled the other triangle row-major (#4905); `--verify` stops on both.
+- `sbgemm` (#322): a GEMM of bfloat16 A and B into a float C, accumulated
+  in float, through OpenBLAS's `cblas_sbgemm` (built with
+  `BUILD_BFLOAT16`) and ArmPL's, or MKL's `cblas_gemm_bf16bf16f32`,
+  skipped where the library has none. `--verify` checks it against the bfloat16 values
+  it was given, with single precision's tolerance for K additions. Every
+  result records the types (`# types: bf16 inputs, fp32 accumulation and
+  output`, `"types"` in the JSON); `bmb_report` judges it by the peak its
+  results were given, not by its own, which is double precision's.
 - `bmb_mcp` (#262), installed beside `bmb_report` and `bmb_suite`: an MCP
   server, so that an AI agent lists the routines, describes the machine,
   runs a benchmark or the suite, reads a result and makes the report,

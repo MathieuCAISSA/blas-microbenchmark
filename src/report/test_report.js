@@ -71,6 +71,7 @@
     if (o.kernels) { r.kernels = o.kernels; }
     if (o.peakGflops) { r.peak_gflops_per_core = o.peakGflops; }
     if (o.peakGbs) { r.peak_gbs = o.peakGbs; }
+    if (o.types) { r.types = o.types; }
     return r;
   }
 
@@ -783,6 +784,23 @@
       eq(m.identities.map(function (id) { return id.name; }), ["openblas", "openblas · ld + 8"],
          "--ld-pad (#163): a padded run is its own series, named so");
       eq(byName(m, "openblas").files, ["old.json", "zero.json"], "files without a padding merge with unpadded ones");
+    });
+
+    /* ---- Inputs of another type (#322) ---- */
+
+    test("types", function () {
+      var m = R.buildModel([
+        entry("sb.json", gemm({ routine: "sbgemm", types: { inputs: "bf16", accumulator: "fp32" },
+                                peakGflops: 300, rows: [[1, 64, 64, 1, 30, null]] })),
+        entry("s.json", gemm({ routine: "sgemm", rows: [[1, 64, 64, 1, 20, null]] }))
+      ]);
+      var sb = routine(m, "sbgemm"), sg = routine(m, "sgemm");
+      eq(sb.types, "bf16 into fp32", "a bf16 GEMM's section knows its types");
+      eq(sg.types, undefined, "sgemm's has none");
+      eq(R.peakOf(sb, sb.seriesOrder[0], { gflops: 50, gbs: 0 }).gflops, 300,
+         "bmb_report's peak, double precision's, is not a bf16 one: the results' own is taken");
+      eq(R.peakOf(sg, sg.seriesOrder[0], { gflops: 50, gbs: 0 }).gflops, 100,
+         "sgemm's is bmb_report's, twice");
     });
 
     /* ---- --star (#173) ---- */

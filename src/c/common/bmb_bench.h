@@ -109,6 +109,11 @@ typedef struct {
      * Under BMB_COUNTS the counts are written all the same: they call
      * nothing. */
     const char *missing;
+    /* A GEMM whose inputs are of another type than its output (#322):
+     * the inputs' type and the accumulation's, "bf16" and "fp32", which
+     * every result records. NULL for a routine in one precision. */
+    const char *input_type;
+    const char *accumulator_type;
 
     bmb_bench_setup_fn setup;
     bmb_bench_call_fn call;

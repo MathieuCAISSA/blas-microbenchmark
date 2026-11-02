@@ -43,6 +43,24 @@ else
 fi
 echo "ok   the width of the library's integers, in the json, and in the table of an ILP64 build"
 
+# The types of a GEMM whose inputs are not its output's (#322), in every
+# format, where the library has one; none for a routine in one precision.
+if grep -q '"types"' fmt.json; then
+    fail "dgemm, in one precision, records types"
+fi
+. "${srcdir:-.}/test_helper.sh"
+if ! bmb_missing sbgemm; then
+    level3/single/bmb_sbgemm -x 0 -i 1 -m 8 -o types.json >types.txt 2>/dev/null || fail "the sbgemm run failed"
+    level3/single/bmb_sbgemm -x 0 -i 1 -m 8 -o types.csv >/dev/null 2>&1 || fail "the sbgemm csv run failed"
+    grep -qx '# types: bf16 inputs, fp32 accumulation and output' types.txt || fail "sbgemm's table does not say its types"
+    grep -qx '# types: bf16 inputs, fp32 accumulation and output' types.csv || fail "sbgemm's csv does not say its types"
+    grep -qx '  "types": {"inputs": "bf16", "accumulator": "fp32"},' types.json || fail "sbgemm's json does not say its types"
+    echo "ok   sbgemm's types, bf16 into fp32, in the table, the csv and the json; none for dgemm"
+else
+    echo "ok   no types for dgemm (sbgemm not in this build)"
+fi
+rm -f types.json types.txt types.csv
+
 # No dim3 without -K: GEMM's output is as it always was (#215).
 if grep -q '"dim3' fmt.json; then
     fail "dgemm without -K writes a dim3"

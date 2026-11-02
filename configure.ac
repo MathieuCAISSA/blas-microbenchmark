@@ -575,41 +575,70 @@ dnl Batched GEMM (#159): MKL's signature, which BLIS, AOCL-BLAS, NVPL and
 dnl OpenBLAS (from 0.3.28, strided from 0.3.31) have too. The header has to
 dnl declare it as well as the library define it: the call takes arrays,
 dnl which an implicit declaration would get wrong. Netlib's has none.
+dnl Each probe stores the address through a volatile pointer, which the
+dnl link has to resolve: a bare (void) &f is thrown away by the compiler,
+dnl and a call declared but not defined, as Ubuntu's OpenBLAS declares
+dnl cblas_sbgemm, would be found (#322).
 AS_CASE(["$bmb_blas_backend"],
   [netlib], [bmb_batch_header=],
   [mkl], [bmb_batch_header=mkl_cblas.h],
   [bmb_batch_header=cblas.h])
 AS_IF([test -n "$bmb_batch_header"], [
   AC_CACHE_CHECK([for cblas_?gemm_batch], [bmb_cv_gemm_batch],
-    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
-      [[(void) &cblas_sgemm_batch; (void) &cblas_dgemm_batch;
-        (void) &cblas_cgemm_batch; (void) &cblas_zgemm_batch;]])],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_sgemm_batch; bmb_p = (void (*)(void)) &cblas_dgemm_batch;
+        bmb_p = (void (*)(void)) &cblas_cgemm_batch; bmb_p = (void (*)(void)) &cblas_zgemm_batch;]])],
       [bmb_cv_gemm_batch=yes], [bmb_cv_gemm_batch=no])])
   AC_CACHE_CHECK([for cblas_?gemm_batch_strided], [bmb_cv_gemm_batch_strided],
-    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
-      [[(void) &cblas_sgemm_batch_strided; (void) &cblas_dgemm_batch_strided;
-        (void) &cblas_cgemm_batch_strided; (void) &cblas_zgemm_batch_strided;]])],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_sgemm_batch_strided; bmb_p = (void (*)(void)) &cblas_dgemm_batch_strided;
+        bmb_p = (void (*)(void)) &cblas_cgemm_batch_strided; bmb_p = (void (*)(void)) &cblas_zgemm_batch_strided;]])],
       [bmb_cv_gemm_batch_strided=yes], [bmb_cv_gemm_batch_strided=no])])
   dnl Extensions of the BLAS (#171): the same header and the same rule.
   dnl axpby: OpenBLAS, MKL, BLIS, AOCL-BLAS; gemmt: MKL, NVPL, AOCL-BLAS,
   dnl BLIS, OpenBLAS from 0.3.27, whose library had it before its header did.
   AC_CACHE_CHECK([for cblas_?axpby], [bmb_cv_axpby],
-    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
-      [[(void) &cblas_saxpby; (void) &cblas_daxpby;
-        (void) &cblas_caxpby; (void) &cblas_zaxpby;]])],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_saxpby; bmb_p = (void (*)(void)) &cblas_daxpby;
+        bmb_p = (void (*)(void)) &cblas_caxpby; bmb_p = (void (*)(void)) &cblas_zaxpby;]])],
       [bmb_cv_axpby=yes], [bmb_cv_axpby=no])])
   dnl gemmtr: gemmt's name in the Reference BLAS from LAPACK 3.12, and
   dnl MKL's since it deprecated gemmt; taken where the library has it.
   AC_CACHE_CHECK([for cblas_?gemmtr], [bmb_cv_gemmtr],
-    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
-      [[(void) &cblas_sgemmtr; (void) &cblas_dgemmtr;
-        (void) &cblas_cgemmtr; (void) &cblas_zgemmtr;]])],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_sgemmtr; bmb_p = (void (*)(void)) &cblas_dgemmtr;
+        bmb_p = (void (*)(void)) &cblas_cgemmtr; bmb_p = (void (*)(void)) &cblas_zgemmtr;]])],
       [bmb_cv_gemmtr=yes], [bmb_cv_gemmtr=no])])
   AC_CACHE_CHECK([for cblas_?gemmt], [bmb_cv_gemmt],
-    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>]],
-      [[(void) &cblas_sgemmt; (void) &cblas_dgemmt;
-        (void) &cblas_cgemmt; (void) &cblas_zgemmt;]])],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_sgemmt; bmb_p = (void (*)(void)) &cblas_dgemmt;
+        bmb_p = (void (*)(void)) &cblas_cgemmt; bmb_p = (void (*)(void)) &cblas_zgemmt;]])],
       [bmb_cv_gemmt=yes], [bmb_cv_gemmt=no])])
+  dnl A GEMM of bfloat16 inputs into float (#322): OpenBLAS's cblas_sbgemm,
+  dnl defined when it was built with BUILD_BFLOAT16 (its header declares it
+  dnl either way) and ArmPL's, and MKL's cblas_gemm_bf16bf16f32, with the same
+  dnl arguments.
+  AC_CACHE_CHECK([for cblas_sbgemm], [bmb_cv_sbgemm],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_sbgemm;]])],
+      [bmb_cv_sbgemm=yes], [bmb_cv_sbgemm=no])])
+  AC_CACHE_CHECK([for cblas_gemm_bf16bf16f32], [bmb_cv_gemm_bf16],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_gemm_bf16bf16f32;]])],
+      [bmb_cv_gemm_bf16=yes], [bmb_cv_gemm_bf16=no])])
+  AS_IF([test "x$bmb_cv_gemm_bf16" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_GEMM_BF16BF16F32], [1],
+      [Define to 1 if the CBLAS declares and defines MKL's cblas_gemm_bf16bf16f32.])])
+  AS_IF([test "x$bmb_cv_sbgemm" = xyes || test "x$bmb_cv_gemm_bf16" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_SBGEMM], [1],
+      [Define to 1 if the CBLAS has a GEMM of bfloat16 into float, cblas_sbgemm or cblas_gemm_bf16bf16f32.])])
   AS_IF([test "x$bmb_cv_axpby" = xyes],
     [AC_DEFINE([HAVE_CBLAS_AXPBY], [1],
       [Define to 1 if the CBLAS declares and defines cblas_?axpby.])])

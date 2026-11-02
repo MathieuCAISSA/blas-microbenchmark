@@ -89,6 +89,8 @@ while read -r r level prec kind family _ext; do
             else if (op == "trmv" || op == "trsv" || op == "tpsv") { f = num(m * (m + 1) * cf); b = num(e * (m * (m + 1) / 2 + 2 * m)) }
             else if (op == "gemm" || op == "symm" || op == "hemm") { f = num(2 * m * m * n * cf); p = num(e * (m * m + 2 * m * n)) }
             else if (op == "syrk" || op == "herk") { f = num(n * m * (m + 1) * cf); p = num(e * (m * n + m * m)) }
+            # bfloat16 A and B, float C (#322)
+            else if (op == "sbgemm") { f = num(2 * m * m * n); p = num(2 * (m * m + m * n) + 4 * m * n) }
             # one triangle of a GEMM, its diagonal in: N (N + 1) / 2 elements of K multiply-adds
             else if (op == "gemmt") { f = num(n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }
             else if (op == "syr2k" || op == "her2k") { f = num(2 * n * m * (m + 1) * cf); p = num(e * (2 * m * n + m * m)) }
@@ -128,6 +130,24 @@ for r in sgemm dgemm cgemm zgemm; do
     ' "$T/$r.got" >"$T/$r.diff" || fail "$(cat "$T/$r.diff")"
 done
 echo "ok   GEMM under -K: 2*M*N*K, and the bytes of M x K, K x N and M x N, at every K"
+
+# sbgemm (#322) under -K: GEMM's operations, A and B in bfloat16 (2
+# bytes), C in float (4). Its counts hold whatever the library has.
+BMB_COUNTS=1 level3/single/bmb_sbgemm -m 30,100000 -M 50,7 -K 3,90,100000 >"$T/sbgemm.out" 2>"$T/sbgemm.err" ||
+    fail "bmb_sbgemm -K failed under BMB_COUNTS: $(cat "$T/sbgemm.err")"
+grep '^counts: ' "$T/sbgemm.err" >"$T/sbgemm.got" || fail "bmb_sbgemm -K wrote no counts"
+awk '
+    function num(x) { return sprintf("%.17g", x) }
+    {
+        m = $3; n = $4; k = $6
+        want = sprintf("counts: sbgemm %s %s K %s flops %s bytes - footprint %s", m, n, k,
+                       num(2 * m * n * k), num(2 * (m * k + k * n) + 4 * m * n))
+        if ($5 != "K" || $0 != want) { printf "sbgemm:\n  got  %s\n  want %s\n", $0, want; bad = 1 }
+        points++
+    }
+    END { if (!bad && points != 12) { print "sbgemm: " points " points, not 12"; bad = 1 } exit bad }
+' "$T/sbgemm.got" >"$T/sbgemm.diff" || fail "$(cat "$T/sbgemm.diff")"
+echo "ok   sbgemm under -K: 2*M*N*K, and A and B in bfloat16, C in float, at every K"
 
 # A batch (#159): the call's counts are the batch's, its count times one
 # matrix's, whichever mode passes them.

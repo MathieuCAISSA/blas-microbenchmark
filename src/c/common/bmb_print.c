@@ -222,6 +222,10 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     if (bmb_build_int_bits() == 64) {
         fprintf(out, "# integers: 64-bit (ILP64)\n");
     }
+    if (rs->input_type != NULL) {
+        fprintf(out, "# types: %s inputs, %s accumulation and output\n", rs->input_type,
+                rs->accumulator_type);
+    }
     if (rs->label != NULL) {
         fprintf(out, "# label: %s\n", rs->label);
     }
@@ -576,6 +580,11 @@ void bmb_print_json(FILE *out, const bmb_result_set_t *rs)
     fprintf(out, ",\n");
 #endif
     fprintf(out, "  \"blas_int_bits\": %u,\n", bmb_build_int_bits());
+    if (rs->input_type != NULL) {
+        fprintf(out, "  \"types\": {");
+        fprintf(out, "\"inputs\": \"%s\", ", rs->input_type);
+        fprintf(out, "\"accumulator\": \"%s\"},\n", rs->accumulator_type);
+    }
     if (rs->label != NULL) {
         fprintf(out, "  \"label\": ");
         bmb_print_json_string(out, rs->label);

@@ -75,6 +75,8 @@ typedef struct {
     double min_time;        /* (in percent) and --max-time (#164) */
     double max_spread;
     double max_time;
+    const char *input_type;       /* #322: "bf16", or NULL */
+    const char *accumulator_type; /* "fp32", with input_type */
     const char *star_cpus;  /* --star (#173): the CPUs the instances are
                              * pinned to, in order, "0-3"; NULL without */
     int has_stats;

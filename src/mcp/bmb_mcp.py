@@ -51,13 +51,14 @@ ROUTINES = """
     stbsv:2:s:nk:tbsv dtbsv:2:d:nk:tbsv sgemm:3:s:mkn:gemm dgemm:3:d:mkn:gemm
     cgemm:3:c:mkn:gemm zgemm:3:z:mkn:gemm sgemmt:3:s:nk:gemmt
     dgemmt:3:d:nk:gemmt cgemmt:3:c:nk:gemmt zgemmt:3:z:nk:gemmt
-    ssymm:3:s:mn:symm dsymm:3:d:mn:symm csymm:3:c:mn:symm zsymm:3:z:mn:symm
-    chemm:3:c:mn:hemm zhemm:3:z:mn:hemm ssyrk:3:s:nk:syrk dsyrk:3:d:nk:syrk
-    csyrk:3:c:nk:syrk zsyrk:3:z:nk:syrk cherk:3:c:nk:herk zherk:3:z:nk:herk
-    ssyr2k:3:s:nk:syr2k dsyr2k:3:d:nk:syr2k csyr2k:3:c:nk:syr2k
-    zsyr2k:3:z:nk:syr2k cher2k:3:c:nk:her2k zher2k:3:z:nk:her2k
-    strmm:3:s:mn:trmm dtrmm:3:d:mn:trmm ctrmm:3:c:mn:trmm ztrmm:3:z:mn:trmm
-    strsm:3:s:mn:trsm dtrsm:3:d:mn:trsm ctrsm:3:c:mn:trsm ztrsm:3:z:mn:trsm
+    sbgemm:3:s:mkn:sbgemm ssymm:3:s:mn:symm dsymm:3:d:mn:symm csymm:3:c:mn:symm
+    zsymm:3:z:mn:symm chemm:3:c:mn:hemm zhemm:3:z:mn:hemm ssyrk:3:s:nk:syrk
+    dsyrk:3:d:nk:syrk csyrk:3:c:nk:syrk zsyrk:3:z:nk:syrk cherk:3:c:nk:herk
+    zherk:3:z:nk:herk ssyr2k:3:s:nk:syr2k dsyr2k:3:d:nk:syr2k
+    csyr2k:3:c:nk:syr2k zsyr2k:3:z:nk:syr2k cher2k:3:c:nk:her2k
+    zher2k:3:z:nk:her2k strmm:3:s:mn:trmm dtrmm:3:d:mn:trmm ctrmm:3:c:mn:trmm
+    ztrmm:3:z:mn:trmm strsm:3:s:mn:trsm dtrsm:3:d:mn:trsm ctrsm:3:c:mn:trsm
+    ztrsm:3:z:mn:trsm
 """
 # END routines (mcp)
 

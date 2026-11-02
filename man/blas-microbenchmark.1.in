@@ -24,11 +24,11 @@ bmb_zhemv, bmb_sspmv, bmb_dspmv, bmb_ssyr, bmb_dsyr, bmb_cher, bmb_zher,
 bmb_ssyr2, bmb_dsyr2, bmb_cher2, bmb_zher2, bmb_strmv, bmb_dtrmv, bmb_ctrmv,
 bmb_ztrmv, bmb_strsv, bmb_dtrsv, bmb_ctrsv, bmb_ztrsv, bmb_stpsv, bmb_dtpsv,
 bmb_stbsv, bmb_dtbsv, bmb_sgemm, bmb_dgemm, bmb_cgemm, bmb_zgemm,
-bmb_sgemmt, bmb_dgemmt, bmb_cgemmt, bmb_zgemmt, bmb_ssymm, bmb_dsymm,
-bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk, bmb_csyrk,
-bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k, bmb_dsyr2k, bmb_csyr2k,
-bmb_zsyr2k, bmb_cher2k, bmb_zher2k, bmb_strmm, bmb_dtrmm, bmb_ctrmm,
-bmb_ztrmm, bmb_strsm, bmb_dtrsm, bmb_ctrsm,
+bmb_sgemmt, bmb_dgemmt, bmb_cgemmt, bmb_zgemmt, bmb_sbgemm, bmb_ssymm,
+bmb_dsymm, bmb_csymm, bmb_zsymm, bmb_chemm, bmb_zhemm, bmb_ssyrk, bmb_dsyrk,
+bmb_csyrk, bmb_zsyrk, bmb_cherk, bmb_zherk, bmb_ssyr2k, bmb_dsyr2k,
+bmb_csyr2k, bmb_zsyr2k, bmb_cher2k, bmb_zher2k, bmb_strmm, bmb_dtrmm,
+bmb_ctrmm, bmb_ztrmm, bmb_strsm, bmb_dtrsm, bmb_ctrsm,
 bmb_ztrsm \- microbenchmarks for BLAS routines
 .\" END routines (man-name)
 .SH SYNOPSIS
@@ -76,10 +76,10 @@ Level 2	sgemv dgemv cgemv zgemv sgbmv dgbmv sger dger cgeru zgeru
 \&	cgerc zgerc ssymv dsymv chemv zhemv sspmv dspmv ssyr dsyr
 \&	cher zher ssyr2 dsyr2 cher2 zher2 strmv dtrmv ctrmv ztrmv
 \&	strsv dtrsv ctrsv ztrsv stpsv dtpsv stbsv dtbsv
-Level 3	sgemm dgemm cgemm zgemm sgemmt dgemmt cgemmt zgemmt ssymm
-\&	dsymm csymm zsymm chemm zhemm ssyrk dsyrk csyrk zsyrk
-\&	cherk zherk ssyr2k dsyr2k csyr2k zsyr2k cher2k zher2k
-\&	strmm dtrmm ctrmm ztrmm strsm dtrsm ctrsm ztrsm
+Level 3	sgemm dgemm cgemm zgemm sgemmt dgemmt cgemmt zgemmt sbgemm
+\&	ssymm dsymm csymm zsymm chemm zhemm ssyrk dsyrk csyrk
+\&	zsyrk cherk zherk ssyr2k dsyr2k csyr2k zsyr2k cher2k
+\&	zher2k strmm dtrmm ctrmm ztrmm strsm dtrsm ctrsm ztrsm
 .TE
 .\" END routines (man-routines)
 .PP
@@ -126,6 +126,24 @@ for A and B, as GEMM does, and calls cblas_?gemmtr where the library
 has it, the name the Reference BLAS gave it, under which MKL deprecates
 cblas_?gemmt.
 .PP
+sbgemm is a GEMM whose A and B are in bfloat16 (8 bits of significand)
+and C, and the accumulation, in float: OpenBLAS's cblas_sbgemm, where it
+was built with
+.BR BUILD_BFLOAT16 ,
+ArmPL's, or MKL's cblas_gemm_bf16bf16f32.
+It is an extension too, skipped where the library has neither.
+Its operands are the fill every routine uses, rounded to bfloat16;
+.B \-\-verify
+checks C against those bfloat16 values, whose products float holds
+exactly, with single precision's tolerance for K additions, which a
+library accumulating in bfloat16 is far outside.
+Its GFLOP/s count a bfloat16 multiply and a float add as two operations,
+as GEMM's do;
+.B \-\-peak\-gflops
+is then a core's bfloat16 peak, which
+.B bmb_report
+takes from the results only: its own is double precision's.
+.PP
 Level 1 routines are sized with
 .BR \-v .
 Level 2 and 3 routines are sized with
@@ -144,6 +162,7 @@ csymm zsymm chemm zhemm	\-m is M, \-M is N
 strmm dtrmm ctrmm ztrmm	\-m is M, \-M is N
 strsm dtrsm ctrsm ztrsm	\-m is M, \-M is N
 sgemm dgemm cgemm zgemm	\-m is M and K, \-M is N; \-K gives K apart
+sbgemm	\-m is M and K, \-M is N; \-K gives K apart
 sgbmv dgbmv stbsv dtbsv	\-m is N, \-M is K
 sgemmt dgemmt cgemmt	\-m is N, \-M is K
 zgemmt ssyrk dsyrk csyrk	\-m is N, \-M is K
@@ -885,6 +904,8 @@ A build against the library's 64\-bit integer interface (ILP64,
 with OpenBLAS or MKL) adds the line
 .BR "# integers: 64\-bit (ILP64)" ;
 in it, a vector may hold more than 2^31 elements.
+sbgemm, whose inputs are of another type than its output, adds
+.BR "# types: bf16 inputs, fp32 accumulation and output" .
 The caches show where a sweep leaves each level.
 The frequency line gives the CPU frequency governor (several, joined by
 .BR / ,
@@ -991,6 +1012,12 @@ one object holding the same information as fields:
 .BR kernels ,
 .B blas_int_bits
 (32, or 64 in an ILP64 build),
+.B types
+(sbgemm's: an object of
+.B inputs
+and
+.BR accumulator ,
+"bf16" and "fp32"),
 .BR label ,
 .B peak_gflops_per_core
 and
