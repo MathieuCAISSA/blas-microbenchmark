@@ -30,10 +30,10 @@ ROUTINES='
     cher2:2:c zher2:2:z strmv:2:s dtrmv:2:d ctrmv:2:c ztrmv:2:z strsv:2:s
     dtrsv:2:d ctrsv:2:c ztrsv:2:z stpsv:2:s dtpsv:2:d stbsv:2:s dtbsv:2:d
     sgemm:3:s dgemm:3:d cgemm:3:c zgemm:3:z sgemmt:3:s dgemmt:3:d cgemmt:3:c
-    zgemmt:3:z ssymm:3:s dsymm:3:d csymm:3:c zsymm:3:z chemm:3:c zhemm:3:z
-    ssyrk:3:s dsyrk:3:d csyrk:3:c zsyrk:3:z cherk:3:c zherk:3:z ssyr2k:3:s
-    dsyr2k:3:d csyr2k:3:c zsyr2k:3:z cher2k:3:c zher2k:3:z strmm:3:s dtrmm:3:d
-    ctrmm:3:c ztrmm:3:z strsm:3:s dtrsm:3:d ctrsm:3:c ztrsm:3:z
+    zgemmt:3:z sbgemm:3:s ssymm:3:s dsymm:3:d csymm:3:c zsymm:3:z chemm:3:c
+    zhemm:3:z ssyrk:3:s dsyrk:3:d csyrk:3:c zsyrk:3:z cherk:3:c zherk:3:z
+    ssyr2k:3:s dsyr2k:3:d csyr2k:3:c zsyr2k:3:z cher2k:3:c zher2k:3:z strmm:3:s
+    dtrmm:3:d ctrmm:3:c ztrmm:3:z strsm:3:s dtrsm:3:d ctrsm:3:c ztrsm:3:z
 '
 # END routines (suite)
 

@@ -16,6 +16,7 @@ level3_PROGRAMS = \
 	double/bmb_dgemmt \
 	complex/bmb_cgemmt \
 	complex16/bmb_zgemmt \
+	single/bmb_sbgemm \
 	single/bmb_ssymm \
 	double/bmb_dsymm \
 	complex/bmb_csymm \
@@ -59,6 +60,8 @@ complex_bmb_cgemmt_SOURCES = bmb_gemmt.c
 complex_bmb_cgemmt_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_C
 complex16_bmb_zgemmt_SOURCES = bmb_gemmt.c
 complex16_bmb_zgemmt_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_Z
+single_bmb_sbgemm_SOURCES = bmb_sbgemm.c
+single_bmb_sbgemm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 single_bmb_ssymm_SOURCES = bmb_symm.c
 single_bmb_ssymm_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
 double_bmb_dsymm_SOURCES = bmb_symm.c
@@ -121,6 +124,7 @@ ROUTINE_TESTS = \
 	double/test_bmb_dgemmt.sh \
 	complex/test_bmb_cgemmt.sh \
 	complex16/test_bmb_zgemmt.sh \
+	single/test_bmb_sbgemm.sh \
 	single/test_bmb_ssymm.sh \
 	double/test_bmb_dsymm.sh \
 	complex/test_bmb_csymm.sh \

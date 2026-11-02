@@ -110,6 +110,7 @@ sgemmt     3      s          nk     gemmt   ext
 dgemmt     3      d          nk     gemmt   ext
 cgemmt     3      c          nk     gemmt   ext
 zgemmt     3      z          nk     gemmt   ext
+sbgemm     3      s          mkn    sbgemm  ext
 ssymm      3      s          mn     symm
 dsymm      3      d          mn     symm
 csymm      3      c          mn     symm

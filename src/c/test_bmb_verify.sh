@@ -73,7 +73,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
         level1/*) sizes="-v 7,64,1000" ;;
         *)
             case $r in
-                sgemm | dgemm | cgemm | zgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
+                sgemm | dgemm | cgemm | zgemm | sbgemm) sizes="-m 7,33,64 -M 5,64 -K 3,40" ;;
                 # gbmv's and tbsv's -M is the band's K, 5 and past N.
                 ?gemv | ?gbmv | ?tbsv | ?ger | ?geru | ?gerc | ?symm | ?hemm \
                     | ?syrk | ?herk | ?syr2k | ?her2k | ?trmm | ?trsm | ?gemmt) sizes="-m 7,33,64 -M 5,64" ;;
@@ -92,7 +92,7 @@ for b in level1/*/bmb_* level2/*/bmb_* level3/*/bmb_*; do
     # commas, the defaults first.
     case $r in [cz]*) t3=N,T,C ;; *) t3=N,T ;; esac
     case $r in
-        [sd]gemm) variants=$(combos --trans=NN,NT,TN,TT) ;;
+        [sd]gemm | sbgemm) variants=$(combos --trans=NN,NT,TN,TT) ;;
         [cz]gemm) variants=$(combos --trans=NN,NT,NC,TN,TT,TC,CN,CT,CC) ;;
         [sd]gemmt) variants=$(combos --uplo=U,L --trans=NN,NT,TN,TT) ;;
         [cz]gemmt) variants=$(combos --uplo=U,L --trans=NN,NT,NC,TN,TT,TC,CN,CT,CC) ;;

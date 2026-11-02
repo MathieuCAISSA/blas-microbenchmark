@@ -41,6 +41,22 @@ message, but under `BMB_COUNTS`, which calls nothing. Its tests begin
 with `bmb_skip_missing`, and the tests of `src/c` that run every
 benchmark pass it over with `bmb_missing` (`test_helper.sh`).
 
+A routine whose inputs are of another type than its output (sbgemm,
+#322) sets `input_type` and `accumulator_type`, which every output
+records, and which `bmb_report` takes to mean that its own peak, double
+precision's, does not apply. sbgemm is compiled as single precision, C's
+and the accumulation's; its A and B are `uint16_t`, the fill rounded to
+bfloat16, and its check projects through float copies of them: a
+product of two bfloat16 values is exact in float, so single precision's
+tolerance for K terms is all that is left. There is no library with it
+on the Ubuntu runners but MKL; the `mkl` job checks it was found. To
+try it elsewhere, build OpenBLAS with `make BUILD_BFLOAT16=1` and give
+`configure` its prefix (`--with-blas-incpath`, `--with-blas-libpath`).
+On a CPU without bfloat16 units (AVX512_BF16, AMX), OpenBLAS falls back
+on generic code: 0.3.34's ran at 0.1 GFLOP/s on a Core Ultra 7 155U, a
+1000 x 1000 product about 15 s, where 0.3.28's ran at 1.8. Keep its
+sizes small there.
+
 Every operand comes from `bmb_bench_alloc()`, aligned as `--align` says,
 never from `malloc` (#163); the context itself, and `verify()`'s scratch,
 may. A matrix gets its leading dimension from `bmb_bench_ld(outer,

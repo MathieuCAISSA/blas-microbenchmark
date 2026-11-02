@@ -619,6 +619,26 @@ void (*volatile bmb_p)(void);]],
       [[bmb_p = (void (*)(void)) &cblas_sgemmt; bmb_p = (void (*)(void)) &cblas_dgemmt;
         bmb_p = (void (*)(void)) &cblas_cgemmt; bmb_p = (void (*)(void)) &cblas_zgemmt;]])],
       [bmb_cv_gemmt=yes], [bmb_cv_gemmt=no])])
+  dnl A GEMM of bfloat16 inputs into float (#322): OpenBLAS's cblas_sbgemm,
+  dnl defined when it was built with BUILD_BFLOAT16 (its header declares it
+  dnl either way), and MKL's cblas_gemm_bf16bf16f32, with the same
+  dnl arguments.
+  AC_CACHE_CHECK([for cblas_sbgemm], [bmb_cv_sbgemm],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_sbgemm;]])],
+      [bmb_cv_sbgemm=yes], [bmb_cv_sbgemm=no])])
+  AC_CACHE_CHECK([for cblas_gemm_bf16bf16f32], [bmb_cv_gemm_bf16],
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
+void (*volatile bmb_p)(void);]],
+      [[bmb_p = (void (*)(void)) &cblas_gemm_bf16bf16f32;]])],
+      [bmb_cv_gemm_bf16=yes], [bmb_cv_gemm_bf16=no])])
+  AS_IF([test "x$bmb_cv_gemm_bf16" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_GEMM_BF16BF16F32], [1],
+      [Define to 1 if the CBLAS declares and defines MKL's cblas_gemm_bf16bf16f32.])])
+  AS_IF([test "x$bmb_cv_sbgemm" = xyes || test "x$bmb_cv_gemm_bf16" = xyes],
+    [AC_DEFINE([HAVE_CBLAS_SBGEMM], [1],
+      [Define to 1 if the CBLAS has a GEMM of bfloat16 into float, cblas_sbgemm or cblas_gemm_bf16bf16f32.])])
   AS_IF([test "x$bmb_cv_axpby" = xyes],
     [AC_DEFINE([HAVE_CBLAS_AXPBY], [1],
       [Define to 1 if the CBLAS declares and defines cblas_?axpby.])])

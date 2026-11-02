@@ -287,10 +287,10 @@ details[open] > summary { margin-bottom: 12px; }
     ztrmv: 2, strsv: 2, dtrsv: 2, ctrsv: 2, ztrsv: 2, stpsv: 2, dtpsv: 2,
     stbsv: 2, dtbsv: 2,
     sgemm: 3, dgemm: 3, cgemm: 3, zgemm: 3, sgemmt: 3, dgemmt: 3, cgemmt: 3,
-    zgemmt: 3, ssymm: 3, dsymm: 3, csymm: 3, zsymm: 3, chemm: 3, zhemm: 3,
-    ssyrk: 3, dsyrk: 3, csyrk: 3, zsyrk: 3, cherk: 3, zherk: 3, ssyr2k: 3,
-    dsyr2k: 3, csyr2k: 3, zsyr2k: 3, cher2k: 3, zher2k: 3, strmm: 3, dtrmm: 3,
-    ctrmm: 3, ztrmm: 3, strsm: 3, dtrsm: 3, ctrsm: 3, ztrsm: 3
+    zgemmt: 3, sbgemm: 3, ssymm: 3, dsymm: 3, csymm: 3, zsymm: 3, chemm: 3,
+    zhemm: 3, ssyrk: 3, dsyrk: 3, csyrk: 3, zsyrk: 3, cherk: 3, zherk: 3,
+    ssyr2k: 3, dsyr2k: 3, csyr2k: 3, zsyr2k: 3, cher2k: 3, zher2k: 3, strmm: 3,
+    dtrmm: 3, ctrmm: 3, ztrmm: 3, strsm: 3, dtrsm: 3, ctrsm: 3, ztrsm: 3
   };
   var FAMILY = {
     sasum: ["asum", "s"], dasum: ["asum", "d"], scasum: ["asum", "c"],
@@ -321,16 +321,16 @@ details[open] > summary { margin-bottom: 12px; }
     dtpsv: ["tpsv", "d"], stbsv: ["tbsv", "s"], dtbsv: ["tbsv", "d"],
     sgemm: ["gemm", "s"], dgemm: ["gemm", "d"], cgemm: ["gemm", "c"],
     zgemm: ["gemm", "z"], sgemmt: ["gemmt", "s"], dgemmt: ["gemmt", "d"],
-    cgemmt: ["gemmt", "c"], zgemmt: ["gemmt", "z"], ssymm: ["symm", "s"],
-    dsymm: ["symm", "d"], csymm: ["symm", "c"], zsymm: ["symm", "z"],
-    chemm: ["hemm", "c"], zhemm: ["hemm", "z"], ssyrk: ["syrk", "s"],
-    dsyrk: ["syrk", "d"], csyrk: ["syrk", "c"], zsyrk: ["syrk", "z"],
-    cherk: ["herk", "c"], zherk: ["herk", "z"], ssyr2k: ["syr2k", "s"],
-    dsyr2k: ["syr2k", "d"], csyr2k: ["syr2k", "c"], zsyr2k: ["syr2k", "z"],
-    cher2k: ["her2k", "c"], zher2k: ["her2k", "z"], strmm: ["trmm", "s"],
-    dtrmm: ["trmm", "d"], ctrmm: ["trmm", "c"], ztrmm: ["trmm", "z"],
-    strsm: ["trsm", "s"], dtrsm: ["trsm", "d"], ctrsm: ["trsm", "c"],
-    ztrsm: ["trsm", "z"]
+    cgemmt: ["gemmt", "c"], zgemmt: ["gemmt", "z"], sbgemm: ["sbgemm", "s"],
+    ssymm: ["symm", "s"], dsymm: ["symm", "d"], csymm: ["symm", "c"],
+    zsymm: ["symm", "z"], chemm: ["hemm", "c"], zhemm: ["hemm", "z"],
+    ssyrk: ["syrk", "s"], dsyrk: ["syrk", "d"], csyrk: ["syrk", "c"],
+    zsyrk: ["syrk", "z"], cherk: ["herk", "c"], zherk: ["herk", "z"],
+    ssyr2k: ["syr2k", "s"], dsyr2k: ["syr2k", "d"], csyr2k: ["syr2k", "c"],
+    zsyr2k: ["syr2k", "z"], cher2k: ["her2k", "c"], zher2k: ["her2k", "z"],
+    strmm: ["trmm", "s"], dtrmm: ["trmm", "d"], ctrmm: ["trmm", "c"],
+    ztrmm: ["trmm", "z"], strsm: ["trsm", "s"], dtrsm: ["trsm", "d"],
+    ctrsm: ["trsm", "c"], ztrsm: ["trsm", "z"]
   };
   /* END routines (report) */
 
@@ -469,6 +469,9 @@ details[open] > summary { margin-bottom: 12px; }
       for (i = 0; i < r.results.length; i++) {
         var row = r.results[i];
         var routine = routineFor(r, (row.dim3 === undefined) ? null : row.dim3);
+        /* Inputs of another type than the output (#322): the peak given
+         * to bmb_report, double precision's, says nothing of it. */
+        if (r.types && r.types.inputs) { routine.types = r.types.inputs + " into " + r.types.accumulator; }
         var series = routine.series[id.key];
         if (!series) {
           series = routine.series[id.key] = { identity: id, points: {} };
@@ -1469,7 +1472,7 @@ details[open] > summary { margin-bottom: 12px; }
   function peakOf(rt, s, given) {
     var g = given || givenPeak;
     var out = { gflops: null, gbs: null, gflopsFrom: null, gbsFrom: null };
-    if (g.gflops > 0) {
+    if (g.gflops > 0 && !rt.types) {
       out.gflops = g.gflops * (singlePrecision(rt.name) ? 2 : 1);
       out.gflopsFrom = "bmb_report";
     } else if (s.peakGflops > 0) {

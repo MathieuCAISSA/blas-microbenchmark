@@ -1111,6 +1111,8 @@ int bmb_benchmark_main(int argc, char *argv[], const bmb_benchmark_t *bench)
     rs.max_spread = opts.max_spread;
     rs.max_time = opts.max_time;
     rs.star_cpus = opts.star ? bmb_star_cpu_list : NULL;
+    rs.input_type = bench->input_type;
+    rs.accumulator_type = bench->accumulator_type;
     bmb_align = opts.align;
     bmb_ld_pad = opts.ld_pad;
     if (!bench->use_vector_range) {

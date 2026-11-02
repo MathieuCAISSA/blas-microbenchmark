@@ -95,7 +95,7 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
     esac
     case $name in bmb_[cz]*) trans="--trans=T --trans=C" ;; *) trans=--trans=T ;; esac
     case $name in
-        bmb_[sd]gemm) args="--trans=NT --trans=TN --trans=TT" ;;
+        bmb_[sd]gemm | bmb_sbgemm) args="--trans=NT --trans=TN --trans=TT" ;;
         bmb_[cz]gemm) args="--trans=NT --trans=NC --trans=TN --trans=TT --trans=TC --trans=CN --trans=CT --trans=CC" ;;
         bmb_[sd]gemmt) args="--uplo=L --trans=NT --trans=TN --trans=TT" ;;
         bmb_[cz]gemmt) args="--uplo=L --trans=NC --trans=TN --trans=CT --trans=CC" ;;
@@ -115,6 +115,12 @@ for f in "$B"/src/c/level1/*/bmb_* "$B"/src/c/level2/*/bmb_* "$B"/src/c/level3/*
         done
     done
     case $name in
+        bmb_sbgemm)
+            for layout in row col; do
+                check "-K 8,300 --layout $layout -m 512 -M 33, 1 and 4 threads" \
+                    -t 1,4 --layout "$layout" -m 512 -M 33 -K 8,300
+            done
+            ;;
         bmb_?gemm)
             for layout in row col; do
                 check "-K 8,300 --layout $layout -m 512 -M 33, 1 and 4 threads" \

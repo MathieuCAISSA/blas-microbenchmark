@@ -186,6 +186,9 @@ one given to
 .B bmb_report
 is in double precision, and taken as twice it for single, as vector
 units do twice the floats.
+A routine whose inputs are of another type than its output (sbgemm,
+bfloat16 into float) has no such ratio: only the peak its results were
+given counts.
 Each routine's section says the peak its charts use, and where it came
 from.
 .PP
