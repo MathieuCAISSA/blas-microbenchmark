@@ -31,6 +31,10 @@ it comes from in brackets.
   file using POSIX functions ([code style](../AGENTS.md#code-style)).
 - [ ] `common/` stays generic: shapes, alpha values and resets belong to
   the routine's file; no exported function without a caller.
+- [ ] A `configure` link probe makes the link resolve the symbol (an
+  address stored through a volatile pointer): a bare `(void) &f` is
+  thrown away, and a call the header declares but the library does not
+  define is found (Ubuntu's OpenBLAS and `cblas_sbgemm`, #322).
 - [ ] A macro from `config.h` (`HAVE_*`, `BMB_*`) tested by `#if` is seen
   where it is tested: the file, or a header it includes, includes
   `config.h`, or the test is false without a word. `BMB_ILP64` reached
