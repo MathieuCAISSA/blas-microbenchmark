@@ -442,6 +442,8 @@ jobs:
   # groff. BMB_MAN_STRICT turns a missing tool into a failure rather than a
   # SKIP, so this job cannot pass without checking everything. No
   # --enable-werror: Fedora's newer GCC is not what this job is testing.
+  # util-linux: man runs col, which man-db pulls in only as a weak
+  # dependency from Fedora 45 on (#330).
   man:
     runs-on: ubuntu-latest
     container: fedora:latest
@@ -451,7 +453,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             gcc make autoconf automake libtool pkgconf-pkg-config openblas-devel \
-            groff man-db mandoc diffutils findutils git
+            groff man-db mandoc diffutils findutils git util-linux
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -468,6 +470,16 @@ jobs:
 
       - name: make
         run: make -C build -j"$(nproc)"
+
+      # Fedora's OpenBLAS, 0.3.34 from Fedora 45 on, is built with
+      # DYNAMIC_ARCH and crashes on a batch of small matrices: the one job
+      # where the benchmarks' refusal of it runs (#330). Once Fedora has
+      # 0.3.35, the test measures every batch.
+      - name: Batched GEMM, on a library that may crash on small ones
+        run: |
+          make -C build/src/c check-TESTS TESTS=test_bmb_gemm_batch.sh \
+            || { cat build/src/c/test_bmb_gemm_batch.sh.log; exit 1; }
+          cat build/src/c/test_bmb_gemm_batch.sh.log
 
       - name: Tools
         run: |

@@ -78,7 +78,9 @@ How the man pages are built, and why:
 - `.nh` and `.ds AD l` at the top turn off hyphenation and justification:
   both look bad in a terminal, and hyphenation splits literals. `.ad l`
   alone does not stick, since the `man` macros reset the adjustment from
-  `AD` at every paragraph.
+  `AD` at every paragraph. groff 1.24 does the same for hyphenation, from
+  `HY`, so `.nr HY 0` follows: without it, `.nh` lasted one paragraph, and
+  the site's URL was split across a line (#330).
 - A page with tables starts with `'\" t`, which tells `man` to run `tbl`.
 
 To read a page without installing it: `man -l man/blas-microbenchmark.1`

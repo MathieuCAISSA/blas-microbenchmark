@@ -96,7 +96,12 @@ groff and man-db build than Ubuntu's, plus mandoc for its lint, with
 builds without `--enable-werror`, since Fedora's newer GCC is not what it
 is there to test; Fedora keeps `cblas.h` in `/usr/include/openblas`, which
 it finds through `OPENBLAS_INCDIR`, the hint a cluster module would set.
-It then runs `make html`, as `pages.yml` does on `main`, where the tests
+Fedora's OpenBLAS (0.3.34 from Fedora 45 on, with `DYNAMIC_ARCH`) crashes
+on a batch of small matrices, so the job also runs
+`test_bmb_gemm_batch.sh`: the only one where the benchmarks' refusal of
+such a batch runs (#330). Fedora 45 also brought groff 1.24, which the
+pages' `.nr HY 0` and `\-` in `.TH` are for, and a `man-db` without `col`
+unless `util-linux` is installed. It then runs `make html`, as `pages.yml` does on `main`, where the tests
 run `html.sh` alone (#283).
 
 The `spack` job builds the Spack package with Spack, against OpenBLAS,
