@@ -29,6 +29,7 @@ bmb_dgemm -m 256:2048</pre>
 <tr><td><code>c</code></td><td>single complex</td><td>8</td></tr>
 <tr><td><code>z</code></td><td>double complex</td><td>16</td></tr>
 </table>
+<p>One routine mixes them: <code>sbgemm</code>, a GEMM whose A and B are in <b>bfloat16</b> (2 bytes, 8 bits of significand) and whose C, and the sums, are in single precision, as machine-learning codes call it.</p>
 <ul>
 <li><b>Single</b> moves half the bytes of double and fits twice as many numbers in a vector register: it can run about twice as fast, at about 7 significant digits rather than 16.</li>
 <li><b>Complex</b> numbers are pairs of reals. A complex multiply-add is four multiplies and four adds, eight FLOPs on two numbers, where a real one is two FLOPs on one: four times the arithmetic on twice the data. A complex level 3 routine is therefore more compute-bound than its real counterpart.</li>
@@ -50,6 +51,7 @@ bmb_dgemm -m 256:2048</pre>
 <tr><td>asum</td><td>&Sigma;|x&#7522;| (for a complex x, |re| + |im|)</td></tr>
 <tr><td>iamax</td><td>the index of the largest |x&#7522;| (no arithmetic counted)</td></tr>
 <tr><td>rot</td><td>applies a plane rotation to the pairs (x&#7522;, y&#7522;)</td></tr>
+<tr><td>axpby</td><td>y &larr; &alpha;x + &beta;y: an extension, which not every library has</td></tr>
 </table>
 
 <h3 id="level2">Level 2: a matrix and vectors</h3>
@@ -73,5 +75,8 @@ bmb_dgemm -m 256:2048</pre>
 <tr><td>syr2k, her2k</td><td>C &larr; &alpha;ABᵀ + &alpha;BAᵀ + &beta;C, the rank-2k update</td></tr>
 <tr><td>trmm</td><td>B &larr; &alpha;AB with A triangular, on either side</td></tr>
 <tr><td>trsm</td><td>solves AX = &alpha;B for X, A triangular: the core of LU and Cholesky solves</td></tr>
+<tr><td>gemmt</td><td>C &larr; &alpha;AB + &beta;C on one triangle of C (<code>--uplo</code>), for a product known to be symmetric: an extension</td></tr>
+<tr><td>sbgemm</td><td>gemm with A and B in bfloat16, C in single precision: an extension</td></tr>
 </table>
-<p>Not every family exists in every precision: dot, ger, symv, syr, syr2 and spmv are real, their complex counterparts are dotu and dotc, geru and gerc, hemv, her, her2; and here rot, gbmv, tbsv and tpsv are measured in real precision only. <a href="blas-microbenchmark.html">The manual</a> lists the 104 benchmarks by level, with what <code>-m</code>, <code>-M</code> and <code>-K</code> are for each, and <a href="options.html">Options</a> the arguments each takes.</p>
+<p>The extensions are calls libraries add to the BLAS. Their benchmarks are built whatever the library; where it lacks the call, they measure nothing and say which call is missing.</p>
+<p>Not every family exists in every precision: dot, ger, symv, syr, syr2 and spmv are real, their complex counterparts are dotu and dotc, geru and gerc, hemv, her, her2; and here rot, gbmv, tbsv and tpsv are measured in real precision only. <a href="blas-microbenchmark.html">The manual</a> lists the 113 benchmarks by level, with what <code>-m</code>, <code>-M</code> and <code>-K</code> are for each, and <a href="options.html">Options</a> the arguments each takes.</p>

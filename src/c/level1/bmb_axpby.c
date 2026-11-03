@@ -9,8 +9,8 @@
 
 /* saxpby, daxpby, caxpby and zaxpby, one per precision (bmb_prec.h): y =
  * alpha * x + beta * y, an extension of the BLAS (#171) that OpenBLAS,
- * MKL, BLIS and AOCL-BLAS have; a build whose library does not is
- * skipped. */
+ * MKL, BLIS, AOCL-BLAS, NVPL and ArmPL have; a build whose library does
+ * not is skipped. */
 typedef struct {
     bmb_int n;
     bmb_real_t alpha[BMB_PARTS];

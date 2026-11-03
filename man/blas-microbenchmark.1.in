@@ -112,10 +112,10 @@ syr2k: chemv, zhemv, cher, zher, cher2, zher2, chemm, zhemm, cherk,
 zherk, cher2k and zher2k.
 .PP
 Two are extensions of the BLAS, which libraries add: axpby,
-y = alpha x + beta y (OpenBLAS, MKL, BLIS, AOCL\-BLAS), and gemmt, one
-triangle of a GEMM, C = alpha op(A) op(B) + beta C where
+y = alpha x + beta y (OpenBLAS, MKL, BLIS, AOCL\-BLAS, NVPL, ArmPL), and
+gemmt, one triangle of a GEMM, C = alpha op(A) op(B) + beta C where
 .B \-\-uplo
-gives it (MKL, NVPL, AOCL\-BLAS, BLIS, OpenBLAS from 0.3.27), for a
+gives it (MKL, NVPL, AOCL\-BLAS, BLIS, ArmPL, OpenBLAS from 0.3.28), for a
 product known to be symmetric, of which half is enough.
 Their programs are installed whatever the library; where it lacks the
 call, they measure nothing and exit 77, saying which call is missing
@@ -422,6 +422,13 @@ A run with one such point is refused whole; one whose points are all
 larger, or
 .BR loop ,
 is measured.
+OpenBLAS's
+.B strided
+call refuses column-major matrices from 0.3.31 to 0.3.34, and its complex
+one computes wrong from two matrices on (OpenMathLib/OpenBLAS#6214,
+fixed in 0.3.35):
+.B \-\-verify
+stops on both, exit 2.
 Default:
 .BR loop .
 .IP
@@ -1151,7 +1158,7 @@ asks for a call the library does not have, or one it would crash on
 (see
 .BR \-\-batch\-mode ),
 or the routine is an
-extension the library does not have (axpby, gemmt), which is said on
+extension the library does not have (axpby, gemmt, sbgemm), which is said on
 standard error: nothing is measured (77 is what
 .BR "make check" 's
 test driver takes for a test skipped).

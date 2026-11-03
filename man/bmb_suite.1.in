@@ -66,8 +66,9 @@ A line on standard error says which routine runs, and how many are left.
 A benchmark that fails, a result wrong under
 .B \-\-verify
 or an option it refuses, is said with the end of its log, and the others
-still run; one that skips (exit 77: a batch mode or an extension the
-library does not have, or a batch it would crash on) is said too.
+still run; one that skips (exit 77: an extension of the BLAS the library
+lacks, axpby, gemmt or sbgemm, a batch mode it does not have, or a batch
+it would crash on) is said too, with its log and no result.
 .SS Sizes and profiles
 Without
 .BR \-\-profile ,

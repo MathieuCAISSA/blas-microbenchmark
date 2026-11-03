@@ -157,9 +157,13 @@ class BlasMicrobenchmark(AutotoolsPackage):
     def test_benchmarks(self):
         """run every benchmark at a tiny size, its result checked against a reference"""
         benchmarks = self._benchmarks()
-        # Every one from 1.9.0, 104; an older release, the 26 this asked for
-        # before: a build missing most of them must fail.
-        least = 104 if self.spec.satisfies("@1.9:") else 26
+        # Every one: 113 from 1.10.0, 104 in 1.9.0; an older release, the 26
+        # this asked for before: a build missing most of them must fail.
+        least = 26
+        if self.spec.satisfies("@1.10:"):
+            least = 113
+        elif self.spec.satisfies("@1.9:"):
+            least = 104
         assert len(benchmarks) >= least, f"only {len(benchmarks)} benchmarks installed"
         for path in benchmarks:
             name = os.path.basename(path)
@@ -170,7 +174,8 @@ class BlasMicrobenchmark(AutotoolsPackage):
                 out = bench("-x", "0", "-i", "1", *size, output=str.split, error=str.split,
                             ignore_errors=(77,))
                 # An extension of the BLAS the library lacks (axpby, gemmt,
-                # from 1.10): measures nothing, exits 77, says which call.
+                # sbgemm, from 1.10): measures nothing, exits 77, says which
+                # call.
                 if bench.returncode == 77:
                     assert "has no cblas_" in out, f"{name} skipped without saying why: {out}"
                     continue

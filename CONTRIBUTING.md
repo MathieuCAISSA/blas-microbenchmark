@@ -30,7 +30,8 @@ make check
 
 Some tests need tools and skip without them: the report's tests a browser
 (Chrome, Chromium, Edge, or Firefox with geckodriver), the man page tests
-groff and `man`, the site's tests mandoc. CI runs them all. The
+groff and `man`, the site's tests mandoc, `bmb_mcp`'s and the plugin's
+python3. CI runs them all. The
 [Development page](https://mathieucaissa.github.io/blas-microbenchmark/development.html)
 lists every test and every CI job.
 

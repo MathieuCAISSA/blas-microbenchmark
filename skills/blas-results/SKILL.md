@@ -28,7 +28,11 @@ The library and its version (`backend`, `blas`), the kernels it chose,
 the CPU, its caches and frequency settings, the date, and the run:
 command, samples, threads, the CPUs it could use, the variables set, the
 routine's arguments (`trans`, `uplo`, ...), layout, cache state and
-padding. Use them to say what was measured.
+padding; the integers the library takes (`blas_int_bits`, 64 in an ILP64
+build); a GEMM's input and accumulation types where they are not its
+output's (`types`: sbgemm's bf16 into fp32); and `run.star` for a run of
+single-thread instances, one a core, whose rates are their sum. Use them
+to say what was measured.
 
 ## Comparing two results
 
@@ -39,7 +43,10 @@ Not comparable without saying so:
   setting;
 - another layout (`row`/`col`), cache state (`hot`/`cold`), padding,
   or other arguments (`trans NT` is another computation than `NN`);
-- different sizes or thread counts.
+- different sizes or thread counts;
+- a `--star` run (independent instances, rates summed) against threads
+  splitting one call, at the same count;
+- sbgemm (bf16 inputs) against sgemm: other units, another accuracy.
 
 A label (`-l`) names a condition the result does not record by itself.
 
@@ -51,6 +58,8 @@ knows it, never guessed), the report draws a line at the peak on level
 1 and 2: each point under the memory roof (bandwidth times FLOPs a byte)
 and the compute roof. A level 1 or 2 point near the memory roof is as
 good as the memory allows; level 3 near the peak is as good as the cores.
+sbgemm is judged only by a peak its results were given, in bf16: the
+report's own is double precision's, which says nothing of it.
 
 ## Reporting
 

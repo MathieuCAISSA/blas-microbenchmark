@@ -597,8 +597,8 @@ void (*volatile bmb_p)(void);]],
         bmb_p = (void (*)(void)) &cblas_cgemm_batch_strided; bmb_p = (void (*)(void)) &cblas_zgemm_batch_strided;]])],
       [bmb_cv_gemm_batch_strided=yes], [bmb_cv_gemm_batch_strided=no])])
   dnl Extensions of the BLAS (#171): the same header and the same rule.
-  dnl axpby: OpenBLAS, MKL, BLIS, AOCL-BLAS; gemmt: MKL, NVPL, AOCL-BLAS,
-  dnl BLIS, OpenBLAS from 0.3.27, whose library had it before its header did.
+  dnl axpby: OpenBLAS, MKL, BLIS, AOCL-BLAS, NVPL, ArmPL; gemmt: MKL, NVPL, AOCL-BLAS, ArmPL,
+  dnl BLIS, OpenBLAS once its header declares it (0.3.28 does, 0.3.26 not).
   AC_CACHE_CHECK([for cblas_?axpby], [bmb_cv_axpby],
     [AC_LINK_IFELSE([AC_LANG_PROGRAM([[@%:@include <$bmb_batch_header>
 void (*volatile bmb_p)(void);]],

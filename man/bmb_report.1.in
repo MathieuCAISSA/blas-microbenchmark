@@ -128,8 +128,12 @@ and the routine's arguments
 .BR \-\-batch\-count ,
 .BR \-\-batch\-mode ;
 a series with others than the defaults is named by them, and results
-from before 1.9.0 count as the defaults).
-Files that share all eight make one curve: a sweep extended the next day, or
+from before 1.9.0 count as the defaults)
+and star mode
+.RB ( \-\-star :
+a series of instances, one a core, is named so, beside the threads of
+one call at the same count).
+Files that share all nine make one curve: a sweep extended the next day, or
 thread counts measured in separate runs, merge on their own.
 A point measured in more than one file is drawn at the fastest
 measurement, and the page says so with the gap, so that a run which did

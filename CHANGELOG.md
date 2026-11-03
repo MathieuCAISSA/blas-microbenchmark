@@ -29,6 +29,8 @@ releases with the same major version can be compared and read by the same
   result records the types (`# types: bf16 inputs, fp32 accumulation and
   output`, `"types"` in the JSON); `bmb_report` judges it by the peak its
   results were given, not by its own, which is double precision's.
+- The ReFrame tests skip an extension of the BLAS the library lacks, its
+  message as the reason, after the run (#171).
 - `bmb_mcp` (#262), installed beside `bmb_report` and `bmb_suite`: an MCP
   server, so that an AI agent lists the routines, describes the machine,
   runs a benchmark or the suite, reads a result and makes the report,
@@ -64,6 +66,17 @@ releases with the same major version can be compared and read by the same
 - A guide on the site, "What BLAS is" (#314): the interface and its
   libraries, the three levels and what limits each, the four precisions,
   and what each family of routines computes.
+
+### Known issues
+- OpenBLAS's `--batch-mode strided` call computes wrong: column-major
+  calls are refused from 0.3.31 to 0.3.34 (OpenMathLib/OpenBLAS#5979,
+  fixed for 0.3.35), and the complex ones are wrong from two matrices on
+  from 0.3.31 to 0.3.34 (OpenMathLib/OpenBLAS#6214, reported from here,
+  fixed for 0.3.35). `--verify` stops on both, exit 2.
+- OpenBLAS's gemmt before 0.3.30 conjugates an operand in place
+  (OpenMathLib/OpenBLAS#5143), and before 0.3.29 fills the other
+  triangle row-major (OpenMathLib/OpenBLAS#4905): `--verify` stops on
+  both.
 
 ### Fixed
 - A batched GEMM of small matrices (M x N x K up to 100^3) crashed with

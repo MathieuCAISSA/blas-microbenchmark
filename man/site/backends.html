@@ -7,6 +7,7 @@
 <tr><td>OpenBLAS (default)</td><td><code>openblas</code></td><td><code>^openblas</code></td><td><code>OPENBLAS_NUM_THREADS</code>, <code>GOTO_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>BLIS</td><td><code>blis</code></td><td><code>^blis</code></td><td><code>BLIS_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>AMD AOCL-BLAS</td><td><code>aocl</code></td><td><code>^amdblis</code></td><td><code>BLIS_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>AMD AOCL-BLAS</td><td>yes</td><td>yes (as <code>gemmtr</code>)</td><td>no</td></tr>
 <tr><td>Intel MKL</td><td><code>mkl</code></td><td><code>^intel-oneapi-mkl</code></td><td><code>MKL_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>NVIDIA NVPL (aarch64)</td><td><code>nvpl</code></td><td><code>^nvpl-blas</code></td><td><code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>Arm ArmPL (aarch64)</td><td><code>armpl</code></td><td><code>^armpl-gcc</code></td><td><code>OMP_NUM_THREADS</code></td></tr>
@@ -33,7 +34,7 @@
 <p>AMD's fork of BLIS, for AMD EPYC. It comes from AMD's installer, a module (<code>AOCL_ROOT</code>) or Spack (<code>^amdblis</code>); no distribution packages it. The benchmarks link its threaded <code>libblis-mt</code>: its <code>libblis</code> is single-threaded, and would ignore <code>-t</code>. AOCL-BLAS may run a small problem on fewer threads than it is given (AOCL Dynamic); only a library built with <code>--disable-aocl-dynamic</code> does not.</p>
 
 <h2 id="mkl">Intel MKL</h2>
-<p>oneAPI MKL, from Intel's repository, a module (<code>MKLROOT</code>) or Spack. It is linked with its GNU OpenMP layer and 32-bit integers (<code>-lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core</code>). <code>-t</code> sets the thread count of its BLAS domain, which overrides <code>MKL_DOMAIN_NUM_THREADS</code> (a warning says so). MKL may also use fewer threads on a small problem; <code>MKL_DYNAMIC=false</code> makes it use them all.</p>
+<p>oneAPI MKL, from Intel's repository, a module (<code>MKLROOT</code>) or Spack. It is linked with its GNU OpenMP layer and 32-bit integers (<code>-lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core</code>), or 64-bit ones with <code>--enable-ilp64</code> (below). <code>-t</code> sets the thread count of its BLAS domain, which overrides <code>MKL_DOMAIN_NUM_THREADS</code> (a warning says so). MKL may also use fewer threads on a small problem; <code>MKL_DYNAMIC=false</code> makes it use them all.</p>
 
 <h2 id="arm">NVPL and ArmPL</h2>
 <p>NVIDIA's and Arm's libraries, for aarch64 servers (NVIDIA Grace, Neoverse). Both come from their vendor's apt repository or a module, and take their threads from OpenMP.</p>
@@ -47,3 +48,20 @@
 FLEXIBLAS=BLIS-OPENMP bmb_dgemm -m 512:2048 -o blis.json</pre>
 
 <div class="callout"><p>GPU libraries (cuBLAS, rocBLAS, MAGMA, …) are planned for 2.0: see the <a href="https://github.com/users/MathieuCAISSA/projects/2">project</a>.</p></div>
+
+<h2 id="extensions">What each library adds</h2>
+<p>Three benchmarks measure calls libraries add to the BLAS: <code>axpby</code>, <code>gemmt</code> (one triangle of a GEMM) and <code>sbgemm</code> (a GEMM of bfloat16 inputs into single precision). <code>configure</code> looks for each in the library it builds against; a benchmark whose call it did not find is still installed, measures nothing, and says which call is missing (exit 77). What the CI finds:</p>
+<table class="grid">
+<tr><th>Library</th><th>axpby</th><th>gemmt</th><th>sbgemm</th></tr>
+<tr><td>OpenBLAS</td><td>yes</td><td>from 0.3.28's header</td><td>when built with <code>BUILD_BFLOAT16</code></td></tr>
+<tr><td>BLIS</td><td>yes</td><td>yes</td><td>no</td></tr>
+<tr><td>AMD AOCL-BLAS</td><td>yes</td><td>yes (as <code>gemmtr</code>)</td><td>no</td></tr>
+<tr><td>Intel MKL</td><td>yes</td><td>yes (as <code>gemmtr</code>)</td><td>yes (<code>cblas_gemm_bf16bf16f32</code>)</td></tr>
+<tr><td>NVIDIA NVPL</td><td>yes</td><td>yes</td><td>no</td></tr>
+<tr><td>ArmPL</td><td>yes</td><td>yes</td><td>yes</td></tr>
+<tr><td>Netlib</td><td>no</td><td>no</td><td>no</td></tr>
+</table>
+<p>Ubuntu's OpenBLAS package is built without bfloat16, and its 0.3.26 does not declare <code>gemmt</code>. Some OpenBLAS versions compute some of these wrong; <code>--verify</code> stops on them, and <a href="blas-microbenchmark.html">the manual</a> says which.</p>
+
+<h2 id="ilp64">64-bit integers</h2>
+<p>A BLAS takes its dimensions as 32-bit integers, unless it was built for 64-bit ones (ILP64). <code>configure --enable-ilp64</code> builds against OpenBLAS's ILP64 build (Debian's and Ubuntu's <code>libopenblas64-*-dev</code>, or one built with <code>INTERFACE64=1</code>) or MKL's ILP64 interface; a vector may then hold more than 2&#179;&#185; elements. Any other library is refused. <code>--version</code> and every result say which integers the library takes.</p>

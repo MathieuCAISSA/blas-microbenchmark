@@ -590,9 +590,15 @@ def error(mid, code, message):
     return {'jsonrpc': '2.0', 'id': mid, 'error': {'code': code, 'message': message}}
 
 
+def usage_error(message):
+    """A usage error: said on stderr, exit 2, as bmb_mcp(1) gives it."""
+    sys.stderr.write('bmb_mcp: %s\n' % message)
+    sys.exit(2)
+
+
 def option(argv, i, name):
     if i + 1 >= len(argv):
-        sys.exit('bmb_mcp: %s needs a value' % name)
+        usage_error('%s needs a value' % name)
     return argv[i + 1]
 
 
@@ -624,7 +630,7 @@ def main(argv):
                     if memory <= 0:
                         raise ValueError
             except ValueError:
-                sys.exit('bmb_mcp: %s takes a number above 0 (got %r)' % (key, value))
+                usage_error('%s takes a number above 0 (got %r)' % (key, value))
         else:
             sys.stderr.write('bmb_mcp: unknown option: %s\n%s' % (a, USAGE))
             return 2

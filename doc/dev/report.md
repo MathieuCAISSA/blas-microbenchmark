@@ -113,7 +113,7 @@ keeping with "nothing fetched". The decisions it implements are #1's, and
 the code points at them; the ones easiest to break by accident:
 
 - **A series is routine + backend + BLAS string + CPU + label + storage
-  order + cache + padding + arguments.** Files sharing one merge; a duplicate point keeps the fastest
+  order + cache + padding + arguments + star mode.** Files sharing one merge; a duplicate point keeps the fastest
   and is reported. A file with no `layout` (vector routines, results from
   before 1.4) counts as row-major, so a library keeps one series, one
   colour, across its routines; a column-major one is named
