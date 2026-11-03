@@ -146,9 +146,9 @@ class bmb_base(rfm.RunOnlyRegressionTest):
                                 '-t', str(threads), '-o', 'result.json',
                                 *self.bmb_options]
 
-    # An extension of the BLAS (#171, axpby, gemmt) the library does not
-    # have: the benchmark measures nothing, exits 77 and says which call
-    # is missing, which the skip gives as its reason.
+    # An extension of the BLAS (#171, #322: axpby, gemmt, sbgemm) the
+    # library does not have: the benchmark measures nothing, exits 77 and
+    # says which call is missing, which the skip gives as its reason.
     @run_before('sanity')
     def skip_missing(self):
         if self.job.exitcode != 77:

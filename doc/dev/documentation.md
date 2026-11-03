@@ -11,12 +11,20 @@ Three places, for three readers:
   about 140 once, because nobody found anything in it.
 - **The man pages** are the reference: `blas-microbenchmark(1)` for every
   benchmark (options, sweeps, how a number is measured, threads, output,
-  exit status, examples), `bmb_report(1)` and `bmb_suite(1)`. A new option, output field
+  exit status, examples), `bmb_report(1)`, `bmb_suite(1)` and `bmb_mcp(1)`. A new option, output field
   or behaviour goes there, not into the README.
 - **The guides** on the site (`man/site/`, #115) are for a task: install,
-  a first run, comparing libraries, the libraries one by one, a cluster,
-  ReFrame. They repeat what the man pages and the README say, in another
-  order, and are tested against the programs (below).
+  a first run, what BLAS is, comparing libraries, the libraries one by
+  one, a cluster, ReFrame, an AI agent. They repeat what the man pages
+  and the README say, in another order, and are tested against the
+  programs (below).
+- **The skills** (`skills/*/SKILL.md`, #263) are for an AI agent: how to
+  measure, compare and read results as this project does, in the Agent
+  Skills format, installed in `$(pkgdatadir)/skills` and carried by the
+  Claude Code plugin. `man/test_man_skills.sh` holds them to the programs
+  as the guides are: their front matter, every command they give run
+  with options the program takes, every `bmb_mcp` tool they name one it
+  lists.
 
 The site (below) publishes the guides, the man pages, the outputs, and
 the tests and CI; all but the guides are generated from their source.
@@ -85,8 +93,8 @@ shows on its left; each page has its own table of contents on the right,
 and links to the pages before and after it in the menu):
 
 - **The guides**, `man/site/*.html` (#115): Install, Your first
-  benchmarks, Compare libraries, The BLAS libraries, On an HPC cluster,
-  ReFrame tests. They are written for the site, as fragments of HTML
+  benchmarks, What BLAS is, Compare libraries, The BLAS libraries, On an
+  HPC cluster, ReFrame tests, With an AI agent. They are written for the site, as fragments of HTML
   whose first lines give the title and description (`<!-- title: … -->`,
   `<!-- description: … -->`), with `<h2 id>` and `<h3 id>` headings and
   `<!-- picture NAME | ALT | CAPTION -->` for a screenshot. Unlike the

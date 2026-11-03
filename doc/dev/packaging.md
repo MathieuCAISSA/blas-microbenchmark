@@ -62,7 +62,7 @@ methods on an installed spec:
 |---|---|
 | `test_version` | `bmb_dgemm --version` names the version and the backend of the spec |
 | `test_linked_library` | `bmb_dgemm` loads the BLAS of the spec (`ldd`), not another one installed: what a library named differently in Spack and in the distribution would cause |
-| `test_benchmarks` | every benchmark, at a tiny size, says its result was verified |
+| `test_benchmarks` | every benchmark, at a tiny size, says its result was verified, but an extension of the BLAS the library lacks (axpby, gemmt, sbgemm, from 1.10.0), which exits 77 saying which call is missing; at least 113 from 1.10.0 |
 | `test_report` | `bmb_report` turns a result file into a page carrying it |
 | `test_bmb_suite` | `bmb_suite` runs two benchmarks of the install into a directory, which `bmb_report` takes; skipped before 1.9.0 |
 | `test_bmb_mcp` | `bmb_mcp` lists its tools and runs a benchmark through them, verified; skipped before 1.10.0 (#264), from which the package depends on Python at run time |

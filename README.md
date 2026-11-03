@@ -15,7 +15,7 @@
   <a href="LICENSE"><img alt="License: Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-blue.svg"></a>
 </p>
 
-- **104 benchmarks**, one executable per BLAS routine (`bmb_dgemm`,
+- **113 benchmarks**, one executable per BLAS routine (`bmb_dgemm`,
   `bmb_ddot`, …), levels 1 to 3, in single, double and complex
   precision. Think [osu-micro-benchmarks](https://mvapich.cse.ohio-state.edu/benchmarks/),
   for BLAS instead of MPI.
@@ -161,8 +161,10 @@ are.
 
 ### From a release
 
-The [Quick start](#quick-start) above. `make install` puts `bmb_suite` and
-`bmb_report` in `/usr/local/bin`, the manual pages in `/usr/local/share/man`, and the
+The [Quick start](#quick-start) above. `make install` puts `bmb_suite`,
+`bmb_report` and `bmb_mcp` in `/usr/local/bin`, the manual pages in
+`/usr/local/share/man`, the skills in
+`/usr/local/share/blas-microbenchmark/skills`, and the
 benchmarks by BLAS level under `/usr/local/libexec/blas-microbenchmark`,
 not on the `PATH`; to run them all by name:
 
@@ -328,7 +330,7 @@ and `man bmb_mcp`.
 ## Documentation
 
 - **[The manual](https://mathieucaissa.github.io/blas-microbenchmark/)**,
-  online or as `man blas-microbenchmark`, `man bmb_suite` and `man bmb_report`, with
+  online or as `man blas-microbenchmark`, `man bmb_suite`, `man bmb_report` and `man bmb_mcp`, with
   [what a run produces](https://mathieucaissa.github.io/blas-microbenchmark/outputs.html)
   (table, CSV, JSON, the report). Before installing:
   `man -l man/blas-microbenchmark.1` from the build directory.

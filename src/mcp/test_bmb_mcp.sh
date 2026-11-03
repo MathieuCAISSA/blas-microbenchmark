@@ -29,7 +29,15 @@ if $R --nope </dev/null >/dev/null 2>"$T/err"; then
     fail "an unknown option was taken"
 fi
 grep -q 'unknown option: --nope' "$T/err" || fail "an unknown option: $(cat "$T/err")"
-echo "ok   --version, --help, an unknown option refused"
+# Every usage error exits 2, as bmb_mcp(1) says: an unknown option, a
+# missing value, a value out of range.
+for args in "--nope" "--results-dir" "--time-cap 0" "--memory-limit=-1"; do
+    rc=0
+    # shellcheck disable=SC2086 # the options, split on purpose
+    $R $args </dev/null >/dev/null 2>"$T/err" || rc=$?
+    test "$rc" -eq 2 || fail "bmb_mcp $args: exit $rc, not 2: $(cat "$T/err")"
+done
+echo "ok   --version, --help, an unknown option, a missing value and a bad one refused, exit 2"
 
 # call ID TOOL ARGS: a tools/call request, a line.
 call() {

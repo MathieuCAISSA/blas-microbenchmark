@@ -56,9 +56,18 @@ Linux arm64 hosted runner for public repos — both those backends are
 aarch64-only). Keep it green — a routine that only works "on my machine"
 isn't done.
 
+The `ilp64` job builds against Ubuntu's 64-bit-integer OpenBLAS
+(`libopenblas64-pthread-dev`, whose `cblas.h` includes an
+`openblas64_config.h` the package lacks, linked in by the job) with
+`configure --enable-ilp64` (#172), checks `--version` says 64-bit
+integers, runs `make check` and the verification sweep; the `mkl` job
+runs `make check` again with ILP64.
+
 The `openblas` job also installs into a staging root and fails if anything
-lands outside `--prefix`, or if `bin/bmb_report`, `bin/bmb_suite`, the
-`libexec` benchmarks and the man pages are not where the README says;
+lands outside `--prefix`, or if `bin/bmb_report`, `bin/bmb_suite`,
+`bin/bmb_mcp`, the skills, the `libexec` benchmarks and the man pages
+(`bmb_mcp.1` among them) are not where the README says, then runs the
+installed `bmb_mcp`;
 installed for real, `bmb_suite` runs two of the benchmarks there; and it fails
 if the browser tests skipped, since the x86 runners have Chrome.
 
@@ -118,9 +127,11 @@ that job's library; then each argument other than its default, one at a
 time, over the routines that take it (a transposed GEMM, a lower or
 right-side triangle, herk with C), GEMM with a K of its own and batched
 in each mode, a mode the library has not being a skip (#277), and so
-is an extension of the BLAS it lacks (#171): `openblas`, `blis` and
-`mkl` check first that `configure` found those their library has
-(axpby, gemmt), so that a broken probe cannot skip them everywhere. `make
+is an extension of the BLAS it lacks (#171): `openblas` (axpby), `blis`
+(axpby, gemmt), `armpl` (axpby, gemmt, sbgemm) and `mkl` (all of them,
+gemmtr's name and the bf16 GEMM's included) check first that `configure`
+found those their library has, so that a broken probe cannot skip them
+everywhere. `make
 check` runs `--verify` on tiny sizes only, and
 a tolerance too tight for a real size, or a library that is only wrong
 once it splits the work between threads, would get through it. Every
