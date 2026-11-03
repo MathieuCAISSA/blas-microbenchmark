@@ -28,6 +28,22 @@ void bmb_build_backend_name(const char *library, char *buf, size_t size);
  * both say "openblas" -- 0.3.20 and 0.3.29 do not perform alike. */
 const char *bmb_build_blas_version(void);
 
+/* A batched GEMM this library crashes on (#330): OpenBLAS 0.3.28 to
+ * 0.3.34, built with DYNAMIC_ARCH as every distribution builds it, calls
+ * its small-matrix kernel through an offset instead of an address in a
+ * batch whose M x N x K is at most BMB_BUILD_BATCH_SMALL: the group call
+ * from 0.3.28 (OpenMathLib/OpenBLAS#5980), the strided one from 0.3.31
+ * (#6086), both fixed for 0.3.35. Given the library's version string
+ * (bmb_build_blas_version()) and whether the call is the strided one,
+ * which libraries crash, with the upstream issue ("OpenBLAS 0.3.28 to
+ * 0.3.34 built with DYNAMIC_ARCH (OpenMathLib/OpenBLAS#5980, fixed in
+ * 0.3.35)"), or NULL for a library without the crash. A ".dev" version
+ * is taken for the next release, as development is past the last one.
+ * Only where OpenBLAS has its small-matrix path: x86_64, arm64, POWER
+ * and LoongArch. Exported for its unit test. */
+#define BMB_BUILD_BATCH_SMALL (100.0 * 100.0 * 100.0)
+const char *bmb_build_batch_crash(const char *blas_version, int strided);
+
 /* The width of the integers the library takes (#172): 64 in an ILP64
  * build (configure --enable-ilp64), 32 otherwise. */
 unsigned int bmb_build_int_bits(void);

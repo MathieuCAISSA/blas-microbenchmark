@@ -907,6 +907,56 @@ int main(void)
         }
     }
 
+    /* ---- the batch calls an OpenBLAS crashes on (#330) ---- */
+    {
+#if defined(__x86_64__) || defined(__aarch64__) || defined(__powerpc64__) || defined(__loongarch64)
+        static const char *const g =
+            "OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH (OpenMathLib/OpenBLAS#5980, fixed in 0.3.35)";
+        static const char *const s =
+            "OpenBLAS 0.3.31 to 0.3.34 built with DYNAMIC_ARCH (OpenMathLib/OpenBLAS#6086, fixed in 0.3.35)";
+#else
+        static const char *const g = NULL, *const s = NULL;
+#endif
+        static const char d34[] = "OpenBLAS 0.3.34 DYNAMIC_ARCH NO_AFFINITY USE_LOCKING Haswell SINGLE_THREADED";
+        static const char d28[] = "OpenBLAS 0.3.28 DYNAMIC_ARCH NO_AFFINITY Zen MAX_THREADS=64";
+        static const char d31[] = "OpenBLAS 0.3.31 DYNAMIC_ARCH NO_AFFINITY Haswell MAX_THREADS=64";
+        static const struct {
+            const char *version;
+            int strided;
+            const char *const *want;
+            const char *what;
+        } cases[] = {
+            {d34, 0, &g, "batch crash: 0.3.34 with DYNAMIC_ARCH, the group call"},
+            {d34, 1, &s, "batch crash: 0.3.34 with DYNAMIC_ARCH, the strided call"},
+            {d28, 0, &g, "batch crash: 0.3.28, the first with a group call"},
+            {d28, 1, NULL, "batch crash: 0.3.28 has no strided call"},
+            {d31, 1, &s, "batch crash: 0.3.31, the first with a strided call"},
+            {"OpenBLAS 0.3.27 DYNAMIC_ARCH Haswell", 0, NULL, "batch crash: none before 0.3.28"},
+            {"OpenBLAS 0.3.35 DYNAMIC_ARCH Haswell", 0, NULL, "batch crash: fixed in 0.3.35"},
+            {"OpenBLAS 0.3.34.dev DYNAMIC_ARCH Haswell", 1, NULL, "batch crash: 0.3.34.dev is past 0.3.34"},
+            {"OpenBLAS 0.3.34 NO_AFFINITY HASWELL MAX_THREADS=16", 1, NULL,
+             "batch crash: none without DYNAMIC_ARCH"},
+            {"OpenBLAS 0.3.34 DYNAMIC_ARCH", 0, &g, "batch crash: DYNAMIC_ARCH last in the string"},
+            {"OpenBLAS 0.3.34 NO_DYNAMIC_ARCH_X Haswell", 0, NULL, "batch crash: DYNAMIC_ARCH as a word only"},
+            {"OpenBLAS 1.0.0 DYNAMIC_ARCH Haswell", 0, NULL, "batch crash: none in a later major version"},
+            {"OpenBLAS x DYNAMIC_ARCH", 0, NULL, "batch crash: no version, none"},
+            {"BLIS 2.0 DYNAMIC_ARCH", 0, NULL, "batch crash: another library, none"},
+            {NULL, 0, NULL, "batch crash: no version string, none"},
+        };
+        size_t i;
+
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+            const char *got = bmb_build_batch_crash(cases[i].version, cases[i].strided);
+            const char *want = cases[i].want != NULL ? *cases[i].want : NULL;
+
+            if ((got == NULL) != (want == NULL) || (got != NULL && strcmp(got, want) != 0)) {
+                fail(cases[i].what, got != NULL ? got : "(none)");
+            } else {
+                ok(cases[i].what);
+            }
+        }
+    }
+
     /* ---- thread counts share the sweep parser ---- */
     {
         bmb_options_t opts;

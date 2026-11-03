@@ -147,6 +147,46 @@ const char *bmb_build_blas_version(void)
 }
 #endif
 
+const char *bmb_build_batch_crash(const char *blas_version, int strided)
+{
+#if defined(__x86_64__) || defined(__aarch64__) || defined(__powerpc64__) || defined(__loongarch64)
+    static const char prefix[] = "OpenBLAS ";
+    const char *word;
+    int major = 0, minor = 0, patch = 0, used = 0;
+    long version;
+
+    if (blas_version == NULL || strncmp(blas_version, prefix, sizeof(prefix) - 1) != 0
+        || sscanf(blas_version + sizeof(prefix) - 1, "%d.%d.%d%n", &major, &minor, &patch, &used) != 3) {
+        return NULL;
+    }
+    /* 0.3.34 is 334: OpenBLAS's minor and patch numbers stay below 100. */
+    version = major * 10000L + minor * 100L + patch;
+    if (strncmp(blas_version + sizeof(prefix) - 1 + used, ".dev", 4) == 0) {
+        version++;
+    }
+    for (word = strstr(blas_version, "DYNAMIC_ARCH"); word != NULL; word = strstr(word + 1, "DYNAMIC_ARCH")) {
+        if (word[-1] == ' ' && (word[12] == ' ' || word[12] == '\0')) {
+            break;
+        }
+    }
+    if (word == NULL || version > 334) {
+        return NULL;
+    }
+    if (strided) {
+        return version >= 331 ? "OpenBLAS 0.3.31 to 0.3.34 built with DYNAMIC_ARCH (OpenMathLib/OpenBLAS#6086, "
+                                "fixed in 0.3.35)"
+                              : NULL;
+    }
+    return version >= 328 ? "OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH (OpenMathLib/OpenBLAS#5980, "
+                            "fixed in 0.3.35)"
+                          : NULL;
+#else
+    (void) blas_version;
+    (void) strided;
+    return NULL;
+#endif
+}
+
 #if defined(HAVE_OPENBLAS_GET_CORENAME)
 extern char *openblas_get_corename(void);
 

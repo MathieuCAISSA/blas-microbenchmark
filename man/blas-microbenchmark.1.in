@@ -413,6 +413,14 @@ BLIS and AOCL-BLAS
 .B group
 only; Netlib neither.
 A mode the library does not have exits 77 without measuring anything.
+So does a batch of matrices whose M x N x K is at most 100^3 with
+OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH, as distributions
+build it, which crashes on one: the group call from 0.3.28
+(OpenMathLib/OpenBLAS#5980), the strided one from 0.3.31 (#6086), both
+fixed in 0.3.35.
+Larger sizes, and
+.BR loop ,
+are measured.
 Default:
 .BR loop .
 .IP
@@ -1138,7 +1146,10 @@ in which case nothing is written to the
 file;
 77 when
 .B \-\-batch\-mode
-asks for a call the library does not have, or the routine is an
+asks for a call the library does not have, or one it would crash on
+(see
+.BR \-\-batch\-mode ),
+or the routine is an
 extension the library does not have (axpby, gemmt), which is said on
 standard error: nothing is measured (77 is what
 .BR "make check" 's

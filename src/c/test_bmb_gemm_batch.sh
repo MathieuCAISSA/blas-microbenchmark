@@ -5,9 +5,11 @@
 # cblas_?gemm_batch_strided is), passes --verify, every matrix of it, in
 # both layouts, transposed or not, and its check catches a corrupted
 # result; a mode the library has not is skipped, exit 77 and a message,
-# nothing measured. The count and the mode are in every output; a routine
-# without a batched form refuses the options; a batch too large for
-# size_t is refused before anything is allocated. Tiny sizes only.
+# nothing measured; a batch of small matrices a library would crash on is
+# refused (#330), and one past them measured. The count and the mode are
+# in every output; a routine without a batched form refuses the options;
+# a batch too large for size_t is refused before anything is allocated.
+# Tiny sizes only.
 set -e
 
 T=gemm-batch-test.d
@@ -32,16 +34,42 @@ missing=
 if has HAVE_CBLAS_GEMM_BATCH; then modes="$modes group"; else missing="$missing group"; fi
 if has HAVE_CBLAS_GEMM_BATCH_STRIDED; then modes="$modes strided"; else missing="$missing strided"; fi
 
+crashing=
 for b in level3/single/bmb_sgemm level3/double/bmb_dgemm level3/complex/bmb_cgemm level3/complex16/bmb_zgemm; do
     r=${b##*/bmb_}
     for mode in $modes; do
         trans=
+        sizes="-m 20,7 -M 5 -K 9,3"
+        one="-m 7"
+        # A library that would crash on a batch this small (#330): the
+        # call is refused, said, and nothing measured; one past 100^3 is
+        # measured.
+        issue=$(bmb_batch_crash "$b" "$mode")
+        if [ -n "$issue" ]; then
+            set +e
+            "$b" -x 0 -w 0 -i 1 -m 100 --batch-count 4 --batch-mode "$mode" >"$T/$r.out" 2>"$T/$r.err"
+            rc=$?
+            set -e
+            test "$rc" -eq 77 || fail "$r --batch-mode $mode -m 100, which this library crashes on: exit $rc, not 77"
+            grep -q "crashes on a batch of matrices whose M x N x K is at most 100^3, .*($issue, fixed in 0.3.35)" "$T/$r.err" ||
+                fail "$r --batch-mode $mode -m 100: no message saying why: $(cat "$T/$r.err")"
+            if grep -q '^[0-9]' "$T/$r.out"; then
+                fail "$r --batch-mode $mode -m 100 measured something"
+            fi
+            # The smallest size of a sweep, wherever it is in it.
+            rc=0
+            "$b" -x 0 -w 0 -i 1 -m 200,8 --batch-count 4 --batch-mode "$mode" >/dev/null 2>&1 || rc=$?
+            test "$rc" -eq 77 || fail "$r --batch-mode $mode -m 200,8, its 8 crashing this library: exit $rc, not 77"
+            crashing="$crashing $r/$mode"
+            sizes="-m 101,120 -M 101 -K 101"
+            one="-m 101"
+        fi
         for args in "--layout row --trans NN" "--layout col --trans TN -p 3"; do
             # shellcheck disable=SC2086 # the options, split on purpose
             known=$(bmb_known_wrong "$b" "$r" --batch-mode "$mode" $args)
             rc=0
             # shellcheck disable=SC2086 # the options, split on purpose
-            "$b" -x 0 -w 0 -i 1 -m 7,20 -M 5 -K 3,9 --batch-count 4 --batch-mode "$mode" $args \
+            "$b" -x 0 -w 0 -i 1 $sizes --batch-count 4 --batch-mode "$mode" $args \
                 -o "$T/$r-run.json" >"$T/$r-run.out" 2>"$T/$r.err" || rc=$?
             if [ -n "$known" ] && { [ "$rc" -ne 0 ] || [ "${known#maybe }" = "$known" ]; }; then
                 test "$rc" -eq 2 && grep -qF "${known#maybe }" "$T/$r.err" ||
@@ -63,7 +91,8 @@ for b in level3/single/bmb_sgemm level3/double/bmb_dgemm level3/complex/bmb_cgem
         grep -q "\"batch_count\": 4, \"batch_mode\": \"$mode\"" "$T/$r.json" ||
             fail "$r --batch-mode $mode: the json does not say the batch"
         set +e
-        BMB_VERIFY_CORRUPT=1 "$b" -x 0 -w 0 -i 1 -m 7 --batch-count 4 --batch-mode "$mode" >/dev/null 2>"$T/$r.err"
+        # shellcheck disable=SC2086 # the options, split on purpose
+        BMB_VERIFY_CORRUPT=1 "$b" -x 0 -w 0 -i 1 $one --batch-count 4 --batch-mode "$mode" >/dev/null 2>"$T/$r.err"
         rc=$?
         set -e
         test "$rc" -eq 2 || fail "$r --batch-mode $mode: a corrupted result exited $rc, not 2"
@@ -82,7 +111,7 @@ for b in level3/single/bmb_sgemm level3/double/bmb_dgemm level3/complex/bmb_cgem
         fi
     done
 done
-echo "ok   the four GEMMs batched, in$(printf ' %s' $modes), every matrix verified; skipped:${missing:- none}"
+echo "ok   the four GEMMs batched, in$(printf ' %s' $modes), every matrix verified; skipped:${missing:- none}; refused below 100^3, the library crashing there:${crashing:- none}"
 
 # One matrix in a loop is the plain call: the defaults, recorded.
 level3/double/bmb_dgemm -x 0 -w 0 -i 1 -m 7 >"$T/one.out" || fail "dgemm failed"
