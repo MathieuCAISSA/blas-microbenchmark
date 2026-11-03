@@ -141,6 +141,37 @@ int bmb_star_cpus_at(const char *root, const char *allowed, int *cpus, int max)
     return count;
 }
 
+void bmb_star_describe(const int *cpus, int count, char *buf, size_t size)
+{
+    size_t at = 0;
+    int i = 0;
+
+    if (size == 0) {
+        return;
+    }
+    buf[0] = '\0';
+    while (i < count) {
+        int j = i;
+        int w;
+
+        while (j + 1 < count && cpus[j + 1] == cpus[j] + 1) {
+            j++;
+        }
+        if (j == i) {
+            w = snprintf(buf + at, size - at, "%s%d", i == 0 ? "" : ",", cpus[i]);
+        } else {
+            w = snprintf(buf + at, size - at, "%s%d%s%d", i == 0 ? "" : ",", cpus[i],
+                         j == i + 1 ? "," : "-", cpus[j]);
+        }
+        if (w < 0 || (size_t) w >= size - at) {
+            buf[at] = '\0';
+            return;
+        }
+        at += (size_t) w;
+        i = j + 1;
+    }
+}
+
 #if defined(__linux__)
 /* What the instances share: a barrier, and a value each for
  * bmb_star_max(). In memory mapped before fork(), so shared. */
@@ -281,8 +312,8 @@ static void bmb_star_release(void)
     if (bmb_star_pipe[0] >= 0) {
         close(bmb_star_pipe[0]);
     }
-    if (bmb_star_pipe[1] >= 0) {
-        close(bmb_star_pipe[1]);
+    if (bmb_star_pipe[1] >= 0) { /* GCOVR_EXCL_BR_LINE: open only after a start that failed, out of memory, descriptors or processes */
+        close(bmb_star_pipe[1]); /* GCOVR_EXCL_LINE: open only after a start that failed, out of memory, descriptors or processes */
     }
     bmb_star_pipe[0] = bmb_star_pipe[1] = -1;
     free(bmb_star_pids);
@@ -405,12 +436,14 @@ static int bmb_star_ended(unsigned int i, int wstatus, int stopping)
         }
     }
     if (!stopping) {
-        if (WIFSIGNALED(wstatus)) {
+        if (WIFSIGNALED(wstatus)) { /* GCOVR_EXCL_BR_LINE: an instance that ends before the others without a signal, only by an exit() in the library */
             snprintf(msg, sizeof(msg), "--star: instance %u, on CPU %d, was killed by signal %d.",
                      i, bmb_star_on[i], WTERMSIG(wstatus));
         } else {
+            /* GCOVR_EXCL_START: only an exit() in the library ends an instance before the others without a signal */
             snprintf(msg, sizeof(msg), "--star: instance %u, on CPU %d, ended before the others.",
                      i, bmb_star_on[i]);
+            /* GCOVR_EXCL_STOP */
         }
         bmb_log_error(msg);
     }
@@ -444,8 +477,8 @@ int bmb_star_wait(int (*on_row)(const bmb_result_row_t *row, void *arg), void *a
                     got += (size_t) n;
                     if (got == sizeof(row)) {
                         got = 0;
-                        if (on_row(&row, arg) != 0 && status == 0) {
-                            status = -1;
+                        if (on_row(&row, arg) != 0 && status == 0) { /* GCOVR_EXCL_BR_LINE: on_row fails only out of memory, excluded where it does */
+                            status = -1; /* GCOVR_EXCL_LINE: on_row fails only out of memory, excluded where it does */
                         }
                     }
                 } else if (n == 0 || errno != EINTR) { /* GCOVR_EXCL_BR_LINE: no signal is caught */

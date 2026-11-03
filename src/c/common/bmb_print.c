@@ -219,8 +219,8 @@ static void bmb_print_provenance(FILE *out, const bmb_result_set_t *rs)
     fprintf(out, "# kernels: %s\n", bmb_build_kernels());
 #endif
     /* Only when it is not what every other build has (#172). */
-    if (bmb_build_int_bits() == 64) {
-        fprintf(out, "# integers: 64-bit (ILP64)\n");
+    if (bmb_build_int_bits() == 64) { /* GCOVR_EXCL_BR_LINE: only in an ILP64 build, which the ilp64 job tests and no coverage job is */
+        fprintf(out, "# integers: 64-bit (ILP64)\n"); /* GCOVR_EXCL_LINE: only in an ILP64 build, which the ilp64 job tests and no coverage job is */
     }
     if (rs->input_type != NULL) {
         fprintf(out, "# types: %s inputs, %s accumulation and output\n", rs->input_type,

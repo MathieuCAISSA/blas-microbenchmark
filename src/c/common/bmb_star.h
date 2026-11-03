@@ -30,6 +30,10 @@
  * be found. */
 int bmb_star_cpus_at(const char *root, const char *allowed, int *cpus, int max);
 
+/* The CPUs of cpus[0..count-1] as Linux lists them, consecutive ones as a
+ * range ("0-3,8"), into buf; what does not fit is left out whole. */
+void bmb_star_describe(const int *cpus, int count, char *buf, size_t size);
+
 /* Starts `instances` instances on cpus[0..instances-1] and returns, in
  * each, its index; in the calling process, which measures nothing, -1
  * once they all run, or -2 when they could not be started (logged).
