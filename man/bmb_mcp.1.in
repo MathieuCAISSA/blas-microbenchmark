@@ -1,7 +1,7 @@
 .\" bmb_mcp(1). make turns bmb_mcp.1.in into bmb_mcp.1, then into the
 .\" site's bmb_mcp.html; edit the .in. man/test_man_*.sh check it
 .\" against the programs: see doc/dev/documentation.md.
-.TH BMB_MCP 1 2026-11-01 "blas\-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.TH BMB_MCP 1 2026-11-03 "blas\-microbenchmark @PACKAGE_VERSION@" "User Commands"
 .\" No hyphenation, no justification: both hurt in a terminal.
 .nh
 .ds AD l
