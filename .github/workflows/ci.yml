@@ -439,6 +439,8 @@ jobs:
   # groff. BMB_MAN_STRICT turns a missing tool into a failure rather than a
   # SKIP, so this job cannot pass without checking everything. No
   # --enable-werror: Fedora's newer GCC is not what this job is testing.
+  # util-linux: man runs col, which man-db pulls in only as a weak
+  # dependency from Fedora 45 on (#330).
   man:
     runs-on: ubuntu-latest
     container: fedora:latest
@@ -448,7 +450,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             gcc make autoconf automake libtool pkgconf-pkg-config openblas-devel \
-            groff man-db mandoc diffutils findutils git
+            groff man-db mandoc diffutils findutils git util-linux
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
