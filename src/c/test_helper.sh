@@ -35,10 +35,11 @@ bmb_missing() {
 # change places (#5143). Its cblas_?gemm_batch_strided, from 0.3.31 to
 # 0.3.34, refused every column-major call and left C as it was (#5979);
 # from 0.3.31, its complex one does not scale the strides to (re, im)
-# pairs, wrong from two matrices on (#6214, reported, not fixed: when it
-# is, the test on the fixed version fails, and the bound goes here). The
-# others are fixed upstream, and a test that still meets them on a fixed
-# version fails.
+# pairs, wrong from two matrices on (#6214, reported, fixed for 0.3.35:
+# a development build past the fix fails the test, as it should, and the
+# bound goes here once 0.3.35 is out and tested, #332). The others are
+# fixed upstream, and a test that still meets them on a fixed version
+# fails.
 bmb_known_wrong() {
     kw_prog=$1
     kw_r=$2
@@ -93,6 +94,31 @@ bmb_known_wrong() {
             col?C) echo "${kw_maybe}the call changed B, which it must only read" ;;
             rowC?) echo "${kw_maybe}the call changed A, which it must only read" ;;
         esac
+    fi
+}
+
+# bmb_batch_crash <program> <mode>: when the library would crash on a
+# batch of small matrices in this --batch-mode (#330), which the program
+# refuses (exit 77), the upstream issue its message names; nothing
+# otherwise. OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH, where it
+# has its small-matrix path: the group call from 0.3.28
+# (OpenMathLib/OpenBLAS#5980), the strided one from 0.3.31 (#6086).
+bmb_batch_crash() {
+    case $2 in group | strided) ;; *) return 0 ;; esac
+    case `uname -m` in x86_64 | aarch64 | arm64 | ppc64* | loongarch64) ;; *) return 0 ;; esac
+    bc_backend=`"$1" --version 2>/dev/null | sed -n 's/^BLAS backend: //p'`
+    case $bc_backend in
+        "openblas (OpenBLAS "*" DYNAMIC_ARCH "* | "openblas (OpenBLAS "*" DYNAMIC_ARCH)") ;;
+        *) return 0 ;;
+    esac
+    bc_at=`printf '%s\n' "$bc_backend" | sed -n -e 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\.dev.*/\1 \2 \3 1/p' \
+        -e 's/^openblas (OpenBLAS \([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \2 \3 0/p' | sed -n 1p |
+        awk '{ print $1 * 10000 + $2 * 100 + $3 + $4 }'`
+    [ -n "$bc_at" ] && [ "$bc_at" -le 334 ] || return 0
+    if [ "$2" = strided ] && [ "$bc_at" -ge 331 ]; then
+        echo "OpenMathLib/OpenBLAS#6086"
+    elif [ "$2" = group ] && [ "$bc_at" -ge 328 ]; then
+        echo "OpenMathLib/OpenBLAS#5980"
     fi
 }
 

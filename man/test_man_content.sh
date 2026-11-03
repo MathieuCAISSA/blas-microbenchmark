@@ -188,7 +188,7 @@ DGEMM=$(bin_of dgemm)
 rc=$(status "$DGEMM" -x 0 -w 0 -i 1 -m 8 --batch-count 2 --batch-mode strided)
 case $rc in
     0) ;;
-    77) section $PAGE "EXIT STATUS" | grep -q '^77 when' || fail "a batch mode the library has not exited 77, which EXIT STATUS does not give" ;;
+    77) section $PAGE "EXIT STATUS" | grep -q '^77 when' || fail "--batch-mode strided exited 77 (a mode the library has not, or a batch it crashes on), which EXIT STATUS does not give" ;;
     *) fail "--batch-mode strided exited $rc, neither 0 nor 77" ;;
 esac
 ok "the benchmarks exit 0, 1, 2 or 77 when blas-microbenchmark(1) says"

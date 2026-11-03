@@ -809,13 +809,27 @@ int bmb_bench_batch_mode(void)
     return bmb_batch_mode;
 }
 
+/* The smallest size of a sweep. */
+static size_t bmb_range_min(const bmb_range_t *range)
+{
+    size_t min = range->values[0];
+    size_t i;
+
+    for (i = 1; i < range->count; i++) {
+        if (range->values[i] < min) {
+            min = range->values[i];
+        }
+    }
+    return min;
+}
+
 /* An argument the routine does not have is refused, never ignored: a
  * --uplo L that changed nothing would be read as the lower triangle's
  * number. */
 static int bmb_check_args(const bmb_benchmark_t *bench, const bmb_options_t *opts)
 {
     const size_t want = (bench->args & BMB_ARG_TRANS2) ? 2 : 1;
-    char msg[256];
+    char msg[512];
     size_t i;
 
     if (opts->trans[0] != '\0') {
@@ -878,6 +892,30 @@ static int bmb_check_args(const bmb_benchmark_t *bench, const bmb_options_t *opt
                  bmb_batch_mode == BMB_BATCH_GROUP ? "cblas_?gemm_batch" : "cblas_?gemm_batch_strided");
         bmb_log_warning(msg);
         return BMB_EXIT_SKIPPED;
+    }
+    /* A batch call the library would crash on (#330), not made: told,
+     * with the upstream issue, rather than a segmentation fault. The
+     * smallest product of the run is that of the smallest sizes: -M and
+     * -K are swept against -m, and without them N and K follow M, so
+     * either way the smallest of each is a point. Under BMB_COUNTS
+     * nothing is called. */
+    if ((bench->args & BMB_ARG_BATCH) && bmb_batch_mode != BMB_BATCH_LOOP && !bmb_counts_only) {
+        const char *why = bmb_build_batch_crash(bmb_build_blas_version(), bmb_batch_mode == BMB_BATCH_STRIDED);
+        double m = (double) bmb_range_min(&opts->matrix_dim1);
+        double n = opts->matrix_dim2_set ? (double) bmb_range_min(&opts->matrix_dim2) : m;
+        double k = opts->matrix_dim3_set ? (double) bmb_range_min(&opts->matrix_dim3) : m;
+
+        if (why != NULL && m * n * k <= BMB_BUILD_BATCH_SMALL) { /* GCOVR_EXCL_BR_LINE: only an OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH, which no coverage job builds against */
+            /* GCOVR_EXCL_START: only an OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH, which no coverage job builds against */
+            snprintf(msg, sizeof(msg),
+                     "--batch-mode %s: this build's %s crashes on a batch of matrices whose M x N x K "
+                     "is at most 100^3, as %s does; nothing measured. Sizes all past it, or "
+                     "--batch-mode loop, can be.",
+                     bmb_batch_mode_name(bmb_batch_mode), bmb_build_backend(), why);
+            bmb_log_warning(msg);
+            return BMB_EXIT_SKIPPED;
+            /* GCOVR_EXCL_STOP */
+        }
     }
     return 0;
 }

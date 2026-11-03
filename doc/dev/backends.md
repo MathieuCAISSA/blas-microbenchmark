@@ -79,6 +79,12 @@ MKL's in their constness and integer type, so `bmb_gemm.c` passes the
 arrays as `void *`. Netlib has neither, and a build without one skips
 the mode (exit 77) rather than measure something else; the `mkl` job is
 where `strided` runs, the `blis` job `group` (`test_bmb_gemm_batch.sh`).
+OpenBLAS 0.3.28 to 0.3.34 built with `DYNAMIC_ARCH`, as distributions
+build it, crashes on a batch whose M x N x K is at most 100^3 (#5980
+for the group call, #6086 for the strided one, fixed for 0.3.35):
+`bmb_build_batch_crash()` recognises it from its version string, and the
+driver refuses a run with such a point, exit 77 and why (#330); the
+`man` job, on Fedora's 0.3.34, runs `test_bmb_gemm_batch.sh` against it.
 
 The machine side of the provenance lives in `bmb_machine.c`, probed once per
 run: CPU model, logical CPUs, NUMA nodes, cpu0's caches, the CPU frequency
