@@ -1,6 +1,6 @@
 {
   "name": "blas-microbenchmark",
-  "version": "1.10.0-dev",
+  "version": "1.10.0",
   "description": "bmb_mcp, an MCP server over the installed blas-microbenchmark suite, and skills to measure, compare and read BLAS results as the project does. Needs blas-microbenchmark installed, with bmb_mcp on PATH.",
   "author": {
     "name": "Mathieu Caissa"
