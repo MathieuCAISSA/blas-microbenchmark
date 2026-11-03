@@ -34,7 +34,7 @@ class BlasMicrobenchmark(AutotoolsPackage):
     compare libraries."""
 
     homepage = "https://mathieucaissa.github.io/blas-microbenchmark/"
-    url = "https://github.com/MathieuCAISSA/blas-microbenchmark/releases/download/v1.9.0/blas-microbenchmark-1.9.0.tar.gz"
+    url = "https://github.com/MathieuCAISSA/blas-microbenchmark/releases/download/v1.10.0/blas-microbenchmark-1.10.0.tar.gz"
     git = "https://github.com/MathieuCAISSA/blas-microbenchmark.git"
 
     maintainers("MathieuCAISSA")
@@ -42,6 +42,7 @@ class BlasMicrobenchmark(AutotoolsPackage):
     license("Apache-2.0")
 
     version("main", branch="main")
+    version("1.10.0", sha256="57f1406b1e8c5b9c5fcf8c11bfb245bf843b7acf4519823019b6102919ffec23")
     version("1.9.0", sha256="e641f22a899f969f1dda7751ea5f4140a1fd391d71b6de3c564e015a867d565a")
     version("1.8.0", sha256="cd0805d152ef368ed2c4e7ae0a0669054ac11727e634145720bb0fc6371d9114")
     version("1.7.0", sha256="893ac0e1ed16c4cd06fcfbd373183d5fc32cbb98da44564e3117ebb003345173")
