@@ -105,7 +105,8 @@ cold=$((runs - cold))
 
 batch=$runs
 if grep -q '^#define HAVE_CBLAS_GEMM_BATCH 1$' "${top_builddir:?top_builddir is not set}/config.h"; then
-    each_allocation level3/double/bmb_dgemm -x 0 -i 1 -m 8 --batch-count 3 --batch-mode group
+    # 101: past the 100^3 an OpenBLAS with DYNAMIC_ARCH crashes on (#330).
+    each_allocation level3/double/bmb_dgemm -x 0 -i 1 -m 101 --batch-count 3 --batch-mode group
 fi
 batch=$((runs - batch))
 

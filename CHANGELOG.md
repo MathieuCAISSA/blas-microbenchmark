@@ -66,6 +66,17 @@ releases with the same major version can be compared and read by the same
   and what each family of routines computes.
 
 ### Fixed
+- A batched GEMM of small matrices (M x N x K up to 100^3) crashed with
+  OpenBLAS 0.3.28 to 0.3.34 built with `DYNAMIC_ARCH`, as distributions
+  build it (Fedora 45's, Debian trixie's): the group call from 0.3.28
+  (OpenMathLib/OpenBLAS#5980), the strided one from 0.3.31 (#6086),
+  both fixed in 0.3.35 (#330). The benchmark now refuses a run with
+  one such point before the call, saying why: exit 77, nothing
+  measured. A run whose points are all larger, and `--batch-mode loop`,
+  are measured.
+- The man pages under groff 1.24 (#330): hyphenation, turned off, came
+  back after one paragraph, and the header's hyphens were typographic
+  ones.
 - `bmb_report`'s roofline labelled a log tick below 0.01 with two
   decimals, 0.005 as "0.01" (#290): such a tick now keeps its one
   significant figure.

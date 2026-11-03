@@ -3,11 +3,12 @@
 .\" then into the site's blas-microbenchmark.html; edit the .in.
 .\" man/test_man_*.sh check it against the programs: see
 .\" doc/dev/documentation.md.
-.TH BLAS-MICROBENCHMARK 1 2026-10-29 "blas-microbenchmark @PACKAGE_VERSION@" "User Commands"
+.TH BLAS\-MICROBENCHMARK 1 2026-10-29 "blas\-microbenchmark @PACKAGE_VERSION@" "User Commands"
 .\" No hyphenation, no justification: both hurt in a terminal, and
 .\" hyphenation splits literals such as "# label:".
 .nh
 .ds AD l
+.nr HY 0
 .ad l
 .SH NAME
 .\" BEGIN routines (man-name): written by src/c/routines.sh
@@ -412,6 +413,15 @@ BLIS and AOCL-BLAS
 .B group
 only; Netlib neither.
 A mode the library does not have exits 77 without measuring anything.
+So does a batch of matrices whose M x N x K is at most 100^3 with
+OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH, as distributions
+build it, which crashes on one: the group call from 0.3.28
+(OpenMathLib/OpenBLAS#5980), the strided one from 0.3.31 (#6086), both
+fixed in 0.3.35.
+A run with one such point is refused whole; one whose points are all
+larger, or
+.BR loop ,
+is measured.
 Default:
 .BR loop .
 .IP
@@ -1137,7 +1147,10 @@ in which case nothing is written to the
 file;
 77 when
 .B \-\-batch\-mode
-asks for a call the library does not have, or the routine is an
+asks for a call the library does not have, or one it would crash on
+(see
+.BR \-\-batch\-mode ),
+or the routine is an
 extension the library does not have (axpby, gemmt), which is said on
 standard error: nothing is measured (77 is what
 .BR "make check" 's
@@ -1284,6 +1297,10 @@ bmb_dgemm \-m 16:128 \-\-batch\-count 10000 \-o loop.json
 bmb_dgemm \-m 16:128 \-\-batch\-count 10000 \-\-batch\-mode group \-o group.json
 .EE
 .RE
+.PP
+(With OpenBLAS 0.3.28 to 0.3.34 built with DYNAMIC_ARCH, the second
+exits 77: see
+.BR \-\-batch\-mode .)
 .PP
 Thread scaling, threads pinned \(em OMP_* for the OpenMP-threaded
 libraries, taskset for a pthread-built OpenBLAS:
