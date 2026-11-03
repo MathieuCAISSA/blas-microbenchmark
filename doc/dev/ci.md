@@ -172,6 +172,14 @@ on bestpractices.dev; each points at the file here that meets it, so a
 change that moves one of those files (`CONTRIBUTING.md`,
 `.github/SECURITY.md`, `REVIEWS.md`) updates the answers there.
 
+What no coverage job's library has goes uncounted there: `sbgemm` (no
+bf16 GEMM in OpenBLAS's Ubuntu package, BLIS or Netlib), which the `mkl`
+and `armpl` jobs run and verify without measuring coverage; and the
+paths only another build takes, excluded where they are with their
+reason (the ILP64 line, a library that changes gemmt's A or B, an
+instance under `--star` failing its setup alone), read at each release
+(#326).
+
 There is no threshold, on purpose: a number to keep above invites tests
 written for the number. The report is for finding paths no test takes.
 When it was added (1.3.0-dev) it read 90% of lines, 77% of branches; the

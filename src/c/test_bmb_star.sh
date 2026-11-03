@@ -83,6 +83,54 @@ BMB_COUNTS=1 $B --star -t 2 -v 64 >/dev/null 2>"$T/counts.err" || fail "BMB_COUN
 counts=`grep -c '^counts:' "$T/counts.err" || true`
 test "$counts" -eq 1 || fail "BMB_COUNTS under --star printed $counts counts, expected 1"
 
+# An instance lost mid-run (killed) stops the others, which would wait
+# for it forever: exit 1, said, none left running. -T 30 -E 30 make the
+# run long enough to be caught at it: the sample cap ends it after about
+# 8 s, the kill after 1. A run that still waits for the lost instance is
+# stopped after 60 s and fails, rather than hanging the test.
+if command -v pgrep >/dev/null 2>&1; then
+    $B --star -t 2 -x 0 -w 0 -i 5 -T 30 -E 30 -v 64 >/dev/null 2>"$T/lost.err" &
+    p=$!
+    tries=0
+    while [ "$(pgrep -P "$p" | wc -l)" -lt 2 ] && [ "$tries" -lt 50 ]; do
+        sleep 1
+        tries=$((tries + 1))
+    done
+    pids=`pgrep -P "$p" || true`
+    victim=`printf '%s\n' $pids | tail -n 1`
+    test -n "$victim" || fail "no instance of the long run found"
+    kill -9 "$victim" 2>/dev/null || fail "the long run ended before an instance could be killed"
+    tries=0
+    while [ "$tries" -lt 60 ]; do
+        case `ps -o stat= -p "$p" 2>/dev/null` in "" | Z*) break ;; esac
+        sleep 1
+        tries=$((tries + 1))
+    done
+    if [ "$tries" -eq 60 ]; then
+        kill -9 "$p" $pids 2>/dev/null || true
+        fail "a run whose instance was killed was still running 60 s later"
+    fi
+    status=0
+    wait "$p" || status=$?
+    test "$status" -eq 1 || fail "a run whose instance was killed exited $status, not 1: $(cat "$T/lost.err")"
+    grep -q 'was killed by signal 9' "$T/lost.err" || fail "the lost instance was not said: $(cat "$T/lost.err")"
+    # The others, gone with the run, not left to init: a moment for the
+    # last of them to be reaped.
+    tries=0
+    for q in $pids; do
+        while kill -0 "$q" 2>/dev/null && [ "$tries" -lt 5 ]; do
+            sleep 1
+            tries=$((tries + 1))
+        done
+        if kill -0 "$q" 2>/dev/null; then
+            fail "instance $q was left running after one was lost"
+        fi
+    done
+    echo "ok   an instance killed mid-run stops the run: exit 1, said, none left"
+else
+    echo "ok   (no pgrep: an instance lost mid-run not tried)"
+fi
+
 # Without --star, nothing of it.
 $B -t 1 -x 0 -w 0 -i 1 -v 64 >"$T/plain.txt" || fail "the plain run failed"
 if grep -q '^# star' "$T/plain.txt"; then

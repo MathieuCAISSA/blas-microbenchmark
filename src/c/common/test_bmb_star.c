@@ -155,6 +155,47 @@ int main(void)
     /* This process's own affinity, on the real sysfs: at least one. */
     check(bmb_star_cpus_at("", NULL, cpus, BMB_STAR_MAX) >= 1, "this process's affinity: a core at least");
 
+    /* The list the results give, consecutive CPUs as a range; what does not
+     * fit left out whole. */
+    {
+        static const struct {
+            int cpus[8];
+            int count;
+            size_t size;
+            const char *want;
+        } cases[] = {
+            {{0, 2, 4}, 3, 64, "0,2,4"},
+            {{0, 1, 2, 3}, 4, 64, "0-3"},
+            {{0, 1, 2, 3, 8}, 5, 64, "0-3,8"},
+            {{0, 1}, 2, 64, "0,1"},
+            {{10, 11, 12, 20, 21}, 5, 64, "10-12,20,21"},
+            {{5}, 1, 64, "5"},
+            {{0}, 0, 64, ""},
+            {{0, 1, 2, 3, 8}, 5, 4, "0-3"},
+            {{0, 1, 2, 3, 8}, 5, 3, ""},
+        };
+        size_t k;
+
+        for (k = 0; k < sizeof(cases) / sizeof(cases[0]); k++) {
+            char buf[64];
+            char what[160];
+
+            memset(buf, 'x', sizeof(buf));
+            bmb_star_describe(cases[k].cpus, cases[k].count, buf, cases[k].size);
+            snprintf(what, sizeof(what), "the CPUs described in %zu bytes: got \"%s\", want \"%s\"",
+                     cases[k].size, buf, cases[k].want);
+            check(strcmp(buf, cases[k].want) == 0, what);
+        }
+        /* No room at all: nothing written, not even the terminator. */
+        {
+            static const int one[1] = {5};
+            char buf[1] = {'x'};
+
+            bmb_star_describe(one, 1, buf, 0);
+            check(buf[0] == 'x', "the CPUs described in 0 bytes: nothing written");
+        }
+    }
+
     /* Outside --star, nothing to agree with. */
     check(bmb_star_instance() == -1, "outside --star, no instance");
     check(bmb_star_max(2.5) == 2.5, "outside --star, a value is its own largest");
