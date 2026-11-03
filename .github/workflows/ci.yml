@@ -146,6 +146,9 @@ jobs:
           test -f $P/share/man/man1/bmb_suite.1
           test -f $P/share/man/man1/bmb_mcp.1
           grep -qx '.so man1/blas-microbenchmark.1' $P/share/man/man1/bmb_dgemm.1
+          for k in blas-benchmark blas-compare blas-results; do
+            test -f $P/share/blas-microbenchmark/skills/$k/SKILL.md
+          done
           # The page gives the install path, as the reader sees it.
           MANPAGER=cat MANWIDTH=200 man -l $P/share/man/man1/blas-microbenchmark.1 \
             | grep -qF /opt/bmb-test/libexec/blas-microbenchmark/level1
@@ -527,6 +530,13 @@ jobs:
           mkdir -p build
           cd build
           ../configure --with-blas-backend=nvpl --enable-werror
+
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h
 
       - name: make
         run: make -C build -j"$(nproc)"
@@ -979,6 +989,14 @@ jobs:
           mkdir -p build
           cd build
           AOCL_ROOT="$HOME/aocl" ../configure --with-blas-backend=aocl --enable-werror
+
+      # The extensions of the BLAS this library has (#171), built to be
+      # measured: a broken probe would skip them in every job, CI green.
+      - name: The extensions it has, found
+        run: |
+          grep -q '^#define HAVE_CBLAS_AXPBY 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMT 1$' build/config.h &&
+            grep -q '^#define HAVE_CBLAS_GEMMTR 1$' build/config.h
 
       - name: make
         run: make -C build -j"$(nproc)"

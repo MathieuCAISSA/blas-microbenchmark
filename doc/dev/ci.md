@@ -128,8 +128,9 @@ time, over the routines that take it (a transposed GEMM, a lower or
 right-side triangle, herk with C), GEMM with a K of its own and batched
 in each mode, a mode the library has not being a skip (#277), and so
 is an extension of the BLAS it lacks (#171): `openblas` (axpby), `blis`
-(axpby, gemmt), `armpl` (axpby, gemmt, sbgemm) and `mkl` (all of them,
-gemmtr's name and the bf16 GEMM's included) check first that `configure`
+and `nvpl` (axpby, gemmt), `aocl` (axpby, gemmt under both names),
+`armpl` (axpby, gemmt, sbgemm) and `mkl` (all of them, gemmtr's name and
+the bf16 GEMM's included) check first that `configure`
 found those their library has, so that a broken probe cannot skip them
 everywhere. `make
 check` runs `--verify` on tiny sizes only, and

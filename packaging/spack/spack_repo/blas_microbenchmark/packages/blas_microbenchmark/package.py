@@ -174,7 +174,8 @@ class BlasMicrobenchmark(AutotoolsPackage):
                 out = bench("-x", "0", "-i", "1", *size, output=str.split, error=str.split,
                             ignore_errors=(77,))
                 # An extension of the BLAS the library lacks (axpby, gemmt,
-                # from 1.10): measures nothing, exits 77, says which call.
+                # sbgemm, from 1.10): measures nothing, exits 77, says which
+                # call.
                 if bench.returncode == 77:
                     assert "has no cblas_" in out, f"{name} skipped without saying why: {out}"
                     continue

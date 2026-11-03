@@ -73,8 +73,9 @@ releases with the same major version can be compared and read by the same
   fixed for 0.3.35), and the complex ones are wrong from two matrices on
   in every version that has them (OpenMathLib/OpenBLAS#6214, reported,
   not yet fixed). `--verify` stops on both, exit 2.
-- OpenBLAS's gemmt before 0.3.30 conjugates an operand in place, and
-  before 0.3.29 fills the other triangle row-major: `--verify` stops on
+- OpenBLAS's gemmt before 0.3.30 conjugates an operand in place
+  (OpenMathLib/OpenBLAS#5143), and before 0.3.29 fills the other
+  triangle row-major (OpenMathLib/OpenBLAS#4905): `--verify` stops on
   both.
 
 ### Fixed

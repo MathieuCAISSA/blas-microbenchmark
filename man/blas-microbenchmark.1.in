@@ -111,8 +111,8 @@ syr2k: chemv, zhemv, cher, zher, cher2, zher2, chemm, zhemm, cherk,
 zherk, cher2k and zher2k.
 .PP
 Two are extensions of the BLAS, which libraries add: axpby,
-y = alpha x + beta y (OpenBLAS, MKL, BLIS, AOCL\-BLAS, ArmPL), and gemmt, one
-triangle of a GEMM, C = alpha op(A) op(B) + beta C where
+y = alpha x + beta y (OpenBLAS, MKL, BLIS, AOCL\-BLAS, NVPL, ArmPL), and
+gemmt, one triangle of a GEMM, C = alpha op(A) op(B) + beta C where
 .B \-\-uplo
 gives it (MKL, NVPL, AOCL\-BLAS, BLIS, ArmPL, OpenBLAS from 0.3.28), for a
 product known to be symmetric, of which half is enough.

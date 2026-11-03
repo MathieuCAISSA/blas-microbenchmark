@@ -7,6 +7,7 @@
 <tr><td>OpenBLAS (default)</td><td><code>openblas</code></td><td><code>^openblas</code></td><td><code>OPENBLAS_NUM_THREADS</code>, <code>GOTO_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>BLIS</td><td><code>blis</code></td><td><code>^blis</code></td><td><code>BLIS_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>AMD AOCL-BLAS</td><td><code>aocl</code></td><td><code>^amdblis</code></td><td><code>BLIS_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
+<tr><td>AMD AOCL-BLAS</td><td>yes</td><td>yes (as <code>gemmtr</code>)</td><td>no</td></tr>
 <tr><td>Intel MKL</td><td><code>mkl</code></td><td><code>^intel-oneapi-mkl</code></td><td><code>MKL_NUM_THREADS</code>, <code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>NVIDIA NVPL (aarch64)</td><td><code>nvpl</code></td><td><code>^nvpl-blas</code></td><td><code>OMP_NUM_THREADS</code></td></tr>
 <tr><td>Arm ArmPL (aarch64)</td><td><code>armpl</code></td><td><code>^armpl-gcc</code></td><td><code>OMP_NUM_THREADS</code></td></tr>
@@ -54,7 +55,9 @@ FLEXIBLAS=BLIS-OPENMP bmb_dgemm -m 512:2048 -o blis.json</pre>
 <tr><th>Library</th><th>axpby</th><th>gemmt</th><th>sbgemm</th></tr>
 <tr><td>OpenBLAS</td><td>yes</td><td>from 0.3.28's header</td><td>when built with <code>BUILD_BFLOAT16</code></td></tr>
 <tr><td>BLIS</td><td>yes</td><td>yes</td><td>no</td></tr>
+<tr><td>AMD AOCL-BLAS</td><td>yes</td><td>yes (as <code>gemmtr</code>)</td><td>no</td></tr>
 <tr><td>Intel MKL</td><td>yes</td><td>yes (as <code>gemmtr</code>)</td><td>yes (<code>cblas_gemm_bf16bf16f32</code>)</td></tr>
+<tr><td>NVIDIA NVPL</td><td>yes</td><td>yes</td><td>no</td></tr>
 <tr><td>ArmPL</td><td>yes</td><td>yes</td><td>yes</td></tr>
 <tr><td>Netlib</td><td>no</td><td>no</td><td>no</td></tr>
 </table>
