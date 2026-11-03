@@ -146,9 +146,10 @@ void bmb_star_describe(const int *cpus, int count, char *buf, size_t size)
     size_t at = 0;
     int i = 0;
 
-    if (size > 0) {
-        buf[0] = '\0';
+    if (size == 0) {
+        return;
     }
+    buf[0] = '\0';
     while (i < count) {
         int j = i;
         int w;

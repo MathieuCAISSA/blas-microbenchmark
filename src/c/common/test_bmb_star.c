@@ -186,6 +186,14 @@ int main(void)
                      cases[k].size, buf, cases[k].want);
             check(strcmp(buf, cases[k].want) == 0, what);
         }
+        /* No room at all: nothing written, not even the terminator. */
+        {
+            static const int one[1] = {5};
+            char buf[1] = {'x'};
+
+            bmb_star_describe(one, 1, buf, 0);
+            check(buf[0] == 'x', "the CPUs described in 0 bytes: nothing written");
+        }
     }
 
     /* Outside --star, nothing to agree with. */

@@ -204,8 +204,8 @@ static int verify(void *vctx, char *msg, size_t size)
     if (!bmb_verify_skip()) {
         call(ctx);
     }
-    if (memcmp(a0, ctx->a, ctx->sa * BMB_ELEM_BYTES) != 0 || memcmp(b0, ctx->b, ctx->sb * BMB_ELEM_BYTES) != 0) { /* GCOVR_EXCL_BR_LINE: only a library that changes A or B, OpenBLAS before 0.3.30, which no coverage job builds against */
-        /* GCOVR_EXCL_START: only a library that changes A or B, OpenBLAS before 0.3.30, which no coverage job builds against */
+    if (memcmp(a0, ctx->a, ctx->sa * BMB_ELEM_BYTES) != 0 || memcmp(b0, ctx->b, ctx->sb * BMB_ELEM_BYTES) != 0) { /* GCOVR_EXCL_BR_LINE: only a library that changes A or B, OpenBLAS before 0.3.30; the coverage jobs have none that does (Ubuntu's OpenBLAS has no gemmt, BLIS's leaves A and B alone) */
+        /* GCOVR_EXCL_START: only a library that changes A or B, OpenBLAS before 0.3.30; the coverage jobs have none that does (Ubuntu's OpenBLAS has no gemmt, BLIS's leaves A and B alone) */
         snprintf(msg, size, "the call changed %s, which it must only read",
                  memcmp(a0, ctx->a, ctx->sa * BMB_ELEM_BYTES) != 0 ? "A" : "B");
         free(r);
