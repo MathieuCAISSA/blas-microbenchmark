@@ -35,10 +35,11 @@ bmb_missing() {
 # change places (#5143). Its cblas_?gemm_batch_strided, from 0.3.31 to
 # 0.3.34, refused every column-major call and left C as it was (#5979);
 # from 0.3.31, its complex one does not scale the strides to (re, im)
-# pairs, wrong from two matrices on (#6214, reported, not fixed: when it
-# is, the test on the fixed version fails, and the bound goes here). The
-# others are fixed upstream, and a test that still meets them on a fixed
-# version fails.
+# pairs, wrong from two matrices on (#6214, reported, fixed for 0.3.35:
+# a development build past the fix fails the test, as it should, and the
+# bound goes here once 0.3.35 is out and tested, #332). The others are
+# fixed upstream, and a test that still meets them on a fixed version
+# fails.
 bmb_known_wrong() {
     kw_prog=$1
     kw_r=$2

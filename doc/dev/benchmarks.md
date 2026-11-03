@@ -222,7 +222,11 @@ combination of the arguments a routine takes.
 and, in `bench.batch_modes`, the `--batch-mode`s this build can call
 (`loop` always, the others as `configure` found them); the driver skips
 the run (exit 77) for one it cannot, and refuses the options for a
-routine without the bit. GEMM keeps the batch's matrices one after the
+routine without the bit. It also skips, before any call, a run with a
+point a library is known to crash on in that mode
+(`bmb_build_batch_crash()`, #330), saying which library and the upstream
+issue; a crash is not a measurement, and a segmentation fault tells the
+user nothing. GEMM keeps the batch's matrices one after the
 other in one block, the same for every mode, so that the modes measure
 the same data; each matrix has a fill of its own (its index added to the
 fill's offsets), so that a library mixing them up is caught, and
@@ -498,7 +502,8 @@ among them; FlexiBLAS does not say which OpenBLAS it loaded, so there a
 pass is taken too. Its `cblas_?gemm_batch_strided`, from 0.3.31 to
 0.3.34, refuses column-major calls (#5979, fixed for 0.3.35), and its
 complex one does not scale the strides (#6214, reported from here,
-unfixed: no upper bound yet). A development build, `0.3.34.dev`, counts
+fixed for 0.3.35: its upper bound goes in once 0.3.35 is out and tested,
+#332). A development build, `0.3.34.dev`, counts
 as the release it leads to. A bug nobody has reported upstream is
 reported first; it does not go in the list to make CI green.
 

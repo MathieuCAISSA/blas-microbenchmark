@@ -468,6 +468,16 @@ jobs:
       - name: make
         run: make -C build -j"$(nproc)"
 
+      # Fedora's OpenBLAS, 0.3.34 from Fedora 45 on, is built with
+      # DYNAMIC_ARCH and crashes on a batch of small matrices: the one job
+      # where the benchmarks' refusal of it runs (#330). Once Fedora has
+      # 0.3.35, the test measures every batch.
+      - name: Batched GEMM, on a library that may crash on small ones
+        run: |
+          make -C build/src/c check-TESTS TESTS=test_bmb_gemm_batch.sh \
+            || { cat build/src/c/test_bmb_gemm_batch.sh.log; exit 1; }
+          cat build/src/c/test_bmb_gemm_batch.sh.log
+
       - name: Tools
         run: |
           groff --version | head -1

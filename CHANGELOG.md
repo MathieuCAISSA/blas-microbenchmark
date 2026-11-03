@@ -70,9 +70,10 @@ releases with the same major version can be compared and read by the same
   OpenBLAS 0.3.28 to 0.3.34 built with `DYNAMIC_ARCH`, as distributions
   build it (Fedora 45's, Debian trixie's): the group call from 0.3.28
   (OpenMathLib/OpenBLAS#5980), the strided one from 0.3.31 (#6086),
-  both fixed in 0.3.35 (#330). The benchmark now refuses such a run
-  before the call, saying why: exit 77, nothing measured. Larger sizes,
-  and `--batch-mode loop`, are measured.
+  both fixed in 0.3.35 (#330). The benchmark now refuses a run with
+  one such point before the call, saying why: exit 77, nothing
+  measured. A run whose points are all larger, and `--batch-mode loop`,
+  are measured.
 - The man pages under groff 1.24 (#330): hyphenation, turned off, came
   back after one paragraph, and the header's hyphens were typographic
   ones.
