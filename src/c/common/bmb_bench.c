@@ -447,8 +447,8 @@ static int bmb_run_one(const bmb_benchmark_t *bench, const bmb_options_t *opts,
 
             bmb_log_release(r != 0 && first == me);
         }
-        if (r == 0) {
-            bmb_operands_free(bench, &ops);
+        if (r == 0) { /* GCOVR_EXCL_BR_LINE: under --star, one instance failing alone; the failure library fails the same allocation in all */
+            bmb_operands_free(bench, &ops); /* GCOVR_EXCL_LINE: under --star, one instance failing alone; the failure library fails the same allocation in all */
         }
         free(times);
         return -1;
@@ -682,7 +682,6 @@ static int bmb_star_check(bmb_options_t *opts)
 {
     char msg[256];
     size_t i;
-    size_t at = 0;
 
     bmb_star_cpu_count = bmb_star_cpus_at("", NULL, bmb_star_cpus, BMB_STAR_MAX);
     if (bmb_star_cpu_count == 0) { /* GCOVR_EXCL_BR_LINE: the calling process's own affinity can always be read on Linux */
@@ -704,29 +703,7 @@ static int bmb_star_check(bmb_options_t *opts)
         }
     }
 
-    /* "0-3,8", consecutive CPUs as a range: at most 4 digits and a
-     * separator a CPU, which the list has room for twice over. */
-    i = 0;
-    while (i < (size_t) bmb_star_cpu_count) {
-        size_t j = i;
-        int w;
-
-        while (j + 1 < (size_t) bmb_star_cpu_count && bmb_star_cpus[j + 1] == bmb_star_cpus[j] + 1) {
-            j++;
-        }
-        if (j == i) {
-            w = snprintf(bmb_star_cpu_list + at, sizeof(bmb_star_cpu_list) - at, "%s%d",
-                         i == 0 ? "" : ",", bmb_star_cpus[i]);
-        } else {
-            w = snprintf(bmb_star_cpu_list + at, sizeof(bmb_star_cpu_list) - at, "%s%d%s%d",
-                         i == 0 ? "" : ",", bmb_star_cpus[i], j == i + 1 ? "," : "-", bmb_star_cpus[j]);
-        }
-        if (w < 0 || (size_t) w >= sizeof(bmb_star_cpu_list) - at) { /* GCOVR_EXCL_BR_LINE: the list has room for every CPU there can be */
-            break; /* GCOVR_EXCL_LINE: the list has room for every CPU there can be */
-        }
-        at += (size_t) w;
-        i = j + 1;
-    }
+    bmb_star_describe(bmb_star_cpus, bmb_star_cpu_count, bmb_star_cpu_list, sizeof(bmb_star_cpu_list));
     return 0;
 }
 

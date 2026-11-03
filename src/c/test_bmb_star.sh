@@ -83,6 +83,32 @@ BMB_COUNTS=1 $B --star -t 2 -v 64 >/dev/null 2>"$T/counts.err" || fail "BMB_COUN
 counts=`grep -c '^counts:' "$T/counts.err" || true`
 test "$counts" -eq 1 || fail "BMB_COUNTS under --star printed $counts counts, expected 1"
 
+# An instance lost mid-run (killed) stops the others, which would wait
+# for it forever: exit 1, said, none left running. A run long enough to
+# be caught at it, ended by the kill, or by -E in the worst case.
+if command -v pgrep >/dev/null 2>&1; then
+    $B --star -t 2 -x 0 -w 0 -i 5 -T 30 -E 30 -v 64 >/dev/null 2>"$T/lost.err" &
+    p=$!
+    tries=0
+    while [ "$(pgrep -P "$p" | wc -l)" -lt 2 ] && [ "$tries" -lt 50 ]; do
+        sleep 1
+        tries=$((tries + 1))
+    done
+    victim=$(pgrep -P "$p" | tail -n 1)
+    test -n "$victim" || fail "no instance of the long run found"
+    kill -9 "$victim"
+    status=0
+    wait "$p" || status=$?
+    test "$status" -eq 1 || fail "a run whose instance was killed exited $status, not 1: $(cat "$T/lost.err")"
+    grep -q 'was killed by signal 9' "$T/lost.err" || fail "the lost instance was not said: $(cat "$T/lost.err")"
+    if pgrep -P "$p" >/dev/null 2>&1; then
+        fail "instances were left running after one was lost"
+    fi
+    echo "ok   an instance killed mid-run stops the run: exit 1, said, none left"
+else
+    echo "ok   (no pgrep: an instance lost mid-run not tried)"
+fi
+
 # Without --star, nothing of it.
 $B -t 1 -x 0 -w 0 -i 1 -v 64 >"$T/plain.txt" || fail "the plain run failed"
 if grep -q '^# star' "$T/plain.txt"; then
