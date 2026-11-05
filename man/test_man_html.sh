@@ -86,7 +86,15 @@ for t in $(grep -ho '\(test\|fuzz\)_[a-z0-9_]*\(\.sh\|\.js\)\{0,1\}' "$top"/src/
         test_bmb_*.sh) r=${t#test_bmb_}; r=${r%.sh}
                        case " $(echo $ROUTINES) " in *" $r "*) continue ;; esac ;;
     esac
-    case $t in *.sh | *.js) ;; *) t=$t.c ;; esac
+    # A program is described by its source, which its _SOURCES names when
+    # it is not the program's own name: test_bmb_fill_s and test_bmb_fill_d
+    # are one test_bmb_fill.c, built in two precisions (#340).
+    case $t in
+        *.sh | *.js) ;;
+        *) src=$(sed -n "s/^${t}_SOURCES *= *\\([^ ]*\\).*/\\1/p" "$top"/src/c/*/Makefile.am | sed -n 1p)
+           src=${src##*/}
+           t=${src:-$t.c} ;;
+    esac
     grep -q "<dt><code>$t</code>" "$d" || fail "development.html does not describe $t"
     n=$((n + 1))
 done
