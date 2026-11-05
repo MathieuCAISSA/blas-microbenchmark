@@ -644,36 +644,50 @@ A cold call on a small vector waits for memory more than it streams from
 it, so its GB/s are below STREAM's.
 .SS The operands
 Every benchmark fills its operands itself, the same way whatever the
-library: element
-.I i
-of an operand is ((\fIi\fR + \fIoffset\fR) mod 100) \(mu 0.01 \- 0.5,
-each operand, and each part of a complex one, with an offset of its own.
-The values are the same in every run and with every library, from
-\-0.5 to 0.49: no subnormal, NaN or infinity, which some processors and
-libraries handle more slowly than others, and which would favour one.
+library.
+Most are filled with ((\fIi\fR + \fIoffset\fR) mod 100) \(mu 0.01 \- 0.5
+for element
+.IR i ,
+from \-0.5 to 0.49, each operand, and each part of a complex one, with
+an offset.
+The triangular matrices are made diagonally dominant, and the right\-hand
+sides of the solves and scal's vector run from 1 to 1.99, so that every
+call stays well conditioned; an output starts at zero.
+None is subnormal, NaN or infinite, which some processors and libraries
+handle more slowly, and which would favour one.
+The scalars are fixed as well: beta is 0 wherever a routine has one, and
+alpha is 1, but in the routines that update an operand call after call
+(axpy, ger, syr, her and their kin), which take 1e\-6 so that the
+operand does not drift, and in scal, which takes 0.999999 rather than a 1
+a library could skip.
 The sizes are the same too, and so are the alignment
 .RB ( \-\-align ),
 the padding
 .RB ( \-\-ld\-pad )
 and the layout
 .RB ( \-\-layout ):
-two libraries measured with the same options get the same bytes in
-memory, and only the library differs.
+with the same options, every library gets the same operands, and only
+the library differs.
 The probe vector
 .B \-\-verify
-multiplies by comes from a fixed seed too.
+multiplies by is the same in every run too (a fixed seed).
 .PP
-A dense BLAS call does the same operations in the same order whatever
-its operands hold, so their values do not change its speed, the special
-values above apart.
+For most dense calls the values barely change the speed: the same
+operations run in the same order, whatever the operands hold.
+A library may still take shortcuts on them, as the Reference BLAS (Netlib)
+does on a zero element, of which this fill has one in a hundred, or on
+alpha and beta; iamax's comparisons and nrm2's scaling depend on the
+values as well.
 The shape of a matrix is its routine's: a triangular, symmetric,
 Hermitian, band or packed matrix is the operand of the routine made for
 it (trmm and trsm, symm and syrk, hemm and herk, gbmv and tbsv, spmv and
 tpsv; see
 .BR DESCRIPTION ),
-and rot applies a plane (Givens) rotation to two vectors.
-Sparse matrices are not BLAS, and no benchmark takes one; nor, for now,
-can the values be chosen or the operands read from files.
+and rot applies a plane (Givens) rotation, given by its cosine and sine,
+to two vectors.
+Sparse matrices are not in the dense BLAS these libraries implement, and
+no benchmark takes one; nor, for now, can the values be chosen or the
+operands read from files.
 .SH CHECKING RESULTS
 A benchmark times a call whatever it computes: a library that gets the
 result wrong \(em a broken build, a bug at one size or thread count \(em

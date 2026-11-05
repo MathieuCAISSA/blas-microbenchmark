@@ -84,11 +84,11 @@ bmb_dgemm -m 256:2048</pre>
 <h2 id="structures">Matrix structures</h2>
 <p>BLAS has no option for the kind of matrix: the structure is the routine's. A general matrix goes to gemm or gemv; the others each have their own routines, which read only the part that matters:</p>
 <table class="grid">
-<tr><th>Matrix</th><th>Routines</th><th>What is read</th></tr>
-<tr><td>Triangular</td><td>trmv, trsv, trmm, trsm</td><td>one triangle, its diagonal taken as ones with <code>--diag U</code></td></tr>
-<tr><td>Symmetric, Hermitian</td><td>symv, symm, syrk, syr2k; hemv, hemm, herk, her2k</td><td>one triangle of the symmetric or Hermitian matrix (<code>--uplo</code>), the other being its mirror; for syrk, syr2k, herk and her2k, that matrix is C</td></tr>
-<tr><td>Band</td><td>gbmv, tbsv</td><td>the diagonals near the main one, in band storage (<code>-M</code> gives how many)</td></tr>
-<tr><td>Packed</td><td>spmv, tpsv</td><td>one triangle, stored without the other's place</td></tr>
+<tr><th>Matrix</th><th>Routines</th><th>What is used</th></tr>
+<tr><td>Triangular</td><td>trmv, trsv, trmm, trsm</td><td>one triangle (<code>--uplo</code>), its diagonal taken as ones with <code>--diag U</code></td></tr>
+<tr><td>Symmetric, Hermitian</td><td>symv, symm, syr, syr2, syrk, syr2k; hemv, hemm, her, her2, herk, her2k</td><td>one triangle of the symmetric or Hermitian matrix (<code>--uplo</code>), the other being its mirror, conjugated for a Hermitian one; for syr, syr2, her and her2 that matrix is A, which they update; for syrk, syr2k, herk and her2k it is C, the triangle written</td></tr>
+<tr><td>Band</td><td>gbmv, tbsv</td><td>the diagonals near the main one, in band storage: K each side for gbmv, K on one side for tbsv, which takes <code>--uplo</code> and <code>--diag</code> too (<code>-M</code> is K, the band's half-width)</td></tr>
+<tr><td>Packed</td><td>spmv, tpsv</td><td>one triangle (<code>--uplo</code>; <code>--diag</code> for tpsv), stored without the other's place</td></tr>
 </table>
-<p>rot applies a plane (Givens) rotation to two vectors: the rotation is the routine, not an operand. Sparse matrices, mostly zeros stored as lists of their non-zeros, are not BLAS: they have libraries of their own (MKL's sparse routines, cuSPARSE, PETSc), and no benchmark here takes one.</p>
-<p>The values do not change the speed of a dense call, which does the same operations in the same order whatever they are, apart from subnormals, NaN and infinities, which some processors handle more slowly. The benchmarks fill every operand themselves, the same for every library, with none of those (<a href="measuring.html#The_operands">The operands</a>).</p>
+<p>rot applies a plane (Givens) rotation to two vectors: the rotation is given by its cosine and sine, not as a matrix. Sparse matrices, mostly zeros stored as lists of their non-zeros, are not in the dense BLAS these libraries implement: they have routines and libraries of their own (the Sparse BLAS, MKL's sparse routines, cuSPARSE, PETSc), and no benchmark here takes one.</p>
+<p>For most dense calls the values barely change the speed: the same operations run in the same order whatever the operands hold. A library may still take shortcuts on some values, as the Reference BLAS does on a zero element, and subnormals, NaN and infinities slow some processors down. The benchmarks fill every operand themselves, the same for every library, with none of those (<a href="measuring.html#The_operands">The operands</a>).</p>
