@@ -80,3 +80,15 @@ bmb_dgemm -m 256:2048</pre>
 </table>
 <p>The extensions are calls libraries add to the BLAS. Their benchmarks are built whatever the library; where it lacks the call, they measure nothing and say which call is missing.</p>
 <p>Not every family exists in every precision: dot, ger, symv, syr, syr2 and spmv are real, their complex counterparts are dotu and dotc, geru and gerc, hemv, her, her2; and here rot, gbmv, tbsv and tpsv are measured in real precision only. <a href="blas-microbenchmark.html">The manual</a> lists the 113 benchmarks by level, with what <code>-m</code>, <code>-M</code> and <code>-K</code> are for each, and <a href="options.html">Options</a> the arguments each takes.</p>
+
+<h2 id="structures">Matrix structures</h2>
+<p>BLAS has no option for the kind of matrix: the structure is the routine's. A general matrix goes to gemm or gemv; the others each have their own routines, which read only the part that matters:</p>
+<table class="grid">
+<tr><th>Matrix</th><th>Routines</th><th>What is read</th></tr>
+<tr><td>Triangular</td><td>trmv, trsv, trmm, trsm</td><td>one triangle, its diagonal taken as ones with <code>--diag U</code></td></tr>
+<tr><td>Symmetric, Hermitian</td><td>symv, symm, syrk, syr2k; hemv, hemm, herk, her2k</td><td>one triangle of the symmetric or Hermitian matrix (<code>--uplo</code>), the other being its mirror; for syrk, syr2k, herk and her2k, that matrix is C</td></tr>
+<tr><td>Band</td><td>gbmv, tbsv</td><td>the diagonals near the main one, in band storage (<code>-M</code> gives how many)</td></tr>
+<tr><td>Packed</td><td>spmv, tpsv</td><td>one triangle, stored without the other's place</td></tr>
+</table>
+<p>rot applies a plane (Givens) rotation to two vectors: the rotation is the routine, not an operand. Sparse matrices, mostly zeros stored as lists of their non-zeros, are not BLAS: they have libraries of their own (MKL's sparse routines, cuSPARSE, PETSc), and no benchmark here takes one.</p>
+<p>The values do not change the speed of a dense call, which does the same operations in the same order whatever they are, apart from subnormals, NaN and infinities, which some processors handle more slowly. The benchmarks fill every operand themselves, the same for every library, with none of those (<a href="measuring.html#The_operands">The operands</a>).</p>

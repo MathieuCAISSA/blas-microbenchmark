@@ -51,6 +51,10 @@ done</pre>
 
 <h2 id="history">One library, several versions</h2>
 <p>Measure three versions or more of the same library on the same machine, and the report adds a history: each routine's performance, version after version, with a version slower than the one before beyond the noise marked <b>slower</b>. The version comes from the library itself, so nothing needs naming.</p>
+<p>The benchmarks measure the library they were built against, so each version, or each build of one version (another compiler, other options), gets a blas-microbenchmark of its own: one Spack install each, or one <code>./configure --with-blas-incpath=… --with-blas-libpath=…</code> each, under a prefix of its own. <code>bmb_suite</code> then runs them all, each under a name that says what tells it apart:</p>
+<pre>bmb_suite --blas openblas-0.3.26=/opt/bmb-openblas-0.3.26 --blas openblas-0.3.34=/opt/bmb-openblas-0.3.34 -o results
+bmb_report results &gt; report.html</pre>
+<p>Two builds of one version take names such as <code>openblas-0.3.34-gcc13</code> and <code>openblas-0.3.34-gcc14</code>. How to build them: <a href="bmb_suite.html#One_library,_several_builds">bmb_suite's manual</a>.</p>
 
 <h2 id="conditions">Two conditions on one machine</h2>
 <p>To compare a setting rather than a library (turbo, a thread placement, a compiler flag of the library), give each run a label; the report makes a series of each:</p>
@@ -59,6 +63,8 @@ bmb_dgemm -m 1024:8192 -l "turbo off" -o results/turbo-off.json</pre>
 
 <h2 id="fair">A fair comparison</h2>
 <ul>
+<li><b>The same operands.</b> Every library gets the same values, sizes, alignment and layout: the benchmarks fill the operands themselves, the same way whatever the library, with values from &minus;0.5 to 0.49 and no subnormals, NaN or infinities, which some processors and libraries handle more slowly. Only the library differs (<a href="measuring.html#The_operands">The operands</a>).</li>
+<li><b>One after the other.</b> <code>bmb_suite</code> runs the libraries in turn, so a machine heating up or a job started meanwhile can favour one: run it more than once, each time into a directory of its own, and give <code>bmb_report</code> every directory (<a href="#noise">Is the difference real?</a>).</li>
 <li><b>Same machine, same conditions.</b> A comparison across machines measures the machines.</li>
 <li><b>A steady frequency.</b> The <code>performance</code> governor and turbo off, if you can; the benchmark warns when they are not, and the report says under what conditions each series ran.</li>
 <li><b>The same threads, pinned.</b> See <a href="hpc.html#pinning">pinning threads</a>, and <a href="threads.html">Threads</a>.</li>
