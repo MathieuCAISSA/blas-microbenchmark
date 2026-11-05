@@ -9,6 +9,15 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Fixed
+- The operands' values depended on how blas-microbenchmark was built
+  (#340): with a target that has fused multiply-adds (`-march`, the
+  target flags Spack passes), GCC and Clang fused the fill's multiply and
+  add, which rounds once instead of twice, so two builds did not give the
+  libraries the same bytes (an exact 0 became 1e-17). `configure` now
+  builds the benchmarks with `-ffp-contract=off`; the libraries they
+  measure are built on their own, so nothing timed changes.
+
 ## [1.10.0] - 2026-11-03
 
 ### Added
