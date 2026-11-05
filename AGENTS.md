@@ -379,13 +379,6 @@ build the benchmarks only under `make check` and install nothing.
   which every `Makefile.am` picks up through `AM_CFLAGS`. They go in
   `AM_CFLAGS` rather than `CFLAGS` so a user-supplied `CFLAGS` still gets
   the last word; `--disable-warnings` turns them off.
-- `configure` also adds `-ffp-contract=off` (`BMB_FP_CFLAGS`, in the same
-  `AM_CFLAGS`): GCC and Clang otherwise fuse `a*b + c` into one
-  multiply-add where the target has one, and the operands' fill then
-  depended on the build (#340). Every library must be given the same
-  bytes. The libraries measured are built on their own, so this changes
-  nothing timed; a new `Makefile.am` that compiles benchmark code takes
-  it too.
 - CI adds `--enable-werror` on top, which is what makes that a fact rather
   than an aspiration. It is deliberately *not* the default: a compiler
   newer than a given release will eventually warn about something, and
@@ -396,3 +389,13 @@ build the benchmarks only under `make check` and install nothing.
   translation units never call, which is two `-Wunused-function` per
   benchmark). Hint directories keep using `-I` and are searched first, so
   a loaded module still wins over a distro probe.
+- `configure` also adds `-ffp-contract=off` (`BMB_FP_CFLAGS`, in the same
+  `AM_CFLAGS`): GCC and Clang otherwise fuse `a*b + c` into one
+  multiply-add where the target has one (aarch64 always, x86 under
+  `-march`), and the operands' fill then depended on the build (#340).
+  Every library must be given the same bytes. The libraries measured are
+  built on their own, so this changes nothing timed; a new `Makefile.am`
+  that compiles benchmark code takes it too. Like the warnings, a user's
+  `CFLAGS` comes after it, and `-ffp-contract=fast` there (or Clang's
+  `-Ofast` and `-ffast-math`, which imply it) turns contraction back on:
+  `test_bmb_fill_s` and `test_bmb_fill_d` then fail under `make check`.
