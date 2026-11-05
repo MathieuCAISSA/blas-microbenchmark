@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(top_builddir) -I$(top_srcdir)/src/c/common $(BMB_CBLAS_CPPFLAGS)
-AM_CFLAGS = $(BMB_WARN_CFLAGS)
+AM_CFLAGS = $(BMB_WARN_CFLAGS) $(BMB_FP_CFLAGS)
 LDADD = $(top_builddir)/src/c/common/libbmbcommon.a
 
 # A directory per precision in the source and build trees; one, level2,

@@ -45,6 +45,16 @@ AS_IF([test "x$bmb_warnings" != xno], [
 ])
 AC_SUBST([BMB_WARN_CFLAGS])
 
+dnl The operands every library is given are the same bytes whatever the
+dnl build (#340). GCC and Clang fuse a*b + c into one multiply-add by
+dnl default where the target has one (-march, Spack's target flags),
+dnl which rounds once instead of twice and changed the fill's values: an
+dnl exact 0 became 1e-17. Only the benchmarks' own code is affected; the
+dnl libraries they time are built on their own.
+BMB_FP_CFLAGS=
+BMB_CHECK_CFLAGS([-ffp-contract=off], [BMB_FP_CFLAGS])
+AC_SUBST([BMB_FP_CFLAGS])
+
 dnl -----------------------------------------------------------------------
 dnl Search-path helpers
 dnl

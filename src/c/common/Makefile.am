@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I$(top_builddir) $(BMB_CBLAS_CPPFLAGS)
-AM_CFLAGS = $(BMB_WARN_CFLAGS)
+AM_CFLAGS = $(BMB_WARN_CFLAGS) $(BMB_FP_CFLAGS)
 
 noinst_LIBRARIES = libbmbcommon.a
 
@@ -54,6 +54,14 @@ test_bmb_machine_LDADD = libbmbcommon.a
 check_PROGRAMS += test_bmb_star
 test_bmb_star_SOURCES = test_bmb_star.c
 test_bmb_star_LDADD = libbmbcommon.a
+
+# The fill most operands get, the same bytes whatever the build (#340):
+# no multiply-add fused into one rounding. In both real precisions.
+check_PROGRAMS += test_bmb_fill_s test_bmb_fill_d
+test_bmb_fill_s_SOURCES = test_bmb_fill.c
+test_bmb_fill_s_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_S
+test_bmb_fill_d_SOURCES = test_bmb_fill.c
+test_bmb_fill_d_CPPFLAGS = $(AM_CPPFLAGS) -DBMB_PREC_D
 
 # The parser again, on inputs nobody wrote: a libFuzzer target that
 # ClusterFuzzLite runs (.clusterfuzzlite/), built here with a main of its

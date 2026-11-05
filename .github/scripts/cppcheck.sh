@@ -45,8 +45,11 @@ family_sources() {
     }' src/c/routines.txt | sort -u
 }
 
+# test_bmb_fill.c is compiled the same way, in single and double (#340).
+fill_test=src/c/common/test_bmb_fill.c
+
 status=0
-ignore=
+ignore="-i $fill_test"
 # Split on purpose: one path per line, none with a space.
 for f in $(family_sources); do
     ignore="$ignore -i $f"
@@ -55,6 +58,7 @@ done
 run $ignore src/c || status=1
 for p in s d c z; do
     files=$(family_sources "$p")
+    case $p in s | d) files="$files $fill_test" ;; esac
     [ -n "$files" ] || continue
     # shellcheck disable=SC2086 # one word per file
     run "-DBMB_PREC_$(echo "$p" | tr sdcz SDCZ)" $files || status=1
