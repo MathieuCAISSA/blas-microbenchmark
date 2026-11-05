@@ -158,6 +158,19 @@ and
 .BR \- ,
 each given once.
 .PP
+Every suite runs the same benchmarks (but an extension of the BLAS a
+library lacks, which it skips), with the same options, on the same
+operands: their values, sizes, alignment and layout come from the
+benchmarks, never from the library (see The operands in
+.BR blas\-microbenchmark (1)).
+The suites run one after the other, so a machine that heats up, or a job
+started meanwhile, can favour one: run
+.B bmb_suite
+four times or more, each time into a directory of its own, and give
+.BR bmb_report (1)
+every directory, which tests each difference against the spread of the
+runs.
+.PP
 With Spack, a blas\-microbenchmark a library:
 .PP
 .RS
@@ -228,6 +241,50 @@ What it costs: FlexiBLAS must be installed with its libraries (Fedora
 packages it, and Spack builds it; Debian and Ubuntu do not), and its
 indirection, a call through a pointer, shows on the smallest level 1
 calls.
+.SS One library, several builds
+One library can be given more than once: several versions of it, or one
+version built with two compilers or two sets of options.
+Each build gets a blas\-microbenchmark of its own, built against it, and
+a name of its own:
+.PP
+.RS
+.EX
+spack install blas\-microbenchmark ^openblas@0.3.26
+spack install blas\-microbenchmark ^openblas@0.3.30
+spack install blas\-microbenchmark ^openblas@0.3.34
+A=$(spack location \-i blas\-microbenchmark ^openblas@0.3.26)
+B=$(spack location \-i blas\-microbenchmark ^openblas@0.3.30)
+C=$(spack location \-i blas\-microbenchmark ^openblas@0.3.34)
+bmb_suite \-\-blas openblas\-0.3.26=$A \-\-blas openblas\-0.3.30=$B \e
+    \-\-blas openblas\-0.3.34=$C \-o results
+.EE
+.RE
+.PP
+Without Spack, each one is configured against its build of the library,
+which the benchmarks then load wherever it is
+.RB ( \-\-with\-blas\-libpath
+adds its directory to their run path), and installed under a prefix of
+its own:
+.PP
+.RS
+.EX
+\&./configure \-\-prefix=/opt/bmb\-openblas\-0.3.34\-gcc14 \e
+    \-\-with\-blas\-backend=openblas \e
+    \-\-with\-blas\-incpath=/opt/openblas\-0.3.34\-gcc14/include \e
+    \-\-with\-blas\-libpath=/opt/openblas\-0.3.34\-gcc14/lib
+.EE
+.RE
+.PP
+The report tells two versions apart by the version the library gives,
+whatever their names; two builds of one version, which may give the same
+string, only by their names: give them names that say what differs
+.RB ( openblas\-0.3.34\-gcc13 ,
+.BR openblas\-0.3.34\-gcc14 ).
+Three versions or more whose names differ only by the version, written
+as the library prints it, make a history: the report takes the version
+out of the name to group them, so openblas\-0.3.26\-gcc14,
+openblas\-0.3.30\-gcc14 and openblas\-0.3.34\-gcc14 are one history, and
+their \-gcc13 builds another.
 .SS Options for every benchmark
 The words after
 .B \-\-
