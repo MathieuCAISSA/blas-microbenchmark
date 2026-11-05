@@ -198,8 +198,9 @@ static inline void bmb_set_scalar(bmb_real_t *s, bmb_real_t re, bmb_real_t im)
 
 /* bmb_fill(x, count, re, im): count elements, the reals of each from i %
  * 100 shifted by re (the real part) and im (the imaginary part, ignored
- * for a real one), between -0.5 and 0.49: the fill every routine uses, so
- * that no two operands, or two parts, are the same. */
+ * for a real one), between -0.5 and 0.49: the fill most operands get, the
+ * same whatever the library. The offsets keep the two parts of a complex
+ * element apart; operands a routine gives the same offset are equal. */
 static inline void bmb_fill(bmb_real_t *x, size_t count, size_t re, size_t im)
 {
     size_t i;

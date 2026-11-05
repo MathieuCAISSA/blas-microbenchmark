@@ -9,6 +9,15 @@ releases with the same major version can be compared and read by the same
 
 ## [Unreleased]
 
+### Added
+- The documentation says what a fair comparison rests on and how to make
+  one (#337): every library gets the same operands, filled by the
+  benchmarks themselves (`blas-microbenchmark(1)`, "The operands"); one
+  library can be given to `bmb_suite` several times, a version or a build
+  each (`bmb_suite(1)`, "One library, several builds"); and a matrix's
+  structure is its routine's, sparse matrices not being BLAS (the guide
+  "What BLAS is", "Matrix structures").
+
 ### Fixed
 - The operands' values depended on how blas-microbenchmark was built
   (#340): with a target that has fused multiply-adds (`-march`, the
